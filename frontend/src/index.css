@@ -138,13 +138,28 @@
   flex: 1 1 0%;
 }
 
+/* Responsive pages reuse the same typed command declaration in the mobile
+   identity row. The bounded rail protects the complete page title while still
+   claiming useful sticky space for compact controls. */
+.desktop-header-tools--responsive {
+  display: block;
+  flex: 0 1 auto;
+  max-width: 55%;
+}
+
 @media (min-width: 768px) {
   .desktop-header-tools {
     display: block;
   }
+
+  .desktop-header-tools--responsive {
+    flex: 1 1 0%;
+    max-width: none;
+  }
 }
 
 .desktop-header-tools__lane,
+.desktop-header-tools__mode,
 .desktop-header-tools__search,
 .desktop-header-tools__filters,
 .desktop-header-tools__status,
@@ -157,11 +172,71 @@
   align-items: center;
 }
 
+.desktop-header-tools__mode {
+  flex-shrink: 0;
+}
+
+.desktop-header-mode__tabs,
+.desktop-header-mode__label {
+  display: none;
+}
+
+.desktop-header-mode__compact {
+  display: flex;
+  align-items: center;
+}
+
 .desktop-header-tools__lane {
   height: 100%;
   justify-content: flex-end;
   gap: 0.5rem;
   overflow: hidden;
+}
+
+.mobile-header-tools {
+  display: flex;
+  width: max-content;
+  max-width: 100%;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
+}
+
+.mobile-header-tools__context,
+.mobile-header-tools__status,
+.mobile-header-tools__secondary,
+.mobile-header-tools__primary {
+  display: flex;
+  min-width: 0;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.responsive-header-tools__desktop {
+  display: none;
+}
+
+.mobile-header-overflow__status {
+  padding: 0.5rem 0.75rem;
+}
+
+.mobile-header-overflow__query > *,
+.mobile-header-overflow__action > * {
+  width: 100%;
+}
+
+.mobile-header-overflow__action .desktop-header-action-label {
+  display: inline;
+}
+
+.mobile-header-overflow__action button {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.mobile-header-overflow__action > div {
+  flex-direction: column;
+  align-items: stretch;
 }
 
 .desktop-header-tools__combined-query,
@@ -178,17 +253,7 @@
   white-space: nowrap;
 }
 
-/* Entity state belongs in the shell, but only after the command lane can hold it. */
-.desktop-header-tools__status {
-  display: none;
-  flex-shrink: 0;
-}
-
-@container desktop-header-tools (min-width: 600px) {
-  .desktop-header-tools__status {
-    display: flex;
-  }
-}
+/* Entity state is priority context. Query and action labels compact around it. */
 
 .desktop-header-filters__full > * {
   flex-wrap: nowrap;
@@ -241,7 +306,31 @@
   }
 }
 
+/* Editor modes compact before status and commit actions yield any space. */
+@container desktop-header-tools (min-width: 400px) {
+  .desktop-header-mode__tabs {
+    display: flex;
+  }
+
+  .desktop-header-mode__compact {
+    display: none;
+  }
+}
+
+@container desktop-header-tools (min-width: 450px) {
+  .desktop-header-mode__label {
+    display: inline;
+  }
+}
+
 /* Longer dataset names may claim more room only after the full command lane fits. */
+@container desktop-header-tools (min-width: 500px) {
+  .desktop-header-tools__lane:not(:has(.desktop-header-tools__primary)):not(:has(.desktop-header-tools__secondary))
+    .desktop-header-search__wide {
+    width: 14rem;
+  }
+}
+
 @container desktop-header-tools (min-width: 560px) {
   .desktop-header-search__wide {
     width: 13rem;
@@ -322,6 +411,28 @@
 @container desktop-header-tools (max-width: 95px) {
   .desktop-header-tools__combined-query {
     display: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .desktop-header-tools--responsive button,
+  .desktop-header-tools--responsive [role='combobox'] {
+    min-height: 2.75rem;
+  }
+
+  .desktop-header-tools--responsive button {
+    min-width: 2.75rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .mobile-header-tools {
+    display: none;
+  }
+
+  .responsive-header-tools__desktop {
+    display: block;
+    height: 100%;
   }
 }
 
@@ -567,7 +678,7 @@
   }
 
   body {
-    @apply bg-background text-foreground overflow-x-hidden;
+    @apply bg-background text-foreground overflow-x-clip;
     font-family: 'Raleway', sans-serif !important;
   }
   
@@ -577,7 +688,7 @@
 }
 
 html, body {
-  overflow-x: hidden;
+  overflow-x: clip;
   max-width: 100vw;
   width: 100%;
 }

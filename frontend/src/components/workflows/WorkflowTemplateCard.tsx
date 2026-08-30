@@ -2,8 +2,9 @@ import React from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { CheckCircle2, Clock, Play, Pause, Settings } from 'lucide-react'
+import { Clock, Play, Pause, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { getWorkflowStatusVisual } from '@/pages/automations/constants/workflowConstants'
 import type { WorkflowTemplate } from './workflow-templates'
 import {
   WORKFLOW_STEP_LABELS,
@@ -24,6 +25,8 @@ export function WorkflowTemplateCard({
   onConfigure,
 }: WorkflowTemplateCardProps) {
   const hasActions = Boolean(onActivate || onDeactivate || onConfigure)
+  const activeVisual = getWorkflowStatusVisual(true)
+  const ActiveIcon = activeVisual.icon
 
   return (
     <Card className="bg-muted/10 hover:shadow-md transition-shadow">
@@ -36,9 +39,9 @@ export function WorkflowTemplateCard({
               </div>
               <CardTitle className="text-base">{template.name}</CardTitle>
               {template.isActive && (
-                <Badge variant="outline" className="ml-2 bg-green-50 text-green-600 border-green-300">
-                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                  Active
+                <Badge className={cn('ml-2', activeVisual.badgeClass)}>
+                  <ActiveIcon className="mr-1 h-3 w-3" />
+                  {activeVisual.label}
                 </Badge>
               )}
             </div>

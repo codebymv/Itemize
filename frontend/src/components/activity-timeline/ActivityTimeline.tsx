@@ -2,6 +2,7 @@ import React from 'react'
 import { format, formatDistanceToNow, isToday, isYesterday, isThisWeek } from 'date-fns'
 import { cn } from '@/lib/utils'
 import { Card } from '@/components/ui/card'
+import { EmptyState } from '@/components/EmptyState'
 import { Skeleton } from '@/components/ui/skeleton'
 import { semanticColors } from '@/design-system/design-tokens'
 import type { Activity, ActivityType } from '@/design-system/types/activity.types'
@@ -160,12 +161,13 @@ export function ActivityTimeline({
 
   if (!activities || activities.length === 0) {
     return (
-      <Card className="p-8 text-center">
-        <ActivityIcon className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
-        <h3 className="text-lg font-medium mb-2">{empty?.title || 'No activity yet'}</h3>
-        <p className="text-sm text-muted-foreground">
-          {empty?.description || 'Activity appears here.'}
-        </p>
+      <Card>
+        <EmptyState
+          icon={ActivityIcon}
+          kind="inline"
+          title={empty?.title || 'No activity yet'}
+          description={empty?.description || 'Activity appears here.'}
+        />
       </Card>
     )
   }

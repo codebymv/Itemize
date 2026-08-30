@@ -1,9 +1,10 @@
 import React from 'react';
-import { Plus, Building, Clock, Edit, Trash2, AlertTriangle } from 'lucide-react';
+import { Plus, Building, Clock, Edit, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
 import type { Business } from '@/services/invoicesApi';
 import { SettingsSectionTitle } from '@/components/settings/SettingsPrimitives';
 
@@ -62,28 +63,19 @@ export const BusinessProfileCard: React.FC<BusinessProfileCardProps> = ({
       </CardHeader>
       <CardContent>
         {loadError ? (
-          <div className="flex flex-col items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex gap-3">
-              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" aria-hidden="true" />
-              <div>
-                <p className="text-sm font-medium text-foreground">Business profiles could not be loaded</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Payment settings remain available. Retry before editing.
-                </p>
-              </div>
-            </div>
-            {onRetry && (
-              <Button type="button" variant="outline" size="sm" onClick={onRetry}>
-                Retry
-              </Button>
-            )}
-          </div>
+          <ErrorState
+            kind="inline"
+            title="Unable to load business profiles"
+            description="Try again before editing business profiles."
+            onAction={onRetry}
+          />
         ) : businesses.length === 0 ? (
           <EmptyState
             icon={Building}
+            kind="inline"
             title="No businesses yet"
             description="Add the identity customers will see on estimates and invoices."
-            actionLabel="Add Business"
+            actionLabel="Add business"
             onAction={onAddBusiness}
           />
         ) : (

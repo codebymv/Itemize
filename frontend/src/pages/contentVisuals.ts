@@ -1,4 +1,5 @@
-import { Archive, Eye, Pencil, type LucideIcon } from 'lucide-react';
+import { Archive, Eye, Pencil, Share2, type LucideIcon } from 'lucide-react';
+import { defineStatus } from '@/lib/statusVisuals';
 import {
   STAT_BADGE_CLASSES,
   STAT_ICON_BG_CLASSES,
@@ -42,6 +43,8 @@ export const CONTENT_STATUS_VISUALS: Record<ContentStatus, ContentStatusVisual> 
     iconClass: STAT_ICON_CLASSES.red,
   },
 };
+
+export const SHARED_CONTENT_VISUAL = defineStatus('Shared', 'blue', Share2);
 
 export function getContentStatusVisual(status: string): ContentStatusVisual {
   return CONTENT_STATUS_VISUALS[status as ContentStatus] ?? CONTENT_STATUS_VISUALS.draft;

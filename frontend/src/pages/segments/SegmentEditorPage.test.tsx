@@ -21,7 +21,7 @@ vi.mock('@/hooks/useOrganization', () => ({
 vi.mock('@/hooks/use-toast', () => ({ useToast: () => ({ toast: vi.fn() }) }));
 vi.mock('@/hooks/useUnsavedChangesGuard', () => ({ useUnsavedChangesGuard: () => ({ confirmLeave: () => true }) }));
 vi.mock('@/components/layout/PageLayout', () => ({
-  PageLayout: ({ title, desktopTools, children }: { title: string; desktopTools?: { status?: ReactNode; primaryAction?: ReactNode }; children: ReactNode }) => <main><h1>{title}</h1>{desktopTools?.status}{desktopTools?.primaryAction}{children}</main>,
+  PageLayout: ({ title, headerTools, children }: { title: string; headerTools?: { status?: ReactNode; primaryAction?: ReactNode }; children: ReactNode }) => <main><h1>{title}</h1>{headerTools?.status}{headerTools?.primaryAction}{children}</main>,
 }));
 vi.mock('@/components/layout/ShellBackButton', () => ({ ShellBackButton: () => <button type="button">Back</button> }));
 vi.mock('@/components/layout/DesktopHeaderTools', () => ({

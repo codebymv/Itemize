@@ -1,338 +1,217 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Star, Search, MoreHorizontal, MessageSquare, ThumbsUp, ThumbsDown, ExternalLink, FileText } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+import { ExternalLink, FileText, Loader2, MessageSquare, MoreHorizontal, Send, Star, ThumbsDown, ThumbsUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useToast } from '@/hooks/use-toast';
-import { useOrganization } from '@/hooks/useOrganization';
-import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
-import { OnboardingModal } from '@/components/OnboardingModal';
-import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
-import { getReviews, getReputationAnalytics } from '@/services/reputationApi';
-import { PageLayout } from '@/components/layout/PageLayout';
+import { Textarea } from '@/components/ui/textarea';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { OrganizationErrorState } from '@/components/OrganizationErrorState';
+import { HeaderAction, HeaderFilters, HeaderSearch } from '@/components/layout/DesktopHeaderTools';
+import { PageLayout } from '@/components/layout/PageLayout';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
+import { OnboardingModal } from '@/components/OnboardingModal';
 import { StatCard } from '@/components/StatCard';
-import { getSentimentBadgeClass } from '@/lib/badge-utils';
+import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
+import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
+import { useOrganization } from '@/hooks/useOrganization';
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
+import { getReputationAnalytics, getReviews, updateReview, type ReputationAnalytics, type Review } from '@/services/reputationApi';
+import { ReputationPlatformMark } from './components/ReputationPlatformMark';
+import { getReputationPlatformLabel, getReviewSentimentVisual, getReviewStatusVisual } from './constants/reputationVisuals';
 
-interface Review {
-    id: number;
-    platform: string;
-    reviewer_name: string;
-    rating: number;
-    content: string;
-    status: 'pending' | 'responded' | 'flagged';
-    sentiment: 'positive' | 'neutral' | 'negative';
-    created_at: string;
-    response?: string;
-}
-
-interface Analytics {
-    total_reviews: number;
-    average_rating: number;
-    positive_count: number;
-    neutral_count: number;
-    negative_count: number;
-}
+const RATING_OPTIONS = [5, 4, 3, 2, 1] as const;
 
 export function ReputationPage() {
-    const navigate = useNavigate();
-    const { toast } = useToast();
-    // Onboarding
-    const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('reputation');
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('reputation');
+  const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [analytics, setAnalytics] = useState<ReputationAnalytics | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [ratingFilter, setRatingFilter] = useState('all');
+  const [responseReview, setResponseReview] = useState<Review | null>(null);
+  const [responseText, setResponseText] = useState('');
+  const [responding, setResponding] = useState(false);
 
-    const [reviews, setReviews] = useState<Review[]>([]);
-    const [analytics, setAnalytics] = useState<Analytics | null>(null);
-    const [loading, setLoading] = useState(true);
-    const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
-    const [searchQuery, setSearchQuery] = useState('');
-    const [ratingFilter, setRatingFilter] = useState<string>('all');
+  useEffect(() => { if (initError) setLoading(false); }, [initError]);
 
-    useEffect(() => {
-        if (!initError) return;
-        setLoading(false);
-    }, [initError]);
-
-    const fetchData = useCallback(async () => {
-        if (!organizationId) return;
-        setLoading(true);
-        try {
-            const [reviewsRes, analyticsRes] = await Promise.all([
-                getReviews(
-                    { rating: ratingFilter !== 'all' ? parseInt(ratingFilter) : undefined },
-                    organizationId
-                ),
-                getReputationAnalytics(30, organizationId)
-            ]);
-            setReviews((reviewsRes.reviews || []).map((review) => ({
-                id: review.id,
-                platform: review.platform,
-                reviewer_name: review.reviewer_name || 'Anonymous',
-                rating: review.rating,
-                content: review.review_text || '',
-                status: review.status === 'responded' ? 'responded' : review.status === 'flagged' ? 'flagged' : 'pending',
-                sentiment: review.sentiment || 'neutral',
-                created_at: review.created_at,
-                response: review.response_text,
-            })));
-            // Map the API response to our expected format
-            if (analyticsRes?.overall) {
-                setAnalytics({
-                    total_reviews: Number(analyticsRes.overall.total_reviews) || 0,
-                    average_rating: Number(analyticsRes.overall.average_rating) || 0,
-                    positive_count: Number(analyticsRes.overall.positive_reviews) || 0,
-                    neutral_count: Number(analyticsRes.overall.total_reviews || 0) - Number(analyticsRes.overall.positive_reviews || 0) - Number(analyticsRes.overall.negative_reviews || 0),
-                    negative_count: Number(analyticsRes.overall.negative_reviews) || 0,
-                });
-            } else {
-                setAnalytics(null);
-            }
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to load reviews', variant: 'destructive' });
-        } finally {
-            setLoading(false);
-        }
-    }, [organizationId, ratingFilter, toast]);
-
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
-
-    const renderStars = (rating: number) => {
-        return [...Array(5)].map((_, i) => (
-            <Star
-                key={i}
-                className={`h-4 w-4 ${i < rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}
-            />
-        ));
-    };
-
-    const filteredReviews = reviews.filter(r =>
-        r.reviewer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        r.content.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
-    if (initError) {
-        return (
-            <PageLayout
-                title="REVIEWS"
-                icon={<Star className="h-5 w-5 text-blue-600 flex-shrink-0" />}
-            >
-                <ErrorState
-                    title="Unable to load reviews"
-                    description={initError}
-                    onAction={() => void fetchData()}
-                />
-            </PageLayout>
-        );
+  const fetchData = useCallback(async () => {
+    if (!organizationId) return;
+    setLoading(true);
+    setLoadError(false);
+    try {
+      const [reviewsResult, analyticsResult] = await Promise.all([
+        getReviews({ rating: ratingFilter === 'all' ? undefined : Number(ratingFilter) }, organizationId),
+        getReputationAnalytics(30, organizationId),
+      ]);
+      setReviews(reviewsResult.reviews ?? []);
+      setAnalytics(analyticsResult);
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
     }
+  }, [organizationId, ratingFilter]);
 
+  useEffect(() => { void fetchData(); }, [fetchData]);
+
+  const filteredReviews = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return reviews;
+    return reviews.filter(review => [review.reviewer_name, review.review_text, review.platform]
+      .some(value => value?.toLowerCase().includes(query)));
+  }, [reviews, searchQuery]);
+
+  const openResponse = (review: Review) => {
+    setResponseReview(review);
+    setResponseText(review.response_text ?? '');
+  };
+
+  const saveResponse = async () => {
+    if (!organizationId || !responseReview || !responseText.trim()) return;
+    setResponding(true);
+    try {
+      const updated = await updateReview(responseReview.id, { status: 'responded', response_text: responseText.trim() }, organizationId);
+      setReviews(current => current.map(review => review.id === updated.id ? updated : review));
+      setResponseReview(null);
+      toast({ title: 'Response saved' });
+    } catch {
+      toast({ title: 'Could not save response', variant: 'destructive' });
+    } finally {
+      setResponding(false);
+    }
+  };
+
+  const ratingSelect = (className = 'w-32') => (
+    <Select value={ratingFilter} onValueChange={setRatingFilter}>
+      <SelectTrigger className={cn('h-11', className)} aria-label="Filter reviews by rating"><SelectValue placeholder="Rating" /></SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">All ratings</SelectItem>
+        {RATING_OPTIONS.map(rating => <SelectItem key={rating} value={String(rating)}>{rating} stars</SelectItem>)}
+      </SelectContent>
+    </Select>
+  );
+
+  if (initError) {
     return (
-        <PageLayout
-            title="REVIEWS"
-            icon={<Star className="h-5 w-5 text-blue-600 flex-shrink-0" />}
-            pageActions={
-                <>
-                    <div className="relative w-full max-w-xs">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                            placeholder="Search reviews..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50"
-                        />
-                    </div>
-                    <Select value={ratingFilter} onValueChange={setRatingFilter}>
-                        <SelectTrigger className="w-[120px] h-9">
-                            <SelectValue placeholder="Rating" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Ratings</SelectItem>
-                            <SelectItem value="5">5 Stars</SelectItem>
-                            <SelectItem value="4">4 Stars</SelectItem>
-                            <SelectItem value="3">3 Stars</SelectItem>
-                            <SelectItem value="2">2 Stars</SelectItem>
-                            <SelectItem value="1">1 Star</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </>
-            }
-            mobileActions={
-                <>
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                            placeholder="Search reviews..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50"
-                        />
-                    </div>
-                    <Select value={ratingFilter} onValueChange={setRatingFilter}>
-                        <SelectTrigger className="w-[120px] h-9">
-                            <SelectValue placeholder="Rating" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Ratings</SelectItem>
-                            <SelectItem value="5">5 Stars</SelectItem>
-                            <SelectItem value="4">4 Stars</SelectItem>
-                            <SelectItem value="3">3 Stars</SelectItem>
-                            <SelectItem value="2">2 Stars</SelectItem>
-                            <SelectItem value="1">1 Star</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </>
-            }
-        >
-            <OnboardingModal
-                isOpen={showOnboarding}
-                onClose={closeOnboarding}
-                onComplete={completeOnboarding}
-                onDismiss={dismissOnboarding}
-                content={ONBOARDING_CONTENT.reputation}
-            />
-
-                {/* Analytics Summary */}
-            <ResponsiveCardRail
-                label="Reputation summary"
-                desktopColumns="md:grid-cols-5"
-                className="responsive-stat-summary"
-            >
-                {(loading || analytics) ? (
-                    <>
-                        <StatCard
-                            title="Negative reviews"
-                            badgeText="Negative"
-                            value={analytics?.negative_count ?? 0}
-                            icon={ThumbsDown}
-                            description="Negative reviews"
-                            colorTheme="red"
-                            isLoading={loading}
-                        />
-                        <StatCard
-                            title="Total reviews"
-                            badgeText="Total"
-                            value={analytics?.total_reviews ?? 0}
-                            icon={FileText}
-                            description="Total reviews"
-                            colorTheme="blue"
-                            isLoading={loading}
-                        />
-                        <StatCard
-                            title="Average rating"
-                            badgeText="Average"
-                            value={Number(analytics?.average_rating || 0).toFixed(1)}
-                            icon={Star}
-                            description="Average rating"
-                            colorTheme="blue"
-                            isLoading={loading}
-                        />
-                        <StatCard
-                            title="Neutral reviews"
-                            badgeText="Neutral"
-                            value={analytics?.neutral_count ?? 0}
-                            icon={MessageSquare}
-                            description="Neutral reviews"
-                            colorTheme="orange"
-                            isLoading={loading}
-                        />
-                        <StatCard
-                            title="Positive reviews"
-                            badgeText="Positive"
-                            value={analytics?.positive_count ?? 0}
-                            icon={ThumbsUp}
-                            description="Positive reviews"
-                            colorTheme="green"
-                            isLoading={loading}
-                        />
-                    </>
-                ) : null}
-            </ResponsiveCardRail>
-
-            {/* Reviews List */}
-            <Card>
-                <CardContent className="p-0">
-                    {loading ? (
-                        <div className="p-6 space-y-4">
-                            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-32" />)}
-                        </div>
-                    ) : filteredReviews.length === 0 ? (
-                        <EmptyState
-                            icon={Star}
-                            title="No reviews yet"
-                            description="Customer reviews appear here."
-                            actionLabel="Send Review Request"
-                            onAction={() => navigate('/review-requests')}
-                            className="p-12"
-                        />
-                    ) : (
-                        <div className="divide-y">
-                            {filteredReviews.map((review) => (
-                                <div key={review.id} className="p-4">
-                                    <div className="flex items-start justify-between mb-2">
-                                        <div>
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <p className="font-medium">{review.reviewer_name}</p>
-                                                <Badge variant="outline" className="text-xs">{review.platform}</Badge>
-                                                <Badge className={`text-xs ${getSentimentBadgeClass(review.sentiment)}`}>
-                                                    {review.sentiment}
-                                                </Badge>
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                                {renderStars(review.rating)}
-                                                <span className="text-sm text-muted-foreground ml-2">
-                                                    {new Date(review.created_at).toLocaleDateString()}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon">
-                                                    <MoreHorizontal className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem>
-                                                    <MessageSquare className="h-4 w-4 mr-2" />Respond
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem>
-                                                    <ExternalLink className="h-4 w-4 mr-2" />View Original
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </div>
-                                    <p className="text-sm text-muted-foreground">{review.content}</p>
-                                    {review.response && (
-                                        <div className="mt-3 pl-4 border-l-2 border-blue-600">
-                                            <p className="text-sm font-medium">Your Response:</p>
-                                            <p className="text-sm text-muted-foreground">{review.response}</p>
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
-        </PageLayout>
+      <PageLayout title="REVIEWS" icon={<Star className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}>
+        <OrganizationErrorState title="Unable to load reviews" icon={Star} />
+      </PageLayout>
     );
+  }
+
+  const totals = analytics?.overall;
+  const totalReviews = totals?.total_reviews ?? 0;
+  const neutralReviews = Math.max(0, totalReviews - (totals?.positive_reviews ?? 0) - (totals?.negative_reviews ?? 0));
+  const positivePercent = totalReviews > 0 ? Math.round(((totals?.positive_reviews ?? 0) / totalReviews) * 100) : 0;
+
+  return (
+    <PageLayout
+      title="REVIEWS"
+      icon={<Star className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
+      headerTools={{
+        search: <HeaderSearch value={searchQuery} onChange={setSearchQuery} label="Search reviews" placeholder="Search reviews..." />,
+        filters: <HeaderFilters label="Review filters" activeCount={ratingFilter === 'all' ? 0 : 1} preferExpanded>{ratingSelect()}</HeaderFilters>,
+        primaryAction: <HeaderAction label="Request review" icon={<Send className="h-4 w-4" />} onClick={() => navigate('/review-requests?compose=1')} />,
+      }}
+    >
+      <OnboardingModal isOpen={showOnboarding} onClose={closeOnboarding} onComplete={completeOnboarding} onDismiss={dismissOnboarding} content={ONBOARDING_CONTENT.reputation} />
+
+      {!loadError ? <ResponsiveCardRail label="Reputation summary" desktopColumns="md:grid-cols-5" className="responsive-stat-summary">
+        <StatCard title="Total reviews" badgeText="Total" value={totalReviews} icon={FileText} description="Across all sources" colorTheme="blue" isLoading={loading} />
+        <StatCard title="Average rating" badgeText="Average" value={Number(totals?.average_rating ?? 0).toFixed(1)} icon={Star} description="Out of 5" colorTheme="blue" isLoading={loading} />
+        <StatCard title="Positive reviews" badgeText="Positive" value={totals?.positive_reviews ?? 0} icon={ThumbsUp} description={`${positivePercent}% of reviews`} colorTheme="green" isLoading={loading} />
+        <StatCard title="Neutral reviews" badgeText="Neutral" value={neutralReviews} icon={MessageSquare} description="Neutral sentiment" colorTheme="gray" isLoading={loading} />
+        <StatCard title="Negative reviews" badgeText="Negative" value={totals?.negative_reviews ?? 0} icon={ThumbsDown} description="Needs attention" colorTheme="red" isLoading={loading} />
+      </ResponsiveCardRail> : null}
+
+      <Card>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="space-y-4 p-6">{Array.from({ length: 3 }, (_, index) => <Skeleton key={index} className="h-28" />)}</div>
+          ) : loadError ? (
+            <ErrorState
+              kind="section"
+              icon={Star}
+              title="Unable to load reviews"
+              description="We couldn't load your reviews. Try again."
+              onRetry={() => void fetchData()}
+            />
+          ) : filteredReviews.length === 0 ? (
+            <EmptyState
+              icon={Star}
+              kind={searchQuery || ratingFilter !== 'all' ? 'results' : 'passive'}
+              title={searchQuery || ratingFilter !== 'all' ? 'No matching reviews' : 'No reviews yet'}
+              description={searchQuery || ratingFilter !== 'all' ? undefined : 'Customer reviews will appear here.'}
+              actionLabel={searchQuery || ratingFilter !== 'all' ? 'Clear filters' : 'Request review'}
+              onAction={() => {
+                if (searchQuery || ratingFilter !== 'all') { setSearchQuery(''); setRatingFilter('all'); }
+                else navigate('/review-requests?compose=1');
+              }}
+              className="p-12"
+            />
+          ) : (
+            <div className="divide-y">
+              {filteredReviews.map(review => {
+                const statusVisual = getReviewStatusVisual(review.status);
+                const sentimentVisual = getReviewSentimentVisual(review.sentiment);
+                const StatusIcon = statusVisual.icon;
+                return (
+                  <article key={review.id} className="flex items-start gap-3 px-3 py-4 sm:px-4">
+                    <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full', statusVisual.iconBackgroundClass)}><StatusIcon className={cn('h-5 w-5', statusVisual.iconClass)} aria-hidden="true" /></div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="min-w-0 truncate font-medium">{review.reviewer_name || 'Anonymous'}</h3>
+                        <Badge className={cn('text-xs', statusVisual.badgeClass)}>{statusVisual.label}</Badge>
+                        <Badge className={cn('text-xs', sentimentVisual.badgeClass)}>{sentimentVisual.label}</Badge>
+                      </div>
+                      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                        <span className="inline-flex items-center gap-1.5"><ReputationPlatformMark platform={review.platform} />{getReputationPlatformLabel(review.platform)}</span>
+                        <span className="inline-flex items-center gap-0.5" aria-label={`${review.rating} out of 5 stars`}>
+                          {Array.from({ length: 5 }, (_, index) => <Star key={index} className={cn('h-3.5 w-3.5', index < review.rating ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground/30')} />)}
+                        </span>
+                        <time dateTime={review.review_date || review.created_at}>{new Date(review.review_date || review.created_at).toLocaleDateString()}</time>
+                      </div>
+                      {review.review_text ? <p className="mt-3 text-sm text-muted-foreground">{review.review_text}</p> : null}
+                      {review.response_text ? <div className="mt-3 border-l-2 border-blue-600 pl-3"><p className="text-xs font-medium text-foreground">Your response</p><p className="mt-1 text-sm text-muted-foreground">{review.response_text}</p></div> : null}
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" aria-label={`More actions for ${review.reviewer_name || 'review'}`}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openResponse(review)}><MessageSquare className="mr-2 h-4 w-4" />{review.response_text ? 'Edit response' : 'Respond'}</DropdownMenuItem>
+                        {review.review_url ? <DropdownMenuItem onClick={() => window.open(review.review_url, '_blank', 'noopener,noreferrer')}><ExternalLink className="mr-2 h-4 w-4" />View original</DropdownMenuItem> : null}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={Boolean(responseReview)} onOpenChange={open => { if (!open && !responding) setResponseReview(null); }}>
+        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg">
+          <DialogHeader><DialogTitle>Respond to {responseReview?.reviewer_name || 'review'}</DialogTitle></DialogHeader>
+          <Textarea aria-label="Review response" value={responseText} onChange={event => setResponseText(event.target.value)} placeholder="Write a public response..." className="min-h-36" />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setResponseReview(null)} disabled={responding}>Cancel</Button>
+            <Button onClick={() => void saveResponse()} disabled={responding || !responseText.trim()}>{responding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MessageSquare className="mr-2 h-4 w-4" />}Save response</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </PageLayout>
+  );
 }
 
 export default ReputationPage;

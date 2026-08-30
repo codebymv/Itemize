@@ -1,19 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Copy, FileText, FolderOpen, Mail, MoreHorizontal, Pencil, Plus, Search, Send, Trash2 } from 'lucide-react';
+import { Copy, FileText, FolderOpen, Mail, MoreHorizontal, Pencil, Plus, Send, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { HeaderAction, HeaderCombinedQuery, HeaderFilters, HeaderSearch } from '@/components/layout/DesktopHeaderTools';
 import { PageLayout } from '@/components/layout/PageLayout';
-import { MobileQueryBar } from '@/components/layout/MobileQueryBar';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { StatCard } from '@/components/StatCard';
@@ -82,7 +81,7 @@ export function EmailTemplatesPage() {
 
   const filters = (compact = false) => <div className={cn('flex gap-2', compact && 'flex-col')}>
     <Select value={categoryFilter} onValueChange={setCategoryFilter}><SelectTrigger className={compact ? 'h-11 w-full' : 'h-11 w-[142px] bg-muted/20'}><SelectValue placeholder="Category" /></SelectTrigger><SelectContent><SelectItem value="all">All categories</SelectItem>{categories.map(category => <SelectItem key={category} value={category}>{category}</SelectItem>)}</SelectContent></Select>
-    <Select value={statusFilter} onValueChange={value => setStatusFilter(value as StatusFilter)}><SelectTrigger className={compact ? 'h-11 w-full' : 'h-11 w-[126px] bg-muted/20'}><SelectValue placeholder="Status" /></SelectTrigger><SelectContent><SelectItem value="all">All statuses</SelectItem><SelectItem value="active">Active</SelectItem><SelectItem value="inactive">Inactive</SelectItem></SelectContent></Select>
+    <Select value={statusFilter} onValueChange={value => setStatusFilter(value as StatusFilter)}><SelectTrigger className={compact ? 'h-11 w-full' : 'h-11 w-[126px] bg-muted/20'}><SelectValue placeholder="Status" /></SelectTrigger><SelectContent><SelectItem value="all">All statuses</SelectItem><SelectItem value="active">Available</SelectItem><SelectItem value="inactive">Unavailable</SelectItem></SelectContent></Select>
   </div>;
 
   const handleDuplicate = async (template: EmailTemplate) => {
@@ -115,29 +114,27 @@ export function EmailTemplatesPage() {
   const hasQuery = Boolean(searchQuery.trim()) || categoryFilter !== 'all' || statusFilter !== 'all';
   const clearQuery = () => { setSearchQuery(''); setCategoryFilter('all'); setStatusFilter('all'); };
 
-  if (initError) return <PageLayout title="EMAIL TEMPLATES" icon={<FileText className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}><ErrorState title="Unable to load email templates" description={initError} icon={FileText} onAction={() => void fetchTemplates()} /></PageLayout>;
+  if (initError) return <PageLayout title="EMAIL TEMPLATES" icon={<FileText className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}><OrganizationErrorState title="Unable to load email templates" icon={FileText} /></PageLayout>;
 
   return <PageLayout
     title="EMAIL TEMPLATES"
     icon={<FileText className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
-    mobileClassName="items-stretch"
-    desktopTools={{
+    headerTools={{
       search: <HeaderSearch label="Search email templates" placeholder="Search email templates..." value={searchQuery} onChange={setSearchQuery} width="wide" />,
       filters: <HeaderFilters label="Filter email templates" activeCount={Number(categoryFilter !== 'all') + Number(statusFilter !== 'all')} compactChildren={filters(true)} preferExpanded="wide-lane">{filters()}</HeaderFilters>,
       combinedQuery: <HeaderCombinedQuery label="Search and filter email templates" placeholder="Search email templates..." value={searchQuery} onChange={setSearchQuery} activeCount={Number(Boolean(searchQuery.trim())) + Number(categoryFilter !== 'all') + Number(statusFilter !== 'all')}>{filters(true)}</HeaderCombinedQuery>,
       primaryAction: <HeaderAction label="New template" icon={<Plus className="h-4 w-4" />} onClick={() => navigate('/email-templates/new')} />,
     }}
-    mobileActions={<MobileQueryBar search={<div className="relative min-w-0 flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input aria-label="Search email templates" placeholder="Search templates..." value={searchQuery} onChange={event => setSearchQuery(event.target.value)} className="h-11 pl-10" /></div>} filters={<HeaderCombinedQuery label="Filter email templates" placeholder="Search email templates..." value={searchQuery} onChange={setSearchQuery} activeCount={Number(categoryFilter !== 'all') + Number(statusFilter !== 'all')}>{filters(true)}</HeaderCombinedQuery>} actions={<Button size="icon" aria-label="New template" className="h-11 w-11 shrink-0 bg-blue-600 text-white hover:bg-blue-700" onClick={() => navigate('/email-templates/new')}><Plus className="h-4 w-4" /></Button>} />}
   >
     {!loadError && <ResponsiveCardRail label="Email template summary" desktopColumns="md:grid-cols-2 lg:grid-cols-4" className="responsive-stat-summary">
       <StatCard title="Total email templates" badgeText="Total" value={stats.total} icon={FileText} description={`${stats.total} reusable`} colorTheme="blue" isLoading={loading} />
-      <StatCard title="Active email templates" badgeText="Active" value={stats.active} icon={Mail} description="Available to use" colorTheme="blue" isLoading={loading} />
-      <StatCard title="Inactive email templates" badgeText="Inactive" value={stats.inactive} icon={FileText} description="Parked templates" colorTheme="orange" isLoading={loading} />
+      <StatCard title="Available email templates" badgeText="Available" value={stats.active} icon={Mail} description="Ready for new sends" colorTheme="blue" isLoading={loading} />
+      <StatCard title="Unavailable email templates" badgeText="Unavailable" value={stats.inactive} icon={FileText} description="Not selectable" colorTheme="orange" isLoading={loading} />
       <StatCard title="Email template categories" badgeText="Categories" value={stats.categories} icon={FolderOpen} description="Catalog groups" colorTheme="blue" isLoading={loading} />
     </ResponsiveCardRail>}
     <Card><CardContent className="p-0">{loading ? <div className="space-y-4 p-6">{Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-20 w-full" />)}</div>
       : loadError ? <ErrorState title="Email templates unavailable" description={loadError} icon={FileText} onAction={() => void fetchTemplates()} className="p-12" />
-      : filteredTemplates.length === 0 ? <EmptyState icon={FileText} title={hasQuery ? 'No matching email templates' : 'No email templates yet'} description={hasQuery ? 'Try a different search or clear the current filters.' : 'Create a reusable template for campaign and automation emails.'} actionLabel={hasQuery ? 'Clear filters' : 'New template'} onAction={hasQuery ? clearQuery : () => navigate('/email-templates/new')} className="p-12" />
+      : filteredTemplates.length === 0 ? <EmptyState icon={FileText} kind={hasQuery ? 'results' : 'collection'} title={hasQuery ? 'No matching email templates' : 'No email templates yet'} description={hasQuery ? undefined : 'Create a reusable template for campaign and automation emails.'} actionLabel={hasQuery ? 'Clear filters' : 'New template'} onAction={hasQuery ? clearQuery : () => navigate('/email-templates/new')} className="p-12" />
       : <div className="divide-y">{filteredTemplates.map(template => {
         const visual = getCatalogStatusVisual(template.is_active);
         return <div key={template.id} role="link" tabIndex={0} aria-label={`Edit ${template.name}`} className="group flex cursor-pointer items-center gap-3 px-3 py-4 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-4" onClick={() => navigate(`/email-templates/${template.id}`)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); navigate(`/email-templates/${template.id}`); } }}><div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full', visual.iconBackgroundClass)}><Mail className={cn('h-5 w-5', visual.iconClass)} /></div><div className="min-w-0 flex-1"><div className="flex min-w-0 items-center gap-2"><h3 className="truncate text-sm font-medium md:text-base">{template.name}</h3><Badge className={cn('shrink-0 text-xs', visual.badgeClass)}>{visual.label}</Badge>{template.has_unpublished_changes && <Badge className={cn('shrink-0 text-xs', DRAFT_EMAIL_TEMPLATE_VISUAL.badgeClass)}>{DRAFT_EMAIL_TEMPLATE_VISUAL.label}</Badge>}</div><p className="mt-1 truncate text-sm text-muted-foreground">{template.subject}</p><div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">{template.category && <span>{template.category}</span>}<span>{template.variables.length} variable{template.variables.length === 1 ? '' : 's'}</span></div></div><DropdownMenu><DropdownMenuTrigger asChild onClick={event => event.stopPropagation()}><Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" disabled={workingId === template.id} aria-label={`More actions for ${template.name}`}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end" onClick={event => event.stopPropagation()}><DropdownMenuItem onClick={() => navigate(`/email-templates/${template.id}`)} className="group/menu"><Pencil className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Edit template</DropdownMenuItem><DropdownMenuItem onClick={() => void handleSendTest(template)} disabled={!template.published_version || Boolean(template.has_unpublished_changes)}><Send className="mr-2 h-4 w-4" />Send published test</DropdownMenuItem><DropdownMenuItem onClick={() => void handleDuplicate(template)}><Copy className="mr-2 h-4 w-4" />Duplicate</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setTemplateToDelete(template)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div>;

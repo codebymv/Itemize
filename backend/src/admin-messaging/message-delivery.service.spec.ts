@@ -14,6 +14,8 @@ const job = (overrides: Record<string, unknown> = {}) => ({
   contact_id: 9,
   email_template_id: 3,
   sms_template_id: null,
+  conversation_id: 21,
+  message_id: 34,
   payload: {
     to: 'ada@example.com',
     from: 'Itemize <onboarding@resend.dev>',

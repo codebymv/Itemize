@@ -45,6 +45,9 @@ import { RevenueFlowChart } from '@/components/payments/RevenueFlowChart';
 import { useOrganization } from '@/hooks/useOrganization';
 import { InvoicesWidget, SignaturesWidget, WorkspaceWidget, ContactsWidget } from '@/design-system/widgets';
 import { GetStartedCard } from '@/components/GetStartedCard';
+import { ErrorState } from '@/components/ErrorState';
+import { FailureNotice } from '@/components/FailureNotice';
+import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { getInvoiceStatusVisual } from './invoices/constants/invoiceConstants';
 import { getSignatureStatusVisual } from './signatures/constants/signatureConstants';
 
@@ -112,7 +115,7 @@ export function DashboardPage() {
         });
     };
     const navigate = useNavigate();
-    const { organizationId } = useOrganization();
+    const { organizationId, error: organizationError } = useOrganization();
 
     // Period selector hook
     const { period, setPeriod } = usePeriodSelector('30days');
@@ -129,6 +132,12 @@ export function DashboardPage() {
         isLoadingCommunications: commLoading,
         isLoadingPipelineDealAge,
         isLoadingRevenue: revenueLoading,
+        analyticsError,
+        conversionsError,
+        communicationsError,
+        pipelineDealAgeError,
+        revenueError,
+        refetchAll,
     } = useDashboardData({ organizationId, period });
 
     const recentActivities = analytics?.recentActivity?.map(transformApiActivityToDesignSystem) ?? [];
@@ -174,38 +183,45 @@ export function DashboardPage() {
         </Select>
     );
 
+    if (organizationError) {
+        return (
+            <PageLayout title="DASHBOARD" icon={<LayoutDashboard className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}>
+                <OrganizationErrorState title="Unable to load dashboard" icon={LayoutDashboard} />
+            </PageLayout>
+        );
+    }
+
+    if (analyticsError && !analytics) {
+        return (
+            <PageLayout title="DASHBOARD" icon={<LayoutDashboard className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}>
+                <ErrorState
+                    kind="page"
+                    title="Unable to load dashboard"
+                    description="We couldn't load your overview. Try again."
+                    icon={LayoutDashboard}
+                    onAction={refetchAll}
+                />
+            </PageLayout>
+        );
+    }
+
     return (
         <PageLayout
             title="DASHBOARD"
             icon={<LayoutDashboard className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />}
-            desktopTools={{
+            headerTools={{
                 filters: (
-                    <HeaderFilters label="Filter performance period" compactChildren={periodSelect(true)} preferExpanded>
+                    <HeaderFilters
+                        label="Performance period"
+                        compactLabel={period.replace('days', 'd')}
+                        compactChildren={periodSelect(true)}
+                        preferExpanded
+                    >
                         {periodSelect()}
                     </HeaderFilters>
                 ),
-                primaryAction: <HeaderAction label="Canvas" onClick={() => navigate('/canvas')} icon={<Map className="h-4 w-4" />} />,
+                secondaryAction: <HeaderAction prominence="secondary" label="Canvas" onClick={() => navigate('/canvas')} icon={<Map className="h-4 w-4" />} />,
             }}
-            mobileActions={
-                <>
-                    <Select value={period} onValueChange={(value) => setPeriod(value as PeriodOption)}>
-                        <SelectTrigger aria-label="Performance period" className="w-[140px] h-9 bg-muted/20 border-border/50">
-                            <SelectValue placeholder="Select period" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {DASHBOARD_PERIODS.map((value) => (
-                                <SelectItem key={value} value={value}>
-                                    {periodLabels[value]}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light flex-1" onClick={() => navigate('/canvas')}>
-                        <Map className="h-4 w-4 mr-2" />
-                        Canvas
-                    </Button>
-                </>
-            }
         >
             {/* Welcome Section */}
             <div className="mb-8 min-[1000px]:flex min-[1000px]:items-center min-[1000px]:justify-between min-[1000px]:gap-6">
@@ -216,6 +232,15 @@ export function DashboardPage() {
             </div>
 
             <GetStartedCard />
+
+            {analyticsError && analytics ? (
+                <FailureNotice
+                    title="Dashboard data may be out of date"
+                    description="Your last loaded overview is still visible."
+                    onRetry={refetchAll}
+                    className="mb-8"
+                />
+            ) : null}
 
             {/* Overview */}
             <Card className="mb-8" data-dashboard-section="overview">
@@ -418,7 +443,7 @@ export function DashboardPage() {
                                 {
                                     label: 'Total',
                                     value: analytics?.contacts?.total ?? 0,
-                                    color: 'text-gray-600 dark:text-gray-400',
+                                    color: 'text-muted-foreground',
                                 },
                                 {
                                     label: 'This Month',
@@ -460,7 +485,21 @@ export function DashboardPage() {
                     </Button>
                 </CardHeader>
                 <CardContent>
-                    <RevenueFlowChart data={revenueData} isLoading={revenueLoading} compact />
+                    {revenueError && !revenueData ? (
+                        <ErrorState
+                            kind="inline"
+                            title="Revenue data unavailable"
+                            description="We couldn't load revenue flow. Try again."
+                            onAction={refetchAll}
+                        />
+                    ) : (
+                        <div className="space-y-4">
+                            {revenueError ? (
+                                <FailureNotice title="Revenue data may be out of date" onRetry={refetchAll} />
+                            ) : null}
+                            <RevenueFlowChart data={revenueData} isLoading={revenueLoading} compact />
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 
@@ -519,7 +558,16 @@ export function DashboardPage() {
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <PipelineDealAgeCard dealAge={pipelineDealAge} isLoading={isLoadingPipelineDealAge} />
+                            {pipelineDealAgeError ? (
+                                <ErrorState
+                                    kind="inline"
+                                    title="Deal age unavailable"
+                                    description="We couldn't load open deal age. Try again."
+                                    onAction={refetchAll}
+                                />
+                            ) : (
+                                <PipelineDealAgeCard dealAge={pipelineDealAge} isLoading={isLoadingPipelineDealAge} />
+                            )}
                         </CardContent>
                     </Card>
                 </CardContent>
@@ -576,6 +624,14 @@ export function DashboardPage() {
                         </div>
                     </CardHeader>
                     <CardContent className="flex-1 flex flex-col">
+                        {conversionsError ? (
+                            <ErrorState
+                                kind="inline"
+                                title="Conversion rates unavailable"
+                                description="We couldn't load conversion rates. Try again."
+                                onAction={refetchAll}
+                            />
+                        ) : (
                         <div className="flex flex-col gap-3 h-full">
                             <div className="grid grid-cols-2 gap-3 flex-1">
                                 <ConversionRateCard
@@ -629,6 +685,7 @@ export function DashboardPage() {
                                 </CardContent>
                             </Card>
                         </div>
+                        )}
                     </CardContent>
                 </Card>
 
@@ -645,7 +702,16 @@ export function DashboardPage() {
                         </div>
                     </CardHeader>
                     <CardContent className="flex-1 flex flex-col">
-                        <CommunicationStatsCard stats={commStats} isLoading={commLoading} />
+                        {communicationsError ? (
+                            <ErrorState
+                                kind="inline"
+                                title="Communication data unavailable"
+                                description="We couldn't load communication performance. Try again."
+                                onAction={refetchAll}
+                            />
+                        ) : (
+                            <CommunicationStatsCard stats={commStats} isLoading={commLoading} />
+                        )}
                     </CardContent>
                 </Card>
             </ResponsiveCardRail>

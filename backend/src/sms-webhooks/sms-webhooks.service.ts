@@ -8,6 +8,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
+import { NotificationsService } from '../notifications/notifications.service';
 
 export const SMS_STATUS_MAP: Readonly<Record<string, string>> = Object.freeze({
   accepted: 'queued',
@@ -46,7 +47,10 @@ export type InboundOutcome = {
 
 @Injectable()
 export class SmsWebhooksService {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async processStatusEvent(values: {
     messageSid: string;
@@ -66,14 +70,18 @@ export class SmsWebhooksService {
       );
       if (claim.rows.length === 0) return { duplicate: true };
 
-      await client.query(
+      const logs = await client.query<{
+        organization_id: number;
+        metadata: Record<string, unknown> | null;
+      }>(
         `UPDATE sms_logs
          SET status = $1,
              ${values.dbStatus === 'delivered' ? 'delivered_at = CURRENT_TIMESTAMP,' : ''}
              ${values.dbStatus === 'sent' ? 'sent_at = CURRENT_TIMESTAMP,' : ''}
              error_code = $2,
              error_message = $3
-         WHERE external_id = $4 AND direction = 'outbound'`,
+         WHERE external_id = $4 AND direction = 'outbound'
+         RETURNING organization_id,metadata`,
         [
           values.dbStatus,
           values.errorCode,
@@ -81,6 +89,9 @@ export class SmsWebhooksService {
           values.messageSid,
         ],
       );
+      for (const log of logs.rows) {
+        await this.syncOutboundDelivery(client, log, values);
+      }
       await client.query(
         `UPDATE sms_webhook_events
          SET processing_status = 'processed'
@@ -137,8 +148,14 @@ export class SmsWebhooksService {
       }
 
       const organizationId = receiver.rows[0].organization_id;
-      const contacts = await client.query<{ id: number }>(
-        `SELECT c.id
+      const contacts = await client.query<{
+        id: number;
+        first_name: string | null;
+        last_name: string | null;
+        email: string | null;
+        phone: string | null;
+      }>(
+        `SELECT c.id,c.first_name,c.last_name,c.email,c.phone
          FROM contacts c
          WHERE c.organization_id = $1
            AND (c.phone = $2 OR c.phone = $3)
@@ -160,8 +177,8 @@ export class SmsWebhooksService {
       }
 
       const contactId = contacts.rows[0].id;
-      const existingConversation = await client.query<{ id: number }>(
-        `SELECT id FROM conversations
+      const existingConversation = await client.query<{ id: number; assigned_to: number | null }>(
+        `SELECT id,assigned_to FROM conversations
          WHERE contact_id = $1 AND organization_id = $2 AND channel = 'sms'
          ORDER BY last_message_at DESC
          LIMIT 1`,
@@ -191,10 +208,11 @@ export class SmsWebhooksService {
         conversationId = created.rows[0].id;
       }
 
-      await client.query(
+      const message = await client.query<{ id: number }>(
         `INSERT INTO messages
            (conversation_id, organization_id, sender_type, sender_contact_id, channel, content)
-         VALUES ($1, $2, 'contact', $3, 'sms', $4)`,
+         VALUES ($1, $2, 'contact', $3, 'sms', $4)
+         RETURNING id`,
         [conversationId, organizationId, contactId, values.messageBody],
       );
       await client.query(
@@ -220,7 +238,112 @@ export class SmsWebhooksService {
         [eventKey, organizationId, contactId],
       );
 
+      const contact = contacts.rows[0];
+      const contactName = [contact.first_name, contact.last_name].filter(Boolean).join(' ')
+        || contact.email
+        || contact.phone
+        || normalizedFrom;
+      await this.notifications.createForOrganizationOwnerWithClient(client, {
+        organizationId,
+        preferredUserId: existingConversation.rows[0]?.assigned_to ?? null,
+        eventType: 'communication.message_received',
+        entityType: 'conversation',
+        entityId: conversationId,
+        dedupeKey: `communication:sms:${values.messageSid}:received`,
+        payload: {
+          channel: 'sms',
+          conversationId,
+          messageId: Number(message.rows[0].id),
+          contactId,
+        },
+        category: 'collaboration',
+        priority: 'normal',
+        title: `New SMS from ${contactName}`,
+        body: values.messageBody.slice(0, 240),
+        href: `/inbox?conversation=${conversationId}`,
+      });
+
       return { duplicate: false, routed: true };
+    });
+  }
+
+  private async syncOutboundDelivery(
+    client: PoolClient,
+    log: { organization_id: number; metadata: Record<string, unknown> | null },
+    values: {
+      messageSid: string;
+      dbStatus: string;
+      errorCode: string | null;
+      errorMessage: string | null;
+      providerStatus: string;
+    },
+  ): Promise<void> {
+    const deliveryJobId = Number(log.metadata?.message_delivery_job_id);
+    if (!Number.isInteger(deliveryJobId) || deliveryJobId < 1) return;
+    const delivery = await client.query<{
+      id: number;
+      organization_id: number;
+      requested_by_user_id: number | null;
+      conversation_id: number | null;
+      message_id: number | null;
+      first_name: string | null;
+      last_name: string | null;
+      email: string | null;
+      phone: string | null;
+    }>(
+      `SELECT job.id,job.organization_id,job.requested_by_user_id,
+              job.conversation_id,job.message_id,
+              contact.first_name,contact.last_name,contact.email,contact.phone
+       FROM message_delivery_jobs job
+       LEFT JOIN contacts contact
+         ON contact.organization_id=job.organization_id AND contact.id=job.contact_id
+       WHERE job.organization_id=$1 AND job.id=$2
+       FOR UPDATE OF job`,
+      [log.organization_id, deliveryJobId],
+    );
+    const job = delivery.rows[0];
+    if (!job?.conversation_id || !job.message_id) return;
+    const terminal = values.dbStatus === 'failed' || values.dbStatus === 'undelivered';
+    await client.query(
+      `UPDATE messages
+       SET metadata=COALESCE(metadata, '{}'::jsonb) || $3::jsonb
+       WHERE organization_id=$1 AND id=$2`,
+      [
+        job.organization_id,
+        job.message_id,
+        JSON.stringify({
+          delivery_status: terminal ? 'failed' : values.dbStatus,
+          provider_event: values.providerStatus,
+          ...(values.errorCode ? { delivery_error_code: values.errorCode } : {}),
+          ...(values.errorMessage ? { delivery_error: values.errorMessage } : {}),
+        }),
+      ],
+    );
+    if (!terminal) return;
+    const contactName = [job.first_name, job.last_name].filter(Boolean).join(' ')
+      || job.email
+      || job.phone
+      || 'a contact';
+    await this.notifications.createForOrganizationOwnerWithClient(client, {
+      organizationId: job.organization_id,
+      preferredUserId: job.requested_by_user_id,
+      actorUserId: job.requested_by_user_id,
+      eventType: 'communication.delivery_failed',
+      entityType: 'conversation',
+      entityId: job.conversation_id,
+      dedupeKey: `communication:delivery:${job.id}:attention`,
+      payload: {
+        channel: 'sms',
+        conversationId: job.conversation_id,
+        messageId: job.message_id,
+        deliveryJobId: job.id,
+        providerEvent: values.providerStatus,
+      },
+      category: 'business',
+      priority: 'high',
+      title: 'SMS delivery failed',
+      body: `Your message to ${contactName} could not be delivered.`,
+      href: `/inbox?conversation=${job.conversation_id}`,
     });
   }
 

@@ -1,21 +1,42 @@
-import type { ChangeEvent, ReactNode } from 'react';
-import { Filter, RefreshCw, Search, SlidersHorizontal } from 'lucide-react';
+import {
+  Children,
+  Fragment,
+  isValidElement,
+  useState,
+  type ChangeEvent,
+  type ReactNode,
+} from 'react';
+import type { LucideIcon } from 'lucide-react';
+import {
+  ChevronDown,
+  Filter,
+  MoreHorizontal,
+  RefreshCw,
+  Search,
+  SlidersHorizontal,
+} from 'lucide-react';
 import { AppHeaderIconButton } from '@/components/ui/app-header-icon-button';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { NavigationRow } from '@/components/ui/navigation-row';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { IconTabsList, IconTabsTrigger, Tabs } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 export interface DesktopHeaderToolsProps {
+  /** Persistent editor modes; compacts from labels to icons to one selector. */
+  modeNavigation?: ReactNode;
   search?: ReactNode;
   filters?: ReactNode;
   combinedQuery?: ReactNode;
-  /** Read-only entity state shown only when the command lane has room. */
+  /** Read-only entity state kept visible while lower-priority controls compact. */
   status?: ReactNode;
   secondaryAction?: ReactNode;
   primaryAction?: ReactNode;
 }
+
+export type ResponsiveHeaderToolsProps = DesktopHeaderToolsProps;
 
 interface HeaderSearchProps {
   value: string;
@@ -29,6 +50,8 @@ interface HeaderSearchProps {
 interface HeaderFiltersProps {
   children: ReactNode;
   compactChildren?: ReactNode;
+  /** Short current value used instead of a generic filter icon when context matters. */
+  compactLabel?: string;
   label: string;
   activeCount?: number;
   /**
@@ -56,11 +79,25 @@ interface HeaderActionProps {
   prominence?: 'primary' | 'secondary';
 }
 
+export interface HeaderModeNavigationItem {
+  value: string;
+  label: string;
+  icon: LucideIcon;
+}
+
+interface HeaderModeNavigationProps {
+  value: string;
+  onValueChange: (value: string) => void;
+  items: HeaderModeNavigationItem[];
+  label: string;
+}
+
 /**
  * One non-wrapping desktop command lane. Named slots preserve the order
  * search -> filters -> secondary -> primary, with primary nearest global chrome.
  */
-export function DesktopHeaderTools({
+function HeaderToolsLane({
+  modeNavigation,
   search,
   filters,
   combinedQuery,
@@ -69,22 +106,209 @@ export function DesktopHeaderTools({
   primaryAction,
 }: DesktopHeaderToolsProps) {
   return (
+    <div className="desktop-header-tools__lane">
+      {modeNavigation ? (
+        <div className="desktop-header-tools__mode">{modeNavigation}</div>
+      ) : null}
+      {combinedQuery ? (
+        <div className="desktop-header-tools__combined-query">{combinedQuery}</div>
+      ) : null}
+      {search ? <div className="desktop-header-tools__search">{search}</div> : null}
+      {filters ? <div className="desktop-header-tools__filters">{filters}</div> : null}
+      {status ? <div className="desktop-header-tools__status flex shrink-0">{status}</div> : null}
+      {secondaryAction ? (
+        <div className="desktop-header-tools__secondary">{secondaryAction}</div>
+      ) : null}
+      {primaryAction ? (
+        <div className="desktop-header-tools__primary">{primaryAction}</div>
+      ) : null}
+    </div>
+  );
+}
+
+function MobileHeaderOverflow({ children }: { children: ReactNode }) {
+  return (
+    <Popover>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <PopoverTrigger asChild>
+            <AppHeaderIconButton aria-label="More page actions">
+              <MoreHorizontal className="h-4 w-4" />
+            </AppHeaderIconButton>
+          </PopoverTrigger>
+        </TooltipTrigger>
+        <TooltipContent>More</TooltipContent>
+      </Tooltip>
+      <PopoverContent align="end" className="mobile-header-overflow w-64 space-y-2 p-2">
+        {children}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function countMobileActions(node: ReactNode): number {
+  if (node == null || typeof node === 'boolean') return 0;
+  if (Array.isArray(node)) {
+    return node.reduce((total, child) => total + countMobileActions(child), 0);
+  }
+  if (!isValidElement(node)) return 1;
+
+  // Transparent grouping elements should not consume an action slot of their
+  // own. Count their controls so dense editor groups can collapse as a unit.
+  if (node.type === Fragment || node.type === 'div' || node.type === 'span') {
+    return Children.toArray(node.props.children).reduce(
+      (total, child) => total + countMobileActions(child),
+      0,
+    );
+  }
+
+  return 1;
+}
+
+function MobileHeaderTools({
+  modeNavigation,
+  search,
+  filters,
+  combinedQuery,
+  status,
+  secondaryAction,
+  primaryAction,
+}: ResponsiveHeaderToolsProps) {
+  const preferredQuery = combinedQuery ?? search ?? filters;
+  const extraQuery = combinedQuery ? null : search && filters ? filters : null;
+  const visibleContext = modeNavigation ?? preferredQuery;
+  const overflowQuery = modeNavigation ? preferredQuery : extraQuery;
+  const hasVisibleContext = Boolean(visibleContext);
+  const secondaryActionCount = countMobileActions(secondaryAction);
+  const overflowSecondary = secondaryAction && primaryAction && secondaryActionCount > 1
+    ? secondaryAction
+    : null;
+  const showSecondaryDirectly = Boolean(secondaryAction && !overflowSecondary);
+  // Entity state already hands off to the detail header on compact layouts.
+  // Keep it in the sticky row only when it is the sole page-level context;
+  // otherwise action space and an intact page title take priority.
+  const showStatusDirectly = Boolean(
+    status && !primaryAction && !secondaryAction && !hasVisibleContext,
+  );
+  const hasOverflow = Boolean(overflowQuery || overflowSecondary);
+
+  return (
+    <div className="mobile-header-tools" data-mobile-header-tools>
+      {visibleContext ? <div className="mobile-header-tools__context">{visibleContext}</div> : null}
+      {showStatusDirectly ? <div className="mobile-header-tools__status">{status}</div> : null}
+      {showSecondaryDirectly ? (
+        <div className="mobile-header-tools__secondary">{secondaryAction}</div>
+      ) : null}
+      {hasOverflow ? (
+        <MobileHeaderOverflow>
+          {overflowQuery ? <div className="mobile-header-overflow__query">{overflowQuery}</div> : null}
+          {overflowSecondary ? (
+            <div className="mobile-header-overflow__action grid gap-2">{overflowSecondary}</div>
+          ) : null}
+        </MobileHeaderOverflow>
+      ) : null}
+      {primaryAction ? <div className="mobile-header-tools__primary">{primaryAction}</div> : null}
+    </div>
+  );
+}
+
+/** Legacy desktop-only renderer retained while pages migrate to one responsive command spec. */
+export function DesktopHeaderTools(props: DesktopHeaderToolsProps) {
+  return (
     <div className="desktop-header-tools" data-desktop-header-tools>
-      <div className="desktop-header-tools__lane">
-        {combinedQuery ? (
-          <div className="desktop-header-tools__combined-query">{combinedQuery}</div>
-        ) : null}
-        {search ? <div className="desktop-header-tools__search">{search}</div> : null}
-        {filters ? <div className="desktop-header-tools__filters">{filters}</div> : null}
-        {status ? <div className="desktop-header-tools__status">{status}</div> : null}
-        {secondaryAction ? (
-          <div className="desktop-header-tools__secondary">{secondaryAction}</div>
-        ) : null}
-        {primaryAction ? (
-          <div className="desktop-header-tools__primary">{primaryAction}</div>
-        ) : null}
+      <HeaderToolsLane {...props} />
+    </div>
+  );
+}
+
+/**
+ * One command declaration rendered in both the sticky mobile identity row and
+ * the desktop shell lane. Compact children and action labels respond to the
+ * actual space remaining beside the page title.
+ */
+export function ResponsiveHeaderTools(props: ResponsiveHeaderToolsProps) {
+  return (
+    <div
+      className="desktop-header-tools desktop-header-tools--responsive"
+      data-responsive-header-tools
+    >
+      <MobileHeaderTools {...props} />
+      <div className="responsive-header-tools__desktop">
+        <HeaderToolsLane {...props} />
       </div>
     </div>
+  );
+}
+
+export function HeaderModeNavigation({
+  value,
+  onValueChange,
+  items,
+  label,
+}: HeaderModeNavigationProps) {
+  const [compactOpen, setCompactOpen] = useState(false);
+  const activeItem = items.find((item) => item.value === value) ?? items[0];
+
+  if (!activeItem) return null;
+
+  const ActiveIcon = activeItem.icon;
+
+  return (
+    <>
+      <div className="desktop-header-mode__tabs">
+        <Tabs value={value} onValueChange={onValueChange}>
+          <IconTabsList aria-label={label} className="gap-0.5">
+            {items.map((item) => {
+              const Icon = item.icon;
+              return (
+                <IconTabsTrigger
+                  key={item.value}
+                  value={item.value}
+                  aria-label={item.label}
+                  className="gap-0.5 px-1"
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="desktop-header-mode__label">{item.label}</span>
+                </IconTabsTrigger>
+              );
+            })}
+          </IconTabsList>
+        </Tabs>
+      </div>
+      <div className="desktop-header-mode__compact">
+        <Popover open={compactOpen} onOpenChange={setCompactOpen}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <PopoverTrigger asChild>
+                <AppHeaderIconButton aria-label={`${label}: ${activeItem.label}`}>
+                  <ActiveIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                </AppHeaderIconButton>
+              </PopoverTrigger>
+            </TooltipTrigger>
+            <TooltipContent>{activeItem.label}</TooltipContent>
+          </Tooltip>
+          <PopoverContent align="end" className="w-56 p-2">
+            <div role="radiogroup" aria-label={label} className="space-y-1">
+              {items.map((item) => (
+                <NavigationRow
+                  key={item.value}
+                  role="radio"
+                  aria-checked={item.value === value}
+                  active={item.value === value}
+                  icon={item.icon}
+                  onClick={() => {
+                    onValueChange(item.value);
+                    setCompactOpen(false);
+                  }}
+                >
+                  {item.label}
+                </NavigationRow>
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+    </>
   );
 }
 
@@ -150,6 +374,7 @@ function CountBadge({ count }: { count: number }) {
 export function HeaderFilters({
   children,
   compactChildren,
+  compactLabel,
   label,
   activeCount = 0,
   preferExpanded = false,
@@ -178,10 +403,23 @@ export function HeaderFilters({
           <Tooltip>
             <TooltipTrigger asChild>
               <PopoverTrigger asChild>
-                <AppHeaderIconButton className="relative" aria-label={label}>
-                  <Filter className="h-4 w-4" />
-                  <CountBadge count={activeCount} />
-                </AppHeaderIconButton>
+                {compactLabel ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="relative h-11 min-w-11 gap-0.5 px-2 font-light"
+                    aria-label={`${label}: ${compactLabel}`}
+                  >
+                    <span className="whitespace-nowrap">{compactLabel}</span>
+                    <ChevronDown aria-hidden="true" className="h-3.5 w-3.5" />
+                    <CountBadge count={activeCount} />
+                  </Button>
+                ) : (
+                  <AppHeaderIconButton className="relative" aria-label={label}>
+                    <Filter className="h-4 w-4" />
+                    <CountBadge count={activeCount} />
+                  </AppHeaderIconButton>
+                )}
               </PopoverTrigger>
             </TooltipTrigger>
             <TooltipContent>{label}</TooltipContent>

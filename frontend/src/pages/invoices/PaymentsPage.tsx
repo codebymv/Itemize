@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-    Search,
     Plus,
     CreditCard,
     DollarSign,
@@ -46,7 +45,6 @@ import {
     type RevenueFlow,
 } from '@/services/invoicePaymentsApi';
 import { PageLayout } from '@/components/layout/PageLayout';
-import { MobileQueryBar } from '@/components/layout/MobileQueryBar';
 import {
     HeaderAction,
     HeaderCombinedQuery,
@@ -55,6 +53,7 @@ import {
 } from '@/components/layout/DesktopHeaderTools';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { StatCard } from '@/components/StatCard';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { RevenueFlowChart } from '@/components/payments/RevenueFlowChart';
@@ -430,11 +429,7 @@ export function PaymentsPage() {
                 title="PAYMENTS"
                 icon={<DollarSign className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
             >
-                <ErrorState
-                    title="Failed to initialize"
-                    description={initError}
-                    onAction={() => void fetchPayments()}
-                />
+                <OrganizationErrorState title="Unable to load payments" icon={DollarSign} />
             </PageLayout>
         );
     }
@@ -443,8 +438,7 @@ export function PaymentsPage() {
         <PageLayout
             title="PAYMENTS"
             icon={<DollarSign className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
-            mobileClassName="flex-col items-stretch gap-2"
-            desktopTools={{
+            headerTools={{
                 search: (
                     <HeaderSearch
                         label="Search payments"
@@ -491,28 +485,6 @@ export function PaymentsPage() {
                     />
                 ),
             }}
-            mobileActions={
-                <MobileQueryBar
-                  search={
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                            aria-label="Search payments"
-                            placeholder="Search payments..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 w-full bg-muted/20 border-border/50"
-                        />
-                    </div>
-                  }
-                  filters={<HeaderCombinedQuery label="Search and filter payments" placeholder="Search payments..." value={searchQuery} onChange={setSearchQuery} activeCount={headerQueryCount}><div className="space-y-2">{periodSelect(true)}{paymentFilters(true)}</div></HeaderCombinedQuery>}
-                  actions={
-                    <Button size="icon" aria-label="Add payment" className="h-11 w-11 bg-blue-600 text-white hover:bg-blue-700" onClick={() => setShowCreateModal(true)}>
-                        <Plus className="h-4 w-4" />
-                    </Button>
-                  }
-                />
-            }
         >
             {!loadError && overviewCurrencies.map((currencyOverview) => {
                 const netIsNegative = currencyOverview.netAmount < 0;
@@ -606,16 +578,19 @@ export function PaymentsPage() {
                     ) : payments.length === 0 ? (
                         <EmptyState
                             icon={DollarSign}
+                            kind={headerQueryCount > 0 ? 'results' : 'collection'}
                             title={headerQueryCount > 0
                                 ? 'No matching payments'
                                 : period === 'all' ? 'No payments yet' : 'No payments in this period'}
                             description={headerQueryCount > 0
-                                ? 'Try changing your search or filters'
+                                ? undefined
                                 : period === 'all'
-                                    ? 'Record a payment or receive one through an invoice'
-                                    : `There was no payment activity in ${PAYMENT_PERIOD_LABELS[period].toLowerCase()}`}
-                            actionLabel={headerQueryCount === 0 ? 'Add payment' : undefined}
-                            onAction={headerQueryCount === 0 ? () => setShowCreateModal(true) : undefined}
+                                    ? 'Record a payment or receive one through an invoice.'
+                                    : `There was no payment activity in ${PAYMENT_PERIOD_LABELS[period].toLowerCase()}.`}
+                            actionLabel={headerQueryCount > 0 ? 'Clear filters' : 'Add payment'}
+                            onAction={headerQueryCount > 0
+                                ? () => { setSearchQuery(''); setMethodFilter('all'); setStatusFilter('all'); }
+                                : () => setShowCreateModal(true)}
                             className="p-12"
                         />
                     ) : (

@@ -790,6 +790,17 @@ export interface Conversation {
   contact_last_name?: string;
   contact_email?: string;
   contact_phone?: string;
+  social_conversation_id?: number;
+  provider_account_name?: string;
+  provider_participant_name?: string;
+  provider_participant_username?: string;
+  provider_participant_profile_pic?: string;
+  chat_session_id?: number;
+  chat_session_status?: string;
+  chat_visitor_name?: string;
+  chat_visitor_email?: string;
+  chat_visitor_phone?: string;
+  chat_widget_name?: string;
   messages?: Message[];
 }
 

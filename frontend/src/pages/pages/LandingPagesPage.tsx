@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Layout, MoreHorizontal, Trash2, Copy, Eye, EyeOff, BarChart3, Pencil, Archive, ChevronDown, Maximize2, Loader2 } from 'lucide-react';
+import { Plus, Layout, MoreHorizontal, Trash2, Copy, Eye, EyeOff, BarChart3, Pencil, Archive, ChevronDown, Maximize2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import {
     DropdownMenu,
@@ -29,11 +28,11 @@ import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { getPages, getPage, updatePage, deletePage, duplicatePage, createPage, type Page } from '@/services/pagesApi';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { HeaderAction, HeaderCombinedQuery, HeaderFilters, HeaderSearch } from '@/components/layout/DesktopHeaderTools';
-import { MobileQueryBar } from '@/components/layout/MobileQueryBar';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { StatCard } from '@/components/StatCard';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { cn } from '@/lib/utils';
 import { getContentStatusVisual } from '@/pages/contentVisuals';
@@ -237,13 +236,9 @@ const handleDuplicate = async (id: number) => {
         return (
             <PageLayout
                 title="LANDING PAGES"
-                icon={<Layout className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+                icon={<Layout className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />}
             >
-                <ErrorState
-                    description={initError}
-                    icon={Layout}
-                    onAction={() => void fetchPages()}
-                />
+                <OrganizationErrorState title="Unable to load pages" icon={Layout} />
             </PageLayout>
         );
     }
@@ -252,29 +247,12 @@ const handleDuplicate = async (id: number) => {
         <PageLayout
             title="PAGES"
             icon={<Layout className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
-            mobileClassName="items-stretch"
-            desktopTools={{
+            headerTools={{
                 search: <HeaderSearch label="Search pages" placeholder="Search pages..." value={searchQuery} onChange={setSearchQuery} width="wide" />,
                 filters: <HeaderFilters label="Filter pages by status" activeCount={Number(statusFilter !== 'all')} compactChildren={statusSelect(true)} preferExpanded="when-roomy">{statusSelect()}</HeaderFilters>,
                 combinedQuery: <HeaderCombinedQuery label="Search and filter pages" placeholder="Search pages..." value={searchQuery} onChange={setSearchQuery} activeCount={Number(Boolean(normalizedQuery)) + Number(statusFilter !== 'all')}>{statusSelect(true)}</HeaderCombinedQuery>,
                 primaryAction: <HeaderAction label="New page" icon={<Plus className="h-4 w-4" />} onClick={handleCreatePage} />,
             }}
-            mobileActions={
-                <MobileQueryBar
-                    search={<div className="relative min-w-0 flex-1">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                            <Input
-                                aria-label="Search pages"
-                                placeholder="Search pages..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="h-11 w-full bg-muted/20 pl-10"
-                            />
-                    </div>}
-                    filters={<HeaderCombinedQuery label="Search and filter pages" placeholder="Search pages..." value={searchQuery} onChange={setSearchQuery} activeCount={Number(Boolean(normalizedQuery)) + Number(statusFilter !== 'all')}>{statusSelect(true)}</HeaderCombinedQuery>}
-                    actions={<Button size="icon" aria-label="New page" className="h-11 w-11 shrink-0 bg-blue-600 text-white hover:bg-blue-700" onClick={handleCreatePage}><Plus className="h-4 w-4" /></Button>}
-                />
-            }
         >
             <OnboardingModal
                 isOpen={showOnboarding}
@@ -301,8 +279,9 @@ const handleDuplicate = async (id: number) => {
                     ) : filteredPages.length === 0 ? (
                         <EmptyState
                             icon={Layout}
+                            kind={hasQuery ? 'results' : 'collection'}
                             title={hasQuery ? 'No matching pages' : 'No pages yet'}
-                            description={hasQuery ? 'Try a different search or clear the current filters.' : 'Create a page to publish content and capture leads.'}
+                            description={hasQuery ? undefined : 'Create a page to publish content and capture leads.'}
                             actionLabel={hasQuery ? 'Clear filters' : 'New page'}
                             onAction={hasQuery ? clearQuery : handleCreatePage}
                             className="p-12"

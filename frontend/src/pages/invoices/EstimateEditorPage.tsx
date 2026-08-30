@@ -54,6 +54,7 @@ import {
 } from '@/components/layout/DesktopHeaderTools';
 import { ShellBackButton } from '@/components/layout/ShellBackButton';
 import { ErrorState } from '@/components/ErrorState';
+import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { getContact, getContacts } from '@/services/contactsApi';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useDirtyState } from '@/hooks/useDirtyState';
@@ -126,7 +127,7 @@ export function EstimateEditorPage() {
     const [loadError, setLoadError] = useState(false);
     const [loadAttempt, setLoadAttempt] = useState(0);
     const [saving, setSaving] = useState(false);
-    const { organizationId } = useOrganization();
+    const { organizationId, error: organizationError } = useOrganization();
     const [contacts, setContacts] = useState<Contact[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
 
@@ -459,6 +460,14 @@ export function EstimateEditorPage() {
         }
     };
 
+    if (organizationError) {
+        return (
+            <PageLayout title="ESTIMATE" icon={<FileText className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}>
+                <OrganizationErrorState title="Unable to load estimate" icon={FileText} />
+            </PageLayout>
+        );
+    }
+
     if (loading) {
         return (
             <PageLayout
@@ -489,6 +498,7 @@ export function EstimateEditorPage() {
                 }
             >
                 <ErrorState
+                    kind="page"
                     title="Estimate unavailable"
                     description="We could not load this estimate. Your data has not been changed."
                     onAction={() => setLoadAttempt(current => current + 1)}
@@ -566,7 +576,7 @@ export function EstimateEditorPage() {
                     if (confirmLeave()) navigate('/estimates');
                 }} />
             }
-            desktopTools={{
+            headerTools={{
                 status: <Badge className={cn('pointer-events-none whitespace-nowrap', statusVisual.badgeClass)}>{statusVisual.label}</Badge>,
                 secondaryAction: estimateActions,
                 primaryAction: (
@@ -578,42 +588,6 @@ export function EstimateEditorPage() {
                     />
                 ),
             }}
-            mobileActions={
-                <>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleSave}
-                        disabled={!canSave}
-                        className="flex-1 bg-blue-600 text-white hover:bg-blue-700"
-                    >
-                        <Save className="h-4 w-4 mr-2" />
-                        {primaryActionLabel}
-                    </Button>
-                    {!isNew && status === 'draft' && (
-                        <Button
-                            size="sm"
-                            onClick={handleSendEstimate}
-                            disabled={saving || isDirty}
-                            className="flex-1"
-                        >
-                            <Send className="h-4 w-4 mr-2" />
-                            Send
-                        </Button>
-                    )}
-                    {!isNew && ['sent', 'accepted'].includes(status) && (
-                        <Button
-                            size="sm"
-                            className="flex-1"
-                            onClick={handleConvertToInvoice}
-                            disabled={saving || isDirty}
-                        >
-                            <ArrowRight className="h-4 w-4 mr-2" />
-                            Convert
-                        </Button>
-                    )}
-                </>
-            }
         >
             <div className="space-y-6">
                 <EntityDetailHeader

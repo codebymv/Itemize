@@ -122,9 +122,9 @@ export function ActivityTimeline({ activities }: ActivityTimelineProps) {
         <CardContent className="p-0">
           <EmptyState
             icon={MessageSquare}
+            kind="inline"
             title="No activities yet"
             description="Add a note to start tracking interactions"
-            className="p-12"
           />
         </CardContent>
       </Card>

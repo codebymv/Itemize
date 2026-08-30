@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ArrowRight, FileText, DollarSign, Clock } from 'lucide-react'
 import { semanticColors } from '@/design-system/design-tokens'
+import { EmptyState } from '@/components/EmptyState'
 import type { ClientInvoice, ClientSignature } from '@/design-system/types/client.types'
 
 interface ClientDocumentsTabProps {
@@ -72,7 +73,7 @@ export function ClientDocumentsTab({
         </CardHeader>
         <CardContent>
           {invoices.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No invoices yet</p>
+            <EmptyState icon={DollarSign} kind="inline" title="No invoices yet" />
           ) : (
             <div className="space-y-2">
               {invoices.map((invoice) => {
@@ -134,7 +135,7 @@ export function ClientDocumentsTab({
         </CardHeader>
         <CardContent>
           {signatures.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No documents yet</p>
+            <EmptyState icon={FileText} kind="inline" title="No documents yet" />
           ) : (
             <div className="space-y-2">
               {signatures.map((signature) => {

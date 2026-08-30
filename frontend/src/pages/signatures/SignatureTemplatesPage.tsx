@@ -1,13 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Eye, Send, FileSignature, CheckCircle, AlertCircle, ChevronDown, MoreVertical, Trash2, Search } from 'lucide-react';
+import { Plus, Eye, Send, FileSignature, CheckCircle, AlertCircle, ChevronDown, MoreVertical, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { PageLayout } from '@/components/layout/PageLayout';
-import { MobileQueryBar } from '@/components/layout/MobileQueryBar';
 import { HeaderAction, HeaderCombinedQuery, HeaderFilters, HeaderSearch } from '@/components/layout/DesktopHeaderTools';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
@@ -47,6 +45,7 @@ export default function SignatureTemplatesPage() {
     fields: SignatureTemplateField[];
   } | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const [previewError, setPreviewError] = useState(false);
   const [deleteTemplateId, setDeleteTemplateId] = useState<number | null>(null);
 
   const fetchTemplates = useCallback(async () => {
@@ -83,28 +82,31 @@ export default function SignatureTemplatesPage() {
     }
   }, [navigate, toast]);
 
-  const handleToggleExpand = async (templateId: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-
-    if (expandedTemplateId === templateId) {
-      setExpandedTemplateId(null);
-      setExpandedTemplateData(null);
-      return;
-    }
-
+  const loadExpandedTemplate = async (templateId: number) => {
     setExpandedTemplateId(templateId);
     setExpandedTemplateData(null);
+    setPreviewError(false);
     setLoadingPreview(true);
 
     try {
       const data = await getSignatureTemplate(templateId);
       setExpandedTemplateData(data);
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to load template preview', variant: 'destructive' });
-      setExpandedTemplateId(null);
+    } catch {
+      setPreviewError(true);
     } finally {
       setLoadingPreview(false);
     }
+  };
+
+  const handleToggleExpand = (templateId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (expandedTemplateId === templateId) {
+      setExpandedTemplateId(null);
+      setExpandedTemplateData(null);
+      setPreviewError(false);
+      return;
+    }
+    void loadExpandedTemplate(templateId);
   };
 
   const handleDelete = useCallback(async (): Promise<boolean> => {
@@ -147,8 +149,7 @@ export default function SignatureTemplatesPage() {
     <PageLayout
       title="TEMPLATES"
       icon={<FileSignature className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
-      mobileClassName="flex-col items-stretch gap-2"
-      desktopTools={{
+      headerTools={{
         search: (
           <HeaderSearch
             label="Search templates"
@@ -188,34 +189,6 @@ export default function SignatureTemplatesPage() {
           />
         ),
       }}
-      mobileActions={
-        <MobileQueryBar
-          search={
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                aria-label="Search signature templates"
-                placeholder="Search templates..."
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                className="h-11 w-full border-border/50 bg-muted/20 pl-10"
-              />
-            </div>
-          }
-          filters={<HeaderCombinedQuery label="Search and filter templates" placeholder="Search templates..." value={searchQuery} onChange={setSearchQuery} activeCount={queryCount}>{readinessSelect(true)}</HeaderCombinedQuery>}
-          actions={
-            <Button
-              size="icon"
-              aria-label="New template"
-              className="h-11 w-11 bg-blue-600 text-white hover:bg-blue-700"
-              onClick={() => void handleCreate()}
-              disabled={creating}
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-          }
-        />
-      }
     >
           {!loadError && (
             <ResponsiveCardRail
@@ -268,12 +241,15 @@ export default function SignatureTemplatesPage() {
               ) : filteredTemplates.length === 0 ? (
                 <EmptyState
                   icon={FileSignature}
+                  kind={queryCount > 0 ? 'results' : 'collection'}
                   title={templates.length === 0 ? 'No templates yet' : 'No templates match your search'}
                   description={templates.length === 0
                     ? 'Create a reusable template for signature requests.'
-                    : 'Adjust the search or readiness filter to see more templates.'}
-                  actionLabel={templates.length === 0 ? 'New template' : undefined}
-                  onAction={templates.length === 0 ? () => void handleCreate() : undefined}
+                    : undefined}
+                  actionLabel={queryCount > 0 ? 'Clear filters' : 'New template'}
+                  onAction={queryCount > 0
+                    ? () => { setSearchQuery(''); setReadinessFilter('all'); }
+                    : () => void handleCreate()}
                   className="p-12"
                 />
               ) : (
@@ -399,6 +375,14 @@ export default function SignatureTemplatesPage() {
                               <div className="flex items-center justify-center py-8 text-muted-foreground">
                                 Loading preview...
                               </div>
+                            ) : previewError ? (
+                              <ErrorState
+                                kind="inline"
+                                icon={FileSignature}
+                                title="Unable to load template preview"
+                                description="The template is still available to edit."
+                                onRetry={() => void loadExpandedTemplate(template.id)}
+                              />
                             ) : expandedTemplateData?.template.id === template.id ? (
                               <div className="space-y-4">
                                 {(expandedTemplateData.template.description || expandedTemplateData.template.message) && (

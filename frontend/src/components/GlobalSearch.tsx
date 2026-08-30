@@ -6,6 +6,9 @@ import { useNavigate } from 'react-router-dom';
 import { Search, X, Loader2, ChevronRight, LayoutDashboard, List, StickyNote, FileText, FileSignature, Users, Inbox, Zap, Calendar, BarChart3, PenTool, Workflow, Lock, Package, Megaphone, LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
+import { FailureNotice } from '@/components/FailureNotice';
 import { cn } from '@/lib/utils';
 import { fetchCanvasLists, getNotes, getWhiteboards, getWireframes, getVaults } from '@/services/api';
 import { getContacts } from '@/services/contactsApi';
@@ -37,7 +40,7 @@ const STATIC_PAGES: SearchResult[] = [
   { id: 'page-dashboard', type: 'page', title: 'Dashboard', subtitle: 'Overview', icon: LayoutDashboard, href: '/dashboard' },
   { id: 'page-canvas', type: 'page', title: 'Canvas', subtitle: 'All content', icon: List, href: '/canvas' },
   { id: 'page-contacts', type: 'page', title: 'Contacts', subtitle: 'Manage contacts', icon: Users, href: '/contacts' },
-  { id: 'page-inbox', type: 'page', title: 'Inbox', subtitle: 'Email messages', icon: Inbox, href: '/inbox' },
+  { id: 'page-inbox', type: 'page', title: 'Inbox', subtitle: 'Customer conversations', icon: Inbox, href: '/inbox' },
   { id: 'page-calendar', type: 'page', title: 'Calendar', subtitle: 'Appointments', icon: Calendar, href: '/calendars' },
   { id: 'page-automations', type: 'page', title: 'Automations', subtitle: 'Workflows', icon: Zap, href: '/automations' },
   { id: 'page-campaigns', type: 'page', title: 'Campaigns', subtitle: 'Email campaigns', icon: Megaphone, href: '/campaigns' },
@@ -53,6 +56,8 @@ export function GlobalSearch({ open, onClose, hasPaidAccess }: GlobalSearchProps
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
+  const [searchError, setSearchError] = useState(false);
+  const [searchAttempt, setSearchAttempt] = useState(0);
   const [mounted, setMounted] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState<number | string>(-1);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -62,6 +67,11 @@ export function GlobalSearch({ open, onClose, hasPaidAccess }: GlobalSearchProps
     setMounted(true);
   }, []);
 
+  const handleSelect = useCallback((result: SearchResult) => {
+    navigate(result.href);
+    onClose();
+  }, [navigate, onClose]);
+
   useEffect(() => {
     if (open) {
       const timer = setTimeout(() => inputRef.current?.focus(), 50);
@@ -69,6 +79,7 @@ export function GlobalSearch({ open, onClose, hasPaidAccess }: GlobalSearchProps
     } else {
       setQuery('');
       setResults([]);
+      setSearchError(false);
       setSelectedIndex(-1);
     }
   }, [open]);
@@ -127,7 +138,7 @@ export function GlobalSearch({ open, onClose, hasPaidAccess }: GlobalSearchProps
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
     }
-  }, [open, onClose, results, selectedIndex, query]);
+  }, [handleSelect, open, onClose, results, selectedIndex, query]);
 
   useEffect(() => {
     if (open) {
@@ -148,11 +159,13 @@ export function GlobalSearch({ open, onClose, hasPaidAccess }: GlobalSearchProps
     const search = async () => {
       if (!query.trim()) {
         setResults([]);
+        setSearchError(false);
         setSelectedIndex(-1);
         return;
       }
 
       setLoading(true);
+      setSearchError(false);
       setSelectedIndex(-1); // Reset selection when query changes
       try {
         const lowerQuery = query.toLowerCase();
@@ -169,7 +182,7 @@ export function GlobalSearch({ open, onClose, hasPaidAccess }: GlobalSearchProps
 
         if (query.length > 1) {
           try {
-            const [listsData, notesData, whiteboardsData, wireframesData, vaultsData, segmentsData, campaignsData, automationsData] = await Promise.allSettled([
+            const contentResults = await Promise.allSettled([
               fetchCanvasLists(),
               getNotes(),
               getWhiteboards(),
@@ -178,15 +191,17 @@ export function GlobalSearch({ open, onClose, hasPaidAccess }: GlobalSearchProps
               hasPaidAccess ? getSegments({ search: query }) : Promise.resolve([]),
               hasPaidAccess ? getCampaigns({ search: query, limit: 3 }) : Promise.resolve({ campaigns: [] }),
               hasPaidAccess
-                ? getWorkflows(Number(getOrgId() || 0), { search: query }).catch(() => ({ workflows: [] }))
+                ? getWorkflows(Number(getOrgId() || 0), { search: query })
                 : Promise.resolve({ workflows: [] })
             ]);
+            const [listsData, notesData, whiteboardsData, wireframesData, vaultsData, segmentsData, campaignsData, automationsData] = contentResults;
+            if (contentResults.some((result) => result.status === 'rejected')) setSearchError(true);
 
             if (listsData.status === 'fulfilled' && Array.isArray(listsData.value)) {
               const matchedLists = listsData.value
                 .filter((l: { title: string }) => l.title.toLowerCase().includes(lowerQuery))
                 .slice(0, 3)
-                .map((l: { id: string; title: string }) => ({
+                .map((l: { id: string | number; title: string }) => ({
                   id: `list-${l.id}`,
                   type: 'list' as const,
                   title: l.title,
@@ -304,11 +319,13 @@ export function GlobalSearch({ open, onClose, hasPaidAccess }: GlobalSearchProps
             }
 
             if (hasPaidAccess && query.length > 2) {
-              const [contactsData, invoicesData, signaturesData] = await Promise.allSettled([
+              const paidResults = await Promise.allSettled([
                 getContacts({ search: query, limit: 3 }),
                 getInvoices({ search: query, limit: 3 }),
                 getSignatures({ search: query, limit: 3 })
               ]);
+              const [contactsData, invoicesData, signaturesData] = paidResults;
+              if (paidResults.some((result) => result.status === 'rejected')) setSearchError(true);
               
               // Invoices
               if (invoicesData.status === 'fulfilled' && invoicesData.value?.invoices) {
@@ -372,12 +389,14 @@ export function GlobalSearch({ open, onClose, hasPaidAccess }: GlobalSearchProps
             }
           } catch (error) {
             console.error('Search error', error);
+            setSearchError(true);
           }
         }
 
         setResults(allResults);
       } catch (error) {
         console.error('Search error', error);
+        setSearchError(true);
       } finally {
         setLoading(false);
       }
@@ -385,12 +404,7 @@ export function GlobalSearch({ open, onClose, hasPaidAccess }: GlobalSearchProps
 
     const debounce = setTimeout(search, 300);
     return () => clearTimeout(debounce);
-  }, [query, getOrgId, hasPaidAccess]);
-
-  const handleSelect = (result: SearchResult) => {
-    navigate(result.href);
-    onClose();
-  };
+  }, [query, getOrgId, hasPaidAccess, searchAttempt]);
 
   if (!mounted || !open) return null;
 
@@ -457,10 +471,35 @@ export function GlobalSearch({ open, onClose, hasPaidAccess }: GlobalSearchProps
             </div>
           )}
 
-          {query && results.length === 0 && !loading && (
-            <div className="p-12 text-center text-slate-600 dark:text-slate-400">
-              <p>No results found for "{query}"</p>
-            </div>
+          {query && searchError && results.length === 0 && !loading && (
+            <ErrorState
+              kind="inline"
+              title="Unable to complete search"
+              description="Some search sources couldn't be reached. Try again."
+              icon={Search}
+              onAction={() => setSearchAttempt((current) => current + 1)}
+              className="p-8"
+            />
+          )}
+
+          {query && searchError && results.length > 0 && !loading && (
+            <FailureNotice
+              title="Some results couldn't be loaded"
+              onRetry={() => setSearchAttempt((current) => current + 1)}
+              className="mb-3"
+            />
+          )}
+
+          {query && results.length === 0 && !loading && !searchError && (
+            <EmptyState
+              icon={Search}
+              kind="results"
+              size="compact"
+              title={`No results for "${query}"`}
+              actionLabel="Clear search"
+              onAction={() => setQuery('')}
+              className="p-8"
+            />
           )}
 
           {results.length > 0 && (

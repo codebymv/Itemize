@@ -16,7 +16,7 @@ describe('getUserFriendlyError', () => {
     const error = new Error('Something went wrong');
     const result = getUserFriendlyError(error);
 
-    expect(result.title).toBe('Unexpected Error');
+    expect(result.title).toBe('Unexpected error');
     expect(result.type).toBe('unknown');
   });
 
@@ -25,7 +25,7 @@ describe('getUserFriendlyError', () => {
     error.code = 'ECONNREFUSED';
     const result = getUserFriendlyError(error);
 
-    expect(result.title).toBe('Cannot Connect');
+    expect(result.title).toBe('Cannot connect');
     expect(result.type).toBe('network');
     expect(result.action).toBe('Check your internet connection');
   });
@@ -35,7 +35,7 @@ describe('getUserFriendlyError', () => {
     error.code = 'ETIMEDOUT';
     const result = getUserFriendlyError(error);
 
-    expect(result.title).toBe('Connection Timeout');
+    expect(result.title).toBe('Connection timed out');
     expect(result.type).toBe('timeout');
   });
 
@@ -44,7 +44,7 @@ describe('getUserFriendlyError', () => {
     error.response = mockResponse(401);
     const result = getUserFriendlyError(error);
 
-    expect(result.title).toBe('Session Expired');
+    expect(result.title).toBe('Session expired');
     expect(result.type).toBe('client');
     expect(result.action).toBe('Log in to continue');
   });
@@ -54,7 +54,7 @@ describe('getUserFriendlyError', () => {
     error.response = mockResponse(403);
     const result = getUserFriendlyError(error);
 
-    expect(result.title).toBe('Access Denied');
+    expect(result.title).toBe('Access denied');
     expect(result.type).toBe('client');
     expect(result.action).toBe('Contact your administrator');
   });
@@ -64,7 +64,7 @@ describe('getUserFriendlyError', () => {
     error.response = mockResponse(404);
     const result = getUserFriendlyError(error);
 
-    expect(result.title).toBe('Not Found');
+    expect(result.title).toBe('Not found');
     expect(result.type).toBe('client');
   });
 
@@ -73,7 +73,7 @@ describe('getUserFriendlyError', () => {
     error.response = mockResponse(429);
     const result = getUserFriendlyError(error);
 
-    expect(result.title).toBe('Too Many Requests');
+    expect(result.title).toBe('Too many requests');
     expect(result.type).toBe('client');
     expect(result.action).toBe('Wait a moment, then try again');
   });
@@ -83,7 +83,7 @@ describe('getUserFriendlyError', () => {
     error.response = mockResponse(500);
     const result = getUserFriendlyError(error);
 
-    expect(result.title).toBe('Server Error');
+    expect(result.title).toBe('Server error');
     expect(result.type).toBe('server');
     expect(result.action).toBe('Please try again later');
   });
@@ -101,7 +101,7 @@ describe('getUserFriendlyError', () => {
     error.response = mockResponse(400);
     const result = getUserFriendlyError(error);
 
-    expect(result.title).toBe('Request Failed');
+    expect(result.title).toBe('Request failed');
     expect(result.type).toBe('client');
   });
 });

@@ -12,6 +12,7 @@ import {
 
 export interface ConversationsQueryParams {
     status?: 'open' | 'closed' | 'snoozed' | 'all';
+    channel?: 'email' | 'sms' | 'chat' | 'facebook' | 'instagram' | 'internal' | 'all';
     assigned_to?: number;
     contact_id?: number;
     page?: number;
@@ -19,7 +20,7 @@ export interface ConversationsQueryParams {
     organization_id?: number;
 }
 
-const CONVERSATION_FIELDS = `
+const BASE_CONVERSATION_FIELDS = `
     fragment ConversationFields on Conversation {
         id
         organization_id: organizationId
@@ -41,6 +42,32 @@ const CONVERSATION_FIELDS = `
         contact_phone: contactPhone
     }
 `;
+
+const PROVIDER_CONVERSATION_FIELDS = BASE_CONVERSATION_FIELDS.replace(
+    /\n {4}}\n$/,
+    `
+        social_conversation_id: socialConversationId
+        provider_account_name: providerAccountName
+        provider_participant_name: providerParticipantName
+        provider_participant_username: providerParticipantUsername
+        provider_participant_profile_pic: providerParticipantProfilePic
+        chat_session_id: chatSessionId
+        chat_session_status: chatSessionStatus
+        chat_visitor_name: chatVisitorName
+        chat_visitor_email: chatVisitorEmail
+        chat_visitor_phone: chatVisitorPhone
+        chat_widget_name: chatWidgetName
+    }
+`,
+);
+
+const providerFieldsUnavailable = (error: unknown): boolean =>
+    error instanceof Error
+    && /Cannot query field "(?:socialConversationId|providerAccountName|providerParticipantName|providerParticipantUsername|providerParticipantProfilePic|chatSessionId|chatSessionStatus|chatVisitorName|chatVisitorEmail|chatVisitorPhone|chatWidgetName)"/.test(error.message);
+
+const channelFilterUnavailable = (error: unknown): boolean =>
+    error instanceof Error
+    && /Unknown argument "channel"|Unknown type "ConversationChannel"/.test(error.message);
 
 const MESSAGE_FIELDS = `
     fragment ConversationMessageFields on ConversationMessage {
@@ -65,7 +92,7 @@ const MESSAGE_FIELDS = `
 export const getConversations = async (
     params: ConversationsQueryParams = {}
 ): Promise<ConversationsResponse> => {
-    const data = await graphqlRequest<{
+    type Response = {
         conversations: {
             conversations: Conversation[];
             page: number;
@@ -73,17 +100,37 @@ export const getConversations = async (
             total: number;
             totalPages: number;
         };
-    }, {
+    };
+    type Variables = {
         status?: string;
+        channel?: string;
         assignedTo?: number;
         contactId?: number;
         page?: number;
         limit?: number;
-    }>(
+    };
+    const variables: Variables = {
+        ...(params.status && params.status !== 'all'
+            ? { status: params.status }
+            : {}),
+        ...(params.channel && params.channel !== 'all'
+            ? { channel: params.channel }
+            : {}),
+        ...(params.assigned_to === undefined
+            ? {}
+            : { assignedTo: params.assigned_to }),
+        ...(params.contact_id === undefined
+            ? {}
+            : { contactId: params.contact_id }),
+        ...(params.page === undefined ? {} : { page: params.page }),
+        ...(params.limit === undefined ? {} : { limit: params.limit }),
+    };
+    const request = (fields: string, includeChannel = true) => graphqlRequest<Response, Variables>(
         `
-            ${CONVERSATION_FIELDS}
+            ${fields}
             query Conversations(
                 $status: String
+                ${includeChannel ? '$channel: String' : ''}
                 $assignedTo: Int
                 $contactId: Int
                 $page: Int
@@ -91,6 +138,7 @@ export const getConversations = async (
             ) {
                 conversations(
                     status: $status
+                    ${includeChannel ? 'channel: $channel' : ''}
                     assignedTo: $assignedTo
                     contactId: $contactId
                     page: $page
@@ -104,24 +152,35 @@ export const getConversations = async (
                 }
             }
         `,
-        {
-            ...(params.status && params.status !== 'all'
-                ? { status: params.status }
-                : {}),
-            ...(params.assigned_to === undefined
-                ? {}
-                : { assignedTo: params.assigned_to }),
-            ...(params.contact_id === undefined
-                ? {}
-                : { contactId: params.contact_id }),
-            ...(params.page === undefined ? {} : { page: params.page }),
-            ...(params.limit === undefined ? {} : { limit: params.limit }),
-        },
+        variables,
         params.organization_id,
     );
+    let data: Response | null = null;
+    let lastError: unknown;
+    let serverAppliedChannel = true;
+    const attempts: Array<[string, boolean]> = [
+        [PROVIDER_CONVERSATION_FIELDS, true],
+        [BASE_CONVERSATION_FIELDS, true],
+        [PROVIDER_CONVERSATION_FIELDS, false],
+        [BASE_CONVERSATION_FIELDS, false],
+    ];
+    for (const [fields, includeChannel] of attempts) {
+        try {
+            data = await request(fields, includeChannel);
+            serverAppliedChannel = includeChannel;
+            break;
+        } catch (error) {
+            if (!providerFieldsUnavailable(error) && !channelFilterUnavailable(error)) throw error;
+            lastError = error;
+        }
+    }
+    if (!data) throw lastError;
     const { conversations, page, limit, total, totalPages } = data.conversations;
+    const visibleConversations = !serverAppliedChannel && params.channel && params.channel !== 'all'
+        ? conversations.filter(conversation => conversation.channel === params.channel)
+        : conversations;
     return {
-        conversations,
+        conversations: visibleConversations,
         pagination: { page, limit, total, totalPages },
     };
 };
@@ -130,9 +189,9 @@ export const getConversation = async (
     id: number,
     organizationId?: number
 ): Promise<Conversation> => {
-    const data = await graphqlRequest<{ conversation: Conversation }, { id: number }>(
+    const request = (fields: string) => graphqlRequest<{ conversation: Conversation }, { id: number }>(
         `
-            ${CONVERSATION_FIELDS}
+            ${fields}
             ${MESSAGE_FIELDS}
             query Conversation($id: Int!) {
                 conversation(id: $id) {
@@ -144,6 +203,13 @@ export const getConversation = async (
         { id },
         organizationId,
     );
+    let data: { conversation: Conversation };
+    try {
+        data = await request(PROVIDER_CONVERSATION_FIELDS);
+    } catch (error) {
+        if (!providerFieldsUnavailable(error)) throw error;
+        data = await request(BASE_CONVERSATION_FIELDS);
+    }
     return data.conversation;
 };
 
@@ -170,7 +236,7 @@ export const createConversation = async (
         }
     >(
         `
-            ${CONVERSATION_FIELDS}
+            ${BASE_CONVERSATION_FIELDS}
             mutation CreateConversation($input: CreateConversationInput!) {
                 createConversation(input: $input) { ...ConversationFields }
             }
@@ -203,7 +269,7 @@ export const updateConversation = async (
         }
     >(
         `
-            ${CONVERSATION_FIELDS}
+            ${BASE_CONVERSATION_FIELDS}
             mutation UpdateConversation($id: Int!, $input: UpdateConversationInput!) {
                 updateConversation(id: $id, input: $input) { ...ConversationFields }
             }
@@ -232,7 +298,7 @@ export const assignConversation = async (
         { id: number; assignedTo: number | null }
     >(
         `
-            ${CONVERSATION_FIELDS}
+            ${BASE_CONVERSATION_FIELDS}
             mutation AssignConversation($id: Int!, $assignedTo: Int) {
                 assignConversation(id: $id, assignedTo: $assignedTo) {
                     ...ConversationFields
@@ -254,7 +320,7 @@ export const markConversationRead = async (
         { id: number }
     >(
         `
-            ${CONVERSATION_FIELDS}
+            ${BASE_CONVERSATION_FIELDS}
             mutation MarkConversationRead($id: Int!) {
                 markConversationRead(id: $id) { ...ConversationFields }
             }

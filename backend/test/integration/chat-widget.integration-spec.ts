@@ -12,6 +12,9 @@ import type { RealtimeBroadcast } from '../../src/realtime-host/realtime-host';
 const {
   runChatWidgetGraphqlMigration,
 } = require('../../../db/src/db_chat_widget_graphql_migrations');
+const {
+  runChatInboxBridgeMigration,
+} = require('../../../db/src/db_chat_inbox_bridge_migrations');
 
 describe('Authenticated Chat Widget GraphQL PostgreSQL contract', () => {
   let app: NestExpressApplication;
@@ -40,6 +43,7 @@ describe('Authenticated Chat Widget GraphQL PostgreSQL contract', () => {
       ssl: process.env.TEST_DATABASE_SSL === 'true',
     });
     await runChatWidgetGraphqlMigration(pool);
+    await runChatInboxBridgeMigration(pool);
 
     const suffix = `${Date.now()}-${process.pid}`;
     const users = await pool.query<{ id: number }>(

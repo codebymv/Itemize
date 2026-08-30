@@ -18,6 +18,8 @@ const queued = {
   replayed: false,
   contactId: 9,
   templateId: 3,
+  conversationId: 21,
+  messageId: 34,
   providerId: null,
   createdAt: '2026-07-25T00:00:00.000Z',
 };
@@ -40,6 +42,8 @@ describe('message delivery GraphQL adapter', () => {
       success: true,
       delivery_id: '14',
       status: 'queued',
+      conversation_id: 21,
+      message_id: 34,
     });
     expect(graphqlMutationRequest).toHaveBeenCalledWith(
       expect.stringContaining('EnqueueContactEmail'),

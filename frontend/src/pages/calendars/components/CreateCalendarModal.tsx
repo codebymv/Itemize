@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Calendar, Clock } from 'lucide-react';
+import { CalendarDays, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,7 +7,6 @@ import { Textarea } from '@/components/ui/textarea';
 import {
     Dialog,
     DialogContent,
-    DialogDescription,
     DialogFooter,
     DialogHeader,
     DialogTitle,
@@ -34,7 +33,9 @@ interface CreateCalendarModalProps {
     onCreated: (calendar: CalendarType) => void;
 }
 
-const TIMEZONES = [
+const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+const TIMEZONES = Array.from(new Set([
+    detectedTimezone,
     'America/New_York',
     'America/Chicago',
     'America/Denver',
@@ -50,7 +51,7 @@ const TIMEZONES = [
     'Asia/Shanghai',
     'Asia/Dubai',
     'Australia/Sydney',
-];
+]));
 
 const DURATIONS = [15, 30, 45, 60, 90, 120];
 
@@ -75,7 +76,7 @@ export function CreateCalendarModal({
     const [formData, setFormData] = useState<CalendarCreateData>({
         name: '',
         description: '',
-        timezone: 'America/New_York',
+        timezone: detectedTimezone,
         duration_minutes: 30,
         buffer_before_minutes: 0,
         buffer_after_minutes: 0,
@@ -118,32 +119,30 @@ export function CreateCalendarModal({
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <Calendar className="h-5 w-5 text-blue-600" />
-                        Create Calendar
+                        <CalendarDays className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                        Create calendar
                     </DialogTitle>
-                    <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>
-                        Set up a new calendar for appointment scheduling
-                    </DialogDescription>
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit}>
                     <div className="space-y-4 py-4">
                         {/* Name */}
                         <div className="space-y-2">
-                            <Label htmlFor="name" style={{ fontFamily: '"Raleway", sans-serif' }}>Calendar Name *</Label>
+                            <Label htmlFor="name">Calendar name</Label>
                             <Input
                                 id="name"
                                 value={formData.name}
                                 onChange={(e) =>
                                     setFormData((prev) => ({ ...prev, name: e.target.value }))
                                 }
-                                placeholder="e.g., Strategy Call, Discovery Meeting"
+                                placeholder="Strategy call"
+                                required
                             />
                         </div>
 
                         {/* Description */}
                         <div className="space-y-2">
-                            <Label htmlFor="description" style={{ fontFamily: '"Raleway", sans-serif' }}>Description</Label>
+                            <Label htmlFor="description">Description <span className="text-muted-foreground">(optional)</span></Label>
                             <Textarea
                                 id="description"
                                 value={formData.description || ''}
@@ -156,16 +155,16 @@ export function CreateCalendarModal({
                         </div>
 
                         {/* Duration and Timezone */}
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-4 sm:grid-cols-2">
                             <div className="space-y-2">
-                                <Label htmlFor="duration" style={{ fontFamily: '"Raleway", sans-serif' }}>Duration</Label>
+                                <Label htmlFor="calendar-duration">Duration</Label>
                                 <Select
                                     value={formData.duration_minutes?.toString()}
                                     onValueChange={(val) =>
                                         setFormData((prev) => ({ ...prev, duration_minutes: parseInt(val) }))
                                     }
                                 >
-                                    <SelectTrigger>
+                                    <SelectTrigger id="calendar-duration">
                                         <Clock className="h-4 w-4 mr-2" />
                                         <SelectValue />
                                     </SelectTrigger>
@@ -180,14 +179,14 @@ export function CreateCalendarModal({
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="timezone">Timezone</Label>
+                                <Label htmlFor="calendar-timezone">Timezone</Label>
                                 <Select
                                     value={formData.timezone}
                                     onValueChange={(val) =>
                                         setFormData((prev) => ({ ...prev, timezone: val }))
                                     }
                                 >
-                                    <SelectTrigger>
+                                    <SelectTrigger id="calendar-timezone">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent className="max-h-[200px]">
@@ -202,16 +201,16 @@ export function CreateCalendarModal({
                         </div>
 
                         {/* Booking constraints */}
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-4 sm:grid-cols-2">
                             <div className="space-y-2">
-                                <Label htmlFor="min_notice" style={{ fontFamily: '"Raleway", sans-serif' }}>Minimum Notice</Label>
+                                <Label htmlFor="calendar-min-notice">Minimum notice</Label>
                                 <Select
                                     value={formData.min_notice_hours?.toString()}
                                     onValueChange={(val) =>
                                         setFormData((prev) => ({ ...prev, min_notice_hours: parseInt(val) }))
                                     }
                                 >
-                                    <SelectTrigger>
+                                    <SelectTrigger id="calendar-min-notice">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -225,14 +224,14 @@ export function CreateCalendarModal({
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="max_future">Booking Window</Label>
+                                <Label htmlFor="calendar-booking-window">Booking window</Label>
                                 <Select
                                     value={formData.max_future_days?.toString()}
                                     onValueChange={(val) =>
                                         setFormData((prev) => ({ ...prev, max_future_days: parseInt(val) }))
                                     }
                                 >
-                                    <SelectTrigger>
+                                    <SelectTrigger id="calendar-booking-window">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -248,15 +247,17 @@ export function CreateCalendarModal({
 
                         {/* Color picker */}
                         <div className="space-y-2">
-                            <Label style={{ fontFamily: '"Raleway", sans-serif' }}>Calendar Color</Label>
-                            <div className="flex gap-2">
+                            <Label>Calendar color</Label>
+                            <div className="flex flex-wrap gap-2" role="group" aria-label="Calendar color">
                                 {COLORS.map((color) => (
                                     <button
                                         key={color}
                                         type="button"
-                                        className={`w-8 h-8 rounded-full transition-transform ${formData.color === color ? 'ring-2 ring-offset-2 ring-gray-400 scale-110' : ''
+                                        className={`h-8 w-8 rounded-full transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${formData.color === color ? 'scale-110 ring-2 ring-blue-500 ring-offset-2' : ''
                                             }`}
                                         style={{ backgroundColor: color }}
+                                        aria-label={`Use ${color} calendar color`}
+                                        aria-pressed={formData.color === color}
                                         onClick={() => setFormData((prev) => ({ ...prev, color }))}
                                     />
                                 ))}
@@ -265,17 +266,16 @@ export function CreateCalendarModal({
                     </div>
 
                     <DialogFooter>
-                        <Button type="button" variant="outline" onClick={onClose} style={{ fontFamily: '"Raleway", sans-serif' }} aria-label="Cancel">
+                        <Button type="button" variant="outline" onClick={onClose}>
                             Cancel
                         </Button>
                         <Button
                             type="submit"
                             disabled={loading}
                             className="bg-blue-600 hover:bg-blue-700 text-white"
-                            style={{ fontFamily: '"Raleway", sans-serif' }}
                             aria-label={loading ? 'Creating calendar...' : 'Create calendar'}
                         >
-                            {loading ? 'Creating...' : 'Create Calendar'}
+                            {loading ? 'Creating...' : 'Create calendar'}
                         </Button>
                     </DialogFooter>
                 </form>

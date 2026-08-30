@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Mail, Loader2 } from 'lucide-react';
 import { getEmailLog, getEmailLogs, EmailLog } from '@/services/adminEmailApi';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
 
 export interface EmailLogsViewHandle {
     refresh: () => void;
@@ -21,6 +23,7 @@ export const EmailLogsView = React.forwardRef<EmailLogsViewHandle, EmailLogsView
 }, ref) {
     const [logs, setLogs] = useState<EmailLog[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState(false);
     const [page, setPage] = useState(0);
     const [hasMore, setHasMore] = useState(false);
     const [selectedLog, setSelectedLog] = useState<EmailLog | null>(null);
@@ -28,6 +31,7 @@ export const EmailLogsView = React.forwardRef<EmailLogsViewHandle, EmailLogsView
 
     const fetchLogs = useCallback(async (pageNum = 0) => {
         setLoading(true);
+        setLoadError(false);
         onLoadingChange?.(true);
         try {
             const response = await getEmailLogs({ page: pageNum, limit: 25 });
@@ -35,12 +39,12 @@ export const EmailLogsView = React.forwardRef<EmailLogsViewHandle, EmailLogsView
             onTotalChange?.(response.total);
             setHasMore(response.hasMore);
         } catch {
-            toast({ title: 'Error', description: 'Failed to load email logs', variant: 'destructive' });
+            setLoadError(true);
         } finally {
             setLoading(false);
             onLoadingChange?.(false);
         }
-    }, [onLoadingChange, onTotalChange, toast]);
+    }, [onLoadingChange, onTotalChange]);
 
     useEffect(() => {
         void fetchLogs();
@@ -83,11 +87,16 @@ export const EmailLogsView = React.forwardRef<EmailLogsViewHandle, EmailLogsView
                     <div className="flex items-center justify-center h-48">
                         <Loader2 className="h-6 w-6 animate-spin" />
                     </div>
+                ) : loadError ? (
+                    <ErrorState
+                        kind="section"
+                        icon={Mail}
+                        title="Unable to load email logs"
+                        description="We couldn't load the email log. Try again."
+                        onRetry={() => void fetchLogs(page)}
+                    />
                 ) : logs.length === 0 ? (
-                    <div className="text-center py-12 text-muted-foreground">
-                        <Mail className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                        <p>No emails sent yet</p>
-                    </div>
+                    <EmptyState icon={Mail} kind="passive" title="No emails sent yet" />
                 ) : (
                     <div className="space-y-2">
                         {logs.map(log => (

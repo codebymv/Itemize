@@ -34,7 +34,7 @@ import {
     ChevronRight,
     Kanban,
     Zap,
-    Calendar,
+    CalendarDays,
     Layout,
     MessageSquare,
     Megaphone,
@@ -185,14 +185,14 @@ const mainNavItems: NavItem[] = [
                 path: '/chat-widget',
             },
             {
-                title: 'Social',
+                title: 'Connected Accounts',
                 path: '/social',
             },
         ],
     },
     {
         title: 'Scheduling',
-        icon: Calendar,
+        icon: CalendarDays,
         path: '/calendars',
         items: [
             {
@@ -221,6 +221,10 @@ const mainNavItems: NavItem[] = [
             {
                 title: 'Widgets',
                 path: '/review-widgets',
+            },
+            {
+                title: 'Configuration',
+                path: '/reputation-settings',
             },
         ],
     },

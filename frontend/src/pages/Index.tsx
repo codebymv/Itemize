@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { CreateItemModal } from "@/components/CreateItemModal";
 import { ListCard } from "@/components/ListCard";
+import { EmptyState } from '@/components/EmptyState';
 import { ShareModal } from "@/components/ShareModal";
 import QuickAddForm from "@/components/QuickAddForm";
 import { useDatabaseCategories } from '@/hooks/useDatabaseCategories';
@@ -258,35 +259,19 @@ const Index = () => {
 
         {/* Lists Grid */}
         {filteredLists.length === 0 ? (
-          <div className="text-center py-12">
-            {lists.length === 0 ? (
-              <div className="max-w-md mx-auto">
-                <div className="bg-white rounded-lg shadow-sm border p-8">
-                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Plus className="h-8 w-8 text-blue-600" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-slate-900 mb-2">
-                    Create your first list
-                  </h3>
-                  <p className="text-slate-600 mb-6">
-                    Get organized with custom lists for any purpose - shopping, notes, tasks, and more.
-                  </p>
-                  <Button 
-                    onClick={() => setShowCreateModal(true)}
-                    className="bg-blue-600 hover:bg-blue-700"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create List
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="text-slate-500">
-                <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No lists match your search criteria.</p>
-              </div>
-            )}
-          </div>
+          lists.length === 0 ? (
+            <Card>
+              <EmptyState icon={Plus} title="No lists yet" actionLabel="Create list" onAction={() => setShowCreateModal(true)} />
+            </Card>
+          ) : (
+            <EmptyState
+              icon={Search}
+              kind="results"
+              title="No matching lists"
+              actionLabel="Clear filters"
+              onAction={() => { setSearchQuery(''); setSelectedFilter('all'); }}
+            />
+          )
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredLists.map((list) => (

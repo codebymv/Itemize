@@ -133,13 +133,33 @@ describe('PageLayout', () => {
   });
 
   it('renders mobile actions in the mobile controls bar', () => {
-    renderLayout(
+    const { container } = renderLayout(
       <PageLayout title="CONTACTS" mobileActions={<button type="button">Add Contact</button>}>
         Body
       </PageLayout>
     );
 
     expect(screen.getByRole('button', { name: 'Add Contact' })).toBeInTheDocument();
+    expect(container.querySelector('[data-mobile-controls-bar]')).toBeInTheDocument();
+  });
+
+  it('renders responsive header tools without creating a duplicate mobile body bar', () => {
+    const { container } = renderLayout(
+      <PageLayout
+        title="DASHBOARD"
+        headerTools={{
+          filters: <button type="button">Performance period</button>,
+          secondaryAction: <button type="button">Canvas</button>,
+        }}
+      >
+        Body
+      </PageLayout>,
+    );
+
+    expect(screen.getAllByRole('button', { name: 'Performance period' })).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: 'Canvas' })).toHaveLength(2);
+    expect(container.querySelector('[data-mobile-controls-bar]')).toBeNull();
+    expect(container.querySelector('[data-responsive-header-tools]')).toBeInTheDocument();
   });
 
   it('omits the mobile bar when mobileActions is omitted', () => {

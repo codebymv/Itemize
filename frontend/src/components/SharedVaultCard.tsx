@@ -3,6 +3,7 @@ import { SharedItemCard } from '@/components/public/BrandedPublicPage';
 import { Button } from "@/components/ui/button";
 import { KeyRound, Key, FileText, Eye, EyeOff, Copy, Check } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
+import { EmptyState } from '@/components/EmptyState';
 
 interface SharedVaultItem {
   id: number;
@@ -99,10 +100,7 @@ export const SharedVaultCard: React.FC<SharedVaultCardProps> = ({ vaultData }) =
           </div>
 
           {vaultData.items.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <KeyRound className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">This vault is empty</p>
-            </div>
+            <EmptyState icon={KeyRound} kind="inline" title="This vault is empty" />
           ) : (
             <div className="space-y-2 overflow-hidden">
               {vaultData.items.map((item) => {

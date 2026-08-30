@@ -34,6 +34,8 @@ import { CategorySelector } from "../CategorySelector";
 import { VaultItemRow } from "./VaultItemRow";
 import { DeleteDialog } from "../ui/delete-dialog";
 import { WorkspaceContentCard } from "../workspace/WorkspaceContentCard";
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
 import {
   Dialog,
   DialogContent,
@@ -157,6 +159,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
     // Items
     items,
     isLoadingItems,
+    itemsLoadError,
     loadItems,
 
     // Item visibility
@@ -680,14 +683,15 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                 <div className="flex items-center justify-center py-8">
                   <Spinner size="md" />
                 </div>
+              ) : itemsLoadError ? (
+                <ErrorState
+                  icon={KeyRound}
+                  kind="inline"
+                  title="Unable to load vault items"
+                  onRetry={() => void loadItems()}
+                />
               ) : items.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <KeyRound className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No items in this vault</p>
-                  <p className="text-xs mt-1">
-                    Click "Add Item" to store secrets
-                  </p>
-                </div>
+                <EmptyState icon={KeyRound} kind="inline" title="No items in this vault" />
               ) : (
                 <DndContext
                   sensors={sensors}

@@ -25,8 +25,8 @@ export const CAMPAIGN_SUMMARY_VISUALS = {
   delivered: CAMPAIGN_STATUS_VISUALS.sent,
 } as const;
 
-export const ACTIVE_CATALOG_VISUAL = defineStatus('Active', 'blue', CheckCircle);
-export const INACTIVE_CATALOG_VISUAL = defineStatus('Inactive', 'orange', Pause);
+export const ACTIVE_CATALOG_VISUAL = defineStatus('Available', 'blue', CheckCircle);
+export const INACTIVE_CATALOG_VISUAL = defineStatus('Unavailable', 'orange', Pause);
 
 export function getCampaignStatusVisual(status: Campaign['status']): StatusVisual {
   return CAMPAIGN_STATUS_VISUALS[status];

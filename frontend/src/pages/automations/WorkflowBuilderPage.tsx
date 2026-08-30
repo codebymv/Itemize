@@ -716,7 +716,7 @@ export function WorkflowBuilderPage() {
             className="group/menu-button flex h-11 w-full items-center gap-2 overflow-hidden rounded-md px-2 text-left text-sm font-raleway text-sidebar-foreground outline-none ring-sidebar-ring transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent lg:h-9"
             onClick={() => handleAddStep(step.value)}
           >
-            <step.icon className="h-4 w-4 shrink-0 text-gray-600 transition-colors group-hover/menu-button:text-blue-600 dark:text-gray-400 dark:group-hover/menu-button:text-blue-400" />
+            <step.icon className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover/menu-button:text-blue-600 dark:group-hover/menu-button:text-blue-400" />
             <span className="truncate">{step.label}</span>
           </button>
         </li>
@@ -779,7 +779,7 @@ export function WorkflowBuilderPage() {
           onClick={() => { if (confirmLeave()) navigate('/automations'); }}
         />
       }
-      desktopTools={{
+      headerTools={{
         status: !isNewWorkflow ? (
           <Badge className={cn('pointer-events-none whitespace-nowrap', statusVisual.badgeClass)}>
             {statusVisual.label}
@@ -811,42 +811,6 @@ export function WorkflowBuilderPage() {
           />
         ),
       }}
-      mobileActions={
-        <>
-          {!isNewWorkflow && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowEnrollments(true)}
-              className="flex-1"
-            >
-              <Users className="h-4 w-4 mr-2" />
-              Runs
-            </Button>
-          )}
-          {!isNewWorkflow && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleToggleActive}
-              disabled={saving}
-              className="flex-1"
-            >
-              {isActive ? <Pause className="h-4 w-4 mr-2" /> : <Play className="h-4 w-4 mr-2" />}
-              {isActive ? 'Deactivate' : 'Activate'}
-            </Button>
-          )}
-          <Button
-            size="sm"
-            className="bg-blue-600 hover:bg-blue-700 text-white flex-1"
-            onClick={() => void handleSave()}
-            disabled={saving || !isDirty}
-          >
-            <Save className="h-4 w-4 mr-2" />
-            {saving ? 'Saving...' : 'Save'}
-          </Button>
-        </>
-      }
       frame="flush"
     >
       <div className="relative flex h-[calc(100dvh-12.75rem)] min-h-0 min-w-0 flex-col overflow-hidden md:h-[calc(100dvh-3.5rem)]">

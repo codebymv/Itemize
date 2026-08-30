@@ -117,6 +117,7 @@ export const getBookingsViaGraphql = async (
   params: BookingsQueryParams = {},
 ): Promise<BookingsResponse> => {
   const filter = {
+    ...(params.search === undefined ? {} : { search: params.search }),
     ...(params.calendar_id === undefined
       ? {}
       : { calendarId: params.calendar_id }),

@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, MoreHorizontal, Trash2, Tag, UserPlus, Download, Upload, Users } from 'lucide-react';
+import { Plus, MoreHorizontal, Trash2, Tag, UserPlus, Download, Upload, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   DropdownMenu,
@@ -24,7 +23,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { toastMessages } from '@/constants/toastMessages';
 import { PageLayout } from '@/components/layout/PageLayout';
-import { MobileQueryBar } from '@/components/layout/MobileQueryBar';
 import {
   HeaderAction,
   HeaderActionLabel,
@@ -34,6 +32,7 @@ import {
 } from '@/components/layout/DesktopHeaderTools';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
@@ -295,12 +294,7 @@ export function ContactsPage() {
         title="CONTACTS"
         icon={<Users className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
       >
-        <ErrorState
-          title="CRM Not Ready"
-          description={initError}
-          icon={UserPlus}
-          onAction={() => void fetchContacts()}
-        />
+        <OrganizationErrorState title="Unable to load contacts" icon={Users} />
       </PageLayout>
     );
   }
@@ -309,7 +303,7 @@ export function ContactsPage() {
     <PageLayout
       title="CONTACTS"
       icon={<Users className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
-      desktopTools={{
+      headerTools={{
         search: (
           <HeaderSearch
             label="Search contacts"
@@ -343,62 +337,6 @@ export function ContactsPage() {
           />
         ),
       }}
-      mobileActions={
-        <MobileQueryBar
-          search={
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                aria-label="Search contacts"
-                placeholder="Search contacts..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 h-9 w-full bg-muted/20 border-border/50"
-              />
-            </div>
-          }
-          filters={
-            <HeaderCombinedQuery
-              label="Search and filter contacts"
-              placeholder="Search contacts..."
-              value={searchQuery}
-              onChange={setSearchQuery}
-              activeCount={headerQueryCount}
-            >
-              <div className="[&_[role=combobox]]:w-full">{headerFilters}</div>
-            </HeaderCombinedQuery>
-          }
-          actions={
-            <>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="h-11 w-11" aria-label="Contact import and export actions">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setShowImportModal(true)} className="group/menu">
-                  <Upload className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
-                  Import CSV
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => organizationId && exportContactsCSV(organizationId)} className="group/menu">
-                  <Download className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
-                  Export CSV
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button
-              size="icon"
-              aria-label="Add contact"
-              className="h-11 w-11 bg-blue-600 text-white hover:bg-blue-700"
-              onClick={() => setShowCreateModal(true)}
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-            </>
-          }
-        />
-      }
     >
       <OnboardingModal
         isOpen={showOnboarding}
@@ -488,10 +426,17 @@ export function ContactsPage() {
               ) : contacts.length === 0 ? (
                 <EmptyState
                   icon={UserPlus}
-                  title="No contacts yet"
-                  description="Get started by adding your first contact"
-                  actionLabel="Add Contact"
-                  onAction={() => setShowCreateModal(true)}
+                  kind={headerQueryCount > 0 ? 'results' : 'collection'}
+                  title={headerQueryCount > 0 ? 'No matching contacts' : 'No contacts yet'}
+                  description={headerQueryCount > 0 ? undefined : 'Add a contact to start building customer relationships.'}
+                  actionLabel={headerQueryCount > 0 ? 'Clear filters' : 'Add contact'}
+                  onAction={headerQueryCount > 0
+                    ? () => {
+                        setSearchQuery('');
+                        setStatusFilter('all');
+                        setPagination((current) => ({ ...current, page: 1 }));
+                      }
+                    : () => setShowCreateModal(true)}
                   className="p-12"
                 />
               ) : isMobile ? (

@@ -78,7 +78,7 @@ export function AdminShellNavigation() {
                                         'h-4 w-4 shrink-0',
                                         item.path === activeItem.path
                                             ? 'text-blue-600 dark:text-blue-400'
-                                            : 'text-gray-600 dark:text-gray-400',
+                                            : 'text-muted-foreground',
                                     )}
                                 />
                                 <span>{item.title}</span>

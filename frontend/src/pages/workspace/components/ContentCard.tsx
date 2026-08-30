@@ -19,6 +19,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { SHARED_CONTENT_VISUAL } from '@/pages/contentVisuals';
+import { cn } from '@/lib/utils';
 
 type ContentType = 'all' | 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault';
 
@@ -145,8 +147,8 @@ export function ContentCard({ content, onClick, onDelete, formatRelativeTime }: 
             {content.category}
           </Badge>
           {content.is_public && (
-            <Badge variant="outline" className="text-xs text-green-600 border-green-300">
-              Shared
+            <Badge className={cn('text-xs', SHARED_CONTENT_VISUAL.badgeClass)}>
+              {SHARED_CONTENT_VISUAL.label}
             </Badge>
           )}
         </div>

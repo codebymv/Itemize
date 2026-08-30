@@ -20,8 +20,11 @@ export function MobileQueryBar({
 }: MobileQueryBarProps) {
   return (
     <div
-      className={cn('flex w-full min-w-0 flex-nowrap items-center gap-2', className)}
       data-mobile-query-bar
+      className={cn(
+        'flex w-full min-w-0 flex-nowrap items-center gap-2 [&_button]:min-h-11 [&_input]:min-h-11',
+        className,
+      )}
     >
       <div className="min-w-0 flex-1">{search}</div>
       {filters ? <div className="flex shrink-0 items-center gap-2">{filters}</div> : null}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Pause, Play, RefreshCw, RotateCcw, UserPlus, XCircle } from 'lucide-react';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -204,14 +205,15 @@ export function WorkflowEnrollmentsDialog({ open, onOpenChange, organizationId, 
 
         <div className="max-h-[45vh] space-y-2 overflow-y-auto">
           {loadError && (
-            <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
-              <p className="font-medium">Runs unavailable</p>
-              <p className="mt-1">{loadError}</p>
-              <Button type="button" variant="outline" size="sm" className="mt-3" onClick={() => void loadData(search)}>Try again</Button>
-            </div>
+            <ErrorState
+              kind="inline"
+              title="Unable to load automation runs"
+              description={loadError}
+              onAction={() => void loadData(search)}
+            />
           )}
           {!loading && !loadError && enrollments.length === 0 && (
-            <EmptyState icon={UserPlus} title="No runs yet" size="compact" />
+            <EmptyState icon={UserPlus} kind="inline" title="No runs yet" />
           )}
           {enrollments.map((enrollment) => {
             const busy = working?.endsWith(`-${enrollment.id}`) ?? false;

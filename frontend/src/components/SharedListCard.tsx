@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { SharedItemCard } from '@/components/public/BrandedPublicPage';
 import { Progress } from "@/components/ui/progress";
 import { Check } from 'lucide-react';
+import { EmptyState } from '@/components/EmptyState';
 
 interface SharedListItem {
   id: string;
@@ -148,11 +149,7 @@ export const SharedListCard: React.FC<SharedListCardProps> = ({ listData, isLive
             ))}
             
             {listData.items.length === 0 && (
-              <div 
-                className="py-8 text-center text-sm text-muted-foreground"
-              >
-                This list is empty.
-              </div>
+              <EmptyState kind="inline" title="This list is empty" />
             )}
           </div>
       </SharedItemCard>

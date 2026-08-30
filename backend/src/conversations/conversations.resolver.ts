@@ -25,6 +25,7 @@ export class ConversationsResolver {
   @Query(() => ConversationPage, { name: 'conversations' })
   conversationsList(
     @Args('status', { type: () => String, nullable: true }) status?: string,
+    @Args('channel', { type: () => String, nullable: true }) channel?: string,
     @Args('assignedTo', { type: () => Int, nullable: true })
     assignedTo?: number,
     @Args('contactId', { type: () => Int, nullable: true }) contactId?: number,
@@ -33,6 +34,7 @@ export class ConversationsResolver {
   ): Promise<ConversationPage> {
     return this.conversations.list(this.organizationId(), {
       status,
+      channel,
       assignedTo,
       contactId,
       page,

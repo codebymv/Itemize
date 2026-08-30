@@ -29,6 +29,8 @@ import {
 } from 'lucide-react';
 import * as adminApi from '@/services/adminApi';
 import { EmailLogsView, type EmailLogsViewHandle } from './EmailLogsView';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
 
 const PLAN_ICONS = {
     free: UserIcon,
@@ -98,6 +100,7 @@ export default function CommunicationsSection({
     const [planFilter, setPlanFilter] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [usersLoading, setUsersLoading] = useState(false);
+    const [usersLoadError, setUsersLoadError] = useState(false);
     const [loadingMore, setLoadingMore] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
     const [users, setUsers] = useState<adminApi.AdminUser[]>([]);
@@ -143,6 +146,7 @@ export default function CommunicationsSection({
             setLoadingMore(true);
         }
         isLoadingRef.current = true;
+        setUsersLoadError(false);
 
         try {
             const response = await adminApi.searchUsers({
@@ -161,14 +165,14 @@ export default function CommunicationsSection({
             setHasMore(response.hasMore || false);
         } catch (error) {
             console.error('Error fetching users:', error);
-            toast({ title: 'Error', description: 'Failed to load users', variant: 'destructive' });
+            setUsersLoadError(true);
         } finally {
             setUsersLoading(false);
             setLoadingMore(false);
             setRefreshing(false);
             isLoadingRef.current = false;
         }
-    }, [searchQuery, planFilter, toast]);
+    }, [searchQuery, planFilter]);
 
     const isInitialMount = useRef(true);
     useEffect(() => {
@@ -297,7 +301,7 @@ export default function CommunicationsSection({
         return 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300';
     };
 
-    const showNoResultsState = !usersLoading && users.length === 0;
+    const showNoResultsState = !usersLoading && !usersLoadError && users.length === 0;
     const showResults = users.length > 0;
     const resultCountLabel = (planFilter || searchQuery) && filteredTotal > 0
         ? `${users.length} of ${filteredTotal} users`
@@ -541,12 +545,22 @@ export default function CommunicationsSection({
                                 <div className="flex items-center justify-center h-64">
                                     <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
                                 </div>
+                            ) : usersLoadError ? (
+                                <ErrorState
+                                    kind="section"
+                                    icon={Users}
+                                    title="Unable to load users"
+                                    description="We couldn't load the user list. Try again."
+                                    onRetry={() => void fetchUsers(0, false)}
+                                />
                             ) : showNoResultsState ? (
-                                <div className="text-center py-12">
-                                    <Users className="h-12 w-12 mx-auto mb-3 text-slate-300 dark:text-slate-600" />
-                                    <p className="text-slate-600 dark:text-slate-400 font-medium">No users found</p>
-                                    <p className="text-sm text-muted-foreground mt-1">Try adjusting your search or filters</p>
-                                </div>
+                                <EmptyState
+                                    icon={Users}
+                                    kind={searchQuery || planFilter ? 'results' : 'passive'}
+                                    title={searchQuery || planFilter ? 'No matching users' : 'No users yet'}
+                                    actionLabel={searchQuery || planFilter ? 'Clear filters' : undefined}
+                                    onAction={searchQuery || planFilter ? () => { setSearchQuery(''); setPlanFilter(null); } : undefined}
+                                />
                             ) : showResults ? (
                                 <div className="space-y-2 max-h-[500px] overflow-y-auto">
                                     {users.map((user) => (
@@ -581,7 +595,7 @@ export default function CommunicationsSection({
                                             </div>
 
                                             {user.role === 'ADMIN' && (
-                                                <Badge variant="default" className="bg-blue-600">
+                                                <Badge>
                                                     <ShieldCheck className="h-3 w-3 sm:mr-1" />
                                                     <span className="hidden sm:inline">Admin</span>
                                                 </Badge>

@@ -24,7 +24,8 @@ import {
     Users,
     Workflow,
     FileText,
-    Calendar
+    Calendar,
+    CreditCard,
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import PricingCards from './PricingCards';
@@ -36,6 +37,7 @@ import {
     PLAN_PRICING
 } from '@/lib/subscription';
 import { STATUS_THEME_CLASSES } from '@/lib/statusVisuals';
+import { ErrorState } from '@/components/ErrorState';
 
 // Plan icons
 const PLAN_ICONS: Record<Plan, typeof Zap> = {
@@ -51,6 +53,7 @@ const getErrorMessage = (error: unknown, fallback: string): string =>
 export function BillingPanel() {
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState(false);
     const [status, setStatus] = useState<BillingStatus | null>(null);
     const [usage, setUsage] = useState<UsageStats | null>(null);
     const [processing, setProcessing] = useState(false);
@@ -61,6 +64,8 @@ export function BillingPanel() {
     }, []);
 
     const fetchData = async () => {
+        setLoading(true);
+        setLoadError(false);
         try {
             const [statusResult, usageResult] = await Promise.all([
                 billingApi.getBillingStatus(),
@@ -70,17 +75,15 @@ export function BillingPanel() {
             if (statusResult.success && statusResult.data) {
                 setStatus(statusResult.data);
                 setBillingPeriod(statusResult.data.billing_period || 'monthly');
+            } else {
+                throw new Error('Billing status unavailable');
             }
             if (usageResult.success && usageResult.data) {
                 setUsage(usageResult.data);
             }
         } catch (error) {
             console.error('Failed to fetch billing data:', error);
-            toast({
-                title: 'Error',
-                description: 'Failed to load billing information',
-                variant: 'destructive',
-            });
+            setLoadError(true);
         } finally {
             setLoading(false);
         }
@@ -150,7 +153,17 @@ export function BillingPanel() {
         );
     }
 
-    if (!status) return null;
+    if (loadError || !status) {
+        return (
+            <ErrorState
+                kind="section"
+                icon={CreditCard}
+                title="Unable to load billing information"
+                description="We couldn't load your plan and usage. Try again."
+                onRetry={() => void fetchData()}
+            />
+        );
+    }
 
     const currentPlan = status.plan || 'starter';
     const meta = PLAN_METADATA[currentPlan];

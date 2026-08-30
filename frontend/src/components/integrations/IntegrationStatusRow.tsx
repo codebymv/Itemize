@@ -13,9 +13,18 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { defineStatus, type StatusVisual } from '@/lib/statusVisuals';
 import { cn } from '@/lib/utils';
 
 export type IntegrationStatus = 'connected' | 'disconnected' | 'inactive' | 'soon' | 'available';
+
+const INTEGRATION_STATUS_VISUALS: Record<IntegrationStatus, StatusVisual> = {
+  connected: defineStatus('Connected', 'blue', CheckCircle2),
+  disconnected: defineStatus('Not connected', 'gray', Clock3),
+  inactive: defineStatus('Inactive', 'orange', Clock3),
+  soon: defineStatus('Soon', 'gray', Clock3),
+  available: defineStatus('Available', 'blue', CheckCircle2),
+};
 
 interface IntegrationStatusRowProps {
   name: string;
@@ -34,29 +43,9 @@ interface IntegrationStatusRowProps {
 }
 
 function StatusBadge({ status }: { status: IntegrationStatus }) {
-  if (status === 'connected') {
-    return (
-      <Badge variant="outline" className="border-green-200 bg-green-50 text-green-700 dark:border-green-800 dark:bg-green-950/40 dark:text-green-400">
-        <CheckCircle2 className="mr-1 h-3 w-3" />
-        Connected
-      </Badge>
-    );
-  }
-
-  if (status === 'inactive') return <Badge variant="destructive">Inactive</Badge>;
-
-  if (status === 'soon') {
-    return (
-      <Badge variant="secondary">
-        <Clock3 className="mr-1 h-3 w-3" />
-        Soon
-      </Badge>
-    );
-  }
-
-  if (status === 'available') return <Badge variant="secondary">Available</Badge>;
-
-  return <Badge variant="outline" className="text-muted-foreground">Not connected</Badge>;
+  const visual = INTEGRATION_STATUS_VISUALS[status];
+  const StatusIcon = visual.icon;
+  return <Badge className={visual.badgeClass}><StatusIcon className="mr-1 h-3 w-3" />{visual.label}</Badge>;
 }
 
 export function IntegrationStatusRow({

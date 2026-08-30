@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
+import { NotificationsService } from '../notifications/notifications.service';
 
 export type MessageDeliveryKind =
   | 'contact_email'
@@ -32,6 +33,8 @@ export type MessageDeliveryJobRow = {
   contact_id: number | null;
   email_template_id: number | null;
   sms_template_id: number | null;
+  conversation_id: number | null;
+  message_id: number | null;
   payload: MessageDeliveryPayload;
   status: string;
   attempt_count: number;
@@ -93,12 +96,16 @@ type JobInsert = {
 const selection = `
   id, organization_id, requested_by_user_id, idempotency_key,
   request_fingerprint, kind, channel, contact_id, email_template_id,
-  sms_template_id, payload, status, attempt_count, provider_id, last_error,
+  sms_template_id, conversation_id, message_id, payload, status, attempt_count,
+  provider_id, last_error,
   created_at`;
 
 @Injectable()
 export class MessageDeliveryRepository {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   enqueueContactEmail(
     input: EnqueueBase & { contactId: number; templateId?: number | null },
@@ -333,6 +340,24 @@ export class MessageDeliveryRepository {
         });
       }
 
+      if (job.message_id) {
+        await client.query(
+          `UPDATE messages
+           SET metadata=COALESCE(metadata, '{}'::jsonb) || $3::jsonb
+           WHERE organization_id=$1 AND id=$2`,
+          [
+            organizationId,
+            job.message_id,
+            JSON.stringify({
+              delivery_status: 'sent',
+              provider_id: providerId,
+              email_log_id: emailLogId,
+              sms_log_id: smsLogId,
+            }),
+          ],
+        );
+      }
+
       const updated = await client.query<MessageDeliveryJobRow>(
         `UPDATE message_delivery_jobs
          SET status='provider_accepted', provider_id=$3, email_log_id=$4,
@@ -353,23 +378,49 @@ export class MessageDeliveryRepository {
     message: string,
     retryable: boolean,
   ): Promise<MessageDeliveryJobRow> {
-    const current = await this.find(organizationId, id);
-    if (!current) throw new Error('Message delivery disappeared');
-    const retry = retryable && current.channel === 'email' && current.attempt_count < 5;
-    const delaySeconds = Math.min(300, 5 * (2 ** Math.max(0, current.attempt_count - 1)));
-    const result = await this.pool.query<MessageDeliveryJobRow>(
-      `UPDATE message_delivery_jobs
-       SET status=$3::varchar,
-           next_attempt_at=CASE WHEN $3::varchar='retry'
-             THEN CURRENT_TIMESTAMP + ($4::int * INTERVAL '1 second')
-             ELSE next_attempt_at END,
-           lease_expires_at=NULL, claimed_by=NULL, last_error=$5,
-           updated_at=CURRENT_TIMESTAMP
-       WHERE organization_id=$1 AND id=$2 AND status='processing'
-       RETURNING ${selection}`,
-      [organizationId, id, retry ? 'retry' : 'dead_letter', delaySeconds, message],
-    );
-    return result.rows[0] ?? current;
+    return this.transaction(async (client) => {
+      const found = await client.query<MessageDeliveryJobRow>(
+        `SELECT ${selection} FROM message_delivery_jobs
+         WHERE organization_id=$1 AND id=$2 FOR UPDATE`,
+        [organizationId, id],
+      );
+      const current = found.rows[0];
+      if (!current) throw new Error('Message delivery disappeared');
+      const retry = retryable && current.channel === 'email' && current.attempt_count < 5;
+      const delaySeconds = Math.min(300, 5 * (2 ** Math.max(0, current.attempt_count - 1)));
+      const result = await client.query<MessageDeliveryJobRow>(
+        `UPDATE message_delivery_jobs
+         SET status=$3::varchar,
+             next_attempt_at=CASE WHEN $3::varchar='retry'
+               THEN CURRENT_TIMESTAMP + ($4::int * INTERVAL '1 second')
+               ELSE next_attempt_at END,
+             lease_expires_at=NULL, claimed_by=NULL, last_error=$5,
+             updated_at=CURRENT_TIMESTAMP
+         WHERE organization_id=$1 AND id=$2 AND status='processing'
+         RETURNING ${selection}`,
+        [organizationId, id, retry ? 'retry' : 'dead_letter', delaySeconds, message],
+      );
+      const updated = result.rows[0] ?? current;
+      if (updated.message_id) {
+        await client.query(
+          `UPDATE messages
+           SET metadata=COALESCE(metadata, '{}'::jsonb) || $3::jsonb
+           WHERE organization_id=$1 AND id=$2`,
+          [
+            organizationId,
+            updated.message_id,
+            JSON.stringify({
+              delivery_status: updated.status === 'retry' ? 'retrying' : 'failed',
+              delivery_error: message,
+            }),
+          ],
+        );
+      }
+      if (updated.status === 'dead_letter') {
+        await this.notifyDeliveryAttention(client, updated, 'failed');
+      }
+      return updated;
+    });
   }
 
   async reconciliation(
@@ -377,18 +428,85 @@ export class MessageDeliveryRepository {
     id: number,
     message: string,
   ): Promise<MessageDeliveryJobRow> {
-    const result = await this.pool.query<MessageDeliveryJobRow>(
-      `UPDATE message_delivery_jobs
-       SET status='reconciliation_required', lease_expires_at=NULL,
-           claimed_by=NULL, last_error=$3, updated_at=CURRENT_TIMESTAMP
-       WHERE organization_id=$1 AND id=$2 AND status='processing'
-       RETURNING ${selection}`,
-      [organizationId, id, message],
+    return this.transaction(async (client) => {
+      const result = await client.query<MessageDeliveryJobRow>(
+        `UPDATE message_delivery_jobs
+         SET status='reconciliation_required', lease_expires_at=NULL,
+             claimed_by=NULL, last_error=$3, updated_at=CURRENT_TIMESTAMP
+         WHERE organization_id=$1 AND id=$2 AND status='processing'
+         RETURNING ${selection}`,
+        [organizationId, id, message],
+      );
+      const current = result.rows[0] ?? (await client.query<MessageDeliveryJobRow>(
+        `SELECT ${selection} FROM message_delivery_jobs
+         WHERE organization_id=$1 AND id=$2 FOR UPDATE`,
+        [organizationId, id],
+      )).rows[0];
+      if (!current) throw new Error('Message delivery disappeared');
+      if (current.message_id) {
+        await client.query(
+          `UPDATE messages
+           SET metadata=COALESCE(metadata, '{}'::jsonb) || $3::jsonb
+           WHERE organization_id=$1 AND id=$2`,
+          [
+            organizationId,
+            current.message_id,
+            JSON.stringify({
+              delivery_status: 'needs_review',
+              delivery_error: message,
+            }),
+          ],
+        );
+      }
+      if (current.status === 'reconciliation_required') {
+        await this.notifyDeliveryAttention(client, current, 'needs review');
+      }
+      return current;
+    });
+  }
+
+  private async notifyDeliveryAttention(
+    client: PoolClient,
+    job: MessageDeliveryJobRow,
+    state: 'failed' | 'needs review',
+  ): Promise<void> {
+    if (!job.conversation_id || !job.message_id || !job.contact_id) return;
+    const contact = await client.query<{
+      first_name: string | null;
+      last_name: string | null;
+      email: string | null;
+      phone: string | null;
+    }>(
+      `SELECT first_name,last_name,email,phone FROM contacts
+       WHERE organization_id=$1 AND id=$2`,
+      [job.organization_id, job.contact_id],
     );
-    if (result.rows[0]) return result.rows[0];
-    const current = await this.find(organizationId, id);
-    if (!current) throw new Error('Message delivery disappeared');
-    return current;
+    const row = contact.rows[0];
+    const name = [row?.first_name, row?.last_name].filter(Boolean).join(' ')
+      || row?.email
+      || row?.phone
+      || 'a contact';
+    await this.notifications.createForOrganizationOwnerWithClient(client, {
+      organizationId: job.organization_id,
+      preferredUserId: job.requested_by_user_id,
+      actorUserId: job.requested_by_user_id,
+      eventType: 'communication.delivery_failed',
+      entityType: 'conversation',
+      entityId: job.conversation_id,
+      dedupeKey: `communication:delivery:${job.id}:attention`,
+      payload: {
+        channel: job.channel,
+        conversationId: job.conversation_id,
+        messageId: job.message_id,
+        deliveryJobId: Number(job.id),
+        state,
+      },
+      category: 'business',
+      priority: 'high',
+      title: `${job.channel === 'email' ? 'Email' : 'SMS'} delivery ${state === 'failed' ? 'failed' : 'needs review'}`,
+      body: `Your message to ${name} ${state === 'failed' ? 'could not be delivered' : 'needs review'}.`,
+      href: `/inbox?conversation=${job.conversation_id}`,
+    });
   }
 
   private async enqueue(
@@ -444,8 +562,106 @@ export class MessageDeliveryRepository {
           JSON.stringify(job.payload),
         ],
       );
-      return { kind: 'created', job: inserted.rows[0] };
+      const tracked = await this.trackContactDelivery(
+        client,
+        inserted.rows[0],
+      );
+      return { kind: 'created', job: tracked };
     });
+  }
+
+  private async trackContactDelivery(
+    client: PoolClient,
+    job: MessageDeliveryJobRow,
+  ): Promise<MessageDeliveryJobRow> {
+    if (!job.contact_id || (job.kind !== 'contact_email' && job.kind !== 'contact_sms')) {
+      return job;
+    }
+
+    await client.query(
+      'SELECT pg_advisory_xact_lock($1::int, hashtext($2))',
+      [job.organization_id, `conversation:${job.contact_id}:${job.channel}`],
+    );
+    const existing = await client.query<{ id: number }>(
+      `SELECT id
+       FROM conversations
+       WHERE organization_id=$1 AND contact_id=$2 AND channel=$3 AND status='open'
+       ORDER BY last_message_at DESC NULLS LAST, id DESC
+       LIMIT 1
+       FOR UPDATE`,
+      [job.organization_id, job.contact_id, job.channel],
+    );
+    const content = job.channel === 'email'
+      ? (job.payload.text?.trim() || job.payload.subject || 'Email')
+      : (job.payload.message?.trim() || 'SMS message');
+    let conversationId = existing.rows[0]?.id;
+    if (!conversationId) {
+      const created = await client.query<{ id: number }>(
+        `INSERT INTO conversations (
+           organization_id, contact_id, assigned_to, channel, subject,
+           last_message_at, last_message_preview, status
+         ) VALUES ($1,$2,$3,$4,$5,CURRENT_TIMESTAMP,$6,'open')
+         RETURNING id`,
+        [
+          job.organization_id,
+          job.contact_id,
+          job.requested_by_user_id,
+          job.channel,
+          job.payload.subject ?? null,
+          content.slice(0, 200),
+        ],
+      );
+      conversationId = Number(created.rows[0].id);
+    } else {
+      await client.query(
+        `UPDATE conversations
+         SET assigned_to=COALESCE(assigned_to,$3),
+             subject=COALESCE(subject,$4),
+             last_message_at=CURRENT_TIMESTAMP,
+             last_message_preview=$5,
+             updated_at=CURRENT_TIMESTAMP
+         WHERE organization_id=$1 AND id=$2`,
+        [
+          job.organization_id,
+          conversationId,
+          job.requested_by_user_id,
+          job.payload.subject ?? null,
+          content.slice(0, 200),
+        ],
+      );
+    }
+
+    const message = await client.query<{ id: number }>(
+      `INSERT INTO messages (
+         conversation_id, organization_id, sender_type, sender_user_id,
+         channel, content, content_html, metadata, is_read
+       ) VALUES ($1,$2,'user',$3,$4,$5,$6,$7::jsonb,TRUE)
+       RETURNING id`,
+      [
+        conversationId,
+        job.organization_id,
+        job.requested_by_user_id,
+        job.channel,
+        content,
+        job.channel === 'email' ? job.payload.html ?? null : null,
+        JSON.stringify({
+          message_delivery_job_id: Number(job.id),
+          delivery_status: 'queued',
+          to: job.payload.to,
+          from: job.payload.from,
+          subject: job.payload.subject ?? null,
+          template_name: job.payload.templateName ?? null,
+        }),
+      ],
+    );
+    const linked = await client.query<MessageDeliveryJobRow>(
+      `UPDATE message_delivery_jobs
+       SET conversation_id=$3, message_id=$4, updated_at=CURRENT_TIMESTAMP
+       WHERE organization_id=$1 AND id=$2
+       RETURNING ${selection}`,
+      [job.organization_id, job.id, conversationId, message.rows[0].id],
+    );
+    return linked.rows[0];
   }
 
   private async contact(

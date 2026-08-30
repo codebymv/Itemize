@@ -10,6 +10,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
+import { NotificationsService } from '../notifications/notifications.service';
 
 export class EmailWebhookInputError extends Error {
   constructor(message: string) {
@@ -71,6 +72,7 @@ type TargetRow = {
   contact_id: number | null;
   status: string;
   provider_status_at: Date | null;
+  metadata: Record<string, unknown> | null;
 };
 
 export type EmailWebhookResult = {
@@ -201,7 +203,10 @@ export function shouldSuppressContact(
 
 @Injectable()
 export class EmailWebhooksService {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async processResendEvent(
     deliveryId: unknown,
@@ -291,6 +296,10 @@ export class EmailWebhooksService {
       normalized,
     );
     const matched = Boolean(emailLog || campaignRecipient);
+
+    if (emailLog && targets.emailLog) {
+      await this.syncDirectDelivery(client, targets.emailLog, normalized);
+    }
 
     if (
       matched &&
@@ -385,7 +394,7 @@ export class EmailWebhooksService {
     organizationCount: number;
   }> {
     const emailLogResult = await client.query<TargetRow>(
-      `SELECT id, organization_id, contact_id, status, provider_status_at
+      `SELECT id, organization_id, contact_id, status, provider_status_at, metadata
        FROM email_logs
        WHERE external_id = $1
        ORDER BY id DESC
@@ -393,7 +402,8 @@ export class EmailWebhooksService {
       [externalId],
     );
     const campaignResult = await client.query<TargetRow>(
-      `SELECT id, organization_id, contact_id, status, provider_status_at
+      `SELECT id, organization_id, contact_id, status, provider_status_at,
+              NULL::jsonb AS metadata
        FROM campaign_recipients
        WHERE external_message_id = $1
        ORDER BY id DESC
@@ -516,6 +526,99 @@ export class EmailWebhooksService {
       ],
     );
     return result.rows[0] || null;
+  }
+
+  private async syncDirectDelivery(
+    client: PoolClient,
+    target: TargetRow,
+    normalized: NormalizedEvent,
+  ): Promise<void> {
+    const deliveryJobId = Number(target.metadata?.message_delivery_job_id);
+    if (!Number.isInteger(deliveryJobId) || deliveryJobId < 1) return;
+    const delivery = await client.query<{
+      id: number;
+      organization_id: number;
+      requested_by_user_id: number | null;
+      conversation_id: number | null;
+      message_id: number | null;
+      channel: string;
+      first_name: string | null;
+      last_name: string | null;
+      email: string | null;
+      phone: string | null;
+    }>(
+      `SELECT job.id,job.organization_id,job.requested_by_user_id,
+              job.conversation_id,job.message_id,job.channel,
+              contact.first_name,contact.last_name,contact.email,contact.phone
+       FROM message_delivery_jobs job
+       LEFT JOIN contacts contact
+         ON contact.organization_id=job.organization_id AND contact.id=job.contact_id
+       WHERE job.organization_id=$1 AND job.id=$2
+       FOR UPDATE OF job`,
+      [target.organization_id, deliveryJobId],
+    );
+    const job = delivery.rows[0];
+    if (!job?.conversation_id || !job.message_id) return;
+    const terminal = [
+      'email.bounced',
+      'email.complained',
+      'email.failed',
+      'email.suppressed',
+    ].includes(normalized.eventType);
+    const deliveryStatus = terminal
+      ? 'failed'
+      : normalized.eventType === 'email.delivered'
+        || normalized.eventType === 'email.opened'
+        || normalized.eventType === 'email.clicked'
+        ? 'delivered'
+        : normalized.eventType === 'email.sent'
+          ? 'sent'
+          : null;
+    if (deliveryStatus) {
+      await client.query(
+        `UPDATE messages
+         SET metadata=COALESCE(metadata, '{}'::jsonb) || $3::jsonb
+         WHERE organization_id=$1 AND id=$2`,
+        [
+          job.organization_id,
+          job.message_id,
+          JSON.stringify({
+            delivery_status: deliveryStatus,
+            provider_event: normalized.eventType,
+            ...(normalized.details.message
+              ? { delivery_error: normalized.details.message }
+              : {}),
+          }),
+        ],
+      );
+    }
+    if (!terminal) return;
+    const contactName = [job.first_name, job.last_name].filter(Boolean).join(' ')
+      || job.email
+      || job.phone
+      || 'a contact';
+    await this.notifications.createForOrganizationOwnerWithClient(client, {
+      organizationId: job.organization_id,
+      preferredUserId: job.requested_by_user_id,
+      actorUserId: job.requested_by_user_id,
+      eventType: 'communication.delivery_failed',
+      entityType: 'conversation',
+      entityId: job.conversation_id,
+      dedupeKey: `communication:delivery:${job.id}:attention`,
+      payload: {
+        channel: 'email',
+        conversationId: job.conversation_id,
+        messageId: job.message_id,
+        deliveryJobId: job.id,
+        providerEvent: normalized.eventType,
+      },
+      category: 'business',
+      priority: 'high',
+      title: 'Email delivery failed',
+      body: `Your message to ${contactName} could not be delivered.`,
+      href: `/inbox?conversation=${job.conversation_id}`,
+      occurredAt: normalized.eventCreatedAt,
+    });
   }
 
   private async transaction<T>(

@@ -81,6 +81,7 @@ export const useVaultCardLogic = ({
   // Items state
   const [items, setItems] = useState<VaultItem[]>(vault.items || []);
   const [isLoadingItems, setIsLoadingItems] = useState(false);
+  const [itemsLoadError, setItemsLoadError] = useState(false);
   const [itemsLoaded, setItemsLoaded] = useState(
     vault.client_session_unlocked || hasCompleteVaultItems(vault),
   );
@@ -233,6 +234,7 @@ export const useVaultCardLogic = ({
       if (itemsLoaded || isLoadingItems) return;
 
       setIsLoadingItems(true);
+      setItemsLoadError(false);
       try {
         const fullVault = await getVault(
           vault.id,
@@ -260,11 +262,7 @@ export const useVaultCardLogic = ({
         }
       } catch (error) {
         console.error("Failed to load vault items:", error);
-        toast({
-          title: "Error",
-          description: "Could not load vault items. Please try again.",
-          variant: "destructive",
-        });
+        setItemsLoadError(true);
       } finally {
         setIsLoadingItems(false);
       }
@@ -279,7 +277,6 @@ export const useVaultCardLogic = ({
       isUnlockedForSession,
       needsEnrollment,
       openSecurityDialog,
-      toast,
     ],
   );
 
@@ -947,6 +944,7 @@ export const useVaultCardLogic = ({
     // Items
     items,
     isLoadingItems,
+    itemsLoadError,
     itemsLoaded,
     loadItems,
 

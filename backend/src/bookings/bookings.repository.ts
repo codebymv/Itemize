@@ -39,6 +39,7 @@ export type BookingRow = {
 
 export type BookingCriteria = {
   organizationId: number;
+  search?: string;
   calendarId?: number;
   contactId?: number;
   assignedToId?: number;
@@ -152,9 +153,27 @@ export class BookingsRepository {
       add('b.start_time', criteria.startDate, '>=');
     if (criteria.endDate !== undefined)
       add('b.start_time', criteria.endDate, '<=');
+    if (criteria.search !== undefined) {
+      const escaped = criteria.search.replace(/[\\%_]/g, '\\$&');
+      parameters.push(`%${escaped}%`);
+      clauses.push(`concat_ws(' ',
+        b.attendee_name,
+        b.attendee_email,
+        b.attendee_phone,
+        b.title,
+        calendar.name,
+        contact.first_name,
+        contact.last_name,
+        contact.email,
+        contact.phone
+      ) ILIKE $${parameters.length} ESCAPE '\\'`);
+    }
     const where = clauses.join(' AND ');
     const count = await this.pool.query<{ total: number }>(
-      `SELECT COUNT(*)::int AS total FROM bookings b WHERE ${where}`,
+      `SELECT COUNT(*)::int AS total
+       FROM bookings b
+       ${bookingJoins}
+       WHERE ${where}`,
       parameters,
     );
     const rows = await this.pool.query<BookingRow>(

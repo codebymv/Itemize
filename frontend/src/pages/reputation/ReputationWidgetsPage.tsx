@@ -1,299 +1,177 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Code, MoreHorizontal, Trash2, Copy } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Code2, Copy, LayoutGrid, MoreHorizontal, Pause, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { CardGridSkeleton } from '@/components/ui/loading-skeletons';
-import { useToast } from '@/hooks/use-toast';
-import { useOrganization } from '@/hooks/useOrganization';
-import { getReviewWidgets, deleteReviewWidget, createReviewWidget, getWidgetEmbedCode } from '@/services/reputationApi';
-import { PageLayout } from '@/components/layout/PageLayout';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { DeleteDialog } from '@/components/ui/delete-dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
-import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
+import { OrganizationErrorState } from '@/components/OrganizationErrorState';
+import { HeaderAction, HeaderFilters, HeaderSearch } from '@/components/layout/DesktopHeaderTools';
+import { PageLayout } from '@/components/layout/PageLayout';
+import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { OnboardingModal } from '@/components/OnboardingModal';
-import { getWidgetTypeBadgeClass } from '@/lib/badge-utils';
+import { StatCard } from '@/components/StatCard';
+import { ListRowSkeleton } from '@/components/ui/loading-skeletons';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
-import { DeleteDialog } from '@/components/ui/delete-dialog';
+import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
+import { useOrganization } from '@/hooks/useOrganization';
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
+import { deleteReviewWidget, getReviewWidgets, getWidgetEmbedCode, type ReviewWidget } from '@/services/reputationApi';
+import { getReputationPlatformLabel, getReviewWidgetAvailabilityVisual } from './constants/reputationVisuals';
 
-interface ReviewWidget {
-    id: number;
-    name: string;
-    widget_type: 'carousel' | 'grid' | 'list' | 'badge' | 'floating';
-    widget_key: string;
-    is_active: boolean;
-    theme: 'light' | 'dark' | 'auto';
-    min_rating: number;
-    max_reviews: number;
-    created_at: string;
-}
+const WIDGET_TYPES: Array<ReviewWidget['widget_type'] | 'all'> = ['all', 'carousel', 'grid', 'list', 'badge', 'floating'];
 
 export function ReputationWidgetsPage() {
-    const { toast } = useToast();
-    // Route-aware onboarding (will show 'reputation' onboarding for Reputation group)
-    const {
-        showModal: showOnboarding,
-        handleComplete: handleOnboardingComplete,
-        handleDismiss: handleOnboardingDismiss,
-        handleClose: handleOnboardingClose,
-        featureKey: onboardingFeatureKey,
-    } = useRouteOnboarding();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
+  const { showModal: showOnboarding, handleComplete, handleDismiss, handleClose, featureKey } = useRouteOnboarding();
+  const [widgets, setWidgets] = useState<ReviewWidget[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [widgetToDelete, setWidgetToDelete] = useState<ReviewWidget | null>(null);
 
-    const [widgets, setWidgets] = useState<ReviewWidget[]>([]);
-    const [loading, setLoading] = useState(true);
-    const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
-    const [searchQuery, setSearchQuery] = useState('');
-    const [typeFilter, setTypeFilter] = useState<string>('all');
-    const [widgetToDelete, setWidgetToDelete] = useState<ReviewWidget | null>(null);
+  useEffect(() => { if (initError) setLoading(false); }, [initError]);
 
-    useEffect(() => {
-        if (!organizationId && initError) {
-            setLoading(false);
-        }
-    }, [organizationId, initError]);
-
-    const fetchWidgets = useCallback(async () => {
-        if (!organizationId) return;
-        setLoading(true);
-        try {
-            const widgetsData = await getReviewWidgets(organizationId);
-            setWidgets(Array.isArray(widgetsData) ? widgetsData : []);
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to load widgets', variant: 'destructive' });
-        } finally {
-            setLoading(false);
-        }
-    }, [organizationId, toast]);
-
-    useEffect(() => {
-        fetchWidgets();
-    }, [fetchWidgets]);
-
-    const handleCreateWidget = async () => {
-        if (!organizationId) return;
-        try {
-            const newWidget = await createReviewWidget({
-                name: 'New Widget',
-                widget_type: 'carousel',
-            }, organizationId);
-            setWidgets(prev => [newWidget, ...prev]);
-            toast({ title: 'Created', description: 'Widget created successfully' });
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to create widget', variant: 'destructive' });
-        }
-    };
-
-    const handleCopyEmbedCode = async (id: number) => {
-        if (!organizationId) return;
-        try {
-            const { embed_code } = await getWidgetEmbedCode(id, organizationId);
-            navigator.clipboard.writeText(embed_code);
-            toast({ title: 'Copied', description: 'Embed code copied to clipboard' });
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to get embed code', variant: 'destructive' });
-        }
-    };
-
-    const handleDelete = async (): Promise<boolean> => {
-        if (!organizationId || !widgetToDelete) return false;
-        try {
-            await deleteReviewWidget(widgetToDelete.id, organizationId);
-            setWidgets(prev => prev.filter(w => w.id !== widgetToDelete.id));
-            setWidgetToDelete(null);
-            return true;
-        } catch (error) {
-            return false;
-        }
-    };
-
-    const filteredWidgets = widgets.filter(w => {
-        const matchesSearch = w.name.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesType = typeFilter === 'all' || w.widget_type === typeFilter;
-        return matchesSearch && matchesType;
-    });
-
-    if (initError) {
-        return (
-            <PageLayout
-                title="WIDGETS"
-                icon={<Code className="h-5 w-5 text-blue-600 flex-shrink-0" />}
-            >
-                <ErrorState
-                    title="Unable to load widgets"
-                    description={initError}
-                    onAction={() => void fetchWidgets()}
-                />
-            </PageLayout>
-        );
+  const fetchWidgets = useCallback(async () => {
+    if (!organizationId) return;
+    setLoading(true);
+    setLoadError(false);
+    try {
+      setWidgets(await getReviewWidgets(organizationId));
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
     }
+  }, [organizationId]);
 
+  useEffect(() => { void fetchWidgets(); }, [fetchWidgets]);
+
+  const filteredWidgets = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return widgets.filter(widget => (!query || widget.name.toLowerCase().includes(query)) && (typeFilter === 'all' || widget.widget_type === typeFilter));
+  }, [searchQuery, typeFilter, widgets]);
+
+  const copyEmbedCode = async (widget: ReviewWidget) => {
+    if (!organizationId) return;
+    try {
+      const result = await getWidgetEmbedCode(widget.id, organizationId);
+      await navigator.clipboard.writeText(result.embed_code);
+      toast({ title: 'Embed code copied' });
+    } catch {
+      toast({ title: 'Could not copy embed code', variant: 'destructive' });
+    }
+  };
+
+  const handleDelete = async (): Promise<boolean> => {
+    if (!organizationId || !widgetToDelete) return false;
+    try {
+      await deleteReviewWidget(widgetToDelete.id, organizationId);
+      setWidgets(current => current.filter(widget => widget.id !== widgetToDelete.id));
+      setWidgetToDelete(null);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const typeSelect = (className = 'w-36') => (
+    <Select value={typeFilter} onValueChange={setTypeFilter}>
+      <SelectTrigger className={cn('h-11', className)} aria-label="Filter review widgets by type"><SelectValue placeholder="Type" /></SelectTrigger>
+      <SelectContent>{WIDGET_TYPES.map(type => <SelectItem key={type} value={type}>{type === 'all' ? 'All types' : getReputationPlatformLabel(type)}</SelectItem>)}</SelectContent>
+    </Select>
+  );
+
+  if (initError) {
     return (
-        <PageLayout
-            title="WIDGETS"
-            icon={<Code className="h-5 w-5 text-blue-600 flex-shrink-0" />}
-            pageActions={
-                <>
-                    <div className="relative w-full max-w-xs">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Search widgets..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors"
-                        />
-                    </div>
-                    <Select value={typeFilter} onValueChange={setTypeFilter}>
-                        <SelectTrigger className="w-[120px] h-9 bg-muted/20 border-border/50">
-                            <SelectValue placeholder="Type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Types</SelectItem>
-                            <SelectItem value="carousel">Carousel</SelectItem>
-                            <SelectItem value="grid">Grid</SelectItem>
-                            <SelectItem value="list">List</SelectItem>
-                            <SelectItem value="badge">Badge</SelectItem>
-                            <SelectItem value="floating">Floating</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-                        onClick={handleCreateWidget}
-                    >
-                        <Plus className="h-4 w-4 mr-2" />
-                        New Widget
-                    </Button>
-                </>
-            }
-            mobileActions={
-                <>
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Search widgets..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 w-full bg-muted/20 border-border/50"
-                        />
-                    </div>
-                    <Select value={typeFilter} onValueChange={setTypeFilter}>
-                        <SelectTrigger className="w-[100px] h-9">
-                            <SelectValue placeholder="Type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All</SelectItem>
-                            <SelectItem value="carousel">Carousel</SelectItem>
-                            <SelectItem value="grid">Grid</SelectItem>
-                            <SelectItem value="list">List</SelectItem>
-                            <SelectItem value="badge">Badge</SelectItem>
-                            <SelectItem value="floating">Floating</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <Button
-                        size="icon"
-                        className="bg-blue-600 hover:bg-blue-700 text-white h-9 w-9"
-                        onClick={handleCreateWidget}
-                    >
-                        <Plus className="h-4 w-4" />
-                    </Button>
-                </>
-            }
-        >
-                    {loading ? (
-                        <div className="p-6">
-                            <CardGridSkeleton count={3} height="h-40" />
-                        </div>
-                    ) : filteredWidgets.length === 0 ? (
-                        <EmptyState
-                            icon={Code}
-                            title="No review widgets yet"
-                            description="Create widgets to display reviews on your website"
-                            actionLabel="Create Widget"
-                            onAction={handleCreateWidget}
-                            className="p-12"
-                        />
-                    ) : (
-                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {filteredWidgets.map((widget) => (
-                                <Card key={widget.id} className="overflow-hidden hover:shadow-md transition-shadow">
-                                    <div className="h-24 bg-gradient-to-br from-yellow-100 to-orange-100 dark:from-yellow-900/20 dark:to-orange-900/20 flex items-center justify-center">
-                                        <Code className="h-10 w-10 text-yellow-600/50" />
-                                    </div>
-                                    <CardHeader className="pb-3">
-                                        <div className="flex items-start justify-between">
-                                            <div className="flex-1 min-w-0">
-                                                <CardTitle className="text-lg truncate">{widget.name}</CardTitle>
-                                            </div>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2">
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={() => handleCopyEmbedCode(widget.id)} className="group/menu">
-                                                        <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Copy Embed Code
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem onClick={() => setWidgetToDelete(widget)} className="text-destructive focus:text-destructive">
-                                                        <Trash2 className="h-4 w-4 mr-2" />Delete
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent className="pt-0">
-                                        <div className="flex flex-wrap gap-2 mb-3">
-                                            <Badge className={`text-xs ${getWidgetTypeBadgeClass(widget.widget_type)}`}>
-                                                {widget.widget_type}
-                                            </Badge>
-                                            <Badge variant={widget.is_active ? 'default' : 'secondary'}>
-                                                {widget.is_active ? 'Active' : 'Inactive'}
-                                            </Badge>
-                                        </div>
-                                        <p className="text-xs text-muted-foreground">
-                                            Shows {widget.max_reviews} reviews, min {widget.min_rating}★
-                                        </p>
-                                    </CardContent>
-                                </Card>
-                            ))}
-                        </div>
-                    )}
-
-            <DeleteDialog
-                open={Boolean(widgetToDelete)}
-                onOpenChange={(open) => { if (!open) setWidgetToDelete(null); }}
-                onConfirm={handleDelete}
-                itemType="widget"
-                itemTitle={widgetToDelete?.name}
-            />
-
-            {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
-                <OnboardingModal
-                    isOpen={showOnboarding}
-                    onClose={handleOnboardingClose}
-                    onComplete={handleOnboardingComplete}
-                    onDismiss={handleOnboardingDismiss}
-                    content={ONBOARDING_CONTENT[onboardingFeatureKey]}
-                />
-            )}
-        </PageLayout>
+      <PageLayout title="WIDGETS" icon={<LayoutGrid className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}>
+        <OrganizationErrorState title="Unable to load review widgets" icon={LayoutGrid} />
+      </PageLayout>
     );
+  }
+
+  const availableCount = widgets.filter(widget => widget.is_active).length;
+
+  return (
+    <PageLayout
+      title="WIDGETS"
+      icon={<LayoutGrid className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
+      headerTools={{
+        search: <HeaderSearch value={searchQuery} onChange={setSearchQuery} label="Search review widgets" placeholder="Search widgets..." />,
+        filters: <HeaderFilters label="Widget filters" activeCount={typeFilter === 'all' ? 0 : 1} preferExpanded>{typeSelect()}</HeaderFilters>,
+        primaryAction: <HeaderAction label="New widget" icon={<Plus className="h-4 w-4" />} onClick={() => navigate('/review-widgets/new')} />,
+      }}
+    >
+      {!loadError ? <ResponsiveCardRail label="Widget summary" desktopColumns="md:grid-cols-3" className="responsive-stat-summary">
+        <StatCard title="Total widgets" badgeText="Total" value={widgets.length} icon={LayoutGrid} description="Configured widgets" colorTheme="blue" isLoading={loading} />
+        <StatCard title="Available widgets" badgeText="Available" value={availableCount} icon={Code2} description="Rendering when installed" colorTheme="blue" isLoading={loading} />
+        <StatCard title="Unavailable widgets" badgeText="Unavailable" value={widgets.length - availableCount} icon={Pause} description="Retained for later" colorTheme="orange" isLoading={loading} />
+      </ResponsiveCardRail> : null}
+
+      <Card>
+        <CardContent className="p-0">
+          {loading ? <div className="p-6"><ListRowSkeleton count={3} height="h-20" /></div> : loadError ? (
+            <ErrorState
+              kind="section"
+              icon={LayoutGrid}
+              title="Unable to load review widgets"
+              description="We couldn't load your review widgets. Try again."
+              onRetry={() => void fetchWidgets()}
+            />
+          ) : filteredWidgets.length === 0 ? (
+            <EmptyState
+              icon={LayoutGrid}
+              kind={searchQuery || typeFilter !== 'all' ? 'results' : 'collection'}
+              title={searchQuery || typeFilter !== 'all' ? 'No matching widgets' : 'No review widgets yet'}
+              description={searchQuery || typeFilter !== 'all' ? undefined : 'Create a widget to display customer reviews on your website.'}
+              actionLabel={searchQuery || typeFilter !== 'all' ? 'Clear filters' : 'New widget'}
+              onAction={() => {
+                if (searchQuery || typeFilter !== 'all') { setSearchQuery(''); setTypeFilter('all'); }
+                else navigate('/review-widgets/new');
+              }}
+              className="p-12"
+            />
+          ) : (
+            <div className="divide-y">
+              {filteredWidgets.map(widget => {
+                const visual = getReviewWidgetAvailabilityVisual(widget.is_active);
+                const StatusIcon = visual.icon;
+                return (
+                  <div key={widget.id} role="button" tabIndex={0} className="group flex cursor-pointer items-center gap-3 px-3 py-4 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-4" onClick={() => navigate(`/review-widgets/${widget.id}`)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); navigate(`/review-widgets/${widget.id}`); } }}>
+                    <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full', visual.iconBackgroundClass)}><StatusIcon className={cn('h-5 w-5', visual.iconClass)} aria-hidden="true" /></div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex min-w-0 items-center gap-2"><h3 className="truncate font-medium">{widget.name}</h3><Badge className={cn('shrink-0 text-xs', visual.badgeClass)}>{visual.label}</Badge></div>
+                      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground"><span>{getReputationPlatformLabel(widget.widget_type)}</span><span>{widget.min_rating}+ stars</span><span>Up to {widget.max_reviews} reviews</span></div>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" aria-label={`More actions for ${widget.name}`} onClick={event => event.stopPropagation()}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" onClick={event => event.stopPropagation()}>
+                        <DropdownMenuItem onClick={() => navigate(`/review-widgets/${widget.id}`)}><Pencil className="mr-2 h-4 w-4" />Edit</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => void copyEmbedCode(widget)}><Copy className="mr-2 h-4 w-4" />Copy embed code</DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => setWidgetToDelete(widget)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <DeleteDialog open={Boolean(widgetToDelete)} onOpenChange={open => { if (!open) setWidgetToDelete(null); }} onConfirm={handleDelete} itemType="widget" itemTitle={widgetToDelete?.name} />
+      {featureKey && ONBOARDING_CONTENT[featureKey] ? <OnboardingModal isOpen={showOnboarding} onClose={handleClose} onComplete={handleComplete} onDismiss={handleDismiss} content={ONBOARDING_CONTENT[featureKey]} /> : null}
+    </PageLayout>
+  );
 }
 
 export default ReputationWidgetsPage;

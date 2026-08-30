@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { EmailWebhookJobsService } from './email-webhook-jobs.service';
 import { EmailWebhookJobsSchedulerService } from './email-webhook-jobs-scheduler.service';
 import { EmailWebhooksController } from './email-webhooks.controller';
@@ -9,6 +10,7 @@ import {
 } from './resend-webhook.verifier';
 
 @Module({
+  imports: [NotificationsModule],
   controllers: [EmailWebhooksController],
   providers: [
     EmailWebhooksService,

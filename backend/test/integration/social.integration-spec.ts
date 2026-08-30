@@ -15,6 +15,9 @@ import { SocialService } from '../../src/social/social.service';
 const {
   runSocialMessageDeliveryMigration,
 } = require('../../../db/src/db_social_delivery_migrations');
+const {
+  runSocialInboxBridgeMigration,
+} = require('../../../db/src/db_social_inbox_bridge_migrations');
 
 describe('Authenticated Social GraphQL PostgreSQL contract', () => {
   let app: NestExpressApplication;
@@ -42,6 +45,7 @@ describe('Authenticated Social GraphQL PostgreSQL contract', () => {
       ssl: process.env.TEST_DATABASE_SSL === 'true',
     });
     await runSocialMessageDeliveryMigration(pool);
+    await runSocialInboxBridgeMigration(pool);
 
     const suffix = `${Date.now()}-${process.pid}`;
     const users = await pool.query<{ id: number }>(
@@ -358,6 +362,25 @@ describe('Authenticated Social GraphQL PostgreSQL contract', () => {
       external_message_id: `meta-message-${conversationId}`,
       message_count: 2,
       last_message_text: 'Reply',
+    });
+    const inbox = await pool.query(
+      `SELECT conversation.channel, conversation.subject,
+              message.content, message.metadata->>'delivery_status' AS delivery_status
+       FROM social_conversations social_conversation
+       JOIN conversations conversation
+         ON conversation.id=social_conversation.inbox_conversation_id
+       JOIN social_messages social_message
+         ON social_message.conversation_id=social_conversation.id
+        AND social_message.id=$1
+       JOIN messages message ON message.id=social_message.inbox_message_id
+       WHERE social_conversation.organization_id=$2`,
+      [first.body.data.sendSocialMessage.message.id, organizationId],
+    );
+    expect(inbox.rows[0]).toMatchObject({
+      channel: 'facebook',
+      subject: 'Ada',
+      content: 'Reply',
+      delivery_status: 'sent',
     });
   });
 

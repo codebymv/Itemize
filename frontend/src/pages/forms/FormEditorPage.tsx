@@ -55,6 +55,7 @@ import { EntityDetailHeader } from '@/components/layout/EntityDetailHeader';
 import { HeaderAction, HeaderActionLabel } from '@/components/layout/DesktopHeaderTools';
 import { SectionCardTitle } from '@/components/ui/section-card-title';
 import { ErrorState } from '@/components/ErrorState';
+import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { EmptyState } from '@/components/EmptyState';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/hooks/useOrganization';
@@ -507,11 +508,16 @@ export default function FormEditorPage() {
                 icon={<FileText className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
                 leading={backButton}
             >
-                <ErrorState
-                    title="Form unavailable"
-                    description={error || 'Unable to load this form.'}
-                    onAction={() => void loadForm()}
-                />
+                {organizationError ? (
+                    <OrganizationErrorState title="Unable to load form" icon={FileText} />
+                ) : (
+                    <ErrorState
+                        kind="page"
+                        title="Form unavailable"
+                        description={error || 'Unable to load this form.'}
+                        onAction={() => void loadForm()}
+                    />
+                )}
             </PageLayout>
         );
     }
@@ -566,12 +572,11 @@ export default function FormEditorPage() {
             title="FORM"
             icon={<FileText className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
             leading={backButton}
-            desktopTools={{
+            headerTools={{
                 status: <Badge className={cn('pointer-events-none whitespace-nowrap', statusVisual.badgeClass)}>{statusVisual.label}</Badge>,
                 secondaryAction: <>{moreActions}{publishAction}</>,
                 primaryAction: saveActive ? <HeaderAction label={savingActive ? 'Saving...' : saveLabel} icon={<Save className="h-4 w-4" />} onClick={saveActive} disabled={saveDisabled} /> : undefined,
             }}
-            mobileActions={<div className="flex w-full gap-2">{moreActions}{publishAction}{saveActive && <Button aria-label={saveLabel} className="h-11 min-w-0 flex-1 bg-blue-600 text-white hover:bg-blue-700" onClick={saveActive} disabled={saveDisabled}><Save className="mr-2 h-4 w-4" />{savingActive ? 'Saving...' : 'Save'}</Button>}</div>}
         >
                     <EntityDetailHeader
                         icon={<StatusIcon className={cn('h-6 w-6', statusVisual.iconClass)} />}
@@ -907,6 +912,7 @@ export default function FormEditorPage() {
                                     ) : submissions.length === 0 ? (
                                         <EmptyState
                                             icon={FileText}
+                                            kind="passive"
                                             title="No submissions yet"
                                             description="Published responses will appear here."
                                         />

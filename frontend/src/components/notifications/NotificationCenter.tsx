@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { isThisWeek, isToday } from 'date-fns';
 import {
-  AlertTriangle,
   ArrowRightLeft,
   Bell,
   Building2,
@@ -16,6 +15,8 @@ import {
   Inbox,
   Loader2,
   Eye,
+  MessageSquareText,
+  MessageSquareWarning,
   ReceiptText,
   Undo2,
   UsersRound,
@@ -23,6 +24,8 @@ import {
 import { io } from 'socket.io-client';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
 import { AppHeaderIconButton } from '@/components/ui/app-header-icon-button';
 import { ResponsivePageHeading } from '@/components/layout/ResponsivePageHeading';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -56,6 +59,7 @@ import {
   getNotificationDisplayTitle,
   getNotificationIconKind,
 } from './notificationDisplay';
+import { CommunicationChannelMark } from '@/components/communications/CommunicationChannelMark';
 
 const PAGE_SIZE = 25;
 
@@ -74,6 +78,14 @@ function notificationGroup(value: string): string {
 }
 
 function NotificationIcon({ notification }: { notification: AppNotification }) {
+  if (notification.eventType.startsWith('communication.')) {
+    const channel = typeof notification.payload.channel === 'string'
+      ? notification.payload.channel
+      : undefined;
+    if (channel) {
+      return <CommunicationChannelMark channel={channel} className="h-4 w-4" />;
+    }
+  }
   switch (getNotificationIconKind(notification)) {
     case 'itemize':
       return (
@@ -110,6 +122,10 @@ function NotificationIcon({ notification }: { notification: AppNotification }) {
       return <FileCheck2 className="h-4 w-4 text-blue-600" aria-hidden="true" />;
     case 'billing':
       return <ReceiptText className="h-4 w-4 text-blue-600" aria-hidden="true" />;
+    case 'communication':
+      return <MessageSquareText className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />;
+    case 'communication-failed':
+      return <MessageSquareWarning className="h-4 w-4 text-destructive" aria-hidden="true" />;
     default:
       return <Bell className="h-4 w-4 text-blue-600" aria-hidden="true" />;
   }
@@ -219,32 +235,20 @@ function NotificationPanel({
             <Loader2 className="h-5 w-5 animate-spin" aria-label="Loading notifications" />
           </div>
         ) : isError ? (
-          <div className="flex min-h-56 flex-col items-center justify-center gap-3 px-6 text-center">
-            <span className="rounded-full bg-destructive/10 p-3">
-              <AlertTriangle className="h-5 w-5 text-destructive" aria-hidden="true" />
-            </span>
-            <div>
-              <p className="text-sm font-medium">Notifications unavailable</p>
-              <p className="mt-1 max-w-64 text-xs text-muted-foreground">
-                We could not load your activity. Please try again.
-              </p>
-            </div>
-            <Button variant="outline" size="sm" onClick={onRetry}>Try again</Button>
-          </div>
+          <ErrorState
+            kind="inline"
+            title="Notifications unavailable"
+            description="We couldn't load your activity. Try again."
+            onAction={onRetry}
+            className="min-h-56"
+          />
         ) : notifications.length === 0 ? (
-          <div className="flex min-h-56 flex-col items-center justify-center gap-2 px-6 text-center">
-            <span className="rounded-full bg-muted p-3">
-              <Inbox className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
-            </span>
-            <p className="text-sm font-medium">
-              {filter === 'unread' ? 'No unread notifications' : 'Nothing new yet'}
-            </p>
-            <p className="max-w-64 text-xs text-muted-foreground">
-              {filter === 'unread'
-                ? 'New activity appears here.'
-                : 'Account activity appears here.'}
-            </p>
-          </div>
+          <EmptyState
+            icon={Inbox}
+            kind="inline"
+            title={filter === 'unread' ? 'No unread notifications' : 'Nothing new yet'}
+            className="min-h-56"
+          />
         ) : (
           <div className="pb-2">
             {notifications.map((notification) => {

@@ -1,342 +1,207 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Search, Send, MoreHorizontal, Trash2, Users, Mail, MessageSquare } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Mail, MessageSquareText, MessagesSquare, MoreHorizontal, Plus, RotateCw, Send, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { getStatusBadgeClass } from '@/lib/badge-utils';
-import { ListRowSkeleton } from '@/components/ui/loading-skeletons';
-import { useToast } from '@/hooks/use-toast';
-import { useOrganization } from '@/hooks/useOrganization';
-import { getReviewRequests, deleteReviewRequest, resendReviewRequest } from '@/services/reputationApi';
-import { SendReviewRequestModal } from './SendReviewRequestModal';
-import { PageLayout } from '@/components/layout/PageLayout';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { DeleteDialog } from '@/components/ui/delete-dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
-import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
+import { OrganizationErrorState } from '@/components/OrganizationErrorState';
+import { HeaderAction, HeaderFilters, HeaderSearch } from '@/components/layout/DesktopHeaderTools';
+import { PageLayout } from '@/components/layout/PageLayout';
 import { OnboardingModal } from '@/components/OnboardingModal';
+import { ListRowSkeleton } from '@/components/ui/loading-skeletons';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
-import type { ReviewRequest as ApiReviewRequest } from '@/services/reputationApi';
-import { DeleteDialog } from '@/components/ui/delete-dialog';
+import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
+import { useOrganization } from '@/hooks/useOrganization';
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
+import { deleteReviewRequest, getReviewRequests, resendReviewRequest, type ReviewRequest } from '@/services/reputationApi';
+import { SendReviewRequestModal } from './SendReviewRequestModal';
+import { getReviewRequestStatusVisual } from './constants/reputationVisuals';
 
-interface ReviewRequest {
-    id: number;
-    contact_id: number;
-    contact_name: string;
-    contact_email?: string;
-    contact_phone?: string;
-    method: 'email' | 'sms';
-    status: 'pending' | 'sent' | 'clicked' | 'completed' | 'failed' | 'opened' | 'unsubscribed';
-    sent_at?: string;
-    clicked_at?: string;
-    completed_at?: string;
-    created_at: string;
-}
+const REQUEST_STATUSES: Array<ReviewRequest['status'] | 'all'> = ['all', 'pending', 'sent', 'opened', 'clicked', 'completed', 'failed', 'unsubscribed'];
 
-const REVIEW_REQUEST_STATUSES: Array<ApiReviewRequest['status'] | 'all'> = [
-    'all',
-    'pending',
-    'sent',
-    'opened',
-    'clicked',
-    'completed',
-    'failed',
-    'unsubscribed',
-];
+const contactName = (request: ReviewRequest) => request.contact_name
+  || [request.first_name, request.last_name].filter(Boolean).join(' ')
+  || request.contact_email
+  || request.contact_phone
+  || 'Unknown recipient';
 
-const isReviewRequestStatus = (value: string): value is ApiReviewRequest['status'] =>
-    REVIEW_REQUEST_STATUSES.includes(value as ApiReviewRequest['status']);
+const channelLabel = (channel: ReviewRequest['channel']) => channel === 'both' ? 'Email and SMS' : channel === 'sms' ? 'SMS' : 'Email';
 
 export function ReputationRequestsPage() {
-    const { toast } = useToast();
-    // Route-aware onboarding (will show 'reputation' onboarding for Reputation group)
-    const {
-        showModal: showOnboarding,
-        handleComplete: handleOnboardingComplete,
-        handleDismiss: handleOnboardingDismiss,
-        handleClose: handleOnboardingClose,
-        featureKey: onboardingFeatureKey,
-    } = useRouteOnboarding();
+  const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
+  const { showModal: showOnboarding, handleComplete, handleDismiss, handleClose, featureKey } = useRouteOnboarding();
+  const [requests, setRequests] = useState<ReviewRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [showSendModal, setShowSendModal] = useState(searchParams.get('compose') === '1');
+  const [requestToDelete, setRequestToDelete] = useState<ReviewRequest | null>(null);
 
-    const [requests, setRequests] = useState<ReviewRequest[]>([]);
-    const [loading, setLoading] = useState(true);
-    const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
-    const [searchQuery, setSearchQuery] = useState('');
-    const [statusFilter, setStatusFilter] = useState<string>('all');
-    const [showSendModal, setShowSendModal] = useState(false);
-    const [requestToDelete, setRequestToDelete] = useState<ReviewRequest | null>(null);
+  useEffect(() => { if (initError) setLoading(false); }, [initError]);
 
-    useEffect(() => {
-        if (!initError) return;
-        setLoading(false);
-    }, [initError]);
-
-    const fetchRequests = useCallback(async () => {
-        if (!organizationId) return;
-        setLoading(true);
-        try {
-            const response = await getReviewRequests(
-                { status: statusFilter !== 'all' && isReviewRequestStatus(statusFilter) ? statusFilter : undefined },
-                organizationId
-            );
-            setRequests((response.requests || []).map((request) => ({
-                id: request.id,
-                contact_id: request.contact_id || 0,
-                contact_name: request.contact_name || '',
-                contact_email: request.contact_email,
-                contact_phone: request.contact_phone,
-                method: request.channel === 'sms' ? 'sms' : 'email',
-                status: request.status,
-                sent_at: request.email_sent_at || request.sms_sent_at,
-                clicked_at: request.clicked_at,
-                completed_at: request.review_submitted_at,
-                created_at: request.created_at,
-            })));
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to load requests', variant: 'destructive' });
-        } finally {
-            setLoading(false);
-        }
-    }, [organizationId, statusFilter]);
-
-    useEffect(() => {
-        fetchRequests();
-    }, [fetchRequests]);
-
-    const handleResend = async (id: number) => {
-        if (!organizationId) return;
-        try {
-            const result = await resendReviewRequest(id, organizationId);
-            if (result.status === 'failed' || result.status === 'reconciliation_required') {
-                toast({
-                    title: result.status === 'failed' ? 'Delivery failed' : 'Delivery needs review',
-                    description: result.status === 'failed'
-                        ? 'The provider rejected the resend.'
-                        : 'The provider outcome could not be confirmed.',
-                    variant: 'destructive',
-                });
-            } else {
-                toast({
-                    title: result.status === 'sent' ? 'Request resent' : 'Resend accepted',
-                    description: result.status === 'sent'
-                        ? 'Review request delivery was confirmed'
-                        : 'Review request is queued for delivery',
-                });
-            }
-            fetchRequests(); // Refresh the list to update statuses/timestamps
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to resend request', variant: 'destructive' });
-        }
-    };
-
-    const handleDelete = async (): Promise<boolean> => {
-        if (!organizationId || !requestToDelete) return false;
-        try {
-            await deleteReviewRequest(requestToDelete.id, organizationId);
-            setRequests(prev => prev.filter(r => r.id !== requestToDelete.id));
-            setRequestToDelete(null);
-            return true;
-        } catch (error) {
-            return false;
-        }
-    };
-
-    const filteredRequests = requests.filter(r =>
-        r.contact_name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
-    if (initError) {
-        return (
-            <PageLayout
-                title="REQUESTS"
-                icon={<Send className="h-5 w-5 text-blue-600 flex-shrink-0" />}
-            >
-                <ErrorState
-                    title="Unable to load requests"
-                    description={initError}
-                    onAction={() => void fetchRequests()}
-                />
-            </PageLayout>
-        );
+  const fetchRequests = useCallback(async () => {
+    if (!organizationId) return;
+    setLoading(true);
+    setLoadError(false);
+    try {
+      const response = await getReviewRequests({
+        status: statusFilter === 'all' ? undefined : statusFilter as ReviewRequest['status'],
+      }, organizationId);
+      setRequests(response.requests ?? []);
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
     }
+  }, [organizationId, statusFilter]);
 
+  useEffect(() => { void fetchRequests(); }, [fetchRequests]);
+
+  const filteredRequests = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return requests;
+    return requests.filter(request => [contactName(request), request.contact_email, request.contact_phone]
+      .some(value => value?.toLowerCase().includes(query)));
+  }, [requests, searchQuery]);
+
+  const closeComposer = () => {
+    setShowSendModal(false);
+    if (searchParams.has('compose')) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('compose');
+      setSearchParams(next, { replace: true });
+    }
+  };
+
+  const handleResend = async (request: ReviewRequest) => {
+    if (!organizationId) return;
+    try {
+      const result = await resendReviewRequest(request.id, organizationId);
+      toast({
+        title: result.status === 'sent' ? 'Request resent' : result.status === 'failed' ? 'Delivery failed' : 'Resend accepted',
+        variant: result.status === 'failed' ? 'destructive' : 'default',
+      });
+      await fetchRequests();
+    } catch {
+      toast({ title: 'Could not resend request', variant: 'destructive' });
+    }
+  };
+
+  const handleDelete = async (): Promise<boolean> => {
+    if (!organizationId || !requestToDelete) return false;
+    try {
+      await deleteReviewRequest(requestToDelete.id, organizationId);
+      setRequests(current => current.filter(request => request.id !== requestToDelete.id));
+      setRequestToDelete(null);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const statusSelect = (className = 'w-36') => (
+    <Select value={statusFilter} onValueChange={setStatusFilter}>
+      <SelectTrigger className={cn('h-11', className)} aria-label="Filter review requests by status"><SelectValue placeholder="Status" /></SelectTrigger>
+      <SelectContent>
+        {REQUEST_STATUSES.map(status => (
+          <SelectItem key={status} value={status}>{status === 'all' ? 'All statuses' : getReviewRequestStatusVisual(status).label}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+
+  if (initError) {
     return (
-        <PageLayout
-            title="REQUESTS"
-            icon={<Send className="h-5 w-5 text-blue-600 flex-shrink-0" />}
-            pageActions={
-                <>
-                    <div className="relative w-full max-w-xs">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                            placeholder="Search requests..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50"
-                        />
-                    </div>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="w-[120px] h-9">
-                            <SelectValue placeholder="Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All</SelectItem>
-                            <SelectItem value="pending">Pending</SelectItem>
-                            <SelectItem value="sent">Sent</SelectItem>
-                            <SelectItem value="clicked">Clicked</SelectItem>
-                            <SelectItem value="completed">Completed</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-                        onClick={() => setShowSendModal(true)}
-                    >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Send Request
-                    </Button>
-                </>
-            }
-            mobileActions={
-                <>
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                            placeholder="Search requests..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50"
-                        />
-                    </div>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                        <SelectTrigger className="w-[100px] h-9">
-                            <SelectValue placeholder="Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All</SelectItem>
-                            <SelectItem value="pending">Pending</SelectItem>
-                            <SelectItem value="sent">Sent</SelectItem>
-                            <SelectItem value="clicked">Clicked</SelectItem>
-                            <SelectItem value="completed">Completed</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <Button
-                        size="icon"
-                        className="bg-blue-600 hover:bg-blue-700 text-white h-9 w-9"
-                        onClick={() => setShowSendModal(true)}
-                    >
-                        <Plus className="h-4 w-4" />
-                    </Button>
-                </>
-            }
-        >
-                    {loading ? (
-                        <div className="p-6">
-                            <ListRowSkeleton count={3} height="h-20" />
-                        </div>
-                    ) : filteredRequests.length === 0 ? (
-                        <EmptyState
-                            icon={Send}
-                            title="No review requests yet"
-                            description="Send review requests to your customers to collect feedback"
-                            actionLabel="Send First Request"
-                            onAction={() => setShowSendModal(true)}
-                            className="p-12"
-                        />
-                    ) : (
-                        <div className="divide-y">
-                            {filteredRequests.map((request) => (
-                                <div key={request.id} className="p-4 hover:bg-muted/50 transition-colors">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                                                <Users className="h-5 w-5 text-muted-foreground" />
-                                            </div>
-                                            <div>
-                                                <div className="flex items-center gap-2">
-                                                    <p className="font-medium">{request.contact_name}</p>
-                                                    <Badge className={`text-xs ${getStatusBadgeClass(request.status)}`}>
-                                                        {request.status}
-                                                    </Badge>
-                                                </div>
-                                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                    {request.method === 'email' ? (
-                                                        <><Mail className="h-3 w-3" />{request.contact_email}</>
-                                                    ) : (
-                                                        <><MessageSquare className="h-3 w-3" />{request.contact_phone}</>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs text-muted-foreground">
-                                                {request.sent_at ? `Sent ${new Date(request.sent_at).toLocaleDateString()}` : 'Not sent'}
-                                            </span>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon">
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={() => handleResend(request.id)}>
-                                                        <Send className="h-4 w-4 mr-2" />Resend
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem onClick={() => setRequestToDelete(request)} className="text-destructive focus:text-destructive">
-                                                        <Trash2 className="h-4 w-4 mr-2" />Delete
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-            {showSendModal && organizationId && (
-                <SendReviewRequestModal
-                    organizationId={organizationId}
-                    onClose={() => setShowSendModal(false)}
-                    onSent={() => {
-                        setShowSendModal(false);
-                        fetchRequests();
-                    }}
-                />
-            )}
-
-            {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
-                <OnboardingModal
-                    isOpen={showOnboarding}
-                    onClose={handleOnboardingClose}
-                    onComplete={handleOnboardingComplete}
-                    onDismiss={handleOnboardingDismiss}
-                    content={ONBOARDING_CONTENT[onboardingFeatureKey]}
-                />
-            )}
-            <DeleteDialog
-                open={Boolean(requestToDelete)}
-                onOpenChange={(open) => !open && setRequestToDelete(null)}
-                onConfirm={handleDelete}
-                itemType="review-request"
-                itemTitle={requestToDelete?.contact_name}
-            />
-        </PageLayout>
+      <PageLayout title="REQUESTS" icon={<Send className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}>
+        <OrganizationErrorState title="Unable to load review requests" icon={Send} />
+      </PageLayout>
     );
+  }
+
+  return (
+    <PageLayout
+      title="REQUESTS"
+      icon={<Send className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
+      headerTools={{
+        search: <HeaderSearch value={searchQuery} onChange={setSearchQuery} label="Search review requests" placeholder="Search requests..." />,
+        filters: <HeaderFilters label="Request filters" activeCount={statusFilter === 'all' ? 0 : 1} preferExpanded>{statusSelect()}</HeaderFilters>,
+        primaryAction: <HeaderAction label="Send request" icon={<Plus className="h-4 w-4" />} onClick={() => setShowSendModal(true)} />,
+      }}
+    >
+      <Card>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="p-6"><ListRowSkeleton count={3} height="h-20" /></div>
+          ) : loadError ? (
+            <ErrorState
+              kind="section"
+              icon={Send}
+              title="Unable to load review requests"
+              description="We couldn't load your review requests. Try again."
+              onRetry={() => void fetchRequests()}
+            />
+          ) : filteredRequests.length === 0 ? (
+            <EmptyState
+              icon={Send}
+              kind={searchQuery || statusFilter !== 'all' ? 'results' : 'collection'}
+              title={searchQuery || statusFilter !== 'all' ? 'No matching requests' : 'No review requests yet'}
+              description={searchQuery || statusFilter !== 'all' ? undefined : 'Send a request when you are ready to collect feedback.'}
+              actionLabel={searchQuery || statusFilter !== 'all' ? 'Clear filters' : 'Send request'}
+              onAction={() => {
+                if (searchQuery || statusFilter !== 'all') { setSearchQuery(''); setStatusFilter('all'); }
+                else setShowSendModal(true);
+              }}
+              className="p-12"
+            />
+          ) : (
+            <div className="divide-y">
+              {filteredRequests.map(request => {
+                const visual = getReviewRequestStatusVisual(request.status);
+                const StatusIcon = visual.icon;
+                const ChannelIcon = request.channel === 'both' ? MessagesSquare : request.channel === 'sms' ? MessageSquareText : Mail;
+                const activityDate = request.review_submitted_at || request.clicked_at || request.email_opened_at || request.email_sent_at || request.sms_sent_at || request.created_at;
+                return (
+                  <article key={request.id} className="flex items-start gap-3 px-3 py-4 sm:px-4">
+                    <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full', visual.iconBackgroundClass)}><StatusIcon className={cn('h-5 w-5', visual.iconClass)} aria-hidden="true" /></div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2"><h3 className="min-w-0 truncate font-medium">{contactName(request)}</h3><Badge className={cn('text-xs', visual.badgeClass)}>{visual.label}</Badge></div>
+                      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                        <span className="inline-flex items-center gap-1"><ChannelIcon className="h-3.5 w-3.5" />{channelLabel(request.channel)}</span>
+                        {request.contact_email ? <span className="truncate">{request.contact_email}</span> : null}
+                        {request.contact_phone ? <span>{request.contact_phone}</span> : null}
+                        <time dateTime={activityDate}>{new Date(activityDate).toLocaleDateString()}</time>
+                      </div>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" aria-label={`More actions for ${contactName(request)}`}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => void handleResend(request)}><RotateCw className="mr-2 h-4 w-4" />Resend</DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => setRequestToDelete(request)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {showSendModal && organizationId ? <SendReviewRequestModal organizationId={organizationId} onClose={closeComposer} onSent={() => { closeComposer(); void fetchRequests(); }} /> : null}
+      {featureKey && ONBOARDING_CONTENT[featureKey] ? <OnboardingModal isOpen={showOnboarding} onClose={handleClose} onComplete={handleComplete} onDismiss={handleDismiss} content={ONBOARDING_CONTENT[featureKey]} /> : null}
+      <DeleteDialog open={Boolean(requestToDelete)} onOpenChange={open => { if (!open) setRequestToDelete(null); }} onConfirm={handleDelete} itemType="review-request" itemTitle={requestToDelete ? contactName(requestToDelete) : undefined} />
+    </PageLayout>
+  );
 }
 
 export default ReputationRequestsPage;

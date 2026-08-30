@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { debounce } from 'lodash';
-import { Braces, Info, Loader2, MessageSquare, Save, Settings2 } from 'lucide-react';
+import { Braces, Loader2, MessageSquare, Save, Settings2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ErrorState } from '@/components/ErrorState';
+import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { EntityDetailHeader } from '@/components/layout/EntityDetailHeader';
 import { HeaderAction } from '@/components/layout/DesktopHeaderTools';
 import { PageLayout } from '@/components/layout/PageLayout';
@@ -16,9 +17,8 @@ import { Label } from '@/components/ui/label';
 import { PageLoading } from '@/components/ui/page-loading';
 import { SectionCardTitle } from '@/components/ui/section-card-title';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { AvailabilitySettingRow } from '@/components/settings/SettingsPrimitives';
 import { useDirtyState } from '@/hooks/useDirtyState';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
@@ -121,7 +121,7 @@ export function SMSTemplateEditorPage() {
     message: 'This SMS template has unsaved changes. Leave this page anyway?',
   });
 
-  const visual = getCatalogStatusVisual(state.isActive);
+  const visual = getCatalogStatusVisual(template?.is_active ?? true);
   const VisualIcon = visual.icon;
   const validationError = !state.name.trim()
     ? 'Add a template name.'
@@ -178,7 +178,11 @@ export function SMSTemplateEditorPage() {
 
   if (orgError || loadError) return (
     <PageLayout title="SMS TEMPLATE" icon={<MessageSquare className="h-5 w-5 text-blue-600 dark:text-blue-400" />} leading={leading}>
-      <ErrorState title="SMS template unavailable" description={orgError || loadError || 'Unable to load template.'} icon={MessageSquare} onAction={() => void loadTemplate()} />
+      {orgError ? (
+        <OrganizationErrorState title="Unable to load SMS template" icon={MessageSquare} />
+      ) : (
+        <ErrorState kind="page" title="SMS template unavailable" description={loadError || undefined} icon={MessageSquare} onAction={() => void loadTemplate()} />
+      )}
     </PageLayout>
   );
 
@@ -193,17 +197,16 @@ export function SMSTemplateEditorPage() {
       title={isNew ? 'NEW SMS TEMPLATE' : 'SMS TEMPLATE'}
       icon={<MessageSquare className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
       leading={leading}
-      desktopTools={{
-        status: <Badge className={cn('pointer-events-none whitespace-nowrap', visual.badgeClass)}>{visual.label}</Badge>,
+      headerTools={{
+        status: template ? <Badge className={cn('pointer-events-none whitespace-nowrap', visual.badgeClass)}>{visual.label}</Badge> : undefined,
         primaryAction: <HeaderAction label={saving ? 'Saving...' : isNew ? 'Create template' : 'Save changes'} icon={saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} disabled={saving || !isDirty || Boolean(validationError)} onClick={() => void handleSave()} />,
       }}
-      mobileActions={<div className="flex w-full items-center gap-2"><Badge className={cn('shrink-0', visual.badgeClass)}>{visual.label}</Badge><Button className="ml-auto h-11 min-w-0 flex-1 bg-blue-600 text-white hover:bg-blue-700" disabled={saving || !isDirty || Boolean(validationError)} onClick={() => void handleSave()}>{saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}{isNew ? 'Create template' : 'Save changes'}</Button></div>}
     >
       <EntityDetailHeader
         icon={<VisualIcon className={cn('h-6 w-6', visual.iconClass)} />}
         iconClassName={visual.iconBackgroundClass}
         title={state.name || 'New SMS template'}
-        mobileStatus={<Badge className={visual.badgeClass}>{visual.label}</Badge>}
+        mobileStatus={template ? <Badge className={visual.badgeClass}>{visual.label}</Badge> : undefined}
         descriptor={state.message ? <p className="max-w-xl truncate">{state.message}</p> : undefined}
         metadata={<><span>{state.category ? categoryLabel(state.category) : 'Uncategorized'}</span><span>{messageInfo.length} characters</span><span>{messageInfo.segments} segment{messageInfo.segments === 1 ? '' : 's'}</span></>}
       />
@@ -215,7 +218,7 @@ export function SMSTemplateEditorPage() {
             <CardContent className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2"><Label htmlFor="sms-template-name">Name</Label><Input id="sms-template-name" value={state.name} placeholder="Appointment reminder" disabled={saving} onChange={event => setState(current => ({ ...current, name: event.target.value }))} /></div>
               <div className="space-y-2"><Label htmlFor="sms-template-category">Category</Label><Select value={state.category || undefined} disabled={saving} onValueChange={category => setState(current => ({ ...current, category }))}><SelectTrigger id="sms-template-category"><SelectValue placeholder="Select category" /></SelectTrigger><SelectContent>{state.category && !TEMPLATE_CATEGORIES.includes(state.category as typeof TEMPLATE_CATEGORIES[number]) && <SelectItem value={state.category}>{categoryLabel(state.category)}</SelectItem>}{TEMPLATE_CATEGORIES.map(category => <SelectItem key={category} value={category}>{categoryLabel(category)}</SelectItem>)}</SelectContent></Select></div>
-              <div className="flex items-center justify-between gap-4 rounded-lg border p-3 sm:col-span-2"><div className="flex min-w-0 items-center gap-2"><Label htmlFor="sms-template-active">Available for campaigns and automations</Label><Tooltip><TooltipTrigger asChild><button type="button" aria-label="About template availability" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><Info className="h-4 w-4" /></button></TooltipTrigger><TooltipContent>Inactive templates remain reviewable but cannot be selected for new sends.</TooltipContent></Tooltip></div><Switch id="sms-template-active" checked={state.isActive} disabled={saving} onCheckedChange={isActive => setState(current => ({ ...current, isActive }))} /></div>
+              <AvailabilitySettingRow id="sms-template-active" label="Available for campaigns and automations" checked={state.isActive} disabled={saving} onCheckedChange={isActive => setState(current => ({ ...current, isActive }))} help="Unavailable templates remain editable but cannot be selected for new sends." helpLabel="About template availability" className="sm:col-span-2" />
             </CardContent>
           </Card>
 

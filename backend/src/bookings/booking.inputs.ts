@@ -4,6 +4,9 @@ import { BookingStatus } from './booking.enums';
 
 @InputType()
 export class BookingFilterInput {
+  @Field(() => String, { nullable: true })
+  search?: string;
+
   @Field(() => Int, { nullable: true })
   calendarId?: number;
 

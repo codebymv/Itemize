@@ -2,7 +2,6 @@ import React, { useState, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   LayoutGrid,
-  Search,
   Map,
   CheckSquare,
   StickyNote,
@@ -13,7 +12,6 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -71,7 +69,6 @@ import type { CreateItemPresetPayload } from "@/config/contentPresets";
 import { CreateItemModal } from "@/components/CreateItemModal";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { PageLayout } from "@/components/layout/PageLayout";
-import { MobileQueryBar } from "@/components/layout/MobileQueryBar";
 import {
   HeaderActionLabel,
   HeaderCombinedQuery,
@@ -1323,8 +1320,7 @@ export function ContentsPage() {
     <PageLayout
       title="CONTENTS"
       icon={<LayoutGrid className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
-      mobileClassName="flex-col items-stretch gap-3"
-      desktopTools={{
+      headerTools={{
         search: (
           <HeaderSearch
             label="Search content"
@@ -1379,24 +1375,6 @@ export function ContentsPage() {
         ),
         primaryAction: addContentMenu("header"),
       }}
-      mobileActions={
-        <MobileQueryBar
-          search={
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                aria-label="Search workspace content"
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 h-9 w-full bg-muted/20 border-border/50"
-              />
-            </div>
-          }
-          filters={<HeaderCombinedQuery label="Search and filter content" placeholder="Search content..." value={searchQuery} onChange={setSearchQuery} activeCount={headerQueryCount}><div className="space-y-2 [&_[role=combobox]]:w-full">{headerFilters}</div></HeaderCombinedQuery>}
-          actions={addContentMenu("compact")}
-        />
-      }
     >
       <Card aria-busy={refreshing}>
         <CardContent className="p-0">
@@ -1416,6 +1394,7 @@ export function ContentsPage() {
           ) : totalItems === 0 ? (
             <EmptyState
               icon={LayoutGrid}
+              kind={allItemsCount > 0 && hasActiveFilters ? 'results' : 'collection'}
               title={
                 allItemsCount > 0 && hasActiveFilters
                   ? "No matches"
@@ -1423,7 +1402,7 @@ export function ContentsPage() {
               }
               description={
                 allItemsCount > 0 && hasActiveFilters
-                  ? "Try changing or clearing your search and filters."
+                  ? undefined
                   : "Get started by creating content."
               }
               className="p-12"

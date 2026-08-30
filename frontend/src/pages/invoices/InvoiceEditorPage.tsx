@@ -69,6 +69,7 @@ import {
 } from '@/components/layout/DesktopHeaderTools';
 import { ShellBackButton } from '@/components/layout/ShellBackButton';
 import { ErrorState } from '@/components/ErrorState';
+import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { getAssetUrl } from '@/lib/api';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useDirtyState } from '@/hooks/useDirtyState';
@@ -132,7 +133,7 @@ export function InvoiceEditorPage() {
     const [initialized, setInitialized] = useState(false);
     const [loadError, setLoadError] = useState(false);
     const [loadAttempt, setLoadAttempt] = useState(0);
-    const { organizationId, organization } = useOrganization();
+    const { organizationId, organization, error: organizationError } = useOrganization();
     const defaultBusinessId = typeof organization?.settings.defaultBusinessId === 'number'
         ? organization.settings.defaultBusinessId
         : undefined;
@@ -521,6 +522,14 @@ export function InvoiceEditorPage() {
 
 
 
+    if (organizationError) {
+        return (
+            <PageLayout title="INVOICE" icon={<Receipt className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}>
+                <OrganizationErrorState title="Unable to load invoice" icon={Receipt} />
+            </PageLayout>
+        );
+    }
+
     if (loading) {
         return (
             <PageLayout
@@ -551,6 +560,7 @@ export function InvoiceEditorPage() {
                 }
             >
                 <ErrorState
+                    kind="page"
                     title="Invoice unavailable"
                     description="We could not load this invoice. Your data has not been changed."
                     onAction={() => setLoadAttempt(current => current + 1)}
@@ -636,7 +646,7 @@ export function InvoiceEditorPage() {
                     if (confirmLeave()) navigate('/invoices');
                 }} />
             }
-            desktopTools={{
+            headerTools={{
                 status: <Badge className={cn('pointer-events-none whitespace-nowrap', invoiceStatusVisual.badgeClass)}>{invoiceStatusVisual.label}</Badge>,
                 secondaryAction: invoiceActions,
                 primaryAction: (
@@ -648,41 +658,6 @@ export function InvoiceEditorPage() {
                     />
                 ),
             }}
-            mobileActions={
-                <>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowPreview(true)}
-                        className="flex-1"
-                    >
-                        <Eye className="h-4 w-4 mr-2" />
-                        Preview
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleSave}
-                        disabled={!canSave}
-                        className="flex-1 bg-blue-600 text-white hover:bg-blue-700"
-                    >
-                        <Save className="h-4 w-4 mr-2" />
-                        {primaryActionLabel}
-                    </Button>
-                    {!isNew && (
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            className="flex-1"
-                            onClick={() => setShowSendModal(true)}
-                            disabled={saving || isDirty}
-                        >
-                            <Send className="h-4 w-4 mr-2" />
-                            Send
-                        </Button>
-                    )}
-                </>
-            }
         >
             <div className="space-y-6">
                 <EntityDetailHeader

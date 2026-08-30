@@ -1,14 +1,172 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { Save } from 'lucide-react';
+import { Palette, Save, Settings } from 'lucide-react';
 import {
   DesktopHeaderTools,
   HeaderAction,
   HeaderFilters,
+  HeaderModeNavigation,
   HeaderRefreshAction,
   HeaderSearch,
+  ResponsiveHeaderTools,
 } from './DesktopHeaderTools';
+
+describe('ResponsiveHeaderTools', () => {
+  it('marks one command declaration for mobile and desktop shell rendering', () => {
+    const { container } = render(
+      <TooltipProvider>
+        <ResponsiveHeaderTools
+          secondaryAction={(
+            <HeaderAction
+              prominence="secondary"
+              label="Canvas"
+              icon={<Palette />}
+              onClick={vi.fn()}
+            />
+          )}
+        />
+      </TooltipProvider>,
+    );
+
+    expect(container.querySelector('[data-responsive-header-tools]')).toHaveClass(
+      'desktop-header-tools',
+      'desktop-header-tools--responsive',
+    );
+    expect(screen.getAllByRole('button', { name: 'Canvas' })).toHaveLength(2);
+  });
+
+  it('keeps query, secondary, and primary commands in one three-control mobile rail', () => {
+    const { container } = render(
+      <TooltipProvider>
+        <ResponsiveHeaderTools
+          combinedQuery={<button type="button">Search and filter</button>}
+          secondaryAction={<button type="button">More contact actions</button>}
+          primaryAction={<button type="button">Add contact</button>}
+        />
+      </TooltipProvider>,
+    );
+
+    const mobile = container.querySelector('[data-mobile-header-tools]');
+    expect(mobile?.querySelectorAll('button')).toHaveLength(3);
+    expect(mobile).toHaveTextContent('Search and filter');
+    expect(mobile).toHaveTextContent('More contact actions');
+    expect(mobile).toHaveTextContent('Add contact');
+    expect(mobile?.querySelector('[aria-label="More page actions"]')).toBeNull();
+  });
+
+  it('hands status off to the detail header when mode and primary action need the rail', () => {
+    const { container } = render(
+      <TooltipProvider>
+        <ResponsiveHeaderTools
+          modeNavigation={<button type="button">Appearance</button>}
+          status={<span>Inactive</span>}
+          primaryAction={<button type="button">Save changes</button>}
+        />
+      </TooltipProvider>,
+    );
+
+    const mobile = container.querySelector('[data-mobile-header-tools]');
+    expect(mobile?.querySelectorAll('button')).toHaveLength(2);
+    expect(mobile?.querySelector('[aria-label="More page actions"]')).not.toBeInTheDocument();
+    expect(mobile).not.toHaveTextContent('Inactive');
+  });
+
+  it('collapses multi-action secondary groups before truncating the mobile title', () => {
+    const { container } = render(
+      <TooltipProvider>
+        <ResponsiveHeaderTools
+          secondaryAction={(
+            <div>
+              <button type="button">Runs</button>
+              <button type="button">Deactivate</button>
+            </div>
+          )}
+          primaryAction={<button type="button">Save automation</button>}
+        />
+      </TooltipProvider>,
+    );
+
+    const mobile = container.querySelector('[data-mobile-header-tools]');
+    expect(mobile?.querySelectorAll('button')).toHaveLength(2);
+    expect(mobile?.querySelector('[aria-label="More page actions"]')).toBeInTheDocument();
+    expect(mobile).not.toHaveTextContent('Runs');
+    expect(mobile).toHaveTextContent('Save automation');
+  });
+
+  it('counts fragment action groups as separate mobile commands', () => {
+    const { container } = render(
+      <TooltipProvider>
+        <ResponsiveHeaderTools
+          secondaryAction={(
+            <>
+              <button type="button">Preview</button>
+              <button type="button">Publish</button>
+            </>
+          )}
+          primaryAction={<button type="button">Save page</button>}
+        />
+      </TooltipProvider>,
+    );
+
+    const mobile = container.querySelector('[data-mobile-header-tools]');
+    expect(mobile?.querySelectorAll('button')).toHaveLength(2);
+    expect(mobile?.querySelector('[aria-label="More page actions"]')).toBeInTheDocument();
+    expect(mobile).not.toHaveTextContent('Preview');
+    expect(mobile).not.toHaveTextContent('Publish');
+    expect(mobile).toHaveTextContent('Save page');
+  });
+});
+
+describe('HeaderModeNavigation', () => {
+  const items = [
+    { value: 'settings', label: 'Settings', icon: Settings },
+    { value: 'appearance', label: 'Appearance', icon: Palette },
+  ];
+
+  it('renders persistent editor modes in the typed shell slot', () => {
+    const { container } = render(
+      <TooltipProvider>
+        <DesktopHeaderTools
+          modeNavigation={(
+            <HeaderModeNavigation
+              label="Editor mode"
+              value="settings"
+              onValueChange={vi.fn()}
+              items={items}
+            />
+          )}
+        />
+      </TooltipProvider>,
+    );
+
+    expect(container.querySelector('.desktop-header-tools__mode')).toBeInTheDocument();
+    expect(screen.getByRole('tablist', { name: 'Editor mode' })).toHaveClass('gap-0.5');
+    expect(screen.getByRole('tab', { name: 'Settings' }))
+      .toHaveAttribute('data-state', 'active');
+    expect(screen.getByRole('tab', { name: 'Settings' })).toHaveClass('gap-0.5', 'px-1');
+    expect(screen.getByRole('button', { name: 'Editor mode: Settings' })).toBeInTheDocument();
+  });
+
+  it('uses the compact selector to change modes without losing labels', () => {
+    const onValueChange = vi.fn();
+    render(
+      <TooltipProvider>
+        <HeaderModeNavigation
+          label="Editor mode"
+          value="settings"
+          onValueChange={onValueChange}
+          items={items}
+        />
+      </TooltipProvider>,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Editor mode: Settings' }));
+    fireEvent.click(screen.getByRole('radio', { name: 'Appearance' }));
+
+    expect(onValueChange).toHaveBeenCalledWith('appearance');
+  });
+});
 
 describe('HeaderSearch', () => {
   it('marks longer dataset searches to claim available shell width', () => {
@@ -111,6 +269,7 @@ describe('DesktopHeaderTools status', () => {
     );
 
     expect(container.querySelector('.desktop-header-tools__status')).toHaveTextContent('Active');
+    expect(container.querySelector('.desktop-header-tools__status')).toHaveClass('flex', 'shrink-0');
   });
 });
 
@@ -152,6 +311,18 @@ describe('HeaderFilters', () => {
     expect(container.querySelector('.desktop-header-filters__compact')).toHaveClass(
       'desktop-header-filters__compact--priority',
     );
+  });
+
+  it('can expose a short current value instead of an ambiguous compact filter icon', () => {
+    render(
+      <TooltipProvider>
+        <HeaderFilters label="Performance period" compactLabel="30d">
+          <div>Period dropdown</div>
+        </HeaderFilters>
+      </TooltipProvider>,
+    );
+
+    expect(screen.getByRole('button', { name: 'Performance period: 30d' })).toHaveTextContent('30d');
   });
 
   it('can defer a second high-value filter until the shell is roomy', () => {

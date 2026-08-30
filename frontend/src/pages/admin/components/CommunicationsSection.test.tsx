@@ -41,7 +41,7 @@ describe('CommunicationsSection', () => {
     it('uses the shared sidebar surface and icon-only accent contract for its tabs', async () => {
         const { container } = renderSection();
 
-        await screen.findByText('No users found');
+        await screen.findByText('No users yet');
 
         const usersTab = screen.getByRole('tab', { name: 'Users' });
         const emailLogsTab = screen.getByRole('tab', { name: 'Email Logs' });

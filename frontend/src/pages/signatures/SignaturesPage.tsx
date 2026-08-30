@@ -1,12 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Send, XCircle, Download, Eye, FileSignature, FileText, CheckCircle, ChevronDown, MoreVertical, Trash2, Search, RefreshCw } from 'lucide-react';
+import { Plus, Send, XCircle, Download, Eye, FileSignature, FileText, CheckCircle, ChevronDown, MoreVertical, Trash2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PageLayout } from '@/components/layout/PageLayout';
-import { MobileQueryBar } from '@/components/layout/MobileQueryBar';
 import { HeaderAction, HeaderCombinedQuery, HeaderFilters, HeaderSearch } from '@/components/layout/DesktopHeaderTools';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
@@ -43,6 +41,7 @@ export function SignaturesPage() {
   const [expandedDocumentId, setExpandedDocumentId] = useState<number | null>(null);
   const [expandedDocumentData, setExpandedDocumentData] = useState<SignatureDocumentDetails | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const [previewError, setPreviewError] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<DocumentStatusFilter>('all');
   const [deleteDocumentId, setDeleteDocumentId] = useState<number | null>(null);
@@ -152,36 +151,38 @@ export function SignaturesPage() {
     }
   };
 
-  const handleToggleExpand = async (documentId: number, e: React.MouseEvent) => {
-    e.stopPropagation();
-
-    if (expandedDocumentId === documentId) {
-      setExpandedDocumentId(null);
-      setExpandedDocumentData(null);
-      return;
-    }
-
+  const loadExpandedDocument = async (documentId: number) => {
     setExpandedDocumentId(documentId);
     setExpandedDocumentData(null);
+    setPreviewError(false);
     setLoadingPreview(true);
 
     try {
       const data = await getSignatureDocument(documentId);
       setExpandedDocumentData(data);
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to load document details', variant: 'destructive' });
-      setExpandedDocumentId(null);
+    } catch {
+      setPreviewError(true);
     } finally {
       setLoadingPreview(false);
     }
+  };
+
+  const handleToggleExpand = (documentId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (expandedDocumentId === documentId) {
+      setExpandedDocumentId(null);
+      setExpandedDocumentData(null);
+      setPreviewError(false);
+      return;
+    }
+    void loadExpandedDocument(documentId);
   };
 
   return (
     <PageLayout
       title="DOCUMENTS"
       icon={<FileSignature className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
-      mobileClassName="flex-col items-stretch gap-2"
-      desktopTools={{
+      headerTools={{
         search: (
           <HeaderSearch
             label="Search documents"
@@ -220,28 +221,6 @@ export function SignaturesPage() {
           />
         ),
       }}
-      mobileActions={
-        <MobileQueryBar
-          search={
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                aria-label="Search documents"
-                placeholder="Search documents..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-11 w-full border-border/50 bg-muted/20 pl-10"
-              />
-            </div>
-          }
-          filters={<HeaderCombinedQuery label="Search and filter documents" placeholder="Search documents..." value={searchQuery} onChange={setSearchQuery} activeCount={queryCount}>{statusSelect(true)}</HeaderCombinedQuery>}
-          actions={
-            <Button size="icon" aria-label="New document" className="h-11 w-11 bg-blue-600 text-white hover:bg-blue-700" onClick={() => navigate('/documents/new')}>
-              <Plus className="h-4 w-4" />
-            </Button>
-          }
-        />
-      }
     >
           {!loadError && (
           <ResponsiveCardRail
@@ -304,12 +283,15 @@ export function SignaturesPage() {
               ) : filteredDocuments.length === 0 ? (
                 <EmptyState
                   icon={FileSignature}
+                  kind={queryCount > 0 ? 'results' : 'collection'}
                   title={documents.length === 0 ? 'No documents yet' : 'No documents match your search'}
                   description={documents.length === 0
                     ? 'Create a document to start collecting signatures.'
-                    : 'Adjust the search or status filter to see more documents.'}
-                  actionLabel={documents.length === 0 ? 'New document' : undefined}
-                  onAction={documents.length === 0 ? () => navigate('/documents/new') : undefined}
+                    : undefined}
+                  actionLabel={queryCount > 0 ? 'Clear filters' : 'New document'}
+                  onAction={queryCount > 0
+                    ? () => { setSearchQuery(''); setStatusFilter('all'); }
+                    : () => navigate('/documents/new')}
                   className="p-12"
                 />
               ) : (
@@ -550,6 +532,14 @@ export function SignaturesPage() {
                             </ExpandedRowActions>
                             {loadingPreview ? (
                               <div className="flex items-center justify-center py-8 text-muted-foreground">Loading preview...</div>
+                            ) : previewError ? (
+                              <ErrorState
+                                kind="inline"
+                                icon={FileSignature}
+                                title="Unable to load document preview"
+                                description="The document is still available to edit."
+                                onRetry={() => void loadExpandedDocument(doc.id)}
+                              />
                             ) : expandedDocumentData ? (
                               <div className="space-y-4">
                                 {(expandedDocumentData.document.status === 'completed'

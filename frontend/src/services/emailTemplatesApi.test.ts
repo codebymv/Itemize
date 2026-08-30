@@ -101,7 +101,7 @@ describe('email-template permanent GraphQL transport', () => {
     await email.sendEmailToContact(contactInput, 4);
 
     expect(sendEmailTemplateTestViaGraphql).toHaveBeenNthCalledWith(
-      1, 9, 'test@example.com', undefined, 4,
+      1, 9, 'test@example.com', undefined, 4, false,
     );
     expect(sendEmailTemplateTestViaGraphql).toHaveBeenNthCalledWith(
       2, 9, 'test@example.com', undefined, 4,

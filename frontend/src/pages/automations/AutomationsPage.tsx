@@ -1,15 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Plus, Search, Zap, Play, MoreHorizontal, Copy, Trash2,
+  Plus, Zap, Play, Pause, MoreHorizontal, Copy, Trash2,
   Mail, Tag, Clock, Users, TrendingUp, CheckCircle, XCircle,
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatCard } from '@/components/StatCard';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
@@ -47,9 +45,9 @@ import {
   Workflow 
 } from '@/services/automationsApi';
 import { PageLayout } from '@/components/layout/PageLayout';
-import { MobileQueryBar } from '@/components/layout/MobileQueryBar';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import {
   WORKFLOW_TRIGGER_LABELS,
   WORKFLOW_TRIGGER_OPTIONS,
@@ -222,12 +220,7 @@ export function AutomationsPage() {
         title="AUTOMATIONS"
         icon={<Zap className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
       >
-        <ErrorState
-          title="Automations Not Ready"
-          description={initError}
-          icon={Zap}
-          onAction={() => void fetchWorkflows()}
-        />
+        <OrganizationErrorState title="Unable to load automations" icon={Zap} />
       </PageLayout>
     );
   }
@@ -288,8 +281,7 @@ export function AutomationsPage() {
     <PageLayout
       title="AUTOMATIONS"
       icon={<Zap className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
-      mobileClassName="flex-col items-stretch"
-      desktopTools={{
+      headerTools={{
         search: (
           <HeaderSearch
             label="Search automations"
@@ -338,33 +330,6 @@ export function AutomationsPage() {
           />
         ),
       }}
-      mobileActions={
-        <MobileQueryBar
-          search={
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                aria-label="Search automations"
-                placeholder="Search automations..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-9 w-full"
-              />
-            </div>
-          }
-          filters={<HeaderCombinedQuery label="Search and filter automations" placeholder="Search automations..." value={searchQuery} onChange={setSearchQuery} activeCount={activeFilterCount + Number(Boolean(searchQuery.trim()))}><div className="space-y-2"><Select value={triggerFilter} onValueChange={setTriggerFilter}><SelectTrigger className="h-11 w-full"><SelectValue placeholder="Trigger" /></SelectTrigger><SelectContent><SelectItem value="all">All triggers</SelectItem>{WORKFLOW_TRIGGER_OPTIONS.map(({ type, label }) => <SelectItem key={type} value={type}>{label}</SelectItem>)}</SelectContent></Select><Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger className="h-11 w-full"><SelectValue placeholder="Status" /></SelectTrigger><SelectContent><SelectItem value="all">All statuses</SelectItem><SelectItem value="active">Active</SelectItem><SelectItem value="inactive">Inactive</SelectItem></SelectContent></Select></div></HeaderCombinedQuery>}
-          actions={
-            <Button
-              size="icon"
-              className="h-11 w-11 bg-blue-600 text-white hover:bg-blue-700"
-              onClick={() => navigate('/automations/new')}
-              aria-label="Create automation"
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-          }
-        />
-      }
     >
       <OnboardingModal
         isOpen={showOnboarding}
@@ -447,6 +412,7 @@ export function AutomationsPage() {
           ) : workflows.length === 0 ? (
             <EmptyState
               icon={Zap}
+              kind={hasQuery ? 'results' : 'collection'}
               title={hasQuery ? 'No matching automations' : 'No automations yet'}
               description={hasQuery
                 ? 'Try a different search or clear the current filters.'
@@ -487,12 +453,6 @@ export function AutomationsPage() {
                       </div>
                   </button>
                     <div className="flex shrink-0 items-center gap-1">
-                      <Switch
-                        checked={workflow.is_active}
-                        onCheckedChange={() => handleToggleWorkflow(workflow)}
-                        disabled={working}
-                        aria-label={`${workflow.is_active ? 'Deactivate' : 'Activate'} ${workflow.name}`}
-                      />
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" disabled={working} aria-label={`More actions for ${workflow.name}`}>
@@ -503,6 +463,10 @@ export function AutomationsPage() {
                           <DropdownMenuItem onClick={() => navigate(`/automations/${workflow.id}`)} className="group/menu">
                             <Zap className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
                             Edit Workflow
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => void handleToggleWorkflow(workflow)}>
+                            {workflow.is_active ? <Pause className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4" />}
+                            {workflow.is_active ? 'Deactivate automation' : 'Activate automation'}
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleDuplicateWorkflow(workflow)} className="group/menu">
                             <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />

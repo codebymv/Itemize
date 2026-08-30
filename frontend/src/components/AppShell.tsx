@@ -173,24 +173,45 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
         <SearchContext.Provider value={{ searchOpen, setSearchOpen }}>
             <SidebarProvider defaultOpen={true}>
                 <AppSidebar />
-                <SidebarInset className="overflow-x-hidden">
+                <SidebarInset className="min-w-0 overflow-x-clip">
                     <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md">
                         Skip to main content
                     </a>
                     {/* Global chrome and page identity remain separate on narrow screens. */}
-                <header className="sticky top-0 z-50 w-full min-w-0 border-b bg-background">
-                  <div className="grid min-w-0 grid-cols-[1fr_auto] md:flex md:h-14 md:items-center md:px-4">
-                    <div className="flex h-14 items-center px-4 md:hidden">
+                <header className="sticky top-0 z-50 w-full min-w-0 shrink-0 border-b border-sidebar-border bg-sidebar">
+                  <div className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] md:flex md:h-14 md:items-center md:px-4">
+                    <div className="col-start-1 row-start-1 flex h-14 items-center pl-4 md:hidden">
                         <SidebarTrigger className="h-11 w-11" />
                     </div>
 
+                    <div className="col-start-2 row-start-1 flex h-14 min-w-0 items-center justify-center px-3 md:hidden">
+                        <span
+                            role="img"
+                            aria-label="Itemize"
+                            className="inline-flex h-5 max-w-full items-center justify-center overflow-hidden"
+                        >
+                            <img
+                                src="/textblack.png"
+                                alt=""
+                                aria-hidden="true"
+                                className="block h-5 w-auto max-w-full object-contain dark:hidden"
+                            />
+                            <img
+                                src="/textwhite.png"
+                                alt=""
+                                aria-hidden="true"
+                                className="hidden h-5 w-auto max-w-full object-contain dark:block"
+                            />
+                        </span>
+                    </div>
+
                     {/* Dynamic page identity. It gets a dedicated row on mobile. */}
-                    <div className="col-span-2 row-start-2 flex min-h-12 min-w-0 items-center border-t px-4 py-2 md:order-1 md:col-auto md:row-auto md:h-full md:min-h-0 md:flex-1 md:border-t-0 md:px-0 md:py-px">
+                    <div className="col-span-3 row-start-2 flex min-h-12 min-w-0 items-center border-t px-4 py-0.5 md:order-1 md:col-auto md:row-auto md:h-full md:min-h-0 md:flex-1 md:border-t-0 md:px-0 md:py-px">
                         <div className="min-w-0 flex-1 md:flex-none">{headerContent}</div>
                         {desktopTools}
                     </div>
 
-                    <div className="col-start-2 row-start-1 flex h-14 shrink-0 items-center gap-2 pr-4 md:order-2 md:ml-4 md:h-auto md:pr-0">
+                    <div className="col-start-3 row-start-1 flex h-14 shrink-0 items-center gap-2 pr-4 md:order-2 md:ml-4 md:h-auto md:pr-0">
                         <OrganizationSwitcher />
 
                         <NotificationCenter />

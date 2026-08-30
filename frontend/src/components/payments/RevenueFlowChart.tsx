@@ -1,4 +1,5 @@
 import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/EmptyState';
 import { ChartContainer, ChartSurface, ChartTooltip } from '@/components/ui/chart';
 import { cn } from '@/lib/utils';
 import type {
@@ -52,7 +53,7 @@ function MethodBreakdown({ trend }: { trend: RevenueFlowCurrency }) {
         <p className="text-xs text-muted-foreground">Gross received by method</p>
       </div>
       {trend.methods.length === 0 ? (
-        <p className="py-6 text-sm text-muted-foreground">No settled payments in this period</p>
+        <EmptyState kind="inline" title="No settled payments in this period" className="items-start px-0 py-6 text-left" />
       ) : (
         <div className="space-y-4">
           {trend.methods.map((method) => (

@@ -40,6 +40,17 @@ export class Conversation {
   @Field(() => String, { nullable: true }) contactLastName: string | null;
   @Field(() => String, { nullable: true }) contactEmail: string | null;
   @Field(() => String, { nullable: true }) contactPhone: string | null;
+  @Field(() => Int, { nullable: true }) socialConversationId: number | null;
+  @Field(() => String, { nullable: true }) providerAccountName: string | null;
+  @Field(() => String, { nullable: true }) providerParticipantName: string | null;
+  @Field(() => String, { nullable: true }) providerParticipantUsername: string | null;
+  @Field(() => String, { nullable: true }) providerParticipantProfilePic: string | null;
+  @Field(() => Int, { nullable: true }) chatSessionId: number | null;
+  @Field(() => String, { nullable: true }) chatSessionStatus: string | null;
+  @Field(() => String, { nullable: true }) chatVisitorName: string | null;
+  @Field(() => String, { nullable: true }) chatVisitorEmail: string | null;
+  @Field(() => String, { nullable: true }) chatVisitorPhone: string | null;
+  @Field(() => String, { nullable: true }) chatWidgetName: string | null;
   @Field(() => [ConversationMessage], { nullable: true })
   messages?: ConversationMessage[] | null;
 }

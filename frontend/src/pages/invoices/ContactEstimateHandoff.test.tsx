@@ -41,17 +41,15 @@ vi.mock('@/components/layout/PageLayout', () => ({
   PageLayout: ({
     children,
     pageActions,
-    desktopTools,
-    mobileActions,
+    headerTools,
   }: {
     children: React.ReactNode;
     pageActions?: React.ReactNode;
-    desktopTools?: { primaryAction?: React.ReactNode };
-    mobileActions?: React.ReactNode;
+    headerTools?: { secondaryAction?: React.ReactNode; primaryAction?: React.ReactNode };
   }) => (
     <TooltipProvider>
-      <div data-testid="page-actions">{pageActions ?? desktopTools?.primaryAction}</div>
-      <div data-testid="mobile-actions">{mobileActions}</div>
+      <div data-testid="page-actions">{pageActions ?? headerTools?.primaryAction}</div>
+      <div data-testid="secondary-actions">{headerTools?.secondaryAction}</div>
       {children}
     </TooltipProvider>
   ),
@@ -101,7 +99,7 @@ describe('contact to estimate handoff', () => {
     invoicesApi.getProducts.mockResolvedValue([]);
   });
 
-  it('promotes Create Estimate across responsive actions and passes only contactId', async () => {
+  it('promotes one responsive Create Estimate shell action and passes only contactId', async () => {
     render(
       <MemoryRouter initialEntries={['/contacts/17']}>
         <Routes>
@@ -114,11 +112,10 @@ describe('contact to estimate handoff', () => {
     const createEstimateActions = await screen.findAllByRole('button', {
       name: /create estimate/i,
     });
-    expect(createEstimateActions).toHaveLength(3);
+    expect(createEstimateActions).toHaveLength(2);
     expect(screen.getByTestId('page-actions')).toContainElement(createEstimateActions[0]);
-    expect(screen.getByTestId('mobile-actions')).toContainElement(createEstimateActions[1]);
 
-    fireEvent.click(createEstimateActions[1]);
+    fireEvent.click(createEstimateActions[0]);
 
     expect(await screen.findByTestId('location')).toHaveTextContent(
       '/estimates/new?contactId=17',

@@ -26,6 +26,8 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import AppShell from "@/components/AppShell";
 import { PublicPageHeader } from "@/components/layout/PublicPageHeader";
+import { PageLayout } from '@/components/layout/PageLayout';
+import { Crown } from 'lucide-react';
 
 // Pages - Static imports for critical pages only
 import NotFound from "./pages/NotFound";
@@ -68,6 +70,7 @@ const WorkflowBuilderPage = React.lazy(() => import("./pages/automations/Workflo
 const CalendarsPage = React.lazy(() => import("./pages/calendars/CalendarsPage"));
 const CalendarSettingsPage = React.lazy(() => import("./pages/calendars/CalendarSettingsPage"));
 const BookingsPage = React.lazy(() => import("./pages/bookings/BookingsPage"));
+const PublicBookingPage = React.lazy(() => import("./pages/bookings/PublicBookingPage"));
 const FormsPage = React.lazy(() => import("./pages/forms/FormsPage"));
 const FormEditorPage = React.lazy(() => import("./pages/forms/FormEditorPage"));
 const PublicFormPage = React.lazy(() => import("./pages/forms/PublicFormPage"));
@@ -92,6 +95,8 @@ const SocialPage = React.lazy(() => import("./pages/social/SocialPage"));
 const ReputationPage = React.lazy(() => import("./pages/reputation/ReputationPage"));
 const ReputationRequestsPage = React.lazy(() => import("./pages/reputation/ReputationRequestsPage"));
 const ReputationWidgetsPage = React.lazy(() => import("./pages/reputation/ReputationWidgetsPage"));
+const ReputationWidgetEditorPage = React.lazy(() => import("./pages/reputation/ReputationWidgetEditorPage"));
+const ReputationSettingsPage = React.lazy(() => import("./pages/reputation/ReputationSettingsPage"));
 const PublicReviewPage = React.lazy(() => import("./pages/reputation/PublicReviewPage"));
 const InvoicesPage = React.lazy(() => import("./pages/invoices/InvoicesPage"));
 const InvoiceEditorPage = React.lazy(() => import("./pages/invoices/InvoiceEditorPage"));
@@ -231,15 +236,17 @@ const EntitledRoute = ({ requiredPlan = 'starter' }: { requiredPlan?: Plan }) =>
   if (!subscription || !hasPlanAccess(isSubscribed, tierLevel, requiredPlan)) {
     return (
       <AuthenticatedLayout>
-        <div className="mx-auto flex min-h-full w-full max-w-3xl items-center px-4 py-12 sm:px-6">
-          <UpgradePromptCard
-            requiredPlan={requiredPlan}
-            currentPlan={(planName as Plan | null) ?? 'free'}
-            title="Unlock Itemize business tools"
-            description="Upgrade for clients, documents, billing, and delivery."
-            className="w-full bg-background"
-          />
-        </div>
+        <PageLayout title="UPGRADE" icon={<Crown className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />} frame="flush">
+          <div className="mx-auto flex min-h-full w-full max-w-3xl items-center px-4 py-12 sm:px-6">
+            <UpgradePromptCard
+              requiredPlan={requiredPlan}
+              currentPlan={(planName as Plan | null) ?? 'free'}
+              title="Unlock Itemize business tools"
+              description="Upgrade for clients, documents, billing, and delivery."
+              className="w-full bg-background"
+            />
+          </div>
+        </PageLayout>
       </AuthenticatedLayout>
     );
   }
@@ -377,6 +384,7 @@ const AppContent = () => {
       <Route path="/invoice/payment/success" element={<PublicInvoicePaymentPage />} />
       <Route path="/invoice/payment/cancelled" element={<PublicInvoicePaymentPage />} />
       <Route path="/f/:identifier" element={<PublicFormPage />} />
+      <Route path="/book/:identifier" element={<PublicBookingPage />} />
       <Route path="/form/:identifier" element={<LegacyFormRedirect />} />
       <Route path="/p/:slug" element={<PublicLandingPage />} />
       <Route path="/review/:token" element={<PublicReviewPage />} />
@@ -431,6 +439,9 @@ const AppContent = () => {
           <Route path="/reviews" element={<ReputationPage />} />
           <Route path="/review-requests" element={<ReputationRequestsPage />} />
           <Route path="/review-widgets" element={<ReputationWidgetsPage />} />
+          <Route path="/review-widgets/new" element={<ReputationWidgetEditorPage />} />
+          <Route path="/review-widgets/:id" element={<ReputationWidgetEditorPage />} />
+          <Route path="/reputation-settings" element={<ReputationSettingsPage />} />
           <Route path="/invoices" element={<InvoicesPage />} />
           <Route path="/invoices/recurring" element={<RecurringInvoicesPage />} />
           <Route path="/invoices/new" element={<InvoiceEditorPage />} />

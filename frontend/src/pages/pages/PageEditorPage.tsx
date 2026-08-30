@@ -59,6 +59,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { ErrorState } from '@/components/ErrorState';
+import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { EmptyState } from '@/components/EmptyState';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { ShellBackButton } from '@/components/layout/ShellBackButton';
@@ -126,14 +127,9 @@ export function PageEditorPage() {
     const { toast } = useToast();
     const [page, setPage] = useState<Page | null>(null);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
-    const { organizationId } = useOrganization({
-        onError: () => {
-            toast({ title: 'Error', description: 'Failed to initialize', variant: 'destructive' });
-            navigate('/pages');
-            return 'Failed to initialize';
-        }
-    });
+    const { organizationId, error: organizationError } = useOrganization();
 
     // Edit states
     const [editedName, setEditedName] = useState('');
@@ -177,6 +173,7 @@ export function PageEditorPage() {
     const loadPage = useCallback(async () => {
         if (!organizationId || !id) return;
         setLoading(true);
+        setLoadError(null);
         try {
             const pageData = await getPage(parseInt(id), organizationId);
             setPage(pageData);
@@ -186,8 +183,7 @@ export function PageEditorPage() {
             setEditedSeoTitle(pageData.seo_title || '');
             setEditedSeoDescription(pageData.seo_description || '');
         } catch (error) {
-            toast({ title: 'Error', description: 'Failed to load page', variant: 'destructive' });
-            navigate('/pages');
+            setLoadError(getErrorMessage(error, 'Unable to load this page.'));
         } finally {
             setLoading(false);
         }
@@ -336,14 +332,26 @@ export function PageEditorPage() {
                 icon={<Layout className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
                 leading={backButton}
             >
-                <ErrorState
-                    title="Page not found"
-                    description="This page could not be loaded."
-                    actionLabel="Back to pages"
-                    onAction={() => {
-                        if (confirmLeave()) navigate('/pages');
-                    }}
-                />
+                {organizationError ? (
+                    <OrganizationErrorState title="Unable to load page" icon={Layout} />
+                ) : loadError ? (
+                    <ErrorState
+                        kind="page"
+                        title="Page unavailable"
+                        description={loadError}
+                        onAction={() => void loadPage()}
+                    />
+                ) : (
+                    <ErrorState
+                        kind="page"
+                        title="Page not found"
+                        description="This page is no longer available."
+                        actionLabel="Back to pages"
+                        onAction={() => {
+                            if (confirmLeave()) navigate('/pages');
+                        }}
+                    />
+                )}
             </PageLayout>
         );
     }
@@ -384,21 +392,11 @@ export function PageEditorPage() {
             title="PAGE"
             icon={<Layout className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
             leading={backButton}
-            desktopTools={{
+            headerTools={{
                 status: <Badge className={cn('pointer-events-none whitespace-nowrap', statusVisual.badgeClass)}>{statusVisual.label}</Badge>,
                 secondaryAction: <>{moreActions}{publishAction}</>,
                 primaryAction: <HeaderAction label={saving ? 'Saving...' : 'Save changes'} icon={<Save className="h-4 w-4" />} onClick={handleSave} disabled={saving || !isDirty} />,
             }}
-            mobileActions={
-                <div className="flex w-full gap-2">
-                    {moreActions}
-                    {publishAction}
-                    <Button className="h-11 min-w-0 flex-1 bg-blue-600 text-white hover:bg-blue-700" onClick={handleSave} disabled={saving || !isDirty}>
-                        <Save className="mr-2 h-4 w-4" />
-                        {saving ? 'Saving...' : 'Save'}
-                    </Button>
-                </div>
-            }
         >
                 <EntityDetailHeader
                     icon={<StatusIcon className={cn('h-6 w-6', statusVisual.iconClass)} />}

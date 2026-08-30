@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Mail, Phone, MessageSquare, Plus, ArrowRight } from 'lucide-react'
 import type { ClientCommunication } from '../../design-system/types/client.types'
+import { EmptyState } from '@/components/EmptyState'
 
 interface ClientCommunicationsTabProps {
   communications: ClientCommunication[]
@@ -83,7 +84,7 @@ export function ClientCommunicationsTab({
         </CardHeader>
         <CardContent>
           {communications.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No communication history yet</p>
+            <EmptyState icon={MessageSquare} kind="inline" title="No communication history yet" />
           ) : (
             <div className="space-y-3">
               {communications.map((comm) => {

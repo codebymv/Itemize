@@ -39,6 +39,7 @@ const DocsPage: React.FC = () => {
   const navigateBack = useSafeShellBack(currentUser ? '/canvas' : '/home');
   const [markdownContent, setMarkdownContent] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [docStructure, setDocStructure] = useState<DocStructure[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -181,7 +182,7 @@ const DocsPage: React.FC = () => {
           : await docsService.getDocContent(docPath);
         setMarkdownContent(content);
       } catch {
-        setError('Failed to load help content. Please try again later.');
+        setError("We couldn't load this help article. Try again.");
         setMarkdownContent('');
       } finally {
         setLoading(false);
@@ -190,7 +191,7 @@ const DocsPage: React.FC = () => {
 
     fetchDocStructure();
     fetchDocContent();
-  }, [docPath]);
+  }, [docPath, loadAttempt]);
 
   useEffect(() => {
     if (isSidebarOpen) {
@@ -270,6 +271,7 @@ const DocsPage: React.FC = () => {
     ) : filteredDocs.length === 0 && searchQuery ? (
       <EmptyState
         icon={Search}
+        kind="results"
         title={`No results for "${searchQuery}"`}
         size="compact"
         actionLabel="Clear search"
@@ -287,7 +289,12 @@ const DocsPage: React.FC = () => {
   );
 
   const article = error ? (
-    <ErrorState title="Help" description={error} />
+    <ErrorState
+      kind="section"
+      title="Unable to load help content"
+      description={error}
+      onAction={() => setLoadAttempt((current) => current + 1)}
+    />
   ) : loading && !markdownContent ? (
     <div className="space-y-3 p-2">
       <Skeleton className="h-8 w-1/2" />
@@ -339,22 +346,25 @@ const DocsPage: React.FC = () => {
       </div>
 
       <PageLayout
-        title="Help"
-        icon={<HelpCircle className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+        title="HELP"
+        icon={<HelpCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />}
         leading={backButton}
         frame="split"
         nav={docsNav}
-        mobileActions={
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setIsSidebarOpen(true)}
-          >
-            <Menu className="h-4 w-4 mr-2" />
-            Menu
-          </Button>
-        }
+        headerTools={{
+          secondaryAction: (
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-11 w-11 md:hidden"
+              aria-label="Open help menu"
+              onClick={() => setIsSidebarOpen(true)}
+            >
+              <Menu className="h-4 w-4" />
+            </Button>
+          ),
+        }}
         className={cn('flex-1', !currentUser && PUBLIC_SHELL_WIDTH)}
       >
         {article}

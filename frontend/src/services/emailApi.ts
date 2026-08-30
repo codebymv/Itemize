@@ -67,6 +67,8 @@ export interface SendEmailResult {
     message: string;
     email_id?: string;
     delivery_id?: string;
+    conversation_id?: number;
+    message_id?: number;
     status?: string;
     replayed?: boolean;
     error?: string;

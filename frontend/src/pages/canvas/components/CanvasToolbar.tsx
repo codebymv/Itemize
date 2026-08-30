@@ -41,7 +41,7 @@ interface CanvasToolbarProps {
   onAddClick?: (event: MouseEvent) => void;
 }
 
-/** Builds the rule-bound Canvas slots consumed by the desktop shell lane. */
+/** Builds the rule-bound Canvas slots consumed by the responsive shell lane. */
 export function createCanvasHeaderTools({
   searchQuery,
   setSearchQuery,
@@ -160,7 +160,7 @@ export function createCanvasHeaderTools({
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
-            id="new-canvas-button"
+            data-canvas-add-button
             onClick={onAddClick}
             className="h-11 min-w-11 gap-2 bg-blue-600 px-3 font-light text-white hover:bg-blue-700"
             aria-label="Add content"

@@ -1,4 +1,6 @@
 import { Skeleton } from '@/components/ui/skeleton';
+import { Clock3 } from 'lucide-react';
+import { EmptyState } from '@/components/EmptyState';
 import type { PipelineDealAge } from '@/services/analyticsApi';
 
 export function PipelineDealAgeCard({ dealAge, isLoading }: { dealAge?: PipelineDealAge; isLoading?: boolean }) {
@@ -17,11 +19,7 @@ export function PipelineDealAgeCard({ dealAge, isLoading }: { dealAge?: Pipeline
     }
 
     if (!dealAge?.stages || dealAge.stages.length === 0) {
-        return (
-            <div className="text-center text-muted-foreground py-8">
-                No open deals in this pipeline
-            </div>
-        );
+        return <EmptyState icon={Clock3} kind="inline" title="No open deals in this pipeline" />;
     }
 
     return (

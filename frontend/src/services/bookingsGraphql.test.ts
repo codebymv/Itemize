@@ -80,6 +80,7 @@ describe('booking GraphQL consumer', () => {
 
     await expect(
       getBookingsViaGraphql({
+        search: 'Ada',
         calendar_id: 17,
         assigned_to: 7,
         status: 'confirmed',
@@ -107,6 +108,7 @@ describe('booking GraphQL consumer', () => {
     );
     expect(request.variables).toEqual({
       filter: {
+        search: 'Ada',
         calendarId: 17,
         assignedToId: 7,
         status: 'CONFIRMED',

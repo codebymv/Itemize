@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest';
 import { ChatWidgetPreview, type ChatWidgetPreviewConfig } from './ChatWidgetPreview';
 
 const config: ChatWidgetPreviewConfig = {
-  is_active: true,
   name: 'Support',
   welcome_title: 'Welcome!',
   welcome_message: 'How can we help?',
@@ -37,9 +36,10 @@ describe('ChatWidgetPreview', () => {
     render(<ChatWidgetPreview config={config} />);
 
     await act(async () => {
-      await user.click(screen.getByRole('button', { name: 'Offline' }));
+      await user.click(screen.getByRole('tab', { name: 'Offline' }));
     });
 
+    expect(screen.getByRole('tab', { name: 'Offline' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByText('Leave us a message.')).toBeInTheDocument();
     expect(screen.getAllByText('Offline')).toHaveLength(2);
   });

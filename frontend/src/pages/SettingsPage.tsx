@@ -125,7 +125,7 @@ export function SettingsNav() {
             <item.icon
               className={cn(
                 "mr-2 h-4 w-4 transition-colors group-hover/item:text-blue-600 dark:group-hover/item:text-blue-400",
-                isActive ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'
+                isActive ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground'
               )}
             />
             {item.title}
@@ -172,7 +172,7 @@ export function SettingsShellNavigation() {
                     'h-4 w-4 shrink-0',
                     item.path === activeItem.path
                       ? 'text-blue-600'
-                      : 'text-gray-600 dark:text-gray-400',
+                      : 'text-muted-foreground',
                   )}
                 />
                 <span>{item.title}</span>
@@ -768,13 +768,8 @@ export function SettingsPage() {
   return (
     <PageLayout
       title={activeNavItem.title.toUpperCase()}
-      icon={<ActivePageIcon className="h-5 w-5 text-blue-600 flex-shrink-0" />}
-      desktopTools={saveButton ? { primaryAction: saveButton } : undefined}
-      mobileActions={saveButton ? (
-        <div className="flex-1 [&_.desktop-header-action-label]:!inline [&_button]:w-full">
-          {saveButton}
-        </div>
-      ) : undefined}
+      icon={<ActivePageIcon className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />}
+      headerTools={saveButton ? { primaryAction: saveButton } : undefined}
       compactNavigation={<SettingsShellNavigation />}
       nav={<SettingsNav />}
       navigationBreakpoint="wide"

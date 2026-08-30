@@ -152,7 +152,7 @@ export default function SignatureTemplateEditorPage() {
           if (confirmLeave()) navigate('/templates');
         }} />
       }
-      desktopTools={{
+      headerTools={{
         status: template ? (
           <Badge className={cn('pointer-events-none whitespace-nowrap', readinessVisual.badgeClass)}>
             {readinessVisual.label}
@@ -167,12 +167,6 @@ export default function SignatureTemplateEditorPage() {
           />
         ),
       }}
-      mobileActions={
-        <Button className="h-11 flex-1 bg-blue-600 text-white hover:bg-blue-700" onClick={handleSave} disabled={loading || !template || !isDirty}>
-          <Save className="h-4 w-4 mr-2" />
-          Save template
-        </Button>
-      }
     >
           {loadError ? (
             <ErrorState
@@ -245,7 +239,7 @@ export default function SignatureTemplateEditorPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {roles.length === 0 && (
-                  <EmptyState icon={FileSignature} title="No roles yet" size="compact" />
+                  <EmptyState icon={FileSignature} kind="inline" title="No roles yet" />
                 )}
                 {roles.map((role, index) => (
                   <div key={`${role.role_name}-${index}`} className="grid grid-cols-1 gap-2 border rounded-md p-3">

@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, FileText, MoreHorizontal, Trash2, Copy, Eye, EyeOff, BarChart3, Pencil, Archive, ChevronDown, Maximize2, Loader2 } from 'lucide-react';
+import { Plus, FileText, MoreHorizontal, Trash2, Copy, Eye, EyeOff, BarChart3, Pencil, Archive, ChevronDown, Maximize2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import {
     DropdownMenu,
@@ -30,11 +29,11 @@ import { getForms, getForm, updateForm, deleteForm, duplicateForm, createForm } 
 import { useOrganization } from '@/hooks/useOrganization';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { HeaderAction, HeaderCombinedQuery, HeaderFilters, HeaderSearch } from '@/components/layout/DesktopHeaderTools';
-import { MobileQueryBar } from '@/components/layout/MobileQueryBar';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { StatCard } from '@/components/StatCard';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { cn } from '@/lib/utils';
 import { getContentStatusVisual } from '@/pages/contentVisuals';
@@ -231,13 +230,9 @@ export function FormsPage() {
         return (
             <PageLayout
                 title="FORMS"
-                icon={<FileText className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+                icon={<FileText className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />}
             >
-                <ErrorState
-                    description={initError}
-                    icon={FileText}
-                    onAction={() => void fetchForms()}
-                />
+                <OrganizationErrorState title="Unable to load forms" icon={FileText} />
             </PageLayout>
         );
     }
@@ -246,29 +241,12 @@ export function FormsPage() {
         <PageLayout
             title="FORMS"
             icon={<FileText className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
-            mobileClassName="items-stretch"
-            desktopTools={{
+            headerTools={{
                 search: <HeaderSearch label="Search forms" placeholder="Search forms..." value={searchQuery} onChange={setSearchQuery} width="wide" />,
                 filters: <HeaderFilters label="Filter forms by status" activeCount={Number(statusFilter !== 'all')} compactChildren={statusSelect(true)} preferExpanded="when-roomy">{statusSelect()}</HeaderFilters>,
                 combinedQuery: <HeaderCombinedQuery label="Search and filter forms" placeholder="Search forms..." value={searchQuery} onChange={setSearchQuery} activeCount={Number(Boolean(normalizedQuery)) + Number(statusFilter !== 'all')}>{statusSelect(true)}</HeaderCombinedQuery>,
                 primaryAction: <HeaderAction label="New form" icon={<Plus className="h-4 w-4" />} onClick={handleCreateForm} />,
             }}
-            mobileActions={
-                <MobileQueryBar
-                    search={<div className="relative min-w-0 flex-1">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                            aria-label="Search forms"
-                            placeholder="Search forms..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="h-11 w-full bg-muted/20 pl-10"
-                        />
-                    </div>}
-                    filters={<HeaderCombinedQuery label="Search and filter forms" placeholder="Search forms..." value={searchQuery} onChange={setSearchQuery} activeCount={Number(Boolean(normalizedQuery)) + Number(statusFilter !== 'all')}>{statusSelect(true)}</HeaderCombinedQuery>}
-                    actions={<Button size="icon" aria-label="New form" className="h-11 w-11 shrink-0 bg-blue-600 text-white hover:bg-blue-700" onClick={handleCreateForm}><Plus className="h-4 w-4" /></Button>}
-                />
-            }
         >
             {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
                 <OnboardingModal
@@ -297,8 +275,9 @@ export function FormsPage() {
                     ) : filteredForms.length === 0 ? (
                             <EmptyState
                                 icon={FileText}
+                                kind={hasQuery ? 'results' : 'collection'}
                                 title={hasQuery ? 'No matching forms' : 'No forms yet'}
-                                description={hasQuery ? 'Try a different search or clear the current filters.' : 'Create a form to start collecting responses.'}
+                                description={hasQuery ? undefined : 'Create a form to start collecting responses.'}
                                 actionLabel={hasQuery ? 'Clear filters' : 'New form'}
                                 onAction={hasQuery ? clearQuery : handleCreateForm}
                                 className="p-12"

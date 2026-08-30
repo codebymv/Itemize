@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Search,
   Plus,
   Filter,
   Palette,
@@ -17,16 +16,7 @@ import {
 } from "../components/Canvas/CanvasContainer";
 import { ContextMenu } from "../components/Canvas/ContextMenu";
 import { List, Note, Whiteboard, Wireframe, Vault } from "../types";
-import { Input } from "../components/ui/input";
-import { Button } from "@/components/ui/button";
 import { PageLoading } from "@/components/ui/page-loading";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useToast } from "../hooks/use-toast";
 import { CreateItemModal } from "../components/CreateItemModal";
 import { useAuthState } from "../contexts/AuthContext";
@@ -583,12 +573,19 @@ const CanvasPage: React.FC = () => {
     }
   };
 
+  const openCanvasAddMenu = (button: HTMLElement) => {
+    document.getElementById("canvas-add-anchor")?.removeAttribute("id");
+    button.id = "canvas-add-anchor";
+    handleOpenMenu("canvas-add-anchor");
+  };
+
   const handleCanvasOnboardingComplete = async () => {
     await completeOnboarding();
     window.requestAnimationFrame(() => {
-      handleOpenMenu(
-        isMobileView ? "mobile-new-canvas-button" : "new-canvas-button",
-      );
+      const button = Array.from(
+        document.querySelectorAll<HTMLElement>("[data-canvas-add-button]"),
+      ).find((candidate) => candidate.getClientRects().length > 0);
+      if (button) openCanvasAddMenu(button);
     });
   };
 
@@ -649,7 +646,7 @@ const CanvasPage: React.FC = () => {
     <PageLayout
       title="CANVAS"
       icon={<MapIcon className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
-      desktopTools={createCanvasHeaderTools({
+      headerTools={createCanvasHeaderTools({
         searchQuery,
         setSearchQuery,
         typeFilter,
@@ -665,73 +662,10 @@ const CanvasPage: React.FC = () => {
           if (showButtonContextMenu) {
             handleCloseMenu();
           } else {
-            handleOpenMenu("new-canvas-button");
+            openCanvasAddMenu(e.currentTarget);
           }
         },
       })}
-      mobileActions={
-        <>
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-            <Input
-              placeholder="Search canvas..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-9 w-full"
-              style={{ fontFamily: '"Raleway", sans-serif' }}
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <Select
-              value={typeFilter}
-              onValueChange={(v) => setTypeFilter(v as typeof typeFilter)}
-            >
-              <SelectTrigger className="h-11 flex-1">
-                <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="list">Lists</SelectItem>
-                <SelectItem value="note">Notes</SelectItem>
-                <SelectItem value="whiteboard">Whiteboards</SelectItem>
-                <SelectItem value="wireframe">Wireframes</SelectItem>
-                <SelectItem value="vault">Vaults</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select
-              value={categoryFilter}
-              onValueChange={(v) => setCategoryFilter(v)}
-            >
-              <SelectTrigger className="h-11 flex-1">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                {getUniqueCategories.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category === "all" ? "All Categories" : category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button
-              id="mobile-new-canvas-button"
-              aria-label="Add content"
-              title="Add content"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                handleOpenMenu("mobile-new-canvas-button");
-              }}
-              size="icon"
-              className="h-11 w-11 bg-blue-600 text-white hover:bg-blue-700"
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
-        </>
-      }
-      mobileClassName="flex-col items-stretch gap-2 sticky top-0 z-10"
       frame="flush"
     >
       {/* Onboarding Modal */}

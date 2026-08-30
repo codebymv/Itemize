@@ -50,7 +50,7 @@ export function ClientPaymentsTab({ payments }: ClientPaymentsTabProps) {
         </CardHeader>
         <CardContent>
           {payments.length === 0 ? (
-            <EmptyState icon={DollarSign} title="No payments yet" size="compact" />
+            <EmptyState icon={DollarSign} kind="inline" title="No payments yet" />
           ) : (
             <div className="space-y-2">
               {payments.map((payment) => (

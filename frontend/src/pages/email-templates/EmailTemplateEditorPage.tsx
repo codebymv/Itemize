@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FileText, Info, Loader2, Mail, Pencil, Settings2 } from 'lucide-react';
+import { FileText, Loader2, Mail, Pencil, Settings2 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { EmailContentEditor, type EmailContentValue } from '@/components/email/EmailContentEditor';
 import { EmailPreviewPane } from '@/components/email/EmailPreviewPane';
 import { EmailStudioDialog } from '@/components/email/EmailStudioDialog';
 import { EmailTemplateBrowserDialog } from '@/components/email/EmailTemplateBrowserDialog';
 import { ErrorState } from '@/components/ErrorState';
+import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { HeaderAction } from '@/components/layout/DesktopHeaderTools';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { EntityDetailHeader } from '@/components/layout/EntityDetailHeader';
@@ -18,8 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SectionCardTitle } from '@/components/ui/section-card-title';
-import { Switch } from '@/components/ui/switch';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { AvailabilitySettingRow } from '@/components/settings/SettingsPrimitives';
 import { useAuthState } from '@/contexts/AuthContext';
 import { useDirtyState } from '@/hooks/useDirtyState';
 import { useOrganization } from '@/hooks/useOrganization';
@@ -245,7 +245,11 @@ export function EmailTemplateEditorPage() {
 
   if (orgError || loadError) return (
     <PageLayout title="EMAIL TEMPLATE" icon={<Mail className="h-5 w-5 text-blue-600 dark:text-blue-400" />} leading={leading}>
-      <ErrorState title="Email template unavailable" description={orgError || loadError || 'Unable to load template.'} icon={FileText} onAction={() => void loadTemplate()} />
+      {orgError ? (
+        <OrganizationErrorState title="Unable to load email template" icon={Mail} />
+      ) : (
+        <ErrorState kind="page" title="Email template unavailable" description={loadError || undefined} icon={FileText} onAction={() => void loadTemplate()} />
+      )}
     </PageLayout>
   );
 
@@ -266,11 +270,10 @@ export function EmailTemplateEditorPage() {
       title={isNew ? 'NEW EMAIL TEMPLATE' : 'EMAIL TEMPLATE'}
       icon={<Mail className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
       leading={leading}
-      desktopTools={{
+      headerTools={{
         status: <Badge className={cn('pointer-events-none whitespace-nowrap', status.badgeClass)}>{status.label}</Badge>,
         primaryAction: <HeaderAction label="Edit email" icon={<Pencil className="h-4 w-4" />} onClick={() => setStudioOpen(true)} />,
       }}
-      mobileActions={<div className="flex w-full items-center gap-2"><Badge className={status.badgeClass}>{status.label}</Badge><Button className="ml-auto bg-blue-600 text-white hover:bg-blue-700" onClick={() => setStudioOpen(true)}><Pencil className="h-4 w-4" />Edit email</Button></div>}
     >
       <EntityDetailHeader
         icon={<Mail className={cn('h-6 w-6', status.iconClass)} />}
@@ -362,7 +365,7 @@ export function EmailTemplateEditorPage() {
           <div className="space-y-4">
             <div className="space-y-2"><Label htmlFor="template-name">Name</Label><Input id="template-name" value={state.name} placeholder="Monthly product update" disabled={busy} onChange={event => setState(current => ({ ...current, name: event.target.value }))} /></div>
             <div className="space-y-2"><Label htmlFor="template-category">Category</Label><Select value={state.category || undefined} disabled={busy} onValueChange={category => setState(current => ({ ...current, category }))}><SelectTrigger id="template-category"><SelectValue placeholder="Select category" /></SelectTrigger><SelectContent>{state.category && !TEMPLATE_CATEGORIES.includes(state.category as typeof TEMPLATE_CATEGORIES[number]) && <SelectItem value={state.category}>{categoryLabel(state.category)}</SelectItem>}{TEMPLATE_CATEGORIES.map(category => <SelectItem key={category} value={category}>{categoryLabel(category)}</SelectItem>)}</SelectContent></Select></div>
-            <div className="flex items-center justify-between gap-4 rounded-lg border p-3"><div className="flex min-w-0 items-center gap-2"><Label htmlFor="template-active">Available to use</Label><Tooltip><TooltipTrigger asChild><button type="button" aria-label="About template availability" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><Info className="h-4 w-4" /></button></TooltipTrigger><TooltipContent>Inactive templates remain reviewable but cannot be selected for new sends.</TooltipContent></Tooltip></div><Switch id="template-active" checked={state.isActive} disabled={busy} onCheckedChange={isActive => setState(current => ({ ...current, isActive }))} /></div>
+            <AvailabilitySettingRow id="template-active" label="Available to use" checked={state.isActive} disabled={busy} onCheckedChange={isActive => setState(current => ({ ...current, isActive }))} help="Unavailable templates remain editable but cannot be selected for new sends." helpLabel="About template availability" />
           </div>
           <DialogFooter><Button type="button" className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => setTemplateDetailsOpen(false)}>Done</Button></DialogFooter>
         </DialogContent>

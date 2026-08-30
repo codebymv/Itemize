@@ -1,9 +1,10 @@
 import React from 'react';
-import { AlertTriangle, Building2 } from 'lucide-react';
+import { Building2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { SettingsPlanGate } from '@/components/settings/SettingsPrimitives';
+import { ErrorState } from '@/components/ErrorState';
 import type { PaymentsLoadError } from '../hooks/usePaymentsTab';
 
 export function PaymentsTabLoadingSkeleton() {
@@ -119,25 +120,16 @@ export function PaymentsTabErrorState({
 
   return (
     <Card>
-      <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-        <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-full bg-destructive/10 text-destructive">
-          {organizationUnavailable ? (
-            <Building2 className="h-5 w-5" aria-hidden="true" />
-          ) : (
-            <AlertTriangle className="h-5 w-5" aria-hidden="true" />
-          )}
-        </div>
-        <h3 className="text-lg font-medium text-foreground">
-          {organizationUnavailable
-              ? 'Organization unavailable'
-              : 'Unable to load payment settings'}
-        </h3>
-        <p className="mt-2 max-w-md text-sm text-muted-foreground">
-          {organizationUnavailable
+      <CardContent className="p-0">
+        <ErrorState
+          kind="section"
+          title={organizationUnavailable ? 'Organization unavailable' : 'Unable to load payment settings'}
+          description={organizationUnavailable
             ? "We couldn't restore this account's organization. Try again."
-            : "Invoicing settings couldn't load. Retry before editing."}
-        </p>
-        <Button onClick={onRetry} className="mt-5">Try Again</Button>
+            : "We couldn't load invoicing settings. Try again before editing."}
+          icon={organizationUnavailable ? Building2 : undefined}
+          onAction={onRetry}
+        />
       </CardContent>
     </Card>
   );

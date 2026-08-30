@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     Plus,
-    Search,
     Package,
     RefreshCw,
     MoreHorizontal,
@@ -39,10 +38,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
+import { AvailabilitySettingRow } from '@/components/settings/SettingsPrimitives';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/hooks/useOrganization';
 import { PageLayout } from '@/components/layout/PageLayout';
-import { MobileQueryBar } from '@/components/layout/MobileQueryBar';
 import {
     HeaderAction,
     HeaderCombinedQuery,
@@ -51,6 +50,7 @@ import {
 } from '@/components/layout/DesktopHeaderTools';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { StatCard } from '@/components/StatCard';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
@@ -248,9 +248,9 @@ export function ProductsPage() {
                 <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="active">Available</SelectItem>
                 <SelectItem value="all">All products</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="inactive">Unavailable</SelectItem>
             </SelectContent>
         </Select>
     );
@@ -271,8 +271,7 @@ export function ProductsPage() {
         <PageLayout
             title="PRODUCTS"
             icon={<Package className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
-            mobileClassName="flex-col items-stretch gap-2"
-            desktopTools={{
+            headerTools={{
                 search: (
                     <HeaderSearch
                         label="Search products"
@@ -321,33 +320,6 @@ export function ProductsPage() {
                     />
                 ),
             }}
-            mobileActions={
-                <MobileQueryBar
-                  search={
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                            aria-label="Search products"
-                            placeholder="Search products..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="h-9 w-full border-border/50 bg-muted/20 pl-10"
-                        />
-                    </div>
-                  }
-                  filters={<HeaderCombinedQuery label="Search and filter products" placeholder="Search products..." value={searchQuery} onChange={setSearchQuery} activeCount={headerQueryCount}><div className="space-y-2">{statusSelect(true)}{typeSelect(true)}</div></HeaderCombinedQuery>}
-                  actions={
-                    <Button
-                        size="icon"
-                        aria-label="Add product"
-                        className="h-9 w-9 bg-blue-600 text-white hover:bg-blue-700"
-                        onClick={() => openCreateDialog()}
-                    >
-                        <Plus className="h-4 w-4" />
-                    </Button>
-                  }
-                />
-            }
         >
             {!loadError && (
             <ResponsiveCardRail
@@ -356,8 +328,8 @@ export function ProductsPage() {
                 className="responsive-stat-summary"
             >
                 <StatCard
-                    title="Active products"
-                    badgeText="Active"
+                    title="Available products"
+                    badgeText="Available"
                     value={stats.active}
                     icon={getProductStatusVisual(true).icon}
                     description="Available on new invoices"
@@ -383,8 +355,8 @@ export function ProductsPage() {
                     isLoading={loading}
                 />
                 <StatCard
-                    title="Inactive products"
-                    badgeText="Inactive"
+                    title="Unavailable products"
+                    badgeText="Unavailable"
                     value={stats.inactive}
                     icon={getProductStatusVisual(false).icon}
                     description="Hidden from new invoices"
@@ -401,19 +373,19 @@ export function ProductsPage() {
                             {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-20" />)}
                         </div>
                     ) : loadError ? (
-                        <ErrorState
-                            title="Unable to load products"
-                            description={loadError}
-                            actionLabel="Try again"
-                            onAction={() => void fetchProducts()}
-                        />
+                        initError ? (
+                            <OrganizationErrorState kind="section" title="Unable to load products" />
+                        ) : (
+                            <ErrorState kind="section" title="Unable to load products" description={loadError} onAction={() => void fetchProducts()} />
+                        )
                     ) : filteredProducts.length === 0 ? (
                         <EmptyState
                             icon={Package}
+                            kind={products.length === 0 ? 'collection' : 'results'}
                             title={products.length === 0 ? 'No products yet' : 'No matching products'}
                             description={products.length === 0
                                 ? 'Create reusable products and services for faster invoicing'
-                                : 'Try adjusting your search or catalog filters'}
+                                : undefined}
                             actionLabel={products.length === 0 ? 'Add product' : 'Clear filters'}
                             onAction={products.length === 0 ? openCreateDialog : resetCatalogQuery}
                             className="p-12"
@@ -516,7 +488,7 @@ export function ProductsPage() {
             </Card>
 
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogContent className="sm:max-w-[500px]">
+                <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-[500px]">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <Package className="h-5 w-5 text-blue-600" />
@@ -618,23 +590,23 @@ export function ProductsPage() {
                                 />
                             </div>
                         </div>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
+                        <div className="space-y-3">
+                            <div className="flex min-h-14 items-center justify-between gap-4 rounded-lg border p-3">
+                                <Label htmlFor="taxable">Taxable</Label>
                                 <Switch
                                     id="taxable"
                                     checked={formData.taxable}
                                     onCheckedChange={(checked) => setFormData({ ...formData, taxable: checked })}
                                 />
-                                <Label htmlFor="taxable">Taxable</Label>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <Switch
-                                    id="is_active"
-                                    checked={formData.is_active}
-                                    onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-                                />
-                                <Label htmlFor="is_active">Active</Label>
-                            </div>
+                            <AvailabilitySettingRow
+                                id="is_active"
+                                label="Available on new invoices"
+                                checked={formData.is_active}
+                                onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                                help="Unavailable products remain in the catalog but cannot be added to new invoices."
+                                helpLabel="About product availability"
+                            />
                         </div>
                     </div>
                     <DialogFooter>

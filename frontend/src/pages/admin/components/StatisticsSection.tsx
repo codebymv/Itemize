@@ -16,6 +16,7 @@ import {
     Users,
 } from 'lucide-react';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
+import { ErrorState } from '@/components/ErrorState';
 import { StatCard } from '@/components/StatCard';
 import {
     Select,
@@ -24,7 +25,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
 import * as adminApi from '@/services/adminApi';
 import { formatMedian } from './activationFunnelFormat';
 
@@ -37,13 +37,15 @@ function StatisticsSection() {
     const [funnel, setFunnel] = useState<adminApi.ActivationFunnel | null>(null);
     const [cohortDays, setCohortDays] = useState<CohortDays>(30);
     const [loading, setLoading] = useState(true);
-    const { toast } = useToast();
+    const [loadError, setLoadError] = useState(false);
+    const [loadAttempt, setLoadAttempt] = useState(0);
 
     useEffect(() => {
         let active = true;
 
         const fetchStats = async () => {
             setLoading(true);
+            setLoadError(false);
             try {
                 const [systemStats, activationFunnel] = await Promise.all([
                     adminApi.getStats(),
@@ -54,11 +56,7 @@ function StatisticsSection() {
                 setFunnel(activationFunnel);
             } catch {
                 if (!active) return;
-                toast({
-                    title: 'Error',
-                    description: 'Failed to load statistics',
-                    variant: 'destructive',
-                });
+                setLoadError(true);
             } finally {
                 if (active) setLoading(false);
             }
@@ -66,13 +64,25 @@ function StatisticsSection() {
 
         void fetchStats();
         return () => { active = false; };
-    }, [cohortDays, toast]);
+    }, [cohortDays, loadAttempt]);
 
     if (loading) {
         return (
             <div className="flex h-48 items-center justify-center">
                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
+        );
+    }
+
+    if (loadError) {
+        return (
+            <ErrorState
+                kind="section"
+                icon={BarChart3}
+                title="Unable to load statistics"
+                description="We couldn't load system statistics. Try again."
+                onRetry={() => setLoadAttempt((attempt) => attempt + 1)}
+            />
         );
     }
 

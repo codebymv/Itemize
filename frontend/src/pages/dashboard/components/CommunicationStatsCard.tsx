@@ -2,6 +2,7 @@ import React from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
 import { Mail, Phone } from 'lucide-react';
+import { EmptyState } from '@/components/EmptyState';
 import type { CommunicationStats } from '@/services/analyticsApi';
 
 export function CommunicationStatsCard({ stats, isLoading }: { stats?: CommunicationStats; isLoading?: boolean }) {
@@ -15,11 +16,7 @@ export function CommunicationStatsCard({ stats, isLoading }: { stats?: Communica
     }
 
     if (!stats || !stats.email || !stats.sms) {
-        return (
-            <div className="text-center text-muted-foreground py-8">
-                No communication data available
-            </div>
-        );
+        return <EmptyState icon={Mail} kind="inline" title="No communication activity yet" />;
     }
 
     const EmailCommunicationCard = () => (

@@ -122,6 +122,7 @@ export const removeDateOverride = async (
 // ======================
 
 export interface BookingsQueryParams {
+    search?: string;
     calendar_id?: number;
     contact_id?: number;
     assigned_to?: number;

@@ -124,6 +124,7 @@ const {
 } = require('./db_admin_email_delivery_migrations');
 const {
   runMessageDeliveryMigration,
+  runMessageDeliveryConversationLinkMigration,
 } = require('./db_message_delivery_migrations');
 const {
   runSignatureDeliveryMigration,
@@ -162,6 +163,9 @@ const { runAllChatWidgetMigrations } = require('./db_chat_widget_migrations');
 const {
   runChatWidgetGraphqlMigration,
 } = require('./db_chat_widget_graphql_migrations');
+const {
+  runChatInboxBridgeMigration,
+} = require('./db_chat_inbox_bridge_migrations');
 
 // Import Email Campaign migrations
 const { runAllCampaignMigrations } = require('./db_campaign_migrations');
@@ -196,6 +200,9 @@ const {
 const {
   runSocialMessageDeliveryMigration,
 } = require('./db_social_delivery_migrations');
+const {
+  runSocialInboxBridgeMigration,
+} = require('./db_social_inbox_bridge_migrations');
 
 // Import Pages migrations
 const { runAllPagesMigrations } = require('./db_pages_migrations');
@@ -615,6 +622,11 @@ const initializeDatabase = async (pool) => {
       'chat_widget_graphql',
       runChatWidgetGraphqlMigration,
     );
+    await runMigrationOnce(
+      pool,
+      'chat_inbox_bridge_v1',
+      runChatInboxBridgeMigration,
+    );
     await runMigrationOnce(pool, 'module_campaigns', runAllCampaignMigrations);
     await runMigrationOnce(pool, 'email_webhook_events', runEmailWebhookMigration);
     await runMigrationOnce(pool, 'email_webhook_reconciliation', runEmailWebhookReconciliationMigration);
@@ -736,6 +748,7 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'social_webhook_idempotency', runSocialWebhookMigration);
     await runMigrationOnce(pool, 'social_webhook_reconciliation', runSocialWebhookReconciliationMigration);
     await runMigrationOnce(pool, 'social_message_deliveries', runSocialMessageDeliveryMigration);
+    await runMigrationOnce(pool, 'social_inbox_bridge_v1', runSocialInboxBridgeMigration);
     
     await runMigrationOnce(pool, 'module_pages', runAllPagesMigrations);
     
@@ -830,6 +843,11 @@ const initializeDatabase = async (pool) => {
     });
     await runMigrationOnce(pool, 'admin_email_deliveries', runAdminEmailDeliveryMigration);
     await runMigrationOnce(pool, 'message_deliveries', runMessageDeliveryMigration);
+    await runMigrationOnce(
+      pool,
+      'message_delivery_conversation_link_v1',
+      runMessageDeliveryConversationLinkMigration,
+    );
 
     const elapsed = Date.now() - startTime;
     console.log(`✅ Database initialized successfully in ${elapsed}ms`);

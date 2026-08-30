@@ -60,6 +60,9 @@ import { EditContactModal } from './components/EditContactModal';
 import { ComposeEmailModal } from './components/ComposeEmailModal';
 import { useOrganization } from '@/hooks/useOrganization';
 import { getContactStatusVisual } from './constants/contactStatusConstants';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
+import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 
 type RelatedContactItem = {
   id: number;
@@ -92,7 +95,7 @@ function RelatedContentGroup({
         </Badge>
       </div>
       {items.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No linked {title.toLowerCase()}</p>
+        <EmptyState kind="inline" title={`No linked ${title.toLowerCase()}`} className="py-4" />
       ) : (
         <div className="space-y-2">
           {items.map((item) => (
@@ -128,7 +131,8 @@ export function ContactDetailPage() {
     wireframes: RelatedContactItem[];
   }>({ lists: [], notes: [], whiteboards: [], wireframes: [] });
   const [loading, setLoading] = useState(true);
-  const { organizationId } = useOrganization();
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const { organizationId, error: organizationError } = useOrganization();
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [newNote, setNewNote] = useState('');
@@ -164,6 +168,7 @@ export function ContactDetailPage() {
     if (!id || !organizationId) return;
 
     setLoading(true);
+    setLoadError(null);
     try {
       const [contactData, activitiesData, contentData] = await Promise.all([
         getContact(parseInt(id), organizationId),
@@ -176,16 +181,11 @@ export function ContactDetailPage() {
       setRelatedContent(contentData);
     } catch (error) {
       console.error('Error fetching contact:', error);
-      toast({
-        title: 'Error',
-        description: toastMessages.failedToLoad('contact'),
-        variant: 'destructive',
-      });
-      navigate('/contacts');
+      setLoadError(toastMessages.failedToLoad('contact'));
     } finally {
       setLoading(false);
     }
-  }, [id, organizationId, navigate, toast]);
+  }, [id, organizationId]);
 
   useEffect(() => {
     fetchContact();
@@ -342,6 +342,14 @@ export function ContactDetailPage() {
     </DropdownMenu>
   );
 
+  if (organizationError) {
+    return (
+      <PageLayout title="CONTACT" icon={<Users className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />} leading={backButton}>
+        <OrganizationErrorState title="Unable to load contact" icon={Users} />
+      </PageLayout>
+    );
+  }
+
   if (loading) {
     return (
       <PageLayout
@@ -367,8 +375,17 @@ export function ContactDetailPage() {
     );
   }
 
-  if (!contact) {
-    return null;
+  if (loadError || !contact) {
+    return (
+      <PageLayout title="CONTACT" icon={<Users className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />} leading={backButton}>
+        <ErrorState
+          kind="page"
+          title="Contact unavailable"
+          description={loadError || 'This contact is no longer available.'}
+          onAction={() => void fetchContact()}
+        />
+      </PageLayout>
+    );
   }
 
   const contactStatusVisual = getContactStatusVisual(contact.status);
@@ -379,7 +396,7 @@ export function ContactDetailPage() {
       title="CONTACT"
       icon={<Users className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
       leading={backButton}
-      desktopTools={{
+      headerTools={{
         status: (
           <Badge className={cn('pointer-events-none gap-1 whitespace-nowrap', contactStatusVisual.badgeClass)}>
             <ContactStatusIcon className="h-3 w-3" aria-hidden="true" />
@@ -395,18 +412,6 @@ export function ContactDetailPage() {
           />
         ),
       }}
-      mobileActions={
-        <>
-          <Button
-            size="sm"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-light"
-            onClick={handleCreateEstimate}
-          >
-            <FileText className="mr-2 h-4 w-4" />
-            Create estimate
-          </Button>
-        </>
-      }
     >
       <EntityDetailHeader
         icon={<span className={cn('text-xl font-medium', contactStatusVisual.iconClass)}>{getInitials()}</span>}

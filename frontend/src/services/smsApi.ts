@@ -17,6 +17,7 @@ import {
   enqueueContactSmsViaGraphql,
   sendSmsTemplateTestViaGraphql,
 } from './messageDeliveryGraphql';
+import type { SendEmailResult } from './emailApi';
 
 // Types
 export interface SmsTemplate {
@@ -147,7 +148,7 @@ export const duplicateSmsTemplate = async (id: number, organizationId?: number) 
 /**
  * Send SMS to a contact
  */
-export const sendSmsToContact = async (data: SendSmsToContactData) => {
+export const sendSmsToContact = async (data: SendSmsToContactData): Promise<SendEmailResult> => {
   return enqueueContactSmsViaGraphql(data, data.organization_id);
 };
 

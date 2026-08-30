@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import FormEditorPage from './FormEditorPage';
 import { HeaderProvider } from '@/contexts/HeaderContext';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 const apiMocks = vi.hoisted(() => ({
     deleteFormSubmission: vi.fn(),
@@ -27,6 +28,12 @@ vi.mock('@/hooks/useOrganization', () => ({
 }));
 vi.mock('@/hooks/use-toast', () => ({
     useToast: () => ({ toast: toastMock }),
+}));
+vi.mock('@/components/layout/PageLayout', () => ({
+    PageLayout: ({ children, headerTools }: {
+        children: React.ReactNode;
+        headerTools?: { status?: React.ReactNode; secondaryAction?: React.ReactNode; primaryAction?: React.ReactNode };
+    }) => <>{headerTools?.status}{headerTools?.secondaryAction}{headerTools?.primaryAction}{children}</>,
 }));
 
 const form = {
@@ -68,13 +75,15 @@ const form = {
 };
 
 const renderEditor = () => render(
-    <HeaderProvider>
-        <MemoryRouter initialEntries={['/forms/7']}>
-            <Routes>
-                <Route path="/forms/:id" element={<FormEditorPage />} />
-            </Routes>
-        </MemoryRouter>
-    </HeaderProvider>,
+    <TooltipProvider>
+        <HeaderProvider>
+            <MemoryRouter initialEntries={['/forms/7']}>
+                <Routes>
+                    <Route path="/forms/:id" element={<FormEditorPage />} />
+                </Routes>
+            </MemoryRouter>
+        </HeaderProvider>
+    </TooltipProvider>,
 );
 
 describe('FormEditorPage', () => {

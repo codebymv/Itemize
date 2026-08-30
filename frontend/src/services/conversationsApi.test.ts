@@ -57,7 +57,7 @@ describe('conversations GraphQL adapter', () => {
         });
 
         expect(graphqlRequest).toHaveBeenCalledWith(
-            expect.stringContaining('query Conversations'),
+            expect.stringContaining('socialConversationId'),
             {
                 status: 'open',
                 assignedTo: 3,
@@ -67,6 +67,50 @@ describe('conversations GraphQL adapter', () => {
             },
             42,
         );
+    });
+
+    it('keeps Inbox readable while provider fields roll out with the API', async () => {
+        vi.mocked(graphqlRequest)
+            .mockRejectedValueOnce(new Error('Cannot query field "socialConversationId" on type "Conversation".'))
+            .mockResolvedValueOnce({
+                conversations: {
+                    conversations: [conversation],
+                    page: 1,
+                    limit: 50,
+                    total: 1,
+                    totalPages: 1,
+                },
+            });
+
+        await expect(getConversations({ organization_id: 42 })).resolves.toEqual({
+            conversations: [conversation],
+            pagination: { page: 1, limit: 50, total: 1, totalPages: 1 },
+        });
+        expect(graphqlRequest).toHaveBeenCalledTimes(2);
+        expect(vi.mocked(graphqlRequest).mock.calls[1][0]).not.toContain('socialConversationId');
+    });
+
+    it('keeps channel filtering usable while the API argument rolls out', async () => {
+        vi.mocked(graphqlRequest)
+            .mockRejectedValueOnce(new Error('Unknown argument "channel" on field "Query.conversations".'))
+            .mockRejectedValueOnce(new Error('Unknown argument "channel" on field "Query.conversations".'))
+            .mockResolvedValueOnce({
+                conversations: {
+                    conversations: [
+                        conversation,
+                        { ...conversation, id: 8, channel: 'sms' },
+                    ],
+                    page: 1,
+                    limit: 50,
+                    total: 2,
+                    totalPages: 1,
+                },
+            });
+
+        await expect(getConversations({ channel: 'sms', organization_id: 42 }))
+            .resolves.toMatchObject({ conversations: [{ id: 8, channel: 'sms' }] });
+        expect(graphqlRequest).toHaveBeenCalledTimes(3);
+        expect(vi.mocked(graphqlRequest).mock.calls[2][0]).not.toContain('channel: $channel');
     });
 
     it('uses GraphQL for the complete inbox operation surface', async () => {

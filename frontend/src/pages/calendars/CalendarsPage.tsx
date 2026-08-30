@@ -1,9 +1,19 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Calendar as CalendarIcon, Settings, Link2, MoreHorizontal, Trash2, Copy, ExternalLink } from 'lucide-react';
+import {
+    CalendarCheck2,
+    CalendarDays,
+    CalendarOff,
+    Copy,
+    ExternalLink,
+    Link2,
+    MoreHorizontal,
+    Plus,
+    Settings2,
+    Trash2,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -13,104 +23,93 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
-import { Calendar } from '@/types';
+import type { Calendar } from '@/types';
 import { getCalendars, updateCalendar, deleteCalendar } from '@/services/calendarsApi';
 import { useOrganization } from '@/hooks/useOrganization';
 import { CreateCalendarModal } from './components/CreateCalendarModal';
-import { CalendarIntegrations } from './components/CalendarIntegrations';
+import { getCalendarStatusVisual } from './constants/schedulingVisuals';
 import { PageLayout } from '@/components/layout/PageLayout';
+import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
+import { HeaderAction, HeaderSearch } from '@/components/layout/DesktopHeaderTools';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
+import { StatCard } from '@/components/StatCard';
+import { cn } from '@/lib/utils';
 
 export function CalendarsPage() {
     const navigate = useNavigate();
     const { toast } = useToast();
-    // Onboarding
-    const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('calendars');
-
-    // State
+    const onboarding = useOnboardingTrigger('calendars');
     const [calendars, setCalendars] = useState<Calendar[]>([]);
     const [loading, setLoading] = useState(true);
-    const { organizationId, error: initError } = useOrganization({
-        onError: () => 'Failed to initialize organization.'
-    });
+    const [loadError, setLoadError] = useState('');
+    const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize organization.' });
     const [searchQuery, setSearchQuery] = useState('');
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [calendarToDelete, setCalendarToDelete] = useState<Calendar | null>(null);
 
-    useEffect(() => {
-        if (!organizationId && initError) {
-            setLoading(false);
-        }
-    }, [organizationId, initError]);
-
-    // Fetch calendars
     const fetchCalendars = useCallback(async () => {
         if (!organizationId) return;
-
         setLoading(true);
+        setLoadError('');
         try {
             const response = await getCalendars(organizationId);
             setCalendars(response.calendars);
         } catch (error) {
             console.error('Error fetching calendars:', error);
-            toast({
-                title: 'Error',
-                description: 'Failed to load calendars',
-                variant: 'destructive',
-            });
+            setLoadError('Calendars could not be loaded.');
         } finally {
             setLoading(false);
         }
     }, [organizationId]);
 
     useEffect(() => {
-        fetchCalendars();
+        if (!organizationId && initError) setLoading(false);
+    }, [organizationId, initError]);
+
+    useEffect(() => {
+        void fetchCalendars();
     }, [fetchCalendars]);
 
-    // Filter calendars by search
-    const filteredCalendars = calendars.filter((cal) =>
-        cal.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredCalendars = useMemo(() => {
+        const query = searchQuery.trim().toLowerCase();
+        if (!query) return calendars;
+        return calendars.filter(calendar => [calendar.name, calendar.description, calendar.timezone]
+            .some(value => value?.toLowerCase().includes(query)));
+    }, [calendars, searchQuery]);
 
-    // Toggle calendar active status
+    const stats = useMemo(() => ({
+        total: calendars.length,
+        active: calendars.filter(calendar => calendar.is_active).length,
+        inactive: calendars.filter(calendar => !calendar.is_active).length,
+        upcoming: calendars.reduce((sum, calendar) => sum + (calendar.upcoming_bookings ?? 0), 0),
+    }), [calendars]);
+
     const handleToggleActive = async (calendar: Calendar) => {
         if (!organizationId) return;
-
         try {
             await updateCalendar(calendar.id, { is_active: !calendar.is_active }, organizationId);
-            setCalendars((prev) =>
-                prev.map((c) =>
-                    c.id === calendar.id ? { ...c, is_active: !c.is_active } : c
-                )
-            );
-            toast({
-                title: calendar.is_active ? 'Calendar Disabled' : 'Calendar Enabled',
-                description: `${calendar.name} is now ${calendar.is_active ? 'inactive' : 'active'}`,
-            });
+            setCalendars(previous => previous.map(item => item.id === calendar.id
+                ? { ...item, is_active: !item.is_active }
+                : item));
+            toast({ title: calendar.is_active ? 'Calendar paused' : 'Calendar activated', description: calendar.name });
         } catch (error) {
             console.error('Error toggling calendar:', error);
-            toast({
-                title: 'Error',
-                description: 'Failed to update calendar',
-                variant: 'destructive',
-            });
+            toast({ title: 'Unable to update calendar', variant: 'destructive' });
         }
     };
 
-    // Delete calendar
     const handleDeleteCalendar = async (): Promise<boolean> => {
         if (!organizationId || !calendarToDelete) return false;
-
         try {
             await deleteCalendar(calendarToDelete.id, organizationId);
-            setCalendars((prev) => prev.filter((c) => c.id !== calendarToDelete.id));
+            setCalendars(previous => previous.filter(calendar => calendar.id !== calendarToDelete.id));
             setCalendarToDelete(null);
             return true;
         } catch (error) {
@@ -119,39 +118,22 @@ export function CalendarsPage() {
         }
     };
 
-    // Copy booking link
-    const copyBookingLink = (slug: string) => {
-        const url = `${window.location.origin}/book/${slug}`;
-        navigator.clipboard.writeText(url);
-        toast({
-            title: 'Link Copied',
-            description: 'Booking link copied to clipboard',
-        });
+    const copyBookingLink = async (publicId: string) => {
+        await navigator.clipboard.writeText(`${window.location.origin}/book/${publicId}`);
+        toast({ title: 'Booking link copied' });
     };
 
-    // Calendar created callback
     const handleCalendarCreated = (calendar: Calendar) => {
         setShowCreateModal(false);
-        setCalendars((prev) => [calendar, ...prev]);
-        toast({
-            title: 'Created',
-            description: 'Calendar created successfully',
-        });
+        setCalendars(previous => [calendar, ...previous]);
+        toast({ title: 'Calendar created' });
+        navigate(`/calendars/${calendar.id}`);
     };
 
-    // Error state
     if (initError) {
         return (
-            <PageLayout
-                title="CALENDARS"
-                icon={<CalendarIcon className="h-5 w-5 text-blue-600 flex-shrink-0" />}
-            >
-                <ErrorState
-                    title="Calendars Not Ready"
-                    description={initError}
-                    icon={CalendarIcon}
-                    onAction={() => void fetchCalendars()}
-                />
+            <PageLayout title="CALENDARS" icon={<CalendarDays className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}>
+                <OrganizationErrorState title="Unable to load calendars" icon={CalendarDays} />
             </PageLayout>
         );
     }
@@ -159,183 +141,108 @@ export function CalendarsPage() {
     return (
         <PageLayout
             title="CALENDARS"
-            icon={<CalendarIcon className="h-5 w-5 text-blue-600 flex-shrink-0" />}
-            pageActions={
-                <>
-                    <div className="relative w-full max-w-xs">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                            placeholder="Search calendars..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50 focus:bg-background transition-colors"
-                            style={{ fontFamily: '"Raleway", sans-serif' }}
-                        />
-                    </div>
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap font-light"
-                        onClick={() => setShowCreateModal(true)}
-                    >
-                        <Plus className="h-4 w-4 mr-2" />
-                        New Calendar
-                    </Button>
-                </>
-            }
-            mobileActions={
-                <>
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Search calendars..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-9 h-9 w-full"
-                        />
-                    </div>
-                    <Button
-                        size="sm"
-                        className="bg-blue-600 hover:bg-blue-700 text-white font-light"
-                        onClick={() => setShowCreateModal(true)}
-                    >
-                        <Plus className="h-4 w-4" />
-                    </Button>
-                </>
-            }
+            icon={<CalendarDays className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
+            headerTools={{
+                search: <HeaderSearch label="Search calendars" placeholder="Search calendars..." value={searchQuery} onChange={setSearchQuery} width="wide" />,
+                primaryAction: <HeaderAction label="New calendar" icon={<Plus className="h-4 w-4" />} onClick={() => setShowCreateModal(true)} />,
+            }}
         >
-            <OnboardingModal
-                isOpen={showOnboarding}
-                onClose={closeOnboarding}
-                onComplete={completeOnboarding}
-                onDismiss={dismissOnboarding}
-                content={ONBOARDING_CONTENT.calendars}
-            />
+            <OnboardingModal isOpen={onboarding.showModal} onClose={onboarding.handleClose} onComplete={onboarding.handleComplete} onDismiss={onboarding.handleDismiss} content={ONBOARDING_CONTENT.calendars} />
 
-                {/* Calendar Integrations */}
-                {organizationId && <CalendarIntegrations organizationId={organizationId} />}
+            {!loadError && (
+                <ResponsiveCardRail label="Calendar summary" desktopColumns="md:grid-cols-2 lg:grid-cols-4" className="responsive-stat-summary">
+                    <StatCard title="Total calendars" badgeText="Total" value={stats.total} icon={CalendarDays} description={`${stats.total} configured`} colorTheme="blue" isLoading={loading} />
+                    <StatCard title="Active calendars" badgeText="Active" value={stats.active} icon={CalendarCheck2} description="Accepting bookings" colorTheme="blue" isLoading={loading} />
+                    <StatCard title="Paused calendars" badgeText="Paused" value={stats.inactive} icon={CalendarOff} description="Not accepting bookings" colorTheme="orange" isLoading={loading} />
+                    <StatCard title="Upcoming bookings" badgeText="Upcoming" value={stats.upcoming} icon={CalendarCheck2} description="Across all calendars" colorTheme="green" isLoading={loading} />
+                </ResponsiveCardRail>
+            )}
 
-                {/* Calendars content */}
+            <Card>
+                <CardContent className="p-0">
                     {loading ? (
-                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {[...Array(3)].map((_, i) => (
-                                <Skeleton key={i} className="h-48 w-full" />
-                            ))}
-                        </div>
+                        <div className="space-y-4 p-6">{Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-24 w-full" />)}</div>
+                    ) : loadError ? (
+                        <ErrorState title="Calendars unavailable" description={loadError} icon={CalendarDays} onAction={() => void fetchCalendars()} className="p-12" />
                     ) : filteredCalendars.length === 0 ? (
                         <EmptyState
-                            icon={CalendarIcon}
-                            title="No calendars yet"
-                            description="Create a calendar to start accepting appointments"
-                            actionLabel="New Calendar"
-                            onAction={() => setShowCreateModal(true)}
+                            icon={CalendarDays}
+                            kind={searchQuery.trim() ? 'results' : 'collection'}
+                            title={searchQuery.trim() ? 'No matching calendars' : 'No calendars yet'}
+                            description={searchQuery.trim() ? undefined : 'Create a calendar to start accepting appointments.'}
+                            actionLabel={searchQuery.trim() ? 'Clear search' : 'New calendar'}
+                            onAction={searchQuery.trim() ? () => setSearchQuery('') : () => setShowCreateModal(true)}
                             className="p-12"
                         />
                     ) : (
-                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {filteredCalendars.map((calendar) => (
-                                <Card
-                                    key={calendar.id}
-                                    className="overflow-hidden hover:shadow-md transition-shadow"
-                                >
+                        <div className="divide-y">
+                            {filteredCalendars.map(calendar => {
+                                const visual = getCalendarStatusVisual(calendar.is_active);
+                                const StatusIcon = visual.icon;
+                                return (
                                     <div
-                                        className="h-2"
-                                        style={{ backgroundColor: calendar.color || '#3B82F6' }}
-                                    />
-                                    <CardHeader className="pb-3">
-                                        <div className="flex items-start justify-between">
-                                            <div className="flex-1 min-w-0">
-                                                <CardTitle className="text-lg truncate">{calendar.name}</CardTitle>
-                                                {calendar.description && (
-                                                    <CardDescription className="line-clamp-2 mt-1">
-                                                        {calendar.description}
-                                                    </CardDescription>
-                                                )}
-                                            </div>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2">
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem onClick={() => navigate(`/calendars/${calendar.id}`)}>
-                                                        <Settings className="h-4 w-4 mr-2" />
-                                                        Settings
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => copyBookingLink(calendar.public_id)}>
-                                                        <Copy className="h-4 w-4 mr-2" />
-                                                        Copy Link
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        onClick={() => window.open(`/book/${calendar.public_id}`, '_blank')}
-                                                    >
-                                                        <ExternalLink className="h-4 w-4 mr-2" />
-                                                        Preview
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem
-                                                        onClick={() => setCalendarToDelete(calendar)}
-                                                        className="text-destructive focus:text-destructive"
-                                                    >
-                                                        <Trash2 className="h-4 w-4 mr-2" />
-                                                        Delete
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
+                                        key={calendar.id}
+                                        role="link"
+                                        tabIndex={0}
+                                        aria-label={`Open ${calendar.name}`}
+                                        className="group flex cursor-pointer items-center gap-3 px-3 py-4 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-4"
+                                        onClick={() => navigate(`/calendars/${calendar.id}`)}
+                                        onKeyDown={event => {
+                                            if (event.key === 'Enter' || event.key === ' ') {
+                                                event.preventDefault();
+                                                navigate(`/calendars/${calendar.id}`);
+                                            }
+                                        }}
+                                    >
+                                        <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full', visual.iconBackgroundClass)}>
+                                            <StatusIcon className={cn('h-5 w-5', visual.iconClass)} aria-hidden="true" />
                                         </div>
-                                    </CardHeader>
-                                    <CardContent className="pt-0">
-                                        <div className="flex flex-wrap gap-2 mb-4">
-                                            <Badge variant="outline" className="text-xs">
-                                                {calendar.duration_minutes} min
-                                            </Badge>
-                                            <Badge variant="outline" className="text-xs">
-                                                {calendar.timezone}
-                                            </Badge>
-                                            {calendar.upcoming_bookings ? (
-                                                <Badge variant="secondary" className="text-xs">
-                                                    {calendar.upcoming_bookings} upcoming
-                                                </Badge>
-                                            ) : null}
-                                        </div>
-
-                                        <div className="flex items-center justify-between pt-3 border-t">
-                                            <div className="flex items-center gap-2">
-                                                <Link2 className="h-4 w-4 text-muted-foreground" />
-                                                <span className="text-sm text-muted-foreground truncate max-w-[120px]">
-                                                    /book/{calendar.public_id}
-                                                </span>
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex min-w-0 items-center gap-2">
+                                                <h3 className="truncate text-sm font-medium md:text-base">{calendar.name}</h3>
+                                                <Badge className={cn('shrink-0 text-xs', visual.badgeClass)}>{visual.label}</Badge>
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-xs text-muted-foreground">
-                                                    {calendar.is_active ? 'Active' : 'Inactive'}
-                                                </span>
-                                                <Switch
-                                                    checked={calendar.is_active}
-                                                    onCheckedChange={() => handleToggleActive(calendar)}
-                                                />
+                                            {calendar.description ? <p className="mt-1 truncate text-sm text-muted-foreground">{calendar.description}</p> : null}
+                                            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                                                <span>{calendar.duration_minutes} minutes</span>
+                                                <span>{calendar.timezone}</span>
+                                                <span>{calendar.upcoming_bookings ?? 0} upcoming</span>
+                                                {calendar.assigned_to_name ? <span>{calendar.assigned_to_name}</span> : null}
+                                                <span className="inline-flex min-w-0 items-center gap-1"><Link2 className="h-3 w-3 shrink-0" /><span className="truncate">/book/{calendar.public_id}</span></span>
                                             </div>
                                         </div>
-                                    </CardContent>
-                                </Card>
-                            ))}
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild onClick={event => event.stopPropagation()}>
+                                                <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" aria-label={`More actions for ${calendar.name}`}><MoreHorizontal className="h-4 w-4" /></Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end" onClick={event => event.stopPropagation()}>
+                                                <DropdownMenuItem onClick={() => navigate(`/calendars/${calendar.id}`)}><Settings2 className="mr-2 h-4 w-4" />Edit calendar</DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => void copyBookingLink(calendar.public_id)}><Copy className="mr-2 h-4 w-4" />Copy booking link</DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    disabled={!calendar.is_active}
+                                                    onClick={() => window.open(`/book/${calendar.public_id}`, '_blank', 'noopener,noreferrer')}
+                                                >
+                                                    <ExternalLink className="mr-2 h-4 w-4" />
+                                                    Open booking page
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => void handleToggleActive(calendar)}>
+                                                    {calendar.is_active ? <CalendarOff className="mr-2 h-4 w-4" /> : <CalendarCheck2 className="mr-2 h-4 w-4" />}
+                                                    {calendar.is_active ? 'Pause calendar' : 'Activate calendar'}
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem onClick={() => setCalendarToDelete(calendar)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete calendar</DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </div>
+                                );
+                            })}
                         </div>
                     )}
+                </CardContent>
+            </Card>
 
-            {showCreateModal && organizationId && (
-                <CreateCalendarModal
-                    organizationId={organizationId}
-                    onClose={() => setShowCreateModal(false)}
-                    onCreated={handleCalendarCreated}
-                />
-            )}
-            <DeleteDialog
-                open={Boolean(calendarToDelete)}
-                onOpenChange={(open) => !open && setCalendarToDelete(null)}
-                onConfirm={handleDeleteCalendar}
-                itemType="calendar"
-                itemTitle={calendarToDelete?.name}
-            />
+            {showCreateModal && organizationId ? <CreateCalendarModal organizationId={organizationId} onClose={() => setShowCreateModal(false)} onCreated={handleCalendarCreated} /> : null}
+            <DeleteDialog open={Boolean(calendarToDelete)} onOpenChange={open => !open && setCalendarToDelete(null)} onConfirm={handleDeleteCalendar} itemType="calendar" itemTitle={calendarToDelete?.name} />
         </PageLayout>
     );
 }

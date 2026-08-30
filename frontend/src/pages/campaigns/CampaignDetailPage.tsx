@@ -35,6 +35,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { EmptyState } from '@/components/EmptyState';
+import { PreviewPlaceholder } from '@/components/preview/PreviewPlaceholder';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
 import {
@@ -75,6 +77,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ErrorState } from '@/components/ErrorState';
+import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { EmailPreviewPane } from '@/components/email/EmailPreviewPane';
 import { EmailTemplateBrowserDialog } from '@/components/email/EmailTemplateBrowserDialog';
 import { HeaderAction, HeaderActionLabel } from '@/components/layout/DesktopHeaderTools';
@@ -553,7 +556,7 @@ export function CampaignDetailPage() {
   const scrollToPreview = () => previewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   if (initError) {
-    return <PageLayout title="CAMPAIGN" icon={<Megaphone className="h-5 w-5 text-blue-600 dark:text-blue-400" />} leading={<ShellBackButton label="Back to campaigns" onClick={() => navigate('/campaigns')} />}><ErrorState title="Unable to load campaign" description={initError} icon={Megaphone} /></PageLayout>;
+    return <PageLayout title="CAMPAIGN" icon={<Megaphone className="h-5 w-5 text-blue-600 dark:text-blue-400" />} leading={<ShellBackButton label="Back to campaigns" onClick={() => navigate('/campaigns')} />}><OrganizationErrorState title="Unable to load campaign" icon={Megaphone} /></PageLayout>;
   }
 
   if (loading) {
@@ -620,12 +623,11 @@ export function CampaignDetailPage() {
       title={isNew ? 'NEW CAMPAIGN' : 'CAMPAIGN'}
       icon={<Megaphone className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
       leading={<ShellBackButton label="Back to campaigns" onClick={goBack} />}
-      desktopTools={{
+      headerTools={{
         status: <Badge className={cn('pointer-events-none whitespace-nowrap', statusVisual.badgeClass)}>{statusVisual.label}</Badge>,
         secondaryAction: campaignActions,
         primaryAction,
       }}
-      mobileActions={<div className="flex w-full gap-2">{campaignActions}{editable ? <Button className="h-11 min-w-0 flex-1 bg-blue-600 text-white hover:bg-blue-700" onClick={() => void handleSave()} disabled={!dirty || working}><Save className="mr-2 h-4 w-4" />{isNew ? 'Create campaign' : 'Save changes'}</Button> : campaign?.status === 'paused' ? <Button className="h-11 min-w-0 flex-1 bg-blue-600 text-white hover:bg-blue-700" onClick={() => void handleResume()} disabled={working}><Play className="mr-2 h-4 w-4" />Resume</Button> : null}</div>}
     >
       <EntityDetailHeader
         icon={<StatusIcon className={cn('h-6 w-6', statusVisual.iconClass)} />}
@@ -784,7 +786,7 @@ export function CampaignDetailPage() {
               />
             </CardHeader>
             <CardContent className="p-0">
-              {recipientsLoading ? <div className="p-8 text-center text-sm text-muted-foreground">Loading recipients...</div> : filteredRecipients.length === 0 ? <div className="p-10 text-center"><UserRound className="mx-auto h-8 w-8 text-blue-600 dark:text-blue-400" /><p className="mt-3 font-medium">No recipient records found</p><p className="mt-1 text-sm text-muted-foreground">Delivery records will appear here as this campaign processes recipients.</p></div> : <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Recipient</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Opens</TableHead><TableHead className="text-right">Clicks</TableHead><TableHead>Latest activity</TableHead></TableRow></TableHeader><TableBody>{filteredRecipients.map(recipient => { const visual = RECIPIENT_VISUALS[recipient.status]; return <TableRow key={recipient.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/contacts/${recipient.contact_id}`)}><TableCell><p className="font-medium">{recipientDisplayName(recipient)}</p><p className="text-xs text-muted-foreground">{recipient.email}</p></TableCell><TableCell><Badge className={visual.badgeClass}>{visual.label}</Badge>{recipient.error_message && <p className="mt-1 max-w-xs text-xs text-red-600 dark:text-red-400">{recipient.error_message}</p>}</TableCell><TableCell className="text-right">{recipient.open_count}</TableCell><TableCell className="text-right">{recipient.click_count}</TableCell><TableCell className="text-sm text-muted-foreground">{formatDateTime(recipient.clicked_at || recipient.opened_at || recipient.delivered_at || recipient.sent_at || recipient.created_at)}</TableCell></TableRow>; })}</TableBody></Table></div>}
+              {recipientsLoading ? <div className="p-8 text-center text-sm text-muted-foreground">Loading recipients...</div> : filteredRecipients.length === 0 ? <EmptyState icon={UserRound} kind="inline" title="No recipient records" description="Delivery records will appear as the campaign processes recipients." className="py-10" /> : <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Recipient</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Opens</TableHead><TableHead className="text-right">Clicks</TableHead><TableHead>Latest activity</TableHead></TableRow></TableHeader><TableBody>{filteredRecipients.map(recipient => { const visual = RECIPIENT_VISUALS[recipient.status]; return <TableRow key={recipient.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/contacts/${recipient.contact_id}`)}><TableCell><p className="font-medium">{recipientDisplayName(recipient)}</p><p className="text-xs text-muted-foreground">{recipient.email}</p></TableCell><TableCell><Badge className={visual.badgeClass}>{visual.label}</Badge>{recipient.error_message && <p className="mt-1 max-w-xs text-xs text-red-600 dark:text-red-400">{recipient.error_message}</p>}</TableCell><TableCell className="text-right">{recipient.open_count}</TableCell><TableCell className="text-right">{recipient.click_count}</TableCell><TableCell className="text-sm text-muted-foreground">{formatDateTime(recipient.clicked_at || recipient.opened_at || recipient.delivered_at || recipient.sent_at || recipient.created_at)}</TableCell></TableRow>; })}</TableBody></Table></div>}
               {recipientPages > 1 && <div className="flex items-center justify-between border-t p-4"><Button variant="outline" size="sm" onClick={() => setRecipientPage(page => Math.max(1, page - 1))} disabled={recipientPage <= 1 || recipientsLoading}>Previous</Button><span className="text-sm text-muted-foreground">Page {recipientPage} of {recipientPages}</span><Button variant="outline" size="sm" onClick={() => setRecipientPage(page => Math.min(recipientPages, page + 1))} disabled={recipientPage >= recipientPages || recipientsLoading}>Next</Button></div>}
             </CardContent>
           </Card>
@@ -793,7 +795,7 @@ export function CampaignDetailPage() {
 
           <Card ref={previewRef}>
             <CardHeader><SectionCardTitle icon={Eye}>Email snapshot</SectionCardTitle></CardHeader>
-            <CardContent>{previewHtml ? <div className="overflow-hidden rounded-lg border bg-white"><iframe srcDoc={previewHtml} sandbox="allow-same-origin" title="Campaign email snapshot" className="h-[32rem] w-full border-0" /></div> : <div className="flex h-64 items-center justify-center rounded-lg border text-sm text-muted-foreground">No campaign content is available.</div>}</CardContent>
+            <CardContent>{previewHtml ? <div className="overflow-hidden rounded-lg border bg-white"><iframe srcDoc={previewHtml} sandbox="allow-same-origin" title="Campaign email snapshot" className="h-[32rem] w-full border-0" /></div> : <PreviewPlaceholder icon={Mail} title="No email content yet" description="Add email content to generate this snapshot." className="h-64" />}</CardContent>
           </Card>
         </div>
       ) : null}

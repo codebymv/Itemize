@@ -62,6 +62,8 @@ describe('notification display formatting', () => {
     ['organization.updated', 'organization', 'organization'],
     ['estimate.sent', 'estimate', 'estimate'],
     ['invoice.sent', 'invoice', 'billing'],
+    ['communication.message_received', 'conversation', 'communication'],
+    ['communication.delivery_failed', 'conversation', 'communication-failed'],
     ['unknown.event', null, 'default'],
   ] as const)(
     'maps %s with entity %s to the %s visual',

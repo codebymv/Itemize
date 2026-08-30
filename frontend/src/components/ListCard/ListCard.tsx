@@ -10,6 +10,7 @@ import { ListProgressBar } from './ListProgressBar';
 import { ListItemAdd } from './ListItemAdd';
 import { DeleteDialog } from '../ui/delete-dialog';
 import { WorkspaceContentCard } from '../workspace/WorkspaceContentCard';
+import { EmptyState } from '@/components/EmptyState';
 import {
   DndContext,
   closestCenter,
@@ -245,9 +246,7 @@ const ListCard: React.FC<ListCardProps> = ({
                 </SortableContext>
               </DndContext>
               {list.items.length === 0 && (
-                <div className="text-gray-400 dark:text-gray-300 text-sm py-2 italic" style={{ fontFamily: '"Raleway", sans-serif' }}>
-                  No items yet.
-                </div>
+                <EmptyState kind="inline" title="No items yet" className="py-3" />
               )}
             </div>
             

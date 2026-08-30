@@ -6,6 +6,7 @@ import { NoteCard } from '@/components/NoteCard';
 import { WhiteboardCard } from '@/components/WhiteboardCard';
 import { Category, List, Note, Whiteboard } from '@/types';
 import { useResponsiveContentCollapse } from '@/hooks/useResponsiveContentCollapse';
+import { EmptyState } from '@/components/EmptyState';
 
 interface MobileListViewProps {
   filteredLists: List[];
@@ -100,39 +101,29 @@ export function MobileListView({
 
       {/* Content section */}
       {filteredLists.length === 0 && filteredNotes.length === 0 && filteredWhiteboards.length === 0 ? (
-        <div className="text-center py-12">
-          {allLists.length === 0 && allNotes.length === 0 && allWhiteboards.length === 0 ? (
-            <div className="max-w-md mx-auto">
-              <div className="bg-card rounded-lg shadow-sm border border-border p-8">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Plus className="h-8 w-8 text-blue-600" />
+        allLists.length === 0 && allNotes.length === 0 && allWhiteboards.length === 0 ? (
+          <div className="rounded-lg border bg-card shadow-sm">
+            <EmptyState
+              icon={Plus}
+              title="No canvas content yet"
+              action={(
+                <div className="flex flex-wrap justify-center gap-2">
+                  <Button type="button" onClick={onAddList} className="h-11 bg-blue-600 text-white hover:bg-blue-700"><Plus className="mr-2 h-4 w-4" />Add list</Button>
+                  <Button type="button" variant="outline" className="h-11" onClick={onAddNote}>Add note</Button>
+                  <Button type="button" variant="outline" className="h-11" onClick={onAddWhiteboard}>Add whiteboard</Button>
                 </div>
-                <h3 className="text-lg font-light text-foreground mb-6">
-                  No content on your canvas<br />(for now!)
-                </h3>
-                <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                  <Button onClick={onAddList} className="bg-blue-600 hover:bg-blue-700 text-white font-normal">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add List
-                  </Button>
-                  <Button onClick={onAddNote} className="bg-blue-600 hover:bg-blue-700 text-white font-normal">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Note
-                  </Button>
-                  <Button onClick={onAddWhiteboard} className="bg-blue-600 hover:bg-blue-700 text-white font-normal">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Whiteboard
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="text-muted-foreground">
-              <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No content matches your search criteria.</p>
-            </div>
-          )}
-        </div>
+              )}
+            />
+          </div>
+        ) : (
+          <EmptyState
+            icon={Search}
+            kind="results"
+            title="No matching content"
+            actionLabel="Clear filter"
+            onAction={() => setSelectedFilter(null)}
+          />
+        )
       ) : (
         <>
           {/* My Lists section */}

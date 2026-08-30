@@ -1,9 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CornerRightDown, Plus, Settings, MoreHorizontal, TrendingUp, Kanban, Search } from 'lucide-react';
+import { CornerRightDown, Plus, Settings, MoreHorizontal, TrendingUp, Kanban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -32,7 +31,6 @@ import { KanbanBoard } from './components/KanbanBoard';
 import { CreateDealModal } from './components/CreateDealModal';
 import { CreatePipelineModal } from './components/CreatePipelineModal';
 import { PageLayout } from '@/components/layout/PageLayout';
-import { MobileQueryBar } from '@/components/layout/MobileQueryBar';
 import {
   HeaderAction,
   HeaderActionLabel,
@@ -42,6 +40,7 @@ import {
 } from '@/components/layout/DesktopHeaderTools';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 
 const getApiStatus = (error: unknown): number | undefined =>
   (error as { response?: { status?: number } })?.response?.status;
@@ -100,6 +99,7 @@ export function PipelinesPage() {
     data: currentPipeline = null,
     error: pipelineError,
     isPending: isPipelinePending,
+    refetch: refetchPipeline,
   } = useQuery<PipelineWithDeals>({
     queryKey: pipelineQueryKey,
     queryFn: () => getPipeline(activePipelineId!, organizationId!),
@@ -159,26 +159,6 @@ export function PipelinesPage() {
       && pipelines.some((pipeline) => pipeline.id === pipelineId)
     )));
   }, [activePipelineId, isPipelinesPending, pipelines]);
-
-  useEffect(() => {
-    if (!pipelinesError) return;
-    console.error('Error fetching pipelines:', pipelinesError);
-    toast({
-      title: 'Error',
-      description: 'Failed to load pipelines',
-      variant: 'destructive',
-    });
-  }, [pipelinesError, toast]);
-
-  useEffect(() => {
-    if (!pipelineError) return;
-    console.error('Error fetching pipeline:', pipelineError);
-    toast({
-      title: 'Error',
-      description: 'Failed to load pipeline',
-      variant: 'destructive',
-    });
-  }, [pipelineError, toast]);
 
   // Handle deal stage change (drag and drop)
   const handleDealMove = async (pipelineId: number, dealId: number, newStageId: string) => {
@@ -425,21 +405,6 @@ export function PipelinesPage() {
       disabled={activePipelineId === null}
     />
   );
-  const renderNewPipelineButton = () => (
-    <Button
-      size="sm"
-      className="bg-blue-600 hover:bg-blue-700 text-white font-light whitespace-nowrap"
-      onClick={() => {
-        setEditingPipeline(null);
-        setCreatePipelineAsStacked(false);
-        setShowCreatePipelineModal(true);
-      }}
-    >
-      <Plus className="h-4 w-4 mr-2" />
-      New pipeline
-    </Button>
-  );
-
   const filterDeals = (deals: Deal[]) => {
     if (!searchQuery) return deals;
     const query = searchQuery.toLowerCase();
@@ -474,12 +439,7 @@ export function PipelinesPage() {
         title="PIPELINES"
         icon={<Kanban className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
       >
-        <ErrorState
-          title="CRM Not Ready"
-          description={initError}
-          icon={TrendingUp}
-          onAction={() => void refetchPipelines()}
-        />
+        <OrganizationErrorState title="Unable to load pipelines" icon={Kanban} />
       </PageLayout>
     );
   }
@@ -488,9 +448,8 @@ export function PipelinesPage() {
     <PageLayout
       title="PIPELINES"
       icon={<Kanban className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
-      mobileClassName="flex-col items-stretch"
       contentClassName="p-0 sm:p-0"
-      desktopTools={hasPipelines ? {
+      headerTools={hasPipelines ? {
         search: (
           <HeaderSearch
             label="Search deals"
@@ -524,78 +483,6 @@ export function PipelinesPage() {
       } : {
         primaryAction: newPipelineAction,
       }}
-      mobileActions={
-        hasPipelines ? (
-          <MobileQueryBar
-            search={
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  aria-label="Search deals"
-                  placeholder="Search deals..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 h-9 w-full bg-muted/20 border-border/50"
-                />
-              </div>
-            }
-            filters={
-              <HeaderCombinedQuery
-                label="Search deals and select primary pipeline"
-                placeholder="Search deals..."
-                value={searchQuery}
-                onChange={setSearchQuery}
-                activeCount={Number(Boolean(searchQuery.trim()))}
-              >
-                {pipelineSelect(true)}
-              </HeaderCombinedQuery>
-            }
-            actions={
-              <>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon" className="h-11 w-11" aria-label="Pipeline actions">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => {
-                    setEditingPipeline(null);
-                    setCreatePipelineAsStacked(false);
-                    setShowCreatePipelineModal(true);
-                  }}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    New Pipeline
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    disabled={!activePipelineForEditing}
-                    onClick={() => {
-                      if (!activePipelineForEditing) return;
-                      setEditingPipeline(activePipelineForEditing);
-                      setCreatePipelineAsStacked(false);
-                      setShowCreatePipelineModal(true);
-                    }}
-                  >
-                    <Settings className="h-4 w-4 mr-2" />
-                    Pipeline Settings
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              <Button
-                size="icon"
-                className="h-11 w-11 bg-blue-600 text-white hover:bg-blue-700"
-                onClick={() => activePipelineId !== null && openCreateDeal(activePipelineId)}
-                aria-label="Add deal"
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-              </>
-            }
-          />
-        ) : (
-          renderNewPipelineButton()
-        )
-      }
     >
       <OnboardingModal
         isOpen={showOnboarding}
@@ -637,6 +524,22 @@ export function PipelinesPage() {
               ))}
             </div>
           </div>
+        ) : pipelinesError ? (
+          <ErrorState
+            kind="page"
+            icon={Kanban}
+            title="Unable to load pipelines"
+            description="We couldn't load your pipelines. Try again."
+            onRetry={() => void refetchPipelines()}
+          />
+        ) : pipelineError ? (
+          <ErrorState
+            kind="page"
+            icon={Kanban}
+            title="Unable to load this pipeline"
+            description="We couldn't load the selected pipeline. Try again."
+            onRetry={() => void refetchPipeline()}
+          />
         ) : pipelines.length === 0 ? (
           <EmptyState
             icon={TrendingUp}

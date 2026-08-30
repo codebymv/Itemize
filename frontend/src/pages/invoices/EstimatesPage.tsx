@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Plus,
-    Search,
     FileText,
     MoreVertical,
     Trash2,
@@ -13,7 +12,6 @@ import {
     Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import {
     Select,
@@ -42,7 +40,6 @@ import {
     sendEstimate,
 } from '@/services/estimatesApi';
 import { PageLayout } from '@/components/layout/PageLayout';
-import { MobileQueryBar } from '@/components/layout/MobileQueryBar';
 import {
     HeaderAction,
     HeaderCombinedQuery,
@@ -51,6 +48,7 @@ import {
 } from '@/components/layout/DesktopHeaderTools';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { StatCard } from '@/components/StatCard';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
@@ -114,6 +112,7 @@ export function EstimatesPage() {
     const [expandedEstimateId, setExpandedEstimateId] = useState<number | null>(null);
     const [expandedEstimateData, setExpandedEstimateData] = useState<Estimate | null>(null);
     const [loadingPreview, setLoadingPreview] = useState(false);
+    const [previewError, setPreviewError] = useState(false);
 
     useEffect(() => {
         if (!organizationId) {
@@ -177,30 +176,30 @@ export function EstimatesPage() {
         }
     };
 
-    const handleToggleExpand = async (estimateId: number, event?: React.MouseEvent) => {
-        event?.stopPropagation();
-
-        if (expandedEstimateId === estimateId) {
-            setExpandedEstimateId(null);
-            setExpandedEstimateData(null);
-            return;
-        }
-
+    const loadExpandedEstimate = async (estimateId: number) => {
         setExpandedEstimateId(estimateId);
         setExpandedEstimateData(null);
+        setPreviewError(false);
         setLoadingPreview(true);
         try {
             const estimate = await getEstimate(estimateId, organizationId || undefined);
             setExpandedEstimateData(estimate);
         } catch {
-            toast({
-                title: 'Unable to load preview',
-                description: 'The estimate is still available from the Edit action.',
-                variant: 'destructive',
-            });
+            setPreviewError(true);
         } finally {
             setLoadingPreview(false);
         }
+    };
+
+    const handleToggleExpand = (estimateId: number, event?: React.MouseEvent) => {
+        event?.stopPropagation();
+        if (expandedEstimateId === estimateId) {
+            setExpandedEstimateId(null);
+            setExpandedEstimateData(null);
+            setPreviewError(false);
+            return;
+        }
+        void loadExpandedEstimate(estimateId);
     };
 
     const formatCurrency = (amount: number) => {
@@ -289,8 +288,7 @@ export function EstimatesPage() {
         <PageLayout
             title="ESTIMATES"
             icon={<FileText className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
-            mobileClassName="flex-col items-stretch"
-            desktopTools={{
+            headerTools={{
                 search: (
                     <HeaderSearch
                         label="Search estimates"
@@ -323,37 +321,6 @@ export function EstimatesPage() {
                     />
                 ),
             }}
-            mobileActions={
-                <MobileQueryBar
-                  search={
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                            aria-label="Search estimates"
-                            placeholder="Search estimates..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50 w-full"
-                        />
-                    </div>
-                  }
-                  filters={
-                    <HeaderCombinedQuery label="Search and filter estimates" placeholder="Search estimates..." value={searchQuery} onChange={setSearchQuery} activeCount={headerQueryCount}>
-                      <Select value={activeTab} onValueChange={setActiveTab}><SelectTrigger className="h-11 w-full"><SelectValue placeholder="Status" /></SelectTrigger><SelectContent><SelectItem value="all">All estimates</SelectItem><SelectItem value="draft">Draft</SelectItem><SelectItem value="sent">Sent</SelectItem><SelectItem value="accepted">Accepted</SelectItem><SelectItem value="declined">Declined</SelectItem><SelectItem value="expired">Expired</SelectItem></SelectContent></Select>
-                    </HeaderCombinedQuery>
-                  }
-                  actions={
-                    <Button
-                        size="icon"
-                        aria-label="Create estimate"
-                        className="h-11 w-11 bg-blue-600 text-white hover:bg-blue-700"
-                        onClick={() => navigate('/estimates/new')}
-                    >
-                        <Plus className="h-4 w-4" />
-                    </Button>
-                  }
-                />
-            }
         >
             {!loadError && (
             <ResponsiveCardRail
@@ -408,19 +375,21 @@ export function EstimatesPage() {
                             {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20" />)}
                         </div>
                     ) : loadError ? (
-                        <ErrorState
-                            title="Unable to load estimates"
-                            description={loadError}
-                            actionLabel="Try again"
-                            onAction={() => void fetchEstimates()}
-                        />
+                        initError ? (
+                            <OrganizationErrorState kind="section" title="Unable to load estimates" />
+                        ) : (
+                            <ErrorState kind="section" title="Unable to load estimates" description={loadError} onAction={() => void fetchEstimates()} />
+                        )
                     ) : filteredEstimates.length === 0 ? (
                         <EmptyState
                             icon={FileText}
-                            title="No estimates yet"
-                            description="Create estimates to send quotes to your customers"
-                            actionLabel="Create estimate"
-                            onAction={() => navigate('/estimates/new')}
+                            kind={headerQueryCount > 0 ? 'results' : 'collection'}
+                            title={headerQueryCount > 0 ? 'No matching estimates' : 'No estimates yet'}
+                            description={headerQueryCount > 0 ? undefined : 'Create an estimate to price work for a customer.'}
+                            actionLabel={headerQueryCount > 0 ? 'Clear filters' : 'Create estimate'}
+                            onAction={headerQueryCount > 0
+                                ? () => { setSearchQuery(''); setActiveTab('all'); }
+                                : () => navigate('/estimates/new')}
                             className="p-12"
                         />
                     ) : (
@@ -568,6 +537,14 @@ export function EstimatesPage() {
                                                         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                                                         <span className="ml-2 text-muted-foreground">Loading preview...</span>
                                                     </div>
+                                                ) : previewError ? (
+                                                    <ErrorState
+                                                        kind="inline"
+                                                        icon={FileText}
+                                                        title="Unable to load estimate preview"
+                                                        description="The estimate is still available to edit."
+                                                        onRetry={() => void loadExpandedEstimate(estimate.id)}
+                                                    />
                                                 ) : expandedEstimateData ? (
                                                     <div className="mx-auto max-w-3xl">
                                                         <InvoicePreviewCard

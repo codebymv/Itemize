@@ -30,4 +30,27 @@ describe('EmptyState', () => {
 
     expect(screen.getByRole('heading', { name: 'No recipients yet' })).toHaveClass('text-sm');
   });
+
+  it('renders filtered results as an announced recovery state', () => {
+    render(
+      <EmptyState
+        icon={Inbox}
+        kind="results"
+        title="No matching items"
+        actionLabel="Clear filters"
+        onAction={() => undefined}
+      />
+    );
+
+    expect(screen.getByRole('status')).toHaveAttribute('data-empty-state', 'results');
+    expect(screen.getByRole('button', { name: 'Clear filters' })).toHaveClass('border-input');
+    expect(screen.getByRole('button', { name: 'Clear filters' })).toHaveAttribute('type', 'button');
+  });
+
+  it('uses compact density for inline states', () => {
+    render(<EmptyState kind="inline" title="No audit events" />);
+
+    expect(screen.getByRole('heading', { name: 'No audit events' })).toHaveClass('text-sm');
+    expect(screen.getByText('No audit events').parentElement).toHaveAttribute('data-empty-state', 'inline');
+  });
 });

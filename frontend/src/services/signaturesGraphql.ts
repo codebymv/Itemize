@@ -171,7 +171,7 @@ const legacyTemplateFields = `id organizationId title description message hasFil
 
 const isReliabilitySchemaMismatch = (error: unknown): boolean =>
   error instanceof GraphqlRequestError
-  && /Cannot query field \"(?:pageCount|deliveryState|completionState|isReady)\"/.test(error.message);
+  && /Cannot query field "(?:pageCount|deliveryState|completionState|isReady)"/.test(error.message);
 
 const withLegacyReliabilitySelection = async <T>(
   currentRequest: () => Promise<T>,

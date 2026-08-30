@@ -12,8 +12,9 @@ import { DraggableNoteCard } from './DraggableNoteCard';
 import { DraggableWhiteboardCard } from './DraggableWhiteboardCard';
 import { DraggableWireframeCard } from './DraggableWireframeCard';
 import { DraggableVaultCard } from './DraggableVaultCard';
-import { Search } from 'lucide-react';
+import { LayoutGrid, Search } from 'lucide-react';
 import { CanvasViewControls } from './CanvasViewControls';
+import { EmptyState } from '@/components/EmptyState';
 
 interface CanvasContainerProps {
   existingCategories: Category[];
@@ -911,13 +912,12 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
           whiteboards.length === 0 &&
           wireframes.length === 0 &&
           vaults.length === 0 && (
-            <div
-              aria-live="polite"
-              className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center text-center font-raleway text-lg font-light text-muted-foreground"
-              data-canvas-empty-state
-            >
-              No content on your canvas (for now!)
-            </div>
+            <EmptyState
+              icon={LayoutGrid}
+              kind="passive"
+              title="No canvas content yet"
+              className="pointer-events-none absolute inset-0 z-10"
+            />
           )}
       </div>
 

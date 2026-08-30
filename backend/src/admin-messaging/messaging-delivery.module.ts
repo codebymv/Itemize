@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AdminOperationsModule } from '../admin-operations/admin-operations.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 import { AdminEmailDeliveryResolver } from './admin-email-delivery.resolver';
 import { AdminEmailDeliverySchedulerService } from './admin-email-delivery-scheduler.service';
 import { AdminEmailDeliveryService } from './admin-email-delivery.service';
@@ -17,7 +18,7 @@ import { MessageDeliverySchedulerService } from './message-delivery-scheduler.se
 import { MessageDeliveryService } from './message-delivery.service';
 
 @Module({
-  imports: [AdminOperationsModule],
+  imports: [AdminOperationsModule, NotificationsModule],
   providers: [
     AdminMessagingRepository, AdminEmailDeliveryService, AdminEmailDeliveryResolver,
     AdminEmailDeliverySchedulerService, ResendAdminEmailProvider,

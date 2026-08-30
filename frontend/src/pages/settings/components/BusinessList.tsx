@@ -34,6 +34,7 @@ export const BusinessList: React.FC<BusinessListProps> = ({
     return (
       <EmptyState
         icon={Building}
+        kind="inline"
         title="No businesses yet"
         description="Add your first business to get started."
       />

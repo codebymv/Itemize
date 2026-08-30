@@ -1,19 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Filter, MoreHorizontal, Pencil, Plus, RefreshCw, Search, Trash2, Users } from 'lucide-react';
+import { Filter, MoreHorizontal, Pencil, Plus, RefreshCw, Trash2, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { HeaderAction, HeaderCombinedQuery, HeaderFilters, HeaderSearch } from '@/components/layout/DesktopHeaderTools';
 import { PageLayout } from '@/components/layout/PageLayout';
-import { MobileQueryBar } from '@/components/layout/MobileQueryBar';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { StatCard } from '@/components/StatCard';
@@ -79,7 +78,7 @@ export function SegmentsPage() {
   const statusSelect = (compact = false) => (
     <Select value={statusFilter} onValueChange={value => setStatusFilter(value as StatusFilter)}>
       <SelectTrigger className={compact ? 'h-11 w-full' : 'h-11 w-[132px] bg-muted/20'}><SelectValue placeholder="Status" /></SelectTrigger>
-      <SelectContent><SelectItem value="all">All statuses</SelectItem><SelectItem value="active">Active</SelectItem><SelectItem value="inactive">Inactive</SelectItem></SelectContent>
+      <SelectContent><SelectItem value="all">All statuses</SelectItem><SelectItem value="active">Available</SelectItem><SelectItem value="inactive">Unavailable</SelectItem></SelectContent>
     </Select>
   );
 
@@ -108,20 +107,18 @@ export function SegmentsPage() {
   const hasQuery = Boolean(searchQuery.trim()) || statusFilter !== 'all';
   const clearQuery = () => { setSearchQuery(''); setStatusFilter('all'); };
 
-  if (initError) return <PageLayout title="SEGMENTS" icon={<Filter className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}><ErrorState title="Unable to load segments" description={initError} icon={Filter} onAction={() => void fetchSegments()} /></PageLayout>;
+  if (initError) return <PageLayout title="SEGMENTS" icon={<Filter className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}><OrganizationErrorState title="Unable to load segments" icon={Filter} /></PageLayout>;
 
   return (
     <PageLayout
       title="SEGMENTS"
       icon={<Filter className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
-      mobileClassName="items-stretch"
-      desktopTools={{
+      headerTools={{
         search: <HeaderSearch label="Search segments" placeholder="Search segments..." value={searchQuery} onChange={setSearchQuery} width="wide" />,
         filters: <HeaderFilters label="Filter segments by status" activeCount={Number(statusFilter !== 'all')} compactChildren={statusSelect(true)} preferExpanded="when-roomy">{statusSelect()}</HeaderFilters>,
         combinedQuery: <HeaderCombinedQuery label="Search and filter segments" placeholder="Search segments..." value={searchQuery} onChange={setSearchQuery} activeCount={Number(Boolean(searchQuery.trim())) + Number(statusFilter !== 'all')}>{statusSelect(true)}</HeaderCombinedQuery>,
         primaryAction: <HeaderAction label="New segment" icon={<Plus className="h-4 w-4" />} onClick={() => navigate('/segments/new')} />,
       }}
-      mobileActions={<MobileQueryBar search={<div className="relative min-w-0 flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input aria-label="Search segments" placeholder="Search segments..." value={searchQuery} onChange={event => setSearchQuery(event.target.value)} className="h-11 pl-10" /></div>} filters={<div className="w-[6.25rem]">{statusSelect(true)}</div>} actions={<Button size="icon" aria-label="New segment" className="h-11 w-11 shrink-0 bg-blue-600 text-white hover:bg-blue-700" onClick={() => navigate('/segments/new')}><Plus className="h-4 w-4" /></Button>} />}
     >
       {!loadError && <ResponsiveCardRail label="Segment summary" desktopColumns="md:grid-cols-2 lg:grid-cols-4" className="responsive-stat-summary">
         <StatCard title="Total segments" badgeText="Total" value={stats.total} icon={Filter} description={`${stats.total} configured`} colorTheme="blue" isLoading={loading} />
@@ -133,7 +130,7 @@ export function SegmentsPage() {
       <Card><CardContent className="p-0">
         {loading ? <div className="space-y-4 p-6">{Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-20 w-full" />)}</div>
           : loadError ? <ErrorState title="Segments unavailable" description={loadError} icon={Filter} onAction={() => void fetchSegments()} className="p-12" />
-          : filteredSegments.length === 0 ? <EmptyState icon={Filter} title={hasQuery ? 'No matching segments' : 'No segments yet'} description={hasQuery ? 'Try a different search or clear the current filters.' : 'Create a segment to group and target contacts.'} actionLabel={hasQuery ? 'Clear filters' : 'New segment'} onAction={hasQuery ? clearQuery : () => navigate('/segments/new')} className="p-12" />
+          : filteredSegments.length === 0 ? <EmptyState icon={Filter} kind={hasQuery ? 'results' : 'collection'} title={hasQuery ? 'No matching segments' : 'No segments yet'} description={hasQuery ? undefined : 'Create a segment to group and target contacts.'} actionLabel={hasQuery ? 'Clear filters' : 'New segment'} onAction={hasQuery ? clearQuery : () => navigate('/segments/new')} className="p-12" />
           : <div className="divide-y">{filteredSegments.map(segment => {
             const visual = getCatalogStatusVisual(segment.is_active);
             const TypeIcon = segment.segment_type === 'dynamic' ? RefreshCw : Users;

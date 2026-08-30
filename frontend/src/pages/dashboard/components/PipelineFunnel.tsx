@@ -1,6 +1,8 @@
 import React from 'react';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
+import { GitBranch } from 'lucide-react';
+import { EmptyState } from '@/components/EmptyState';
 import type { DashboardAnalytics } from '@/services/analyticsApi';
 
 export function PipelineFunnel({ funnel, isLoading }: { funnel: DashboardAnalytics['deals']['funnel']; isLoading?: boolean }) {
@@ -19,11 +21,7 @@ export function PipelineFunnel({ funnel, isLoading }: { funnel: DashboardAnalyti
     }
 
     if (!funnel || funnel.length === 0) {
-        return (
-            <div className="text-center text-muted-foreground py-8">
-                No pipeline data available
-            </div>
-        );
+        return <EmptyState icon={GitBranch} kind="inline" title="No pipeline activity yet" />;
     }
 
     const maxCount = Math.max(...funnel.map(s => s.dealCount), 1);

@@ -211,8 +211,8 @@ const hasRecentItems = recentItems !== undefined;
               ) : (
                 <EmptyState
                   icon={Icon}
+                  kind="inline"
                   title={emptyListMessage || `No ${title.toLowerCase()} yet`}
-                  size="compact"
                   className="border-t pt-4"
                 />
               )}

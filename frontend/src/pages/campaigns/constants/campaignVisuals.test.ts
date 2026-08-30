@@ -14,9 +14,11 @@ describe('campaign visual grammar', () => {
     expect(getCampaignStatusVisual(status).theme).toBe(theme);
   });
 
-  it('keeps active blue and inactive orange across campaign catalogs', () => {
+  it('describes catalog eligibility as available or unavailable', () => {
     expect(getCatalogStatusVisual(true).theme).toBe('blue');
+    expect(getCatalogStatusVisual(true).label).toBe('Available');
     expect(getCatalogStatusVisual(false).theme).toBe('orange');
+    expect(getCatalogStatusVisual(false).label).toBe('Unavailable');
   });
 
   it('reuses canonical lifecycle visuals in the campaign summary', () => {

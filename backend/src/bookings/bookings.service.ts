@@ -22,6 +22,14 @@ export class BookingsService {
     page: PageInput = new PageInput(),
   ): Promise<BookingPage> {
     const normalizedPage = this.page(page);
+    const search = filter.search?.trim();
+    if (search && search.length > 200) {
+      throw itemizeGraphqlError(
+        'search cannot be longer than 200 characters',
+        'BAD_USER_INPUT',
+        { field: 'search', reason: 'TOO_LONG' },
+      );
+    }
     for (const field of [
       'calendarId',
       'contactId',
@@ -40,9 +48,11 @@ export class BookingsService {
         { field: 'endDate', reason: 'INVALID_DATE_RANGE' },
       );
     }
+    const { search: _ignoredSearch, ...criteriaFilter } = filter;
     const result = await this.bookings.findPage({
       organizationId,
-      ...filter,
+      ...criteriaFilter,
+      ...(search ? { search } : {}),
       pageSize: normalizedPage.pageSize,
       offset: normalizedPage.offset,
     });

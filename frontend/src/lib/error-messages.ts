@@ -72,7 +72,7 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
 export function getUserFriendlyError(error: unknown): UserError {
   if (!(error instanceof AxiosError)) {
     return {
-      title: 'Unexpected Error',
+      title: 'Unexpected error',
       message: 'Something unexpected happened. Please try again.',
       type: 'unknown',
     };
@@ -81,7 +81,7 @@ export function getUserFriendlyError(error: unknown): UserError {
   // Network errors
   if (error.code === 'ECONNREFUSED') {
     return {
-      title: 'Cannot Connect',
+      title: 'Cannot connect',
       message: 'We cannot reach the server. Please check your internet connection and try again.',
       type: 'network',
       action: 'Check your internet connection',
@@ -90,7 +90,7 @@ export function getUserFriendlyError(error: unknown): UserError {
 
   if (error.code === 'ETIMEDOUT' || error.code === 'ECONNABORTED') {
     return {
-      title: 'Connection Timeout',
+      title: 'Connection timed out',
       message: 'The connection took too long. Please try again.',
       type: 'timeout',
       action: 'Refresh the page and try again',
@@ -105,7 +105,7 @@ export function getUserFriendlyError(error: unknown): UserError {
     // Server returned user-friendly message
     if (typeof responseData?.message === 'string' && responseData.message) {
       return {
-        title: status === 500 ? 'Server Error' : 'Error',
+        title: status === 500 ? 'Server error' : 'Error',
         message: responseData.message,
         type: status === 500 ? 'server' : 'client',
         action: status === 401 ? 'Please log in again' : undefined,
@@ -115,7 +115,7 @@ export function getUserFriendlyError(error: unknown): UserError {
     // 401 Unauthorized
     if (status === 401) {
       return {
-        title: 'Session Expired',
+        title: 'Session expired',
         message: 'Your session has expired. Please log in again.',
         type: 'client',
         action: 'Log in to continue',
@@ -136,7 +136,7 @@ export function getUserFriendlyError(error: unknown): UserError {
         };
       }
       return {
-        title: 'Access Denied',
+        title: 'Access denied',
         message: 'You do not have permission to access this resource.',
         type: 'client',
         action: 'Contact your administrator',
@@ -146,7 +146,7 @@ export function getUserFriendlyError(error: unknown): UserError {
     // 404 Not Found
     if (status === 404) {
       return {
-        title: 'Not Found',
+        title: 'Not found',
         message: 'The resource you requested could not be found.',
         type: 'client',
         action: 'Check the URL and try again',
@@ -162,7 +162,7 @@ export function getUserFriendlyError(error: unknown): UserError {
           ? `You're making too many requests. You can try again in a few minutes. ${remaining} remaining this period.`
           : 'You are making too many requests. Please wait a moment and try again.';
       return {
-        title: 'Too Many Requests',
+        title: 'Too many requests',
         message,
         type: 'client',
         action: 'Wait a moment, then try again',
@@ -172,7 +172,7 @@ export function getUserFriendlyError(error: unknown): UserError {
     // 500 Server Error
     if (status >= 500) {
       return {
-        title: 'Server Error',
+        title: 'Server error',
         message: 'Something went wrong on our end. We\'re working to fix it.',
         type: 'server',
         action: 'Please try again later',
@@ -183,7 +183,7 @@ export function getUserFriendlyError(error: unknown): UserError {
     if (status >= 400) {
       const responseMessage = extractPayloadMessage(responseData);
       return {
-        title: 'Request Failed',
+        title: 'Request failed',
         message: responseMessage || 'Something went wrong with your request. Please try again.',
         type: 'client',
       };
@@ -192,7 +192,7 @@ export function getUserFriendlyError(error: unknown): UserError {
 
   // Generic fallback
   return {
-    title: 'Something Went Wrong',
+    title: 'Something went wrong',
     message: 'An unexpected error occurred. Please try again.',
     type: 'unknown',
   };

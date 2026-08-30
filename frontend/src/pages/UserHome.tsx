@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Search, CheckSquare } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { CreateItemModal } from "@/components/CreateItemModal";
 import { ListCard } from "@/components/ListCard";
+import { HeaderAction, HeaderSearch } from '@/components/layout/DesktopHeaderTools';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
 import { useDatabaseCategories } from '@/hooks/useDatabaseCategories';
 import type { CreateItemPresetPayload } from '@/config/contentPresets';
 import type { PreparedVaultSecurity } from '@/lib/vaultZkSession';
@@ -51,6 +52,7 @@ const UserHome = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<string>('all');
   const [loading, setLoading] = useState<boolean>(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const { toast } = useToast();
   const { isAuthenticated } = useAuthState();
   const { categories } = useDatabaseCategories();
@@ -65,6 +67,7 @@ const UserHome = () => {
   const fetchLists = async () => {
     try {
       setLoading(true);
+      setLoadError(null);
       const response = await getLists();
       const rows = Array.isArray(response) ? response : response.lists;
       
@@ -81,11 +84,7 @@ const UserHome = () => {
       setLists(listsWithDataMapped);
     } catch (error) {
       console.error('Failed to fetch lists:', error);
-      toast({
-        title: "Error",
-        description: "Could not retrieve your lists. Please try again later.",
-        variant: "destructive"
-      });
+      setLoadError("We couldn't load your lists. Try again.");
     } finally {
       setLoading(false);
     }
@@ -234,45 +233,14 @@ const UserHome = () => {
     });
   };
 
-  const renderSearchField = () => (
-    <div className="relative">
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-      <Input
-        placeholder="Search lists..."
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        className="pl-10 h-9 w-full md:w-48"
-      />
-    </div>
-  );
-
-  const renderNewListButton = () => (
-    <Button
-      onClick={() => setShowCreateModal(true)}
-      size="sm"
-      className="bg-blue-600 hover:bg-blue-700 text-white whitespace-nowrap"
-    >
-      <Plus className="h-4 w-4 mr-1" />
-      New List
-    </Button>
-  );
-
   return (
     <PageLayout
       title="LISTS"
-      icon={<CheckSquare className="h-5 w-5 text-blue-600 flex-shrink-0" />}
-      pageActions={
-        <>
-          {renderSearchField()}
-          {renderNewListButton()}
-        </>
-      }
-      mobileActions={
-        <>
-          {renderSearchField()}
-          {renderNewListButton()}
-        </>
-      }
+      icon={<CheckSquare className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />}
+      headerTools={{
+        search: <HeaderSearch value={searchQuery} onChange={setSearchQuery} label="Search lists" placeholder="Search lists..." />,
+        primaryAction: <HeaderAction label="New list" icon={<Plus className="h-4 w-4" />} onClick={() => setShowCreateModal(true)} />,
+      }}
     >
         <div className="flex flex-wrap gap-2 mb-6">
           {getUniqueTypes().map((filter) => {
@@ -295,20 +263,29 @@ const UserHome = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-40" />)}
           </div>
+        ) : loadError ? (
+          <ErrorState
+            kind="section"
+            title="Unable to load lists"
+            description={loadError}
+            onAction={() => void fetchLists()}
+          />
         ) : filteredLists.length === 0 ? (
           lists.length === 0 ? (
             <EmptyState
               icon={CheckSquare}
               title="No lists yet"
               description="Organize tasks, notes, and more with lists."
-              actionLabel="Create List"
+              actionLabel="Create list"
               onAction={() => setShowCreateModal(true)}
             />
           ) : (
             <EmptyState
               icon={Search}
-              title="No results found"
-              description="No lists match your search criteria"
+              kind="results"
+              title="No matching lists"
+              actionLabel="Clear filters"
+              onAction={() => { setSearchQuery(''); setSelectedFilter('all'); }}
             />
           )
         ) : (

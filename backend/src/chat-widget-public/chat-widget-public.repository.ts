@@ -6,6 +6,8 @@ import { Inject, Injectable } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
+import { NotificationsService } from '../notifications/notifications.service';
+import { mirrorChatMessageToInbox } from '../chat-widget/chat-inbox-bridge';
 
 const CHAT_MESSAGE_COLUMNS = [
   'id', 'session_id', 'organization_id', 'sender_type', 'sender_user_id',
@@ -42,13 +44,21 @@ export type VisitorMessageOutcome =
   | { status: 'session_not_found' }
   | {
       status: 'ok';
-      session: { id: number; organization_id: number };
+      session: {
+        id: number;
+        organization_id: number;
+        visitor_name: string | null;
+        visitor_email: string | null;
+      };
       message: Record<string, unknown>;
     };
 
 @Injectable()
 export class ChatWidgetPublicRepository {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async widgetConfig(widgetKey: string): Promise<PublicWidgetConfigRow | null> {
     const result = await this.pool.query<PublicWidgetConfigRow>(
@@ -208,8 +218,11 @@ export class ChatWidgetPublicRepository {
         id: number;
         organization_id: number;
         widget_id: number;
+        visitor_name: string | null;
+        visitor_email: string | null;
       }>(
-        `SELECT cs.id, cs.organization_id, cs.widget_id, cs.visitor_name, cs.custom_data
+        `SELECT cs.id, cs.organization_id, cs.widget_id, cs.visitor_name,
+                cs.visitor_email, cs.custom_data
          FROM chat_sessions cs
          WHERE cs.session_token = $1 AND cs.status = 'active'
          FOR UPDATE`,
@@ -221,7 +234,7 @@ export class ChatWidgetPublicRepository {
       }
       const session = sessionResult.rows[0];
 
-      const messageResult = await client.query(
+      const messageResult = await client.query<{ id: number } & Record<string, unknown>>(
         `INSERT INTO chat_messages (session_id, organization_id, sender_type, content)
          VALUES ($1, $2, 'visitor', $3)
          RETURNING ${chatMessageColumns()}`,
@@ -242,6 +255,30 @@ export class ChatWidgetPublicRepository {
          WHERE id = $1`,
         [session.widget_id],
       );
+      const bridged = await mirrorChatMessageToInbox(
+        client,
+        session.organization_id,
+        Number(messageResult.rows[0].id),
+      );
+      await this.notifications.createForOrganizationOwnerWithClient(client, {
+        organizationId: session.organization_id,
+        eventType: 'communication.message_received',
+        entityType: 'conversation',
+        entityId: bridged.conversationId,
+        dedupeKey: `chat-message-received:${messageResult.rows[0].id}`,
+        payload: {
+          conversationId: bridged.conversationId,
+          chatSessionId: session.id,
+          chatMessageId: messageResult.rows[0].id,
+          channel: 'chat',
+        },
+        category: 'business',
+        priority: 'normal',
+        title: 'New website chat',
+        body: `${session.visitor_name || session.visitor_email || 'A visitor'}: ${content.slice(0, 160)}`,
+        href: `/inbox?conversation=${bridged.conversationId}`,
+        occurredAt: new Date(String(messageResult.rows[0].created_at)),
+      });
       await client.query('COMMIT');
       return { status: 'ok', session, message: messageResult.rows[0] };
     } catch (error) {

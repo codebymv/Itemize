@@ -19,7 +19,6 @@ export function AdminPage() {
     const navigate = useNavigate();
     const location = useLocation();
     const [desktopTools, setDesktopTools] = useState<DesktopHeaderToolsProps>();
-    const [mobileActions, setMobileActions] = useState<React.ReactNode>();
 
     const activeNavItem = [
         { title: 'Communications', path: '/admin', icon: Mail },
@@ -40,7 +39,7 @@ export function AdminPage() {
         return (
             <PageLayout
                 title={activeNavItem.title.toUpperCase()}
-                icon={<ActiveIcon className="h-5 w-5 shrink-0 text-primary" />}
+                icon={<ActiveIcon className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
                 compactNavigation={<AdminShellNavigation />}
                 nav={<AdminNav />}
                 navigationBreakpoint="wide"
@@ -59,10 +58,9 @@ export function AdminPage() {
     return (
         <PageLayout
             title={activeNavItem.title.toUpperCase()}
-            icon={<ActiveIcon className="h-5 w-5 shrink-0 text-primary" />}
+            icon={<ActiveIcon className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
             compactNavigation={<AdminShellNavigation />}
-            desktopTools={desktopTools}
-            mobileActions={mobileActions}
+            headerTools={desktopTools}
             nav={<AdminNav />}
             navigationBreakpoint="wide"
         >
@@ -70,14 +68,12 @@ export function AdminPage() {
                 <Route index element={(
                     <CommunicationsSection
                         onDesktopToolsChange={setDesktopTools}
-                        onMobileActionsChange={setMobileActions}
                     />
                 )} />
                 <Route path="stats" element={<StatisticsSection />} />
                 <Route path="operations" element={(
                     <OperationsSection
                         onDesktopToolsChange={setDesktopTools}
-                        onMobileActionsChange={setMobileActions}
                     />
                 )} />
                 <Route path="change-tier" element={<ChangeTierSection />} />

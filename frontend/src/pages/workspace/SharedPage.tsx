@@ -16,10 +16,8 @@ import {
   Link2Off,
   Eye,
   AlertTriangle,
-  Search,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -58,7 +56,6 @@ import {
 } from '@/services/api';
 import { List, Note, Whiteboard, Wireframe, Vault } from '@/types';
 import { PageLayout } from '@/components/layout/PageLayout';
-import { MobileQueryBar } from '@/components/layout/MobileQueryBar';
 import {
   HeaderActionLabel,
   HeaderCombinedQuery,
@@ -413,8 +410,7 @@ export function SharedPage() {
     <PageLayout
       title="SHARED"
       icon={<Share2 className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
-      mobileClassName="flex-col items-stretch gap-3"
-      desktopTools={{
+      headerTools={{
         search: (
           <HeaderSearch
             label="Search shared content"
@@ -469,22 +465,6 @@ export function SharedPage() {
           </Tooltip>
         ),
       }}
-      mobileActions={
-        <MobileQueryBar
-        search={<div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            aria-label="Search shared content"
-            placeholder="Search..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 h-9 w-full bg-muted/20 border-border/50 focus:bg-background"
-          />
-        </div>}
-        filters={<HeaderCombinedQuery label="Search and filter shared content" placeholder="Search shared content..." value={searchQuery} onChange={setSearchQuery} activeCount={headerQueryCount}><div className="space-y-2 [&_[role=combobox]]:w-full">{headerFilters}</div></HeaderCombinedQuery>}
-        actions={<Button variant="outline" size="icon" className="h-11 w-11" onClick={() => navigate('/canvas')} aria-label="Open Canvas"><Map className="h-4 w-4" /></Button>}
-        />
-      }
     >
           {/* Content */}
           <Card>
@@ -505,14 +485,17 @@ export function SharedPage() {
           ) : filteredContent.length === 0 ? (
             <EmptyState
               icon={Share2}
-              title="No shared content"
-              description={
-                typeFilter !== 'all'
-                  ? 'No content of this type has been shared yet'
-                  : 'Share lists, notes, whiteboards, or vaults to see them here'
-              }
+              kind={headerQueryCount > 0 ? 'results' : 'collection'}
+              title={headerQueryCount > 0 ? 'No matching shared content' : 'No shared content yet'}
+              description={headerQueryCount > 0 ? undefined : 'Shared workspace items will appear here.'}
               className="p-12"
-              action={
+              actionLabel={headerQueryCount > 0 ? 'Clear filters' : undefined}
+              onAction={headerQueryCount > 0 ? () => {
+                setSearchQuery('');
+                setTypeFilter('all');
+                setSortBy('recent');
+              } : undefined}
+              action={headerQueryCount === 0 ?
                 <Button
                   onClick={() => navigate(workspaceLanding.path)}
                   className="bg-blue-600 hover:bg-blue-700 text-white"
@@ -520,7 +503,7 @@ export function SharedPage() {
                   <WorkspaceLandingIcon className="mr-2 h-4 w-4" />
                   Go to {workspaceLanding.title}
                 </Button>
-              }
+                : undefined}
             />
           ) : (
             <div className="overflow-x-auto">

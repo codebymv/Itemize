@@ -3,7 +3,7 @@
  * Shows version history, allows previewing, publishing, and restoring versions
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { History as HistoryIcon, Eye, Play, Trash2, RotateCcw, Clock, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +21,8 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
 import { useToast } from '@/hooks/use-toast';
 import {
     getPageVersions,
@@ -33,7 +35,10 @@ import {
 import { useOrganization } from '@/hooks/useOrganization';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { STATUS_THEME_CLASSES } from '@/lib/statusVisuals';
+import { defineStatus } from '@/lib/statusVisuals';
+
+const CURRENT_VERSION_VISUAL = defineStatus('Current', 'blue', Play);
+const PUBLISHED_VERSION_VISUAL = defineStatus('Published', 'green', Eye);
 
 interface PageVersionHistoryProps {
     pageId: number;
@@ -49,29 +54,31 @@ export function PageVersionHistory({ pageId, pageName, open, onOpenChange, onPre
     const [versions, setVersions] = useState<PageVersion[]>([]);
     const [currentVersionId, setCurrentVersionId] = useState<number | null>(null);
     const [loading, setLoading] = useState(false);
+    const [loadError, setLoadError] = useState(false);
     const [selectedVersion, setSelectedVersion] = useState<PageVersion | null>(null);
     const [deleteVersionId, setDeleteVersionId] = useState<number | null>(null);
 
-    // Load versions when dialog opens
-    useEffect(() => {
-        if (open && organizationId) {
-            loadVersions();
-        }
-    }, [open, organizationId]);
-
-    const loadVersions = async () => {
+    const loadVersions = useCallback(async () => {
         if (!organizationId) return;
         setLoading(true);
+        setLoadError(false);
         try {
             const data = await getPageVersions(pageId, organizationId);
             setVersions(data.versions);
             setCurrentVersionId(data.currentVersionId);
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to load version history', variant: 'destructive' });
+        } catch {
+            setLoadError(true);
         } finally {
             setLoading(false);
         }
-    };
+    }, [organizationId, pageId]);
+
+    // Load versions when dialog opens
+    useEffect(() => {
+        if (open && organizationId) {
+            void loadVersions();
+        }
+    }, [loadVersions, open, organizationId]);
 
     const handleCreateVersion = async () => {
         if (!organizationId) return;
@@ -148,15 +155,23 @@ export function PageVersionHistory({ pageId, pageName, open, onOpenChange, onPre
                         <div className="flex items-center justify-center h-40">
                             <p className="text-muted-foreground">Loading versions...</p>
                         </div>
+                    ) : loadError ? (
+                        <ErrorState
+                            kind="inline"
+                            icon={HistoryIcon}
+                            title="Unable to load version history"
+                            description="We couldn't load saved versions. Try again."
+                            onRetry={() => void loadVersions()}
+                            className="min-h-40"
+                        />
                     ) : versions.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-40 text-center">
-                            <HistoryIcon className="h-12 w-12 text-muted-foreground mb-3" />
-                            <p className="text-lg font-medium mb-1">No versions yet</p>
-                            <p className="text-sm text-muted-foreground mb-4">Create a version to save a snapshot.</p>
-                            <Button onClick={handleCreateVersion} disabled={!organizationId}>
-                                Create Version
-                            </Button>
-                        </div>
+                        <EmptyState
+                            icon={HistoryIcon}
+                            kind="inline"
+                            title="No versions yet"
+                            action={<Button type="button" className="h-11 bg-blue-600 text-white hover:bg-blue-700" onClick={handleCreateVersion} disabled={!organizationId}>Create version</Button>}
+                            className="min-h-40"
+                        />
                     ) : (
                         <div className="space-y-3">
                             {versions.map((version, index) => (
@@ -164,7 +179,7 @@ export function PageVersionHistory({ pageId, pageName, open, onOpenChange, onPre
                                     key={version.id}
                                     className={`flex items-center gap-4 p-4 rounded-lg border ${
                                         currentVersionId === version.id
-                                            ? 'bg-green-50 dark:bg-green-950/30 border-green-300 dark:border-green-700'
+                                            ? 'border-primary/30 bg-accent'
                                             : 'bg-card hover:bg-muted/50'
                                     }`}
                                 >
@@ -172,10 +187,10 @@ export function PageVersionHistory({ pageId, pageName, open, onOpenChange, onPre
                                         <div className="flex items-center gap-2 mb-1">
                                             <span className="font-medium">Version {version.version_number}</span>
                                             {currentVersionId === version.id && (
-                                                <Badge className={cn('text-xs', STATUS_THEME_CLASSES.green.badgeClass)}>Current</Badge>
+                                                <Badge className={cn('text-xs', CURRENT_VERSION_VISUAL.badgeClass)}>{CURRENT_VERSION_VISUAL.label}</Badge>
                                             )}
                                             {version.published_at && (
-                                                <Badge variant="outline" className="text-xs">Published</Badge>
+                                                <Badge className={cn('text-xs', PUBLISHED_VERSION_VISUAL.badgeClass)}>{PUBLISHED_VERSION_VISUAL.label}</Badge>
                                             )}
                                         </div>
                                         <p className="text-sm text-muted-foreground mb-1">{version.description || `Version saved ${formatDate(version.created_at)}`}</p>

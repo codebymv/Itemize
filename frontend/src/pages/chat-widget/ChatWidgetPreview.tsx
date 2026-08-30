@@ -1,13 +1,10 @@
 import { useState } from 'react';
-import { Eye, MessageCircle, Send, X } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { SectionCardTitle } from '@/components/ui/section-card-title';
+import { MessageCircle, Send, X } from 'lucide-react';
+import { LiveServicePreview, ServicePreviewBrowser } from '@/components/preview/LiveServicePreview';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 
 export interface ChatWidgetPreviewConfig {
-  is_active: boolean;
   name: string;
   welcome_title: string;
   welcome_message: string;
@@ -102,41 +99,22 @@ export function ChatWidgetPreview({ config }: { config: ChatWidgetPreviewConfig 
   );
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
-        <div className="flex min-w-0 items-center gap-2">
-          <SectionCardTitle icon={Eye}>Live Preview</SectionCardTitle>
-          {!config.is_active ? <Badge variant="secondary">Disabled</Badge> : null}
-        </div>
-        <div className="flex rounded-md bg-muted p-1" aria-label="Preview availability">
-          <Button
-            type="button"
-            size="sm"
-            variant={availability === 'online' ? 'secondary' : 'ghost'}
-            className="h-7 px-2.5 text-xs"
-            onClick={() => setAvailability('online')}
-          >
-            Online
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={availability === 'offline' ? 'secondary' : 'ghost'}
-            className="h-7 px-2.5 text-xs"
-            onClick={() => setAvailability('offline')}
-          >
-            Offline
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="relative h-[34rem] overflow-hidden rounded-xl border bg-slate-50 dark:bg-slate-950/35">
-          <div className="flex h-9 items-center gap-1.5 border-b bg-white px-3 dark:bg-slate-900">
-            <span className="h-2 w-2 rounded-full bg-red-400" />
-            <span className="h-2 w-2 rounded-full bg-amber-400" />
-            <span className="h-2 w-2 rounded-full bg-green-400" />
-            <span className="ml-3 h-4 flex-1 rounded bg-slate-100 dark:bg-slate-800" />
-          </div>
+    <LiveServicePreview
+      controls={(
+        <Tabs
+          value={availability}
+          onValueChange={(value) => {
+            if (value === 'online' || value === 'offline') setAvailability(value);
+          }}
+        >
+          <TabsList className="h-8 shrink-0" aria-label="Preview availability">
+            <TabsTrigger value="online" className="h-6 px-2.5 py-1 text-xs">Online</TabsTrigger>
+            <TabsTrigger value="offline" className="h-6 px-2.5 py-1 text-xs">Offline</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      )}
+    >
+        <ServicePreviewBrowser>
           <div className="space-y-3 p-5 opacity-55" aria-hidden="true">
             <div className="h-5 w-1/3 rounded bg-slate-200 dark:bg-slate-700" />
             <div className="h-3 w-2/3 rounded bg-slate-200 dark:bg-slate-700" />
@@ -149,15 +127,14 @@ export function ChatWidgetPreview({ config }: { config: ChatWidgetPreviewConfig 
           <div
             className={cn(
               'absolute flex w-[calc(100%-1.5rem)] max-w-[20rem] gap-3',
-              isTop ? 'top-12 flex-col' : 'bottom-3 flex-col',
+              isTop ? 'top-3 flex-col' : 'bottom-3 flex-col',
               isRight ? 'right-3' : 'left-3',
             )}
           >
             {isTop ? launcher : chatWindow}
             {isTop ? chatWindow : launcher}
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </ServicePreviewBrowser>
+    </LiveServicePreview>
   );
 }

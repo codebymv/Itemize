@@ -10,6 +10,8 @@ export class MessageDelivery {
   @Field() replayed: boolean;
   @Field(() => Int, { nullable: true }) contactId: number | null;
   @Field(() => Int, { nullable: true }) templateId: number | null;
+  @Field(() => Int, { nullable: true }) conversationId: number | null;
+  @Field(() => Int, { nullable: true }) messageId: number | null;
   @Field(() => String, { nullable: true }) providerId: string | null;
   @Field(() => GraphQLISODateTime) createdAt: Date;
 }

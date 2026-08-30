@@ -21,6 +21,7 @@ const CONVERSATION_STATUSES = new Set(['open', 'closed', 'snoozed']);
 
 type ListInput = {
   status?: string;
+  channel?: string;
   assignedTo?: number;
   contactId?: number;
   page?: number;
@@ -41,6 +42,9 @@ export class ConversationsService {
       !input.status || input.status === 'all'
         ? undefined
         : this.status(input.status);
+    const channel = !input.channel || input.channel === 'all'
+      ? undefined
+      : this.text(input.channel, 'channel', 50);
     const assignedTo =
       input.assignedTo === undefined
         ? undefined
@@ -52,6 +56,7 @@ export class ConversationsService {
     try {
       const result = await this.conversations.findAll(organizationId, {
         status,
+        channel,
         assignedTo,
         contactId,
         page,
@@ -371,6 +376,19 @@ export class ConversationsService {
     contactLastName: row.contact_last_name,
     contactEmail: row.contact_email,
     contactPhone: row.contact_phone,
+    socialConversationId:
+      row.social_conversation_id === null ? null : Number(row.social_conversation_id),
+    providerAccountName: row.provider_account_name,
+    providerParticipantName: row.provider_participant_name,
+    providerParticipantUsername: row.provider_participant_username,
+    providerParticipantProfilePic: row.provider_participant_profile_pic,
+    chatSessionId:
+      row.chat_session_id === null ? null : Number(row.chat_session_id),
+    chatSessionStatus: row.chat_session_status,
+    chatVisitorName: row.chat_visitor_name,
+    chatVisitorEmail: row.chat_visitor_email,
+    chatVisitorPhone: row.chat_visitor_phone,
+    chatWidgetName: row.chat_widget_name,
   });
 
   private readonly mapMessage = (

@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2, Monitor, Smartphone, ExternalLink, AlertCircle } from 'lucide-react';
+import { Loader2, Mail, Monitor, Smartphone, ExternalLink } from 'lucide-react';
 import { getSignatureEmailPreview } from '@/services/signaturesApi';
 import { cn } from '@/lib/utils';
+import { ErrorState } from '@/components/ErrorState';
+import { PreviewPlaceholder } from '@/components/preview/PreviewPlaceholder';
 
 interface SignatureEmailPreviewProps {
   message: string;
@@ -35,17 +37,10 @@ export function SignatureEmailPreview({
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('desktop');
 
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      generatePreview();
-    }, 500);
-
-    return () => clearTimeout(timeoutId);
-  }, [message, documentTitle, senderName, senderEmail, recipientName, expiresAt]);
-
-  const generatePreview = async () => {
+  const generatePreview = useCallback(async () => {
     if (!message.trim()) {
       setPreviewHtml(null);
+      setError(null);
       return;
     }
 
@@ -65,11 +60,19 @@ export function SignatureEmailPreview({
       setPreviewHtml(response.html || null);
     } catch (err) {
       console.error('Error generating preview:', err);
-      setError(getErrorMessage(err, 'Failed to generate preview'));
+      setError(getErrorMessage(err, 'Unable to generate the email preview.'));
     } finally {
       setLoading(false);
     }
-  };
+  }, [documentTitle, expiresAt, message, recipientName, senderEmail, senderName]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      void generatePreview();
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [generatePreview]);
 
   const handleOpenInNewWindow = () => {
     if (!previewHtml) return;
@@ -125,12 +128,13 @@ export function SignatureEmailPreview({
         )}
 
         {error && (
-          <div className="p-4">
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400">
-              <AlertCircle className="h-4 w-4" />
-              <span className="text-sm">{error}</span>
-            </div>
-          </div>
+          <ErrorState
+            kind="inline"
+            title="Unable to load email preview"
+            description={error}
+            icon={Mail}
+            onAction={() => void generatePreview()}
+          />
         )}
 
         {!loading && !error && previewHtml && (
@@ -145,9 +149,7 @@ export function SignatureEmailPreview({
         )}
 
         {!loading && !error && !previewHtml && (
-          <div className="flex items-center justify-center h-[400px] text-muted-foreground text-sm">
-            Enter message content to see preview
-          </div>
+          <PreviewPlaceholder icon={Mail} title="Add message content to preview the email" />
         )}
       </div>
     </div>

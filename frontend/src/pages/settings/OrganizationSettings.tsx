@@ -17,6 +17,8 @@ import {
   Users,
 } from 'lucide-react';
 import { HeaderAction } from '@/components/layout/DesktopHeaderTools';
+import { EmptyState } from '@/components/EmptyState';
+import { FailureNotice } from '@/components/FailureNotice';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -190,6 +192,7 @@ export function OrganizationSettings({
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [businessProfilesAvailable, setBusinessProfilesAvailable] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [detailsLoadError, setDetailsLoadError] = useState(false);
   const [saving, setSaving] = useState(false);
   const [memberSaving, setMemberSaving] = useState(false);
   const [memberActionId, setMemberActionId] = useState<number | null>(null);
@@ -228,6 +231,7 @@ export function OrganizationSettings({
   const loadDetails = useCallback(async () => {
     if (!organizationId) return;
     setLoading(true);
+    setDetailsLoadError(false);
     try {
       const [membersResult, invitationsResult, businessesResult, activityResult] = await Promise.allSettled([
         getOrganizationMembers(organizationId),
@@ -251,15 +255,11 @@ export function OrganizationSettings({
       }
       setActivity(activityResult.status === 'fulfilled' ? activityResult.value : []);
     } catch (error) {
-      toast({
-        title: 'Organization unavailable',
-        description: error instanceof Error ? error.message : 'Could not load organization details.',
-        variant: 'destructive',
-      });
+      setDetailsLoadError(true);
     } finally {
       setLoading(false);
     }
-  }, [canManage, organizationId, toast]);
+  }, [canManage, organizationId]);
 
   useEffect(() => {
     void loadDetails();
@@ -581,6 +581,14 @@ export function OrganizationSettings({
         </CardContent>
       </Card>
 
+      {detailsLoadError ? (
+        <FailureNotice
+          title="Some organization details are unavailable"
+          description="We couldn't refresh members and related organization activity."
+          onRetry={() => void loadDetails()}
+        />
+      ) : null}
+
       <Card>
         <CardHeader>
           <SettingsSectionTitle icon={Building2}>Organization details</SettingsSectionTitle>
@@ -900,10 +908,13 @@ export function OrganizationSettings({
           <CardContent>
             {loading ? (
               <div className="h-20 animate-pulse rounded-lg bg-muted/50" />
-            ) : activity.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                Security-sensitive organization changes appear here.
-              </p>
+            ) : detailsLoadError ? null : activity.length === 0 ? (
+              <EmptyState
+                icon={History}
+                kind="inline"
+                title="No organization activity yet"
+                description="Security-sensitive changes will appear here."
+              />
             ) : (
               <div className="divide-y rounded-lg border">
                 {visibleActivity.map((item) => {

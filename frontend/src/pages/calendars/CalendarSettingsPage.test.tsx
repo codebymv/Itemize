@@ -4,11 +4,14 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import CalendarSettingsPage from './CalendarSettingsPage';
 import { HeaderProvider } from '@/contexts/HeaderContext';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 const apiMocks = vi.hoisted(() => ({
     getCalendar: vi.fn(),
     updateCalendar: vi.fn(),
     updateCalendarAvailability: vi.fn(),
+    addDateOverride: vi.fn(),
+    removeDateOverride: vi.fn(),
 }));
 
 const toastMock = vi.hoisted(() => vi.fn());
@@ -25,6 +28,12 @@ vi.mock('@/hooks/useOrganization', () => ({
 }));
 vi.mock('@/hooks/use-toast', () => ({
     useToast: () => ({ toast: toastMock }),
+}));
+vi.mock('@/components/layout/PageLayout', () => ({
+    PageLayout: ({ children, headerTools }: {
+        children: React.ReactNode;
+        headerTools?: { status?: React.ReactNode; secondaryAction?: React.ReactNode; primaryAction?: React.ReactNode };
+    }) => <>{headerTools?.status}{headerTools?.secondaryAction}{headerTools?.primaryAction}{children}</>,
 }));
 
 const calendar = {
@@ -73,13 +82,15 @@ const calendar = {
 };
 
 const renderPage = () => render(
-    <HeaderProvider>
-        <MemoryRouter initialEntries={['/calendars/7']}>
-            <Routes>
-                <Route path="/calendars/:id" element={<CalendarSettingsPage />} />
-            </Routes>
-        </MemoryRouter>
-    </HeaderProvider>,
+    <TooltipProvider>
+        <HeaderProvider>
+            <MemoryRouter initialEntries={['/calendars/7']}>
+                <Routes>
+                    <Route path="/calendars/:id" element={<CalendarSettingsPage />} />
+                </Routes>
+            </MemoryRouter>
+        </HeaderProvider>
+    </TooltipProvider>,
 );
 
 describe('CalendarSettingsPage', () => {
@@ -93,6 +104,15 @@ describe('CalendarSettingsPage', () => {
         apiMocks.updateCalendarAvailability.mockImplementation(async (_id, windows) => ({
             availability_windows: windows,
         }));
+        apiMocks.addDateOverride.mockResolvedValue({
+            id: 19,
+            calendar_id: 7,
+            override_date: '2026-09-08',
+            is_available: false,
+            reason: 'Team retreat',
+            created_at: '2026-08-29T00:00:00.000Z',
+        });
+        apiMocks.removeDateOverride.mockResolvedValue(undefined);
     });
 
     it('loads calendar detail and renders availability and overrides', async () => {
@@ -109,7 +129,7 @@ describe('CalendarSettingsPage', () => {
 
         const name = await screen.findByLabelText('Name');
         fireEvent.change(name, { target: { value: 'Strategy call' } });
-        fireEvent.click(screen.getByRole('button', { name: 'Save settings' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
 
         await waitFor(() => expect(apiMocks.updateCalendar).toHaveBeenCalledWith(
             7,
@@ -124,12 +144,25 @@ describe('CalendarSettingsPage', () => {
         expect(toastMock).toHaveBeenCalledWith({ title: 'Calendar settings saved' });
     });
 
+    it('keeps the live status persisted while availability has unsaved changes', async () => {
+        renderPage();
+
+        const availability = await screen.findByRole('switch', { name: 'Accept new bookings' });
+        expect(screen.getAllByText('Active').length).toBeGreaterThan(0);
+
+        fireEvent.click(availability);
+
+        expect(availability).not.toBeChecked();
+        expect(screen.getAllByText('Active').length).toBeGreaterThan(0);
+        expect(screen.queryByText('Paused')).not.toBeInTheDocument();
+    });
+
   it('saves the edited recurring schedule through the availability adapter', async () => {
         renderPage();
 
         const mondayStart = await screen.findByLabelText('Monday start');
         fireEvent.input(mondayStart, { target: { value: '10:00' } });
-        fireEvent.click(screen.getByRole('button', { name: 'Save availability' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
 
         await waitFor(() => expect(apiMocks.updateCalendarAvailability).toHaveBeenCalledWith(
             7,
@@ -142,5 +175,35 @@ describe('CalendarSettingsPage', () => {
             42,
         ));
         expect(toastMock).toHaveBeenCalledWith({ title: 'Availability saved' });
+    });
+
+    it('adds a date override without leaving the calendar detail page', async () => {
+        renderPage();
+
+        await screen.findByDisplayValue('Consultation');
+        fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2026-09-08' } });
+        fireEvent.change(screen.getByLabelText(/Reason/), { target: { value: 'Team retreat' } });
+        fireEvent.click(screen.getByRole('button', { name: 'Add override' }));
+
+        await waitFor(() => expect(apiMocks.addDateOverride).toHaveBeenCalledWith(7, {
+            override_date: '2026-09-08',
+            is_available: false,
+            start_time: undefined,
+            end_time: undefined,
+            reason: 'Team retreat',
+        }, 42));
+        expect(await screen.findByText('Team retreat')).toBeInTheDocument();
+        expect(toastMock).toHaveBeenCalledWith({ title: 'Date override saved' });
+    });
+
+    it('removes an existing date override', async () => {
+        renderPage();
+
+        await screen.findByText('Holiday');
+        fireEvent.click(screen.getByRole('button', { name: 'Remove override for 2026-08-01' }));
+
+        await waitFor(() => expect(apiMocks.removeDateOverride).toHaveBeenCalledWith(7, 15, 42));
+        expect(screen.queryByText('Holiday')).not.toBeInTheDocument();
+        expect(toastMock).toHaveBeenCalledWith({ title: 'Date override removed' });
     });
 });

@@ -3,6 +3,7 @@ import { Info, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
   Tooltip,
   TooltipContent,
@@ -75,6 +76,45 @@ export function SettingsFieldLabel({
     <div className="flex items-center gap-1.5">
       <Label className={className} {...props}>{children}</Label>
       {help ? <SettingsInfoTooltip label={helpLabel}>{help}</SettingsInfoTooltip> : null}
+    </div>
+  );
+}
+
+/**
+ * Shared row for a saved availability/configuration boolean. Status remains a
+ * read-only badge elsewhere; this control only edits the pending form value.
+ */
+export function AvailabilitySettingRow({
+  id,
+  label,
+  checked,
+  onCheckedChange,
+  help,
+  helpLabel,
+  disabled,
+  className,
+}: {
+  id: string;
+  label: ReactNode;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  help?: ReactNode;
+  helpLabel?: string;
+  disabled?: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={`flex min-h-14 items-center justify-between gap-4 rounded-lg border p-3 ${className ?? ''}`}>
+      <SettingsFieldLabel htmlFor={id} help={help} helpLabel={helpLabel} className="leading-5">
+        {label}
+      </SettingsFieldLabel>
+      <Switch
+        id={id}
+        className="shrink-0"
+        checked={checked}
+        disabled={disabled}
+        onCheckedChange={onCheckedChange}
+      />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Copy, FolderOpen, MessageSquare, MoreHorizontal, Pencil, Plus, Search, Send, Trash2 } from 'lucide-react';
+import { Copy, FolderOpen, MessageSquare, MoreHorizontal, Pencil, Plus, Send, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,9 +13,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { HeaderAction, HeaderCombinedQuery, HeaderFilters, HeaderSearch } from '@/components/layout/DesktopHeaderTools';
 import { PageLayout } from '@/components/layout/PageLayout';
-import { MobileQueryBar } from '@/components/layout/MobileQueryBar';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { StatCard } from '@/components/StatCard';
@@ -77,7 +77,7 @@ export function SMSTemplatesPage() {
 
   const filters = (compact = false) => <div className={cn('flex gap-2', compact && 'flex-col')}>
     <Select value={categoryFilter} onValueChange={setCategoryFilter}><SelectTrigger className={compact ? 'h-11 w-full' : 'h-11 w-[142px] bg-muted/20'}><SelectValue placeholder="Category" /></SelectTrigger><SelectContent><SelectItem value="all">All categories</SelectItem>{categories.map(category => <SelectItem key={category} value={category}>{category}</SelectItem>)}</SelectContent></Select>
-    <Select value={statusFilter} onValueChange={value => setStatusFilter(value as StatusFilter)}><SelectTrigger className={compact ? 'h-11 w-full' : 'h-11 w-[126px] bg-muted/20'}><SelectValue placeholder="Status" /></SelectTrigger><SelectContent><SelectItem value="all">All statuses</SelectItem><SelectItem value="active">Active</SelectItem><SelectItem value="inactive">Inactive</SelectItem></SelectContent></Select>
+    <Select value={statusFilter} onValueChange={value => setStatusFilter(value as StatusFilter)}><SelectTrigger className={compact ? 'h-11 w-full' : 'h-11 w-[126px] bg-muted/20'}><SelectValue placeholder="Status" /></SelectTrigger><SelectContent><SelectItem value="all">All statuses</SelectItem><SelectItem value="active">Available</SelectItem><SelectItem value="inactive">Unavailable</SelectItem></SelectContent></Select>
   </div>;
 
   const handleDuplicate = async (template: SmsTemplate) => {
@@ -109,29 +109,27 @@ export function SMSTemplatesPage() {
   const hasQuery = Boolean(searchQuery.trim()) || categoryFilter !== 'all' || statusFilter !== 'all';
   const clearQuery = () => { setSearchQuery(''); setCategoryFilter('all'); setStatusFilter('all'); };
 
-  if (initError) return <PageLayout title="SMS TEMPLATES" icon={<MessageSquare className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}><ErrorState title="Unable to load SMS templates" description={initError} icon={MessageSquare} onAction={() => void fetchTemplates()} /></PageLayout>;
+  if (initError) return <PageLayout title="SMS TEMPLATES" icon={<MessageSquare className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}><OrganizationErrorState title="Unable to load SMS templates" icon={MessageSquare} /></PageLayout>;
 
   return <PageLayout
     title="SMS TEMPLATES"
     icon={<MessageSquare className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
-    mobileClassName="items-stretch"
-    desktopTools={{
+    headerTools={{
       search: <HeaderSearch label="Search SMS templates" placeholder="Search SMS templates..." value={searchQuery} onChange={setSearchQuery} width="wide" />,
       filters: <HeaderFilters label="Filter SMS templates" activeCount={Number(categoryFilter !== 'all') + Number(statusFilter !== 'all')} compactChildren={filters(true)} preferExpanded="wide-lane">{filters()}</HeaderFilters>,
       combinedQuery: <HeaderCombinedQuery label="Search and filter SMS templates" placeholder="Search SMS templates..." value={searchQuery} onChange={setSearchQuery} activeCount={Number(Boolean(searchQuery.trim())) + Number(categoryFilter !== 'all') + Number(statusFilter !== 'all')}>{filters(true)}</HeaderCombinedQuery>,
       primaryAction: <HeaderAction label="New template" icon={<Plus className="h-4 w-4" />} onClick={() => navigate('/sms-templates/new')} />,
     }}
-    mobileActions={<MobileQueryBar search={<div className="relative min-w-0 flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" /><Input aria-label="Search SMS templates" placeholder="Search templates..." value={searchQuery} onChange={event => setSearchQuery(event.target.value)} className="h-11 pl-10" /></div>} filters={<HeaderCombinedQuery label="Filter SMS templates" placeholder="Search SMS templates..." value={searchQuery} onChange={setSearchQuery} activeCount={Number(categoryFilter !== 'all') + Number(statusFilter !== 'all')}>{filters(true)}</HeaderCombinedQuery>} actions={<Button size="icon" aria-label="New template" className="h-11 w-11 shrink-0 bg-blue-600 text-white hover:bg-blue-700" onClick={() => navigate('/sms-templates/new')}><Plus className="h-4 w-4" /></Button>} />}
   >
     {!loadError && <ResponsiveCardRail label="SMS template summary" desktopColumns="md:grid-cols-2 lg:grid-cols-4" className="responsive-stat-summary">
       <StatCard title="Total SMS templates" badgeText="Total" value={stats.total} icon={MessageSquare} description={`${stats.total} reusable`} colorTheme="blue" isLoading={loading} />
-      <StatCard title="Active SMS templates" badgeText="Active" value={stats.active} icon={MessageSquare} description="Available to use" colorTheme="blue" isLoading={loading} />
-      <StatCard title="Inactive SMS templates" badgeText="Inactive" value={stats.inactive} icon={MessageSquare} description="Parked templates" colorTheme="orange" isLoading={loading} />
+      <StatCard title="Available SMS templates" badgeText="Available" value={stats.active} icon={MessageSquare} description="Ready for new sends" colorTheme="blue" isLoading={loading} />
+      <StatCard title="Unavailable SMS templates" badgeText="Unavailable" value={stats.inactive} icon={MessageSquare} description="Not selectable" colorTheme="orange" isLoading={loading} />
       <StatCard title="SMS template categories" badgeText="Categories" value={stats.categories} icon={FolderOpen} description="Catalog groups" colorTheme="blue" isLoading={loading} />
     </ResponsiveCardRail>}
     <Card><CardContent className="p-0">{loading ? <div className="space-y-4 p-6">{Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-20 w-full" />)}</div>
       : loadError ? <ErrorState title="SMS templates unavailable" description={loadError} icon={MessageSquare} onAction={() => void fetchTemplates()} className="p-12" />
-      : filteredTemplates.length === 0 ? <EmptyState icon={MessageSquare} title={hasQuery ? 'No matching SMS templates' : 'No SMS templates yet'} description={hasQuery ? 'Try a different search or clear the current filters.' : 'Create a reusable template for campaign messages.'} actionLabel={hasQuery ? 'Clear filters' : 'New template'} onAction={hasQuery ? clearQuery : () => navigate('/sms-templates/new')} className="p-12" />
+      : filteredTemplates.length === 0 ? <EmptyState icon={MessageSquare} kind={hasQuery ? 'results' : 'collection'} title={hasQuery ? 'No matching SMS templates' : 'No SMS templates yet'} description={hasQuery ? undefined : 'Create a reusable template for campaign messages.'} actionLabel={hasQuery ? 'Clear filters' : 'New template'} onAction={hasQuery ? clearQuery : () => navigate('/sms-templates/new')} className="p-12" />
       : <div className="divide-y">{filteredTemplates.map(template => {
         const visual = getCatalogStatusVisual(template.is_active);
         const characterCount = template.message.length;

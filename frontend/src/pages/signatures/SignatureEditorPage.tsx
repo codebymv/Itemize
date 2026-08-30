@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { EmptyState } from '@/components/EmptyState';
+import { PreviewPlaceholder } from '@/components/preview/PreviewPlaceholder';
 import { ErrorState } from '@/components/ErrorState';
 import { HeaderAction, HeaderActionLabel } from '@/components/layout/DesktopHeaderTools';
 import { PageLayout } from '@/components/layout/PageLayout';
@@ -246,23 +247,12 @@ export default function SignatureEditorPage() {
 
   const secondaryAction = editable && document ? <div className="flex items-center gap-2"><HeaderAction label="Save changes" icon={<Save className="h-4 w-4" />} onClick={() => void handleCreateOrSave()} disabled={working || !isDirty} prominence="secondary" />{moreActions}</div> : moreActions;
 
-  const mobilePrimary = () => {
-    if (!document) void handleCreateOrSave();
-    else if (editable) setShowSendModal(true);
-    else if (processingFailure) void handleRetry();
-    else if (document.status === 'sent' || document.status === 'in_progress') void handleRemind();
-    else if (document.status === 'completed') handleDownload();
-  };
-
-  const mobilePrimaryLabel = !document ? 'Create' : editable ? 'Send' : processingFailure ? 'Retry' : document.status === 'completed' ? 'Download' : 'Remind';
-
   return (
     <PageLayout
       title={isExisting ? 'DOCUMENT' : 'NEW DOCUMENT'}
       icon={<FileSignature className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
       leading={<ShellBackButton label="Back to documents" onClick={goBack} />}
-      desktopTools={{ status: document ? <Badge className={cn('pointer-events-none whitespace-nowrap', statusVisual.badgeClass)}>{statusVisual.label}</Badge> : undefined, secondaryAction, primaryAction }}
-      mobileActions={<div className="flex w-full items-center gap-2">{document && <Badge className={cn('pointer-events-none shrink-0', statusVisual.badgeClass)}>{statusVisual.label}</Badge>}<div className="ml-auto flex min-w-0 gap-2">{editable && document && <Button variant="outline" className="h-11" onClick={() => void handleCreateOrSave()} disabled={working || !isDirty}><Save className="mr-2 h-4 w-4" />Save</Button>}{moreActions}{primaryAction && <Button className="h-11 bg-blue-600 text-white hover:bg-blue-700" onClick={mobilePrimary} disabled={working || (!document ? !isDirty || !title.trim() : editable ? isDirty || !readiness.ready : false)}>{!document ? <Save className="mr-2 h-4 w-4" /> : editable ? <Send className="mr-2 h-4 w-4" /> : processingFailure ? <RefreshCw className="mr-2 h-4 w-4" /> : document.status === 'completed' ? <Download className="mr-2 h-4 w-4" /> : <Mail className="mr-2 h-4 w-4" />}{mobilePrimaryLabel}</Button>}</div></div>}
+      headerTools={{ status: document ? <Badge className={cn('pointer-events-none whitespace-nowrap', statusVisual.badgeClass)}>{statusVisual.label}</Badge> : undefined, secondaryAction, primaryAction }}
     >
       {loadError ? <ErrorState title="Document unavailable" description={loadError} onAction={() => void loadDocument()} /> : loading && isExisting && !document ? <CardGridSkeleton count={2} columns={2} height="h-80" /> : <>
         <EntityDetailHeader
@@ -350,7 +340,7 @@ function DraftDocumentEditor({ document, title, setTitle, description, setDescri
         </CardContent></Card>
         <Card><CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 space-y-0"><SectionCardTitle icon={Users}>Recipients and routing</SectionCardTitle><Button variant="outline" size="sm" onClick={addRecipient}><Plus className="mr-2 h-4 w-4" />Add recipient</Button></CardHeader><CardContent className="space-y-4">
           <div className="grid gap-3 rounded-lg border p-3 sm:grid-cols-[minmax(0,1fr)_13rem] sm:items-center"><div className="flex items-center gap-1"><p className="text-sm font-medium">Signing order</p><Tooltip><TooltipTrigger asChild><button type="button" aria-label="About signing order" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><Info className="h-4 w-4" /></button></TooltipTrigger><TooltipContent>Choose whether recipients sign together or in sequence.</TooltipContent></Tooltip></div><Select value={routingMode} onValueChange={value => setRoutingMode(value as 'parallel' | 'sequential')}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="parallel">Any order</SelectItem><SelectItem value="sequential">In sequence</SelectItem></SelectContent></Select></div>
-          {recipients.length === 0 ? <EmptyState icon={Users} title="No recipients yet" description="Add someone who needs to sign or approve." size="compact" /> : recipients.map((recipient, index) => <div key={recipient.id} className="grid gap-3 rounded-lg border p-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_11rem_auto] md:items-start">
+          {recipients.length === 0 ? <EmptyState icon={Users} kind="inline" title="No recipients yet" description="Add someone who needs to sign or approve." /> : recipients.map((recipient, index) => <div key={recipient.id} className="grid gap-3 rounded-lg border p-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_11rem_auto] md:items-start">
             <Input aria-label={`Recipient ${index + 1} name`} placeholder="Name" value={recipient.name || ''} onChange={event => updateRecipient(index, { name: event.target.value })} />
             <Input aria-label={`Recipient ${index + 1} email`} type="email" placeholder="Email" value={recipient.email || ''} onChange={event => updateRecipient(index, { email: event.target.value })} />
             <div className="space-y-2"><Select value={roleChoices.includes(recipient.role_name || '') ? recipient.role_name || '' : 'custom'} onValueChange={value => updateRecipient(index, { role_name: value === 'custom' ? '' : value })}><SelectTrigger aria-label={`Recipient ${index + 1} role`}><SelectValue placeholder="Role" /></SelectTrigger><SelectContent>{roleChoices.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}<SelectItem value="custom">Custom...</SelectItem></SelectContent></Select>{!roleChoices.includes(recipient.role_name || '') && <Input aria-label={`Recipient ${index + 1} custom role`} placeholder="Custom role" value={recipient.role_name || ''} onChange={event => updateRecipient(index, { role_name: event.target.value })} />}</div>
@@ -382,7 +372,7 @@ function ReadOnlyDocumentDetail({ document, recipients, fields, audit, roleOptio
       <StatCard title="Recipients needing attention" badgeText="Attention" value={summary.attention} icon={AlertCircle} description="Declined or failed" colorTheme="red" />
     </ResponsiveCardRail>
     <div className="grid items-stretch gap-6 xl:grid-cols-3">
-      <Card className="xl:col-span-2"><CardHeader><SectionCardTitle icon={FileSignature}>{document.status === 'completed' ? 'Signed document' : 'Document snapshot'}</SectionCardTitle></CardHeader><CardContent>{(document.status === 'completed' ? document.signed_file_url : document.file_url) ? <FieldPlacementCanvas fields={document.status === 'completed' ? [] : fields} onChange={() => undefined} fileUrl={(document.status === 'completed' ? document.signed_file_url : document.file_url) || ''} roles={roleOptions} documentId={document.id} readOnly /> : <div className="flex min-h-48 items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">No PDF is available for this document.</div>}</CardContent></Card>
+      <Card className="xl:col-span-2"><CardHeader><SectionCardTitle icon={FileSignature}>{document.status === 'completed' ? 'Signed document' : 'Document snapshot'}</SectionCardTitle></CardHeader><CardContent>{(document.status === 'completed' ? document.signed_file_url : document.file_url) ? <FieldPlacementCanvas fields={document.status === 'completed' ? [] : fields} onChange={() => undefined} fileUrl={(document.status === 'completed' ? document.signed_file_url : document.file_url) || ''} roles={roleOptions} documentId={document.id} readOnly /> : <PreviewPlaceholder icon={FileSignature} title="No PDF available" />}</CardContent></Card>
       <Card><CardHeader><SectionCardTitle icon={Settings2}>Document details</SectionCardTitle></CardHeader><CardContent className="space-y-4 text-sm">
         <Detail label="Routing" value={document.routing_mode === 'sequential' ? 'In sequence' : 'Any order'} />
         <Detail label="Sender" value={`${document.sender_name || 'Not set'}${document.sender_email ? ` · ${document.sender_email}` : ''}`} />
@@ -393,12 +383,12 @@ function ReadOnlyDocumentDetail({ document, recipients, fields, audit, roleOptio
         {document.completed_at && <Detail label="Completed" value={formatDateTime(document.completed_at)} success />}
       </CardContent></Card>
     </div>
-    <Card><CardHeader><SectionCardTitle icon={Route}>Recipient delivery</SectionCardTitle></CardHeader><CardContent className="p-0">{recipients.length === 0 ? <EmptyState icon={Users} title="No recipient records" description="Delivery records will appear after recipients are added." size="compact" className="py-10" /> : <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Recipient</TableHead><TableHead>Role</TableHead><TableHead>Status</TableHead><TableHead>Latest activity</TableHead></TableRow></TableHeader><TableBody>{recipients.map(recipient => {
+    <Card><CardHeader><SectionCardTitle icon={Route}>Recipient delivery</SectionCardTitle></CardHeader><CardContent className="p-0">{recipients.length === 0 ? <EmptyState icon={Users} kind="inline" title="No recipient records" description="Delivery records will appear after recipients are added." className="py-10" /> : <div className="overflow-x-auto"><Table><TableHeader><TableRow><TableHead>Recipient</TableHead><TableHead>Role</TableHead><TableHead>Status</TableHead><TableHead>Latest activity</TableHead></TableRow></TableHeader><TableBody>{recipients.map(recipient => {
       const visual = getRecipientStatusVisual(recipient);
       const latestActivity = recipient.signed_at || recipient.declined_at || recipient.viewed_at || recipient.sent_at;
       return <TableRow key={recipient.id}><TableCell><p className="font-medium">{recipient.name || 'Unnamed recipient'}</p><p className="text-xs text-muted-foreground">{recipient.email}</p></TableCell><TableCell>{recipient.role_name || 'Signer'}</TableCell><TableCell><Badge className={visual.badgeClass}>{visual.label}</Badge>{recipient.decline_reason && <p className="mt-1 max-w-xs text-xs text-red-600 dark:text-red-400">{recipient.decline_reason}</p>}</TableCell><TableCell className="text-sm text-muted-foreground">{formatDateTime(latestActivity)}</TableCell></TableRow>;
     })}</TableBody></Table></div>}</CardContent></Card>
-    <Card><CardHeader><SectionCardTitle icon={History}>Audit history</SectionCardTitle></CardHeader><CardContent>{audit.length === 0 ? <div className="flex min-h-28 items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">No audit events are available.</div> : <div className="divide-y rounded-lg border">{audit.map(event => {
+    <Card><CardHeader><SectionCardTitle icon={History}>Audit history</SectionCardTitle></CardHeader><CardContent>{audit.length === 0 ? <EmptyState icon={History} kind="inline" title="No audit events yet" /> : <div className="divide-y rounded-lg border">{audit.map(event => {
       const recipient = recipients.find(item => item.id === event.recipient_id);
       return <div key={event.id} className="flex flex-col gap-1 p-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4"><div className="min-w-0"><p className="text-sm font-medium">{formatAuditEvent(event.event_type)}</p><p className="mt-1 text-xs text-muted-foreground">{event.description || (recipient ? `${recipient.name || recipient.email} · ${recipient.email}` : 'Document activity')}</p></div><time className="shrink-0 text-xs text-muted-foreground">{formatDateTime(event.created_at)}</time></div>;
     })}</div>}</CardContent></Card>

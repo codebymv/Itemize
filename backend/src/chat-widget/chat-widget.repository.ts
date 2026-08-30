@@ -3,6 +3,10 @@ import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
 import { RealtimeOutboxService } from '../realtime-outbox/realtime-outbox.service';
+import {
+  ensureChatInboxConversation,
+  mirrorChatMessageToInbox,
+} from './chat-inbox-bridge';
 
 export type ChatWidgetRow = {
   id: number;
@@ -477,6 +481,7 @@ export class ChatWidgetRepository {
         [organizationId, inserted.rows[0].id],
       );
       const row = message.rows[0];
+      await mirrorChatMessageToInbox(client, organizationId, row.id);
       await this.realtimeOutbox.enqueue(client, {
         eventKey: `chat-agent-message:${request.rows[0].id}`,
         aggregateType: 'chat_session',
@@ -503,8 +508,10 @@ export class ChatWidgetRepository {
         visitor_email: string | null;
         visitor_phone: string | null;
         contact_id: number | null;
+        conversation_id: number | null;
       }>(
-        `SELECT visitor_name, visitor_email, visitor_phone, contact_id
+        `SELECT visitor_name, visitor_email, visitor_phone, contact_id,
+                conversation_id
          FROM chat_sessions
          WHERE organization_id=$1 AND id=$2
          FOR UPDATE`,
@@ -531,52 +538,58 @@ export class ChatWidgetRepository {
           userId,
         ],
       );
-      const conversation = await client.query<{ id: number }>(
-        `INSERT INTO conversations (
-           organization_id, contact_id, channel, subject, assigned_to
-         ) VALUES ($1,$2,'chat','Chat Widget Conversation',$3)
-         RETURNING id`,
-        [organizationId, contact.rows[0].id, userId],
+      let conversationId = session.rows[0].conversation_id;
+      if (!conversationId) {
+        conversationId = await ensureChatInboxConversation(
+          client,
+          organizationId,
+          sessionId,
+        );
+      }
+      const transcript = await client.query<{ id: number }>(
+        `SELECT id FROM chat_messages
+         WHERE organization_id=$1 AND session_id=$2
+         ORDER BY created_at, id`,
+        [organizationId, sessionId],
+      );
+      for (const message of transcript.rows) {
+        await mirrorChatMessageToInbox(client, organizationId, Number(message.id));
+      }
+      await client.query(
+        `UPDATE conversations
+         SET contact_id=$3, assigned_to=COALESCE(assigned_to,$4),
+             subject=COALESCE(NULLIF($5,''),subject),
+             updated_at=CURRENT_TIMESTAMP
+         WHERE organization_id=$1 AND id=$2`,
+        [
+          organizationId,
+          conversationId,
+          contact.rows[0].id,
+          userId,
+          session.rows[0].visitor_name,
+        ],
       );
       await client.query(
         `UPDATE chat_sessions
          SET contact_id=$1, conversation_id=$2, status='converted',
              is_online=FALSE, updated_at=CURRENT_TIMESTAMP
          WHERE organization_id=$3 AND id=$4`,
-        [
-          contact.rows[0].id,
-          conversation.rows[0].id,
-          organizationId,
-          sessionId,
-        ],
+        [contact.rows[0].id, conversationId, organizationId, sessionId],
       );
       await client.query(
-        `INSERT INTO messages (
-           conversation_id, organization_id, sender_type, sender_user_id,
-           sender_contact_id, channel, content, created_at
-         )
-         SELECT $1, $2,
-           CASE WHEN chat.sender_type='visitor' THEN 'contact' ELSE 'user' END,
-           chat.sender_user_id,
-           CASE
-             WHEN chat.sender_type='visitor' THEN $3::integer
-             ELSE NULL::integer
-           END,
-           'chat', chat.content, chat.created_at
+        `UPDATE messages inbox
+         SET sender_contact_id=$3
          FROM chat_messages chat
-         WHERE chat.organization_id=$2 AND chat.session_id=$4
-         ORDER BY chat.created_at, chat.id`,
-        [
-          conversation.rows[0].id,
-          organizationId,
-          contact.rows[0].id,
-          sessionId,
-        ],
+         WHERE chat.organization_id=$1 AND chat.session_id=$2
+           AND chat.sender_type='visitor'
+           AND chat.inbox_message_id=inbox.id
+           AND inbox.organization_id=chat.organization_id`,
+        [organizationId, sessionId, contact.rows[0].id],
       );
       return {
         kind: 'ok',
         contactId: Number(contact.rows[0].id),
-        conversationId: Number(conversation.rows[0].id),
+        conversationId: Number(conversationId),
       };
     });
   }

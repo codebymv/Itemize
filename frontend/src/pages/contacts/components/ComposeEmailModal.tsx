@@ -28,6 +28,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Contact } from '@/types';
 import { getEmailTemplates, sendEmailToContact, type EmailTemplate } from '@/services/emailApi';
 import { Loader2, Send, FileText, PenLine, Sparkles } from 'lucide-react';
+import { EmptyState } from '@/components/EmptyState';
 
 interface ComposeEmailModalProps {
     contact: Contact;
@@ -209,13 +210,7 @@ export function ComposeEmailModal({
                                 <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                             </div>
                         ) : templates.length === 0 ? (
-                            <div className="text-center py-8">
-                                <FileText className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                                <p className="text-muted-foreground">No email templates available</p>
-                                <p className="text-sm text-muted-foreground">
-                                    Create templates in the Automations section
-                                </p>
-                            </div>
+                            <EmptyState icon={FileText} kind="inline" title="No email templates available" />
                         ) : (
                             <div className="space-y-4">
                                 <div className="space-y-2">

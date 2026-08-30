@@ -9,12 +9,14 @@ export type MessageDeliveryResult = {
   replayed: boolean;
   contactId: number | null;
   templateId: number | null;
+  conversationId: number | null;
+  messageId: number | null;
   providerId: string | null;
   createdAt: string;
 };
 
 const fields = `
-  id kind channel status accepted replayed contactId templateId providerId createdAt
+  id kind channel status accepted replayed contactId templateId conversationId messageId providerId createdAt
 `;
 
 const deliveryResult = (delivery: MessageDeliveryResult) => ({
@@ -23,6 +25,8 @@ const deliveryResult = (delivery: MessageDeliveryResult) => ({
     ? 'Delivery was already queued'
     : 'Delivery queued',
   delivery_id: String(delivery.id),
+  conversation_id: delivery.conversationId ?? undefined,
+  message_id: delivery.messageId ?? undefined,
   status: delivery.status,
   replayed: delivery.replayed,
 });

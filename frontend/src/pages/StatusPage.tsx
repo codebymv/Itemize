@@ -111,15 +111,6 @@ const StatusPage: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const renderMobileRefreshButton = () => (
-    <RefreshButton
-      onClick={fetchStatus}
-      refreshing={isRefreshing}
-      variant="default"
-      className="font-light"
-    />
-  );
-
   const renderHeaderRefreshAction = () => (
     <HeaderRefreshAction
       onClick={fetchStatus}
@@ -263,10 +254,9 @@ const StatusPage: React.FC = () => {
     return (
       <PageLayout
         title="STATUS"
-        icon={<Server className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+        icon={<Server className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />}
         leading={backButton}
-        desktopTools={{ primaryAction: renderHeaderRefreshAction() }}
-        mobileActions={renderMobileRefreshButton()}
+        headerTools={{ secondaryAction: renderHeaderRefreshAction() }}
         className={cn('flex-1', !currentUser && PUBLIC_SHELL_WIDTH)}
       >
         <div className="space-y-4">
@@ -279,10 +269,9 @@ const StatusPage: React.FC = () => {
   return (
     <PageLayout
       title="STATUS"
-      icon={<Server className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+      icon={<Server className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />}
       leading={backButton}
-      desktopTools={{ primaryAction: renderHeaderRefreshAction() }}
-      mobileActions={renderMobileRefreshButton()}
+      headerTools={{ secondaryAction: renderHeaderRefreshAction() }}
       className={cn('flex-1', !currentUser && PUBLIC_SHELL_WIDTH)}
     >
       <BackgroundClouds />

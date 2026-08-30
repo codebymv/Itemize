@@ -8,6 +8,7 @@ import { useOrganization } from '@/hooks/useOrganization';
 import { useSubscriptionState } from '@/contexts/SubscriptionContext';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { ErrorState } from '@/components/ErrorState';
+import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { IntegrationProviderMark } from '@/components/brand/IntegrationProviderMark';
 import { SettingsPlanGate, SettingsSectionTitle } from '@/components/settings/SettingsPrimitives';
 import {
@@ -38,6 +39,7 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
     const [facebookChannel, setFacebookChannel] = useState<{ id: number; name: string } | null>(null);
     const [stripeConnected, setStripeConnected] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState(false);
     const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [syncing, setSyncing] = useState<number | null>(null);
     const [connecting, setConnecting] = useState<'google' | 'facebook' | 'stripe' | null>(null);
@@ -81,6 +83,7 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
     const fetchStatus = useCallback(async () => {
         if (!organizationId || subscriptionLoading || !isSubscribed) return;
         setLoading(true);
+        setLoadError(false);
         try {
             const [calendarRes, channelsRes, paymentRes] = await Promise.all([
                 getCalendarConnections(organizationId),
@@ -93,11 +96,11 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
             setFacebookChannel(facebook ? { id: facebook.id, name: facebook.name } : null);
             setStripeConnected(Boolean(paymentRes?.stripe_connected));
         } catch {
-            toast({ title: 'Error', description: 'Failed to load integrations', variant: 'destructive' });
+            setLoadError(true);
         } finally {
             setLoading(false);
         }
-    }, [isSubscribed, organizationId, subscriptionLoading, toast]);
+    }, [isSubscribed, organizationId, subscriptionLoading]);
 
     useEffect(() => {
         fetchStatus();
@@ -192,7 +195,7 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
         return (
             <PageLayout
                 title="INTEGRATIONS"
-                icon={<Plug className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+                icon={<Plug className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />}
             >
                 {planGate}
             </PageLayout>
@@ -201,17 +204,17 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
 
     if (initError) {
         const errorState = (
-            <ErrorState
+            <OrganizationErrorState
                 title="Unable to load integrations"
-                description={initError}
-                onAction={() => void fetchStatus()}
+                icon={Plug}
+                kind={embedded ? 'section' : 'page'}
             />
         );
         if (embedded) return errorState;
         return (
             <PageLayout
                 title="INTEGRATIONS"
-                icon={<Plug className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+                icon={<Plug className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />}
             >
                 {errorState}
             </PageLayout>
@@ -238,6 +241,14 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
                                 </div>
                             ))}
                         </div>
+                    ) : loadError ? (
+                        <ErrorState
+                            kind="section"
+                            icon={Plug}
+                            title="Unable to load integrations"
+                            description="We couldn't load your connection status. Try again."
+                            onRetry={() => void fetchStatus()}
+                        />
                     ) : (
                         <div className="divide-y rounded-lg border">
                             <IntegrationStatusRow
@@ -295,7 +306,7 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
                 </CardContent>
             </Card>
 
-            {!loading && connections.length > 0 ? (
+            {!loading && !loadError && connections.length > 0 ? (
                 <Card>
                     <CardHeader>
                         <SettingsSectionTitle icon={CalendarDays}>Calendar accounts</SettingsSectionTitle>
@@ -331,7 +342,7 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
     return (
         <PageLayout
             title="INTEGRATIONS"
-            icon={<Plug className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+            icon={<Plug className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />}
             surfaceClassName="space-y-6"
         >
             {content}

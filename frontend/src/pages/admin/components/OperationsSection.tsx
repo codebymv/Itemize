@@ -14,6 +14,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { STATUS_THEME_CLASSES } from '@/lib/statusVisuals';
 import { Button } from '@/components/ui/button';
+import { ErrorState } from '@/components/ErrorState';
+import { EmptyState } from '@/components/EmptyState';
 import { Card, CardContent } from '@/components/ui/card';
 import {
     HeaderRefreshAction,
@@ -172,6 +174,7 @@ function QueueDetailsPanel({
     bucket,
     onBucketChange,
     onLoadMore,
+    onRetry,
 }: {
     queue: adminApi.JobQueueHealth;
     details: adminApi.JobQueueDetails | null;
@@ -180,6 +183,7 @@ function QueueDetailsPanel({
     bucket: adminApi.JobQueueBucket;
     onBucketChange: (bucket: adminApi.JobQueueBucket) => void;
     onLoadMore: () => void;
+    onRetry: () => void;
 }) {
     const noAttempts = queue.status === 'degraded'
         && queue.queued > 0
@@ -251,13 +255,16 @@ function QueueDetailsPanel({
             )}
 
             {error && (
-                <div className="rounded-md border border-destructive/40 p-3 text-sm text-destructive">{error}</div>
+                <ErrorState
+                    kind="inline"
+                    title="Unable to load queue details"
+                    description={error}
+                    onAction={onRetry}
+                />
             )}
 
             {!loading && details && details.items.length === 0 && (
-                <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
-                    No jobs in this state.
-                </div>
+                <EmptyState kind="inline" title="No jobs in this state" />
             )}
 
             {details && details.items.length > 0 && (
@@ -456,14 +463,14 @@ export default function OperationsSection({
 
     if (error || !snapshot) {
         return (
-            <Card className="border-destructive/40">
-                <CardContent className="flex flex-col items-center gap-3 p-8 text-center">
-                    <AlertTriangle className="h-8 w-8 text-destructive" />
-                    <div>
-                        <p className="font-medium">Unable to load operations</p>
-                        <p className="mt-1 text-sm text-muted-foreground">{error}</p>
-                    </div>
-                    <Button onClick={() => void load()} variant="outline">Try again</Button>
+            <Card>
+                <CardContent className="p-0">
+                    <ErrorState
+                        kind="section"
+                        title="Unable to load operations"
+                        description={error || "We couldn't load production operations. Try again."}
+                        onAction={() => void load()}
+                    />
                 </CardContent>
             </Card>
         );
@@ -615,6 +622,7 @@ export default function OperationsSection({
                                                         bucket={detailsBucket}
                                                         onBucketChange={(bucket) => changeBucket(queue.id, bucket)}
                                                         onLoadMore={() => void loadDetails(queue.id, detailsBucket, true)}
+                                                        onRetry={() => void loadDetails(queue.id, detailsBucket)}
                                                     />
                                                 </TableCell>
                                             </TableRow>
@@ -668,6 +676,7 @@ export default function OperationsSection({
                                             bucket={detailsBucket}
                                             onBucketChange={(bucket) => changeBucket(queue.id, bucket)}
                                             onLoadMore={() => void loadDetails(queue.id, detailsBucket, true)}
+                                            onRetry={() => void loadDetails(queue.id, detailsBucket)}
                                         />
                                     )}
                                 </CardContent>

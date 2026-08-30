@@ -2,6 +2,10 @@ import { randomUUID } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
+import {
+  mirrorSocialMessageToInbox,
+  syncSocialMessageDeliveryToInbox,
+} from './social-inbox-bridge';
 
 export type SocialChannelRow = {
   id: number;
@@ -562,6 +566,11 @@ export class SocialRepository {
           input.fingerprint,
         ],
       );
+      await mirrorSocialMessageToInbox(
+        client,
+        input.organizationId,
+        insertedMessage.rows[0].id,
+      );
       const message = await this.selectMessage(
         client,
         input.organizationId,
@@ -675,6 +684,11 @@ export class SocialRepository {
          WHERE organization_id=$1 AND id=$2`,
         [organizationId, jobId, providerId],
       );
+      await syncSocialMessageDeliveryToInbox(
+        client,
+        organizationId,
+        job.social_message_id,
+      );
     });
   }
 
@@ -683,20 +697,25 @@ export class SocialRepository {
     jobId: number,
     message: string,
   ): Promise<void> {
-    await this.pool.query(
-      `WITH failed AS (
-         UPDATE social_message_delivery_jobs
+    await this.transaction(async (client) => {
+      const failed = await client.query<{ social_message_id: number }>(
+        `UPDATE social_message_delivery_jobs
          SET status='dead_letter', lease_expires_at=NULL, claimed_by=NULL,
              last_error=$3, updated_at=CURRENT_TIMESTAMP
          WHERE organization_id=$1 AND id=$2 AND status='processing'
-         RETURNING social_message_id
-       )
-       UPDATE social_messages target
-       SET status='failed', error_message=$3
-       FROM failed
-       WHERE target.organization_id=$1 AND target.id=failed.social_message_id`,
-      [organizationId, jobId, message.slice(0, 2_000)],
-    );
+         RETURNING social_message_id`,
+        [organizationId, jobId, message.slice(0, 2_000)],
+      );
+      const socialMessageId = failed.rows[0]?.social_message_id;
+      if (!socialMessageId) return;
+      await client.query(
+        `UPDATE social_messages
+         SET status='failed', error_message=$3
+         WHERE organization_id=$1 AND id=$2`,
+        [organizationId, socialMessageId, message.slice(0, 2_000)],
+      );
+      await syncSocialMessageDeliveryToInbox(client, organizationId, socialMessageId);
+    });
   }
 
   async requireReconciliation(
@@ -704,20 +723,24 @@ export class SocialRepository {
     jobId: number,
     message: string,
   ): Promise<void> {
-    await this.pool.query(
-      `WITH uncertain AS (
-         UPDATE social_message_delivery_jobs
+    await this.transaction(async (client) => {
+      const uncertain = await client.query<{ social_message_id: number }>(
+        `UPDATE social_message_delivery_jobs
          SET status='reconciliation_required', lease_expires_at=NULL,
              claimed_by=NULL, last_error=$3, updated_at=CURRENT_TIMESTAMP
          WHERE organization_id=$1 AND id=$2 AND status='processing'
-         RETURNING social_message_id
-       )
-       UPDATE social_messages target
-       SET error_message=$3
-       FROM uncertain
-       WHERE target.organization_id=$1 AND target.id=uncertain.social_message_id`,
-      [organizationId, jobId, message.slice(0, 2_000)],
-    );
+         RETURNING social_message_id`,
+        [organizationId, jobId, message.slice(0, 2_000)],
+      );
+      const socialMessageId = uncertain.rows[0]?.social_message_id;
+      if (!socialMessageId) return;
+      await client.query(
+        `UPDATE social_messages SET error_message=$3
+         WHERE organization_id=$1 AND id=$2`,
+        [organizationId, socialMessageId, message.slice(0, 2_000)],
+      );
+      await syncSocialMessageDeliveryToInbox(client, organizationId, socialMessageId);
+    });
   }
 
   private async selectConversation(

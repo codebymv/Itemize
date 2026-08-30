@@ -18,6 +18,7 @@ import { ActivityTimeline } from '../activity-timeline'
 import { ClientDocumentsTab } from './ClientDocumentsTab'
 import { ClientCommunicationsTab } from './ClientCommunicationsTab'
 import { ClientPaymentsTab } from './ClientPaymentsTab'
+import { EmptyState } from '@/components/EmptyState'
 import type { ClientProfile } from '@/design-system/types/client.types'
 
 interface ClientProfileProps {
@@ -199,7 +200,7 @@ export function ClientProfile({
             </CardHeader>
             <CardContent>
               {client.tasks.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No tasks yet</p>
+                <EmptyState icon={CheckCircle2} kind="inline" title="No tasks yet" />
               ) : (
                 <div className="space-y-2">
                   {client.tasks.map((task) => (

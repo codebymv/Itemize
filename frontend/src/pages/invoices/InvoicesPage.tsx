@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Plus,
-    Search,
     Receipt,
     MoreHorizontal,
     MoreVertical,
@@ -65,7 +64,6 @@ import { PaymentLinkModal } from '@/components/PaymentLinkModal';
 import { RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PageLayout } from '@/components/layout/PageLayout';
-import { MobileQueryBar } from '@/components/layout/MobileQueryBar';
 import {
     HeaderAction,
     HeaderCombinedQuery,
@@ -74,6 +72,7 @@ import {
 } from '@/components/layout/DesktopHeaderTools';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { StatCard } from '@/components/StatCard';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
@@ -133,6 +132,7 @@ export function InvoicesPage() {
 
     const [invoices, setInvoices] = useState<Invoice[]>([]);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState<string | null>(null);
     const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({
         onError: () => 'Failed to initialize.'
     });
@@ -146,6 +146,7 @@ export function InvoicesPage() {
     const [expandedInvoiceId, setExpandedInvoiceId] = useState<number | null>(null);
     const [expandedInvoiceData, setExpandedInvoiceData] = useState<ApiInvoice | null>(null);
     const [loadingPreview, setLoadingPreview] = useState(false);
+    const [previewError, setPreviewError] = useState(false);
     
     // Send invoice modal state
     const [showSendModal, setShowSendModal] = useState(false);
@@ -181,15 +182,16 @@ export function InvoicesPage() {
             return;
         }
         setLoading(true);
+        setLoadError(null);
         try {
             const response = await getInvoices({}, organizationId);
             setInvoices(response.invoices || []);
-        } catch (error) {
-            toast({ title: 'Error', description: toastMessages.failedToLoad('invoices'), variant: 'destructive' });
+        } catch {
+            setLoadError('Invoices could not be loaded. Try again.');
         } finally {
             setLoading(false);
         }
-    }, [organizationId, orgLoading, toast]);
+    }, [organizationId, orgLoading]);
 
     useEffect(() => {
         fetchInvoices();
@@ -490,32 +492,32 @@ export function InvoicesPage() {
         }
     };
 
-    const handleToggleExpand = async (invoiceId: number, e: React.MouseEvent) => {
-        e.stopPropagation();
-        
-        // If clicking on already expanded invoice, collapse it
-        if (expandedInvoiceId === invoiceId) {
-            setExpandedInvoiceId(null);
-            setExpandedInvoiceData(null);
-            return;
-        }
-        
-        // Expand new invoice
+    const loadExpandedInvoice = async (invoiceId: number) => {
+        if (!organizationId) return;
         setExpandedInvoiceId(invoiceId);
         setExpandedInvoiceData(null);
+        setPreviewError(false);
         setLoadingPreview(true);
-        
-        if (!organizationId) return;
-        
+
         try {
             const invoice = await getInvoice(invoiceId, organizationId);
             setExpandedInvoiceData(invoice);
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to load invoice details', variant: 'destructive' });
-            setExpandedInvoiceId(null);
+        } catch {
+            setPreviewError(true);
         } finally {
             setLoadingPreview(false);
         }
+    };
+
+    const handleToggleExpand = (invoiceId: number, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (expandedInvoiceId === invoiceId) {
+            setExpandedInvoiceId(null);
+            setExpandedInvoiceData(null);
+            setPreviewError(false);
+            return;
+        }
+        void loadExpandedInvoice(invoiceId);
     };
 
     // Helper to format date without timezone issues
@@ -633,11 +635,7 @@ export function InvoicesPage() {
                 title="INVOICES"
                 icon={<Receipt className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
             >
-                <ErrorState
-                    title="Failed to initialize"
-                    description={initError}
-                    onAction={() => void fetchInvoices()}
-                />
+                <OrganizationErrorState title="Unable to load invoices" icon={Receipt} />
             </PageLayout>
         );
     }
@@ -646,8 +644,7 @@ export function InvoicesPage() {
         <PageLayout
             title="INVOICES"
             icon={<Receipt className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
-            mobileClassName="flex-col items-stretch"
-            desktopTools={{
+            headerTools={{
                 search: (
                     <HeaderSearch
                         label="Search invoices"
@@ -708,37 +705,6 @@ export function InvoicesPage() {
                     />
                 ),
             }}
-            mobileActions={
-                <MobileQueryBar
-                  search={
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                            aria-label="Search invoices"
-                            placeholder="Search invoices..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50 w-full"
-                        />
-                    </div>
-                  }
-                  filters={
-                    <HeaderCombinedQuery label="Search and filter invoices" placeholder="Search invoices..." value={searchQuery} onChange={setSearchQuery} activeCount={headerQueryCount}>
-                      <div className="space-y-2"><InvoiceViewSelect value="invoices" onValueChange={handleInvoiceViewChange} compact />{statusFilter(true)}</div>
-                    </HeaderCombinedQuery>
-                  }
-                  actions={
-                    <Button
-                        size="icon"
-                        aria-label="New invoice"
-                        className="h-11 w-11 bg-blue-600 text-white hover:bg-blue-700"
-                        onClick={handleCreateInvoice}
-                    >
-                        <Plus className="h-4 w-4" />
-                    </Button>
-                  }
-                />
-            }
         >
             <OnboardingModal
                 isOpen={showOnboarding}
@@ -749,7 +715,7 @@ export function InvoicesPage() {
             />
 
             {/* Summary Cards */}
-            <ResponsiveCardRail
+            {!loadError ? <ResponsiveCardRail
                 label="Invoice status summary"
                 desktopColumns="md:grid-cols-4"
                 className="responsive-stat-summary"
@@ -790,7 +756,7 @@ export function InvoicesPage() {
                     colorTheme={getInvoiceStatusVisual('paid').theme}
                     isLoading={loading}
                 />
-            </ResponsiveCardRail>
+            </ResponsiveCardRail> : null}
 
             {/* Invoice List */}
             <Card>
@@ -799,17 +765,24 @@ export function InvoicesPage() {
                         <div className="p-6 space-y-4">
                             {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-20" />)}
                         </div>
+                    ) : loadError ? (
+                        <ErrorState
+                            kind="section"
+                            icon={Receipt}
+                            title="Unable to load invoices"
+                            description={loadError}
+                            onRetry={() => void fetchInvoices()}
+                        />
                     ) : filteredInvoices.length === 0 ? (
                         <EmptyState
                             icon={Receipt}
-                            title={activeTab === 'all' ? 'No invoices yet' : `No ${activeTab} invoices`}
-                            description={
-                                activeTab === 'all'
-                                    ? 'Create invoices to bill your customers'
-                                    : `You don't have any ${activeTab} invoices`
-                            }
-                            actionLabel={activeTab === 'all' ? 'New invoice' : undefined}
-                            onAction={activeTab === 'all' ? handleCreateInvoice : undefined}
+                            kind={headerQueryCount > 0 ? 'results' : 'collection'}
+                            title={headerQueryCount > 0 ? 'No matching invoices' : 'No invoices yet'}
+                            description={headerQueryCount > 0 ? undefined : 'Create an invoice to bill a customer.'}
+                            actionLabel={headerQueryCount > 0 ? 'Clear filters' : 'New invoice'}
+                            onAction={headerQueryCount > 0
+                                ? () => { setSearchQuery(''); setActiveTab('all'); }
+                                : handleCreateInvoice}
                             className="p-12"
                         />
                     ) : (
@@ -1104,6 +1077,14 @@ export function InvoicesPage() {
                                                         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                                                         <span className="ml-2 text-muted-foreground">Loading preview...</span>
                                                     </div>
+                                                ) : previewError ? (
+                                                    <ErrorState
+                                                        kind="inline"
+                                                        icon={Receipt}
+                                                        title="Unable to load invoice preview"
+                                                        description="The invoice is still available to edit."
+                                                        onRetry={() => void loadExpandedInvoice(invoice.id)}
+                                                    />
                                                 ) : expandedInvoiceData ? (
                                                     <div className="max-w-3xl mx-auto">
                                                         <InvoicePreviewCard

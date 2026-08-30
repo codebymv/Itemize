@@ -8,7 +8,6 @@ import {
   Pencil,
   Play,
   Plus,
-  Search,
   Send,
   Trash2,
   XCircle,
@@ -35,8 +34,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Input } from '@/components/ui/input';
-import { MobileQueryBar } from '@/components/layout/MobileQueryBar';
 import {
   Select,
   SelectContent,
@@ -55,6 +52,7 @@ import { PageLayout } from '@/components/layout/PageLayout';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { StatCard } from '@/components/StatCard';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
@@ -309,7 +307,7 @@ export function CampaignsPage() {
   if (initError) {
     return (
       <PageLayout title="CAMPAIGNS" icon={<Megaphone className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}>
-        <ErrorState title="Unable to load campaigns" description={initError} icon={Megaphone} onAction={() => void fetchCampaigns()} />
+        <OrganizationErrorState title="Unable to load campaigns" icon={Megaphone} />
       </PageLayout>
     );
   }
@@ -318,8 +316,7 @@ export function CampaignsPage() {
     <PageLayout
       title="CAMPAIGNS"
       icon={<Megaphone className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
-      mobileClassName="items-stretch"
-      desktopTools={{
+      headerTools={{
         search: (
           <HeaderSearch label="Search campaigns" placeholder="Search campaigns..." value={searchQuery} onChange={setSearchQuery} width="wide" />
         ),
@@ -343,18 +340,6 @@ export function CampaignsPage() {
           <HeaderAction label="New campaign" icon={<Plus className="h-4 w-4" />} onClick={() => navigate('/campaigns/new')} />
         ),
       }}
-      mobileActions={(
-        <MobileQueryBar
-          search={<div className="relative min-w-0 flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input aria-label="Search campaigns" placeholder="Search campaigns..." value={searchQuery} onChange={event => setSearchQuery(event.target.value)} className="h-11 w-full bg-muted/20 pl-10" />
-          </div>}
-          filters={<div className="w-[6.25rem]">{statusSelect(true)}</div>}
-          actions={<Button size="icon" aria-label="New campaign" className="h-11 w-11 shrink-0 bg-blue-600 text-white hover:bg-blue-700" onClick={() => navigate('/campaigns/new')}>
-            <Plus className="h-4 w-4" />
-          </Button>}
-        />
-      )}
     >
       <OnboardingModal isOpen={onboarding.showModal} onClose={onboarding.handleClose} onComplete={onboarding.handleComplete} onDismiss={onboarding.handleDismiss} content={ONBOARDING_CONTENT.campaigns} />
 
@@ -377,6 +362,7 @@ export function CampaignsPage() {
           ) : filteredCampaigns.length === 0 ? (
             <EmptyState
               icon={Megaphone}
+              kind={hasQuery ? 'results' : 'collection'}
               title={hasQuery ? 'No matching campaigns' : 'No campaigns yet'}
               description={hasQuery ? 'Try a different search or clear the current filters.' : 'Create a campaign draft to begin preparing your message.'}
               actionLabel={hasQuery ? 'Clear filters' : 'New campaign'}

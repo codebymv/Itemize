@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Plus,
-    Search,
     RefreshCw,
     MoreHorizontal,
     MoreVertical,
@@ -69,7 +68,6 @@ import {
 import { useOrganization } from '@/hooks/useOrganization';
 import { InvoicePreviewCard } from './components/InvoicePreviewCard';
 import { PageLayout } from '@/components/layout/PageLayout';
-import { MobileQueryBar } from '@/components/layout/MobileQueryBar';
 import {
     HeaderAction,
     HeaderCombinedQuery,
@@ -78,6 +76,7 @@ import {
 } from '@/components/layout/DesktopHeaderTools';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { StatCard } from '@/components/StatCard';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
@@ -151,6 +150,7 @@ export function RecurringInvoicesPage() {
     const [expandedId, setExpandedId] = useState<number | null>(null);
     const [expandedData, setExpandedData] = useState<RecurringInvoice | null>(null);
     const [loadingPreview, setLoadingPreview] = useState(false);
+    const [previewError, setPreviewError] = useState(false);
     const [previewInvoiceNumber, setPreviewInvoiceNumber] = useState<string>('INV-00001');
     const autoExpandedScheduleRef = useRef<number | null>(null);
     
@@ -389,6 +389,7 @@ export function RecurringInvoicesPage() {
         if (!organizationId) return;
         setExpandedId(recurringId);
         setExpandedData(null);
+        setPreviewError(false);
         setLoadingPreview(true);
 
         try {
@@ -398,13 +399,12 @@ export function RecurringInvoicesPage() {
             ]);
             setExpandedData(recurring);
             setPreviewInvoiceNumber(previewNumber);
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to load recurring schedule details', variant: 'destructive' });
-            setExpandedId(null);
+        } catch {
+            setPreviewError(true);
         } finally {
             setLoadingPreview(false);
         }
-    }, [organizationId, toast]);
+    }, [organizationId]);
 
     const handleToggleExpand = async (recurringId: number, e: React.MouseEvent) => {
         e.stopPropagation();
@@ -412,6 +412,7 @@ export function RecurringInvoicesPage() {
         if (expandedId === recurringId) {
             setExpandedId(null);
             setExpandedData(null);
+            setPreviewError(false);
             return;
         }
 
@@ -515,8 +516,7 @@ export function RecurringInvoicesPage() {
         <PageLayout
             title="INVOICES"
             icon={<Receipt className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
-            mobileClassName="flex-col items-stretch"
-            desktopTools={{
+            headerTools={{
                 search: (
                     <HeaderSearch
                         label="Search recurring schedules"
@@ -577,33 +577,6 @@ export function RecurringInvoicesPage() {
                     />
                 ),
             }}
-            mobileActions={
-                <MobileQueryBar
-                  search={
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                            aria-label="Search recurring invoice schedules"
-                            placeholder="Search schedules..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 h-9 bg-muted/20 border-border/50 w-full"
-                        />
-                    </div>
-                  }
-                  filters={<HeaderCombinedQuery label="Search and filter schedules" placeholder="Search schedules..." value={searchQuery} onChange={setSearchQuery} activeCount={headerQueryCount}><div className="space-y-2"><InvoiceViewSelect value="recurring" onValueChange={handleInvoiceViewChange} compact />{statusFilter(true)}</div></HeaderCombinedQuery>}
-                  actions={
-                    <Button
-                        size="icon"
-                        aria-label="New schedule"
-                        className="h-11 w-11 bg-blue-600 text-white hover:bg-blue-700"
-                        onClick={openCreateDialog}
-                    >
-                        <Plus className="h-4 w-4" />
-                    </Button>
-                  }
-                />
-            }
         >
                 {!loadError && (
                 <ResponsiveCardRail
@@ -649,19 +622,21 @@ export function RecurringInvoicesPage() {
                             {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20" />)}
                         </div>
                     ) : loadError ? (
-                        <ErrorState
-                            title="Unable to load recurring schedules"
-                            description={loadError}
-                            actionLabel="Try again"
-                            onAction={() => void fetchRecurringInvoices()}
-                        />
+                        initError ? (
+                            <OrganizationErrorState kind="section" title="Unable to load recurring schedules" />
+                        ) : (
+                            <ErrorState kind="section" title="Unable to load recurring schedules" description={loadError} onAction={() => void fetchRecurringInvoices()} />
+                        )
                     ) : filteredRecurring.length === 0 ? (
                         <EmptyState
                             icon={RefreshCw}
-                            title="No recurring schedules yet"
-                            description="Create a schedule to automate repeat billing"
-                            actionLabel="Create schedule"
-                            onAction={openCreateDialog}
+                            kind={headerQueryCount > 0 ? 'results' : 'collection'}
+                            title={headerQueryCount > 0 ? 'No matching schedules' : 'No recurring schedules yet'}
+                            description={headerQueryCount > 0 ? undefined : 'Create a schedule to automate repeat billing.'}
+                            actionLabel={headerQueryCount > 0 ? 'Clear filters' : 'Create schedule'}
+                            onAction={headerQueryCount > 0
+                                ? () => { setSearchQuery(''); setActiveTab('all'); }
+                                : openCreateDialog}
                             className="p-12"
                         />
                     ) : (
@@ -867,6 +842,14 @@ export function RecurringInvoicesPage() {
                                                         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                                                         <span className="ml-2 text-muted-foreground">Loading details...</span>
                                                     </div>
+                                                ) : previewError ? (
+                                                    <ErrorState
+                                                        kind="inline"
+                                                        icon={Receipt}
+                                                        title="Unable to load schedule details"
+                                                        description="The recurring schedule is still available to edit."
+                                                        onRetry={() => void loadExpandedRecurring(recurring.id)}
+                                                    />
                                                 ) : expandedData ? (
                                                     <div className="max-w-6xl mx-auto">
                                                         {/* Two Column Layout: Preview + Schedule Details */}

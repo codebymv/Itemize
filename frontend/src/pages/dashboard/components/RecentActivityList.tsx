@@ -1,5 +1,6 @@
 import React from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EmptyState } from '@/components/EmptyState';
 import type { DashboardAnalytics } from '@/services/analyticsApi';
 import {
     Mail,
@@ -120,11 +121,7 @@ export function RecentActivityList({ activities, isLoading }: { activities: Dash
     }
 
     if (!activities || activities.length === 0) {
-        return (
-            <div className="text-center text-muted-foreground py-8">
-                No recent activity yet
-            </div>
-        );
+        return <EmptyState icon={Clock} kind="inline" title="No recent activity yet" />;
     }
 
     return (

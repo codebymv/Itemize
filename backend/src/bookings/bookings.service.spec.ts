@@ -58,6 +58,7 @@ describe('BookingsService', () => {
     const result = await service.list(
       3,
       {
+        search: '  Ada  ',
         calendarId: 4,
         status: BookingStatus.CONFIRMED,
         startDate,
@@ -78,6 +79,7 @@ describe('BookingsService', () => {
     });
     expect(repository.findPage).toHaveBeenCalledWith({
       organizationId: 3,
+      search: 'Ada',
       calendarId: 4,
       status: BookingStatus.CONFIRMED,
       startDate,
@@ -94,6 +96,13 @@ describe('BookingsService', () => {
       Partial<GraphQLError>
     >({
       extensions: expect.objectContaining({ code: 'BAD_USER_INPUT', field }),
+    });
+    expect(repository.findPage).not.toHaveBeenCalled();
+  });
+
+  it('rejects an oversized booking search before querying', async () => {
+    await expect(service.list(3, { search: 'x'.repeat(201) })).rejects.toMatchObject({
+      extensions: expect.objectContaining({ code: 'BAD_USER_INPUT', field: 'search', reason: 'TOO_LONG' }),
     });
     expect(repository.findPage).not.toHaveBeenCalled();
   });

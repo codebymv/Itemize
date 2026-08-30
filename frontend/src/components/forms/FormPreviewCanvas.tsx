@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { ListPlus } from 'lucide-react';
 
 import type { Form, FormField, JsonRecord, JsonValue } from '@/types';
 import { publicFormFieldState } from '@/pages/forms/publicFormBehavior';
+import { PreviewPlaceholder } from '@/components/preview/PreviewPlaceholder';
 import { cn } from '@/lib/utils';
 
 const fieldKey = (field: FormField) => String(field.id ?? field.field_order);
@@ -130,7 +132,14 @@ export function FormPreviewCanvas({ form, className, idPrefix = 'form-preview' }
               </div>
             );
           })}
-          {fields.length === 0 && <p className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">No fields have been added yet.</p>}
+          {fields.length === 0 && (
+            <PreviewPlaceholder
+              icon={ListPlus}
+              size="compact"
+              title="No fields yet"
+              description="Add a field to build this form."
+            />
+          )}
           <button
             type="button"
             aria-disabled="true"

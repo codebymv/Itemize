@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { EmptyState } from '@/components/EmptyState';
 import { cn } from '@/lib/utils';
 
 export interface EmailTemplateBrowserItem {
@@ -145,12 +146,16 @@ export function EmailTemplateBrowserDialog<T extends EmailTemplateBrowserItem>({
               {loading ? (
                 <div className="flex h-full min-h-48 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-blue-600" /></div>
               ) : filteredItems.length === 0 ? (
-                <div className="flex h-full min-h-48 flex-col items-center justify-center px-6 text-center">
-                  <FileText className="mb-3 h-10 w-10 text-muted-foreground/50" />
-                  <p className="font-medium">{hasQuery ? 'No matching templates' : emptyTitle}</p>
-                  <p className="mt-1 max-w-sm text-sm text-muted-foreground">{hasQuery ? 'Try a different search or category.' : emptyDescription}</p>
-                  {hasQuery && <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => { setSearchQuery(''); setCategory('all'); }}>Clear filters</Button>}
-                </div>
+                <EmptyState
+                  icon={FileText}
+                  kind={hasQuery ? 'results' : 'passive'}
+                  size="compact"
+                  title={hasQuery ? 'No matching templates' : emptyTitle}
+                  description={hasQuery ? undefined : emptyDescription}
+                  actionLabel={hasQuery ? 'Clear filters' : undefined}
+                  onAction={hasQuery ? () => { setSearchQuery(''); setCategory('all'); } : undefined}
+                  className="h-full min-h-48"
+                />
               ) : (
                 <div className="divide-y rounded-lg border">
                   {filteredItems.map(item => {

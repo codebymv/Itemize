@@ -60,6 +60,8 @@ export type NotificationIconKind =
   | 'organization'
   | 'estimate'
   | 'billing'
+  | 'communication'
+  | 'communication-failed'
   | 'default';
 
 export function getNotificationIconKind(
@@ -71,6 +73,8 @@ export function getNotificationIconKind(
   if (eventType === 'subscription.plan_changed') return 'subscription';
   if (eventType === 'invoice.paid') return 'paid';
   if (eventType === 'payment.refunded') return 'refunded';
+  if (eventType === 'communication.delivery_failed') return 'communication-failed';
+  if (eventType.startsWith('communication.')) return 'communication';
   if (eventType === 'estimate.accepted') return 'accepted';
   if (eventType === 'estimate.declined' || eventType === 'signature.declined') return 'declined';
   if (eventType === 'signature.signed') return 'signed';

@@ -13,6 +13,8 @@ async function runMessageDeliveryMigration(pool) {
       contact_id INTEGER REFERENCES contacts(id) ON DELETE SET NULL,
       email_template_id INTEGER REFERENCES email_templates(id) ON DELETE SET NULL,
       sms_template_id INTEGER REFERENCES sms_templates(id) ON DELETE SET NULL,
+      conversation_id INTEGER REFERENCES conversations(id) ON DELETE SET NULL,
+      message_id INTEGER REFERENCES messages(id) ON DELETE SET NULL,
       payload JSONB NOT NULL,
       status VARCHAR(32) NOT NULL DEFAULT 'queued' CHECK (
         status IN (
@@ -66,4 +68,23 @@ async function runMessageDeliveryMigration(pool) {
   return true;
 }
 
-module.exports = { runMessageDeliveryMigration };
+async function runMessageDeliveryConversationLinkMigration(pool) {
+  await pool.query(`
+    ALTER TABLE message_delivery_jobs
+      ADD COLUMN IF NOT EXISTS conversation_id INTEGER REFERENCES conversations(id) ON DELETE SET NULL,
+      ADD COLUMN IF NOT EXISTS message_id INTEGER REFERENCES messages(id) ON DELETE SET NULL;
+
+    CREATE INDEX IF NOT EXISTS idx_message_delivery_jobs_conversation
+      ON message_delivery_jobs(organization_id, conversation_id, created_at DESC)
+      WHERE conversation_id IS NOT NULL;
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_message_delivery_jobs_message
+      ON message_delivery_jobs(message_id)
+      WHERE message_id IS NOT NULL;
+  `);
+  return true;
+}
+
+module.exports = {
+  runMessageDeliveryMigration,
+  runMessageDeliveryConversationLinkMigration,
+};

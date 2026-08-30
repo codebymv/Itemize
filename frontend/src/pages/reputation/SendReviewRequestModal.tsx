@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Send, User, Users, Mail, MessageSquare, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -28,6 +27,8 @@ import { useToast } from '@/hooks/use-toast';
 import { sendReviewRequest, sendBulkReviewRequests } from '@/services/reputationApi';
 import { getContacts } from '@/services/contactsApi';
 import { debounce } from 'lodash';
+import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
 
 const getApiErrorMessage = (error: unknown, fallback: string): string => {
   const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
@@ -72,6 +73,7 @@ export function SendReviewRequestModal({
   const [searchQuery, setSearchQuery] = useState('');
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [contactsLoading, setContactsLoading] = useState(false);
+  const [contactsLoadError, setContactsLoadError] = useState(false);
   
   // Single request form
   const [singleForm, setSingleForm] = useState({
@@ -97,9 +99,9 @@ export function SendReviewRequestModal({
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
 
   // Fetch contacts for search/selection
-  const fetchContacts = useCallback(
-    debounce(async (search: string) => {
+  const fetchContacts = useMemo(() => debounce(async (search: string) => {
       setContactsLoading(true);
+      setContactsLoadError(false);
       try {
         const response = await getContacts({
           organization_id: organizationId,
@@ -109,21 +111,16 @@ export function SendReviewRequestModal({
         setContacts(response.contacts || []);
       } catch (error) {
         console.error('Error fetching contacts:', error);
+        setContactsLoadError(true);
       } finally {
         setContactsLoading(false);
       }
-    }, 300),
-    [organizationId]
-  );
+    }, 300), [organizationId]);
 
   useEffect(() => {
     fetchContacts(searchQuery);
+    return () => fetchContacts.cancel();
   }, [searchQuery, fetchContacts]);
-
-  // Initial fetch
-  useEffect(() => {
-    fetchContacts('');
-  }, []);
 
   const getContactDisplayName = (contact: Contact) => {
     const name = [contact.first_name, contact.last_name].filter(Boolean).join(' ');
@@ -289,15 +286,12 @@ export function SendReviewRequestModal({
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Send className="h-5 w-5 text-blue-600" />
             Send Review Request
           </DialogTitle>
-          <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>
-            Request reviews from your customers via email or SMS
-          </DialogDescription>
         </DialogHeader>
 
         <Tabs value={mode} onValueChange={(v) => setMode(v as 'single' | 'bulk')} className="flex-1 flex flex-col overflow-hidden">
@@ -329,7 +323,6 @@ export function SendReviewRequestModal({
                 <Label
                   htmlFor="useExisting"
                   className="text-sm font-normal cursor-pointer"
-                  style={{ fontFamily: '"Raleway", sans-serif' }}
                 >
                   Select from existing contacts
                 </Label>
@@ -337,7 +330,7 @@ export function SendReviewRequestModal({
 
               {singleForm.useExistingContact ? (
                 <div className="space-y-2">
-                  <Label style={{ fontFamily: '"Raleway", sans-serif' }}>
+                  <Label>
                     Select Contact <span className="text-red-500">*</span>
                   </Label>
                   <Input
@@ -348,8 +341,22 @@ export function SendReviewRequestModal({
                   <ScrollArea className="h-[150px] border rounded-md">
                     {contactsLoading ? (
                       <div className="p-4 text-center text-muted-foreground">Loading...</div>
+                    ) : contactsLoadError ? (
+                      <ErrorState
+                        icon={User}
+                        kind="inline"
+                        title="Unable to load contacts"
+                        onRetry={() => fetchContacts(searchQuery)}
+                      />
                     ) : contacts.length === 0 ? (
-                      <div className="p-4 text-center text-muted-foreground">No contacts found</div>
+                      <EmptyState
+                        icon={User}
+                        kind={searchQuery ? 'results' : 'passive'}
+                        title={searchQuery ? 'No matching contacts' : 'No contacts yet'}
+                        actionLabel={searchQuery ? 'Clear search' : undefined}
+                        onAction={searchQuery ? () => setSearchQuery('') : undefined}
+                        className="h-full py-4"
+                      />
                     ) : (
                       <div className="p-2">
                         {contacts.map((contact) => (
@@ -380,7 +387,7 @@ export function SendReviewRequestModal({
               ) : (
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="contact_name" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                    <Label htmlFor="contact_name">
                       Contact Name
                     </Label>
                     <Input
@@ -390,9 +397,9 @@ export function SendReviewRequestModal({
                       placeholder="John Doe"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="contact_email" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                      <Label htmlFor="contact_email">
                         Email {singleForm.channel !== 'sms' && <span className="text-red-500">*</span>}
                       </Label>
                       <Input
@@ -404,7 +411,7 @@ export function SendReviewRequestModal({
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="contact_phone" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                      <Label htmlFor="contact_phone">
                         Phone {singleForm.channel !== 'email' && <span className="text-red-500">*</span>}
                       </Label>
                       <Input
@@ -421,13 +428,13 @@ export function SendReviewRequestModal({
 
               {/* Channel Selection */}
               <div className="space-y-2">
-                <Label style={{ fontFamily: '"Raleway", sans-serif' }}>
+                <Label>
                   Send Via <span className="text-red-500">*</span>
                 </Label>
                 <RadioGroup
                   value={singleForm.channel}
                   onValueChange={(v) => setSingleForm(prev => ({ ...prev, channel: v as 'email' | 'sms' | 'both' }))}
-                  className="flex gap-4"
+                  className="flex flex-wrap gap-4"
                 >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="email" id="channel-email" />
@@ -450,7 +457,7 @@ export function SendReviewRequestModal({
 
               {/* Platform and Message */}
               <div className="space-y-2">
-                <Label htmlFor="platform" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                <Label htmlFor="platform">
                   Preferred Review Platform
                 </Label>
                 <Select
@@ -469,7 +476,7 @@ export function SendReviewRequestModal({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="message" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                <Label htmlFor="message">
                   Custom Message (Optional)
                 </Label>
                 <Textarea
@@ -486,7 +493,7 @@ export function SendReviewRequestModal({
               {/* Contact Multi-Select */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label style={{ fontFamily: '"Raleway", sans-serif' }}>
+                  <Label>
                     Select Contacts <span className="text-red-500">*</span>
                   </Label>
                   <Badge variant="secondary">
@@ -501,8 +508,22 @@ export function SendReviewRequestModal({
                 <ScrollArea className="h-[200px] border rounded-md">
                   {contactsLoading ? (
                     <div className="p-4 text-center text-muted-foreground">Loading...</div>
+                  ) : contactsLoadError ? (
+                    <ErrorState
+                      icon={Users}
+                      kind="inline"
+                      title="Unable to load contacts"
+                      onRetry={() => fetchContacts(searchQuery)}
+                    />
                   ) : contacts.length === 0 ? (
-                    <div className="p-4 text-center text-muted-foreground">No contacts found</div>
+                    <EmptyState
+                      icon={Users}
+                      kind={searchQuery ? 'results' : 'passive'}
+                      title={searchQuery ? 'No matching contacts' : 'No contacts yet'}
+                      actionLabel={searchQuery ? 'Clear search' : undefined}
+                      onAction={searchQuery ? () => setSearchQuery('') : undefined}
+                      className="h-full py-4"
+                    />
                   ) : (
                     <div className="p-2">
                       {contacts.map((contact) => {
@@ -534,13 +555,13 @@ export function SendReviewRequestModal({
 
               {/* Channel Selection */}
               <div className="space-y-2">
-                <Label style={{ fontFamily: '"Raleway", sans-serif' }}>
+                <Label>
                   Send Via <span className="text-red-500">*</span>
                 </Label>
                 <RadioGroup
                   value={bulkForm.channel}
                   onValueChange={(v) => setBulkForm(prev => ({ ...prev, channel: v as 'email' | 'sms' | 'both' }))}
-                  className="flex gap-4"
+                  className="flex flex-wrap gap-4"
                 >
                   <div className="flex items-center space-x-2">
                     <RadioGroupItem value="email" id="bulk-channel-email" />
@@ -563,7 +584,7 @@ export function SendReviewRequestModal({
 
               {/* Platform and Message */}
               <div className="space-y-2">
-                <Label htmlFor="bulk-platform" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                <Label htmlFor="bulk-platform">
                   Preferred Review Platform
                 </Label>
                 <Select
@@ -582,7 +603,7 @@ export function SendReviewRequestModal({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="bulk-message" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                <Label htmlFor="bulk-message">
                   Custom Message (Optional)
                 </Label>
                 <Textarea
@@ -600,7 +621,6 @@ export function SendReviewRequestModal({
                 type="button"
                 variant="outline"
                 onClick={onClose}
-                style={{ fontFamily: '"Raleway", sans-serif' }}
               >
                 Cancel
               </Button>
@@ -608,7 +628,6 @@ export function SendReviewRequestModal({
                 type="submit"
                 disabled={loading}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
-                style={{ fontFamily: '"Raleway", sans-serif' }}
               >
                 {loading ? 'Sending...' : mode === 'single' ? 'Send Request' : `Send ${bulkForm.selectedContactIds.length} Request${bulkForm.selectedContactIds.length !== 1 ? 's' : ''}`}
               </Button>

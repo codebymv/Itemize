@@ -8,6 +8,11 @@
  */
 import { Injectable } from '@nestjs/common';
 import { PoolClient } from 'pg';
+import { NotificationsService } from '../notifications/notifications.service';
+import {
+  ensureInboxConversation,
+  mirrorSocialMessageToInbox,
+} from '../social/social-inbox-bridge';
 import { NormalizedMetaEvent } from './social-webhooks.service';
 
 const SOCIAL_CONVERSATION_COLUMNS = [
@@ -100,6 +105,8 @@ export function normalizedEventFromClaim(
 
 @Injectable()
 export class SocialWebhookProcessingService {
+  constructor(private readonly notifications: NotificationsService) {}
+
   async processMetaWebhookEventByKey(
     client: PoolClient,
     eventKey: string,
@@ -262,6 +269,16 @@ export class SocialWebhookProcessingService {
       ],
     );
     const socialMessage = messageResult.rows[0];
+    const inboxConversationId = await ensureInboxConversation(
+      client,
+      channel.organization_id,
+      conversation.id,
+    );
+    const inboxMessageId = await mirrorSocialMessageToInbox(
+      client,
+      channel.organization_id,
+      socialMessage.id,
+    );
 
     await client.query(
       `UPDATE social_webhook_events SET
@@ -282,6 +299,31 @@ export class SocialWebhookProcessingService {
        WHERE event_key = $1`,
       [normalized.eventKey, channel.id, socialMessage.id],
     );
+
+    const participantName = conversation.participant_name || 'a visitor';
+    await this.notifications.createForOrganizationOwnerWithClient(client, {
+      organizationId: channel.organization_id,
+      preferredUserId: typeof conversation.assigned_to === 'number'
+        ? conversation.assigned_to
+        : null,
+      eventType: 'communication.message_received',
+      entityType: 'conversation',
+      entityId: inboxConversationId,
+      dedupeKey: `communication:social:${normalized.externalMessageId}:received`,
+      payload: {
+        channel: normalized.channelType,
+        conversationId: inboxConversationId,
+        messageId: inboxMessageId,
+        socialConversationId: conversation.id,
+        socialMessageId: socialMessage.id,
+      },
+      category: 'collaboration',
+      priority: 'normal',
+      title: `New ${normalized.channelType === 'instagram' ? 'Instagram' : 'Facebook'} message`,
+      body: `${participantName}: ${preview}`.slice(0, 240),
+      href: `/inbox?conversation=${inboxConversationId}`,
+      occurredAt: normalized.eventTimestamp,
+    });
 
     return {
       channel,

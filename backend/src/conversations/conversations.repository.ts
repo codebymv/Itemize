@@ -21,6 +21,17 @@ export type ConversationRow = {
   contact_last_name: string | null;
   contact_email: string | null;
   contact_phone: string | null;
+  social_conversation_id: number | null;
+  provider_account_name: string | null;
+  provider_participant_name: string | null;
+  provider_participant_username: string | null;
+  provider_participant_profile_pic: string | null;
+  chat_session_id: number | null;
+  chat_session_status: string | null;
+  chat_visitor_name: string | null;
+  chat_visitor_email: string | null;
+  chat_visitor_phone: string | null;
+  chat_widget_name: string | null;
 };
 
 export type ConversationMessageRow = {
@@ -43,6 +54,7 @@ export type ConversationMessageRow = {
 
 export type ConversationListFilters = {
   status?: string;
+  channel?: string;
   assignedTo?: number;
   contactId?: number;
   page: number;
@@ -100,7 +112,32 @@ const conversationSelection = `
   ct.first_name AS contact_first_name,
   ct.last_name AS contact_last_name,
   ct.email AS contact_email,
-  ct.phone AS contact_phone`;
+  ct.phone AS contact_phone,
+  social.id AS social_conversation_id,
+  provider.name AS provider_account_name,
+  social.participant_name AS provider_participant_name,
+  social.participant_username AS provider_participant_username,
+  social.participant_profile_pic AS provider_participant_profile_pic,
+  chat.id AS chat_session_id,
+  chat.status AS chat_session_status,
+  chat.visitor_name AS chat_visitor_name,
+  chat.visitor_email AS chat_visitor_email,
+  chat.visitor_phone AS chat_visitor_phone,
+  chat_widget.name AS chat_widget_name`;
+
+const conversationProviderJoins = `
+  LEFT JOIN social_conversations social
+    ON social.inbox_conversation_id = c.id
+   AND social.organization_id = c.organization_id
+  LEFT JOIN social_channels provider
+    ON provider.id = social.channel_id
+   AND provider.organization_id = social.organization_id
+  LEFT JOIN chat_sessions chat
+    ON chat.conversation_id = c.id
+   AND chat.organization_id = c.organization_id
+  LEFT JOIN chat_widgets chat_widget
+    ON chat_widget.id = chat.widget_id
+   AND chat_widget.organization_id = chat.organization_id`;
 
 const messageSelection = `
   m.id,
@@ -133,6 +170,10 @@ export class ConversationsRepository {
       params.push(filters.status);
       clauses.push(`c.status = $${params.length}`);
     }
+    if (filters.channel) {
+      params.push(filters.channel);
+      clauses.push(`c.channel = $${params.length}`);
+    }
     if (filters.assignedTo !== undefined) {
       params.push(filters.assignedTo);
       clauses.push(`c.assigned_to = $${params.length}`);
@@ -156,6 +197,7 @@ export class ConversationsRepository {
            ON ct.id = c.contact_id
           AND ct.organization_id = c.organization_id
          LEFT JOIN users u ON u.id = c.assigned_to
+         ${conversationProviderJoins}
          WHERE ${where}
          ORDER BY c.last_message_at DESC NULLS LAST, c.created_at DESC, c.id DESC
          LIMIT $${params.length - 1} OFFSET $${params.length}`,
@@ -311,6 +353,26 @@ export class ConversationsRepository {
          WHERE id = $1 AND organization_id = $2`,
         params,
       );
+      if (values.status !== undefined) {
+        await client.query(
+          `UPDATE social_conversations
+           SET status=CASE WHEN $3='closed' THEN 'closed' ELSE 'open' END,
+               updated_at=CURRENT_TIMESTAMP
+           WHERE organization_id=$2 AND inbox_conversation_id=$1`,
+          [conversationId, organizationId, values.status],
+        );
+        if (values.status === 'closed') {
+          await client.query(
+            `UPDATE chat_sessions
+             SET status=CASE WHEN status='active' THEN 'ended' ELSE status END,
+                 is_online=FALSE,
+                 ended_at=COALESCE(ended_at,CURRENT_TIMESTAMP),
+                 updated_at=CURRENT_TIMESTAMP
+             WHERE organization_id=$2 AND conversation_id=$1`,
+            [conversationId, organizationId],
+          );
+        }
+      }
       return this.selectConversation(client, organizationId, conversationId);
     });
   }
@@ -340,6 +402,12 @@ export class ConversationsRepository {
         `UPDATE conversations
          SET assigned_to = $1, updated_at = CURRENT_TIMESTAMP
          WHERE id = $2 AND organization_id = $3`,
+        [assignedTo, conversationId, organizationId],
+      );
+      await client.query(
+        `UPDATE social_conversations
+         SET assigned_to=$1, updated_at=CURRENT_TIMESTAMP
+         WHERE inbox_conversation_id=$2 AND organization_id=$3`,
         [assignedTo, conversationId, organizationId],
       );
       const row = await this.selectConversation(
@@ -428,6 +496,24 @@ export class ConversationsRepository {
          WHERE id = $1 AND organization_id = $2`,
         [conversationId, organizationId],
       );
+      await client.query(
+        `UPDATE social_conversations
+         SET unread_count=0, updated_at=CURRENT_TIMESTAMP
+         WHERE inbox_conversation_id=$1 AND organization_id=$2`,
+        [conversationId, organizationId],
+      );
+      await client.query(
+        `UPDATE chat_messages chat
+         SET is_read=TRUE, read_at=COALESCE(read_at,CURRENT_TIMESTAMP)
+         FROM chat_sessions session
+         WHERE session.organization_id=$2
+           AND session.conversation_id=$1
+           AND chat.organization_id=session.organization_id
+           AND chat.session_id=session.id
+           AND chat.sender_type='visitor'
+           AND chat.is_read=FALSE`,
+        [conversationId, organizationId],
+      );
       return this.selectConversation(client, organizationId, conversationId);
     });
   }
@@ -444,6 +530,7 @@ export class ConversationsRepository {
          ON ct.id = c.contact_id
         AND ct.organization_id = c.organization_id
        LEFT JOIN users u ON u.id = c.assigned_to
+       ${conversationProviderJoins}
        WHERE c.id = $1 AND c.organization_id = $2`,
       [conversationId, organizationId],
     );

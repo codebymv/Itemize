@@ -296,6 +296,8 @@ export class MessageDeliveryService {
       templateId: row.email_template_id === null
         ? (row.sms_template_id === null ? null : Number(row.sms_template_id))
         : Number(row.email_template_id),
+      conversationId: row.conversation_id === null ? null : Number(row.conversation_id),
+      messageId: row.message_id === null ? null : Number(row.message_id),
       providerId: row.provider_id,
       createdAt: new Date(row.created_at),
     };

@@ -5,6 +5,8 @@ import { cn } from '@/lib/utils';
 export type IntegrationProviderMarkName =
   | 'google-calendar'
   | 'facebook'
+  | 'messenger'
+  | 'instagram'
   | 'stripe'
   | 'webhooks'
   | 'outlook-calendar';
@@ -33,6 +35,36 @@ export function IntegrationProviderMark({ provider, className }: IntegrationProv
           fill="#fff"
           d="M13.6 21v-8h2.7l.4-3.1h-3.1v-2c0-.9.3-1.5 1.6-1.5h1.7V3.6c-.3 0-1.3-.1-2.5-.1-2.5 0-4.2 1.5-4.2 4.3v2.1H7.4V13h2.8v8h3.4Z"
         />
+      </svg>
+    );
+  }
+
+  if (provider === 'messenger') {
+    return (
+      <svg viewBox="0 0 24 24" className={markClassName} aria-hidden="true">
+        <circle cx="12" cy="12" r="11" fill="#168AFF" />
+        <path
+          fill="#fff"
+          d="m6.5 15.8 4.1-4.35 2.15 1.82 4.72-5.07-4.08 4.36-2.2-1.83-4.69 5.07Z"
+        />
+      </svg>
+    );
+  }
+
+  if (provider === 'instagram') {
+    return (
+      <svg viewBox="0 0 24 24" className={markClassName} aria-hidden="true">
+        <defs>
+          <linearGradient id="itemize-instagram-mark" x1="2" y1="22" x2="22" y2="2">
+            <stop offset="0" stopColor="#FFD600" />
+            <stop offset="0.45" stopColor="#FF0169" />
+            <stop offset="1" stopColor="#D300C5" />
+          </linearGradient>
+        </defs>
+        <rect x="2" y="2" width="20" height="20" rx="6" fill="url(#itemize-instagram-mark)" />
+        <rect x="6.6" y="6.6" width="10.8" height="10.8" rx="3.2" fill="none" stroke="#fff" strokeWidth="1.8" />
+        <circle cx="12" cy="12" r="2.6" fill="none" stroke="#fff" strokeWidth="1.8" />
+        <circle cx="17.2" cy="6.9" r="1.05" fill="#fff" />
       </svg>
     );
   }
