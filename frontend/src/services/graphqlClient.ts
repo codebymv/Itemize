@@ -20,15 +20,23 @@ type GraphqlResult<TData> = {
 
 export class GraphqlRequestError extends Error {
   readonly code?: string;
+  readonly messages: readonly string[];
   readonly reason?: string;
   readonly status: number;
 
-  constructor(message: string, status: number, code?: string, reason?: string) {
+  constructor(
+    message: string,
+    status: number,
+    code?: string,
+    reason?: string,
+    messages?: string[],
+  ) {
     super(message);
     this.name = 'GraphqlRequestError';
     this.status = status;
     this.code = code;
     this.reason = reason;
+    this.messages = messages?.length ? messages : [message];
   }
 }
 
@@ -117,6 +125,9 @@ const runGraphqlRequest = async <TData, TVariables extends object>(
       typeof firstError?.extensions?.reason === 'string'
         ? firstError.extensions.reason
         : undefined,
+      result.payload.errors
+        ?.map((error) => error.message)
+        .filter((message): message is string => Boolean(message)),
     );
   }
 

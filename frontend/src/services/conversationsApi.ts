@@ -68,13 +68,19 @@ const PROVIDER_CONVERSATION_FIELDS = `
     }
 `;
 
+const errorMessages = (error: unknown): string => {
+    if (!(error instanceof Error)) return '';
+    const messages = 'messages' in error && Array.isArray(error.messages)
+        ? error.messages.filter((message): message is string => typeof message === 'string')
+        : [error.message];
+    return messages.join('\n');
+};
+
 const providerFieldsUnavailable = (error: unknown): boolean =>
-    error instanceof Error
-    && /Cannot query field "(?:socialConversationId|providerAccountName|providerParticipantName|providerParticipantUsername|providerParticipantProfilePic|chatSessionId|chatSessionStatus|chatVisitorName|chatVisitorEmail|chatVisitorPhone|chatWidgetName)"/.test(error.message);
+    /Cannot query field "(?:socialConversationId|providerAccountName|providerParticipantName|providerParticipantUsername|providerParticipantProfilePic|chatSessionId|chatSessionStatus|chatVisitorName|chatVisitorEmail|chatVisitorPhone|chatWidgetName)"/.test(errorMessages(error));
 
 const channelFilterUnavailable = (error: unknown): boolean =>
-    error instanceof Error
-    && /Unknown argument "channel"|Unknown type "ConversationChannel"/.test(error.message);
+    /Unknown argument "channel"|Unknown type "ConversationChannel"/.test(errorMessages(error));
 
 const MESSAGE_FIELDS = `
     fragment ConversationMessageFields on ConversationMessage {
@@ -223,10 +229,10 @@ const baseConversationQuery = `
 `;
 
 const conversationListDocuments = [
-    { document: providerConversationsWithChannelQuery, includesChannel: true },
-    { document: baseConversationsWithChannelQuery, includesChannel: true },
-    { document: providerConversationsWithoutChannelQuery, includesChannel: false },
-    { document: baseConversationsWithoutChannelQuery, includesChannel: false },
+    { document: providerConversationsWithChannelQuery, includesChannel: true, includesProvider: true },
+    { document: baseConversationsWithChannelQuery, includesChannel: true, includesProvider: false },
+    { document: providerConversationsWithoutChannelQuery, includesChannel: false, includesProvider: true },
+    { document: baseConversationsWithoutChannelQuery, includesChannel: false, includesProvider: false },
 ] as const;
 
 let conversationListCapability: number | null = null;
@@ -277,6 +283,8 @@ export const getConversations = async (
     let data: Response | null = null;
     let lastError: unknown;
     let serverAppliedChannel = true;
+    let providerUnavailable = false;
+    let channelUnavailable = false;
     const capabilityOrder = conversationListCapability === null
         ? conversationListDocuments.map((_, index) => index)
         : [
@@ -287,6 +295,8 @@ export const getConversations = async (
         ];
     for (const capabilityIndex of capabilityOrder) {
         const capability = conversationListDocuments[capabilityIndex];
+        if (providerUnavailable && capability.includesProvider) continue;
+        if (channelUnavailable && capability.includesChannel) continue;
         const requestVariables = capability.includesChannel
             ? variables
             : Object.fromEntries(
@@ -302,7 +312,11 @@ export const getConversations = async (
             serverAppliedChannel = capability.includesChannel;
             break;
         } catch (error) {
-            if (!providerFieldsUnavailable(error) && !channelFilterUnavailable(error)) throw error;
+            const missingProvider = providerFieldsUnavailable(error);
+            const missingChannel = channelFilterUnavailable(error);
+            if (!missingProvider && !missingChannel) throw error;
+            providerUnavailable ||= missingProvider;
+            channelUnavailable ||= missingChannel;
             lastError = error;
         }
     }

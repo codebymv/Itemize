@@ -32,6 +32,24 @@ type Data = {
   signatures?: Page<GlobalSearchOrganizationResults['signatures'][number]>;
 };
 
+type SearchFilter = { search: string };
+type SharedSearchVariables = {
+  segmentFilter: SearchFilter;
+  campaignFilter: SearchFilter;
+  workflowFilter: SearchFilter;
+  contactFilter: SearchFilter;
+  invoiceFilter: SearchFilter;
+  page: { page: number; pageSize: number };
+  includeLongQuery: boolean;
+};
+type SearchVariables = SharedSearchVariables & { signatureFilter: SearchFilter };
+type LegacySearchVariables = SharedSearchVariables & {
+  signaturePage: { page: number; pageSize: number };
+};
+
+type SearchCapability = 'unknown' | 'signature-search' | 'legacy-signatures';
+let searchCapability: SearchCapability = 'unknown';
+
 const query = `
   query OrganizationGlobalSearch(
     $segmentFilter: SegmentListFilterInput
@@ -69,6 +87,47 @@ const query = `
   }
 `;
 
+const legacySignatureQuery = `
+  query OrganizationGlobalSearchLegacy(
+    $segmentFilter: SegmentListFilterInput
+    $campaignFilter: CampaignFilterInput
+    $workflowFilter: WorkflowFilterInput
+    $contactFilter: ContactFilterInput
+    $invoiceFilter: InvoiceFilterInput
+    $page: PageInput!
+    $signaturePage: PageInput!
+    $includeLongQuery: Boolean!
+  ) {
+    segments(filter: $segmentFilter, page: $page) {
+      nodes { id name }
+    }
+    campaigns(filter: $campaignFilter, page: $page) {
+      nodes { id name status }
+    }
+    workflows(filter: $workflowFilter, page: $page) {
+      nodes { id name }
+    }
+    contacts(filter: $contactFilter, page: $page)
+      @include(if: $includeLongQuery) {
+      nodes { id firstName lastName email }
+    }
+    invoices(filter: $invoiceFilter, page: $page)
+      @include(if: $includeLongQuery) {
+      nodes {
+        id invoiceNumber contactFirstName contactLastName customerName status
+      }
+    }
+    signatures: signatureDocuments(page: $signaturePage)
+      @include(if: $includeLongQuery) {
+      nodes { id title status }
+    }
+  }
+`;
+
+const missingSignatureSearch = (error: unknown): boolean => error instanceof Error
+  && error.message.includes('Field "search" is not defined by type')
+  && error.message.includes('SignatureDocumentFilterInput');
+
 export const searchOrganizationViaGraphql = async (
   search: string,
   organizationId: number,
@@ -76,30 +135,57 @@ export const searchOrganizationViaGraphql = async (
 ): Promise<GlobalSearchOrganizationResults> => {
   const normalizedSearch = search.trim();
   const filter = { search: normalizedSearch };
-  const data = await graphqlRequest<Data, {
-    segmentFilter: typeof filter;
-    campaignFilter: typeof filter;
-    workflowFilter: typeof filter;
-    contactFilter: typeof filter;
-    invoiceFilter: typeof filter;
-    signatureFilter: typeof filter;
-    page: { page: number; pageSize: number };
-    includeLongQuery: boolean;
-  }>(
-    query,
-    {
-      segmentFilter: filter,
-      campaignFilter: filter,
-      workflowFilter: filter,
-      contactFilter: filter,
-      invoiceFilter: filter,
-      signatureFilter: filter,
-      page: { page: 1, pageSize: 3 },
-      includeLongQuery: normalizedSearch.length > 2,
-    },
-    organizationId,
-    signal,
-  );
+  const variables: SearchVariables = {
+    segmentFilter: filter,
+    campaignFilter: filter,
+    workflowFilter: filter,
+    contactFilter: filter,
+    invoiceFilter: filter,
+    signatureFilter: filter,
+    page: { page: 1, pageSize: 3 },
+    includeLongQuery: normalizedSearch.length > 2,
+  };
+  let data: Data | null = null;
+  if (searchCapability !== 'legacy-signatures') {
+    try {
+      data = await graphqlRequest<Data, SearchVariables>(
+        query,
+        variables,
+        organizationId,
+        signal,
+      );
+      searchCapability = 'signature-search';
+    } catch (error) {
+      if (searchCapability !== 'unknown' || !missingSignatureSearch(error)) throw error;
+      searchCapability = 'legacy-signatures';
+    }
+  }
+
+  if (data === null) {
+    data = await graphqlRequest<Data, LegacySearchVariables>(
+      legacySignatureQuery,
+      {
+        segmentFilter: filter,
+        campaignFilter: filter,
+        workflowFilter: filter,
+        contactFilter: filter,
+        invoiceFilter: filter,
+        page: variables.page,
+        signaturePage: { page: 1, pageSize: 50 },
+        includeLongQuery: variables.includeLongQuery,
+      },
+      organizationId,
+      signal,
+    );
+  }
+
+  const signatures = searchCapability === 'legacy-signatures'
+    ? (data.signatures?.nodes ?? [])
+      .filter((signature) => signature.title
+        .toLocaleLowerCase()
+        .includes(normalizedSearch.toLocaleLowerCase()))
+      .slice(0, 3)
+    : data.signatures?.nodes ?? [];
 
   return {
     segments: data.segments.nodes,
@@ -107,6 +193,10 @@ export const searchOrganizationViaGraphql = async (
     workflows: data.workflows.nodes,
     contacts: data.contacts?.nodes ?? [],
     invoices: data.invoices?.nodes ?? [],
-    signatures: data.signatures?.nodes ?? [],
+    signatures,
   };
+};
+
+export const resetGlobalSearchCapability = (): void => {
+  searchCapability = 'unknown';
 };

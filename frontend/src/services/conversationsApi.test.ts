@@ -117,7 +117,6 @@ describe('conversations GraphQL adapter', () => {
     it('keeps channel filtering usable while the API argument rolls out', async () => {
         vi.mocked(graphqlRequest)
             .mockRejectedValueOnce(new Error('Unknown argument "channel" on field "Query.conversations".'))
-            .mockRejectedValueOnce(new Error('Unknown argument "channel" on field "Query.conversations".'))
             .mockResolvedValueOnce({
                 conversations: {
                     conversations: [
@@ -133,8 +132,38 @@ describe('conversations GraphQL adapter', () => {
 
         await expect(getConversations({ channel: 'sms', organization_id: 42 }))
             .resolves.toMatchObject({ conversations: [{ id: 8, channel: 'sms' }] });
-        expect(graphqlRequest).toHaveBeenCalledTimes(3);
-        expect(vi.mocked(graphqlRequest).mock.calls[2][0]).not.toContain('channel: $channel');
+        expect(graphqlRequest).toHaveBeenCalledTimes(2);
+        expect(vi.mocked(graphqlRequest).mock.calls[1][0]).not.toContain('channel: $channel');
+    });
+
+    it('uses the complete validation payload to avoid redundant compatibility probes', async () => {
+        const compatibilityError = Object.assign(
+            new Error('Cannot query field "socialConversationId" on type "Conversation".'),
+            {
+                messages: [
+                    'Cannot query field "socialConversationId" on type "Conversation".',
+                    'Unknown argument "channel" on field "Query.conversations".',
+                ],
+            },
+        );
+        vi.mocked(graphqlRequest)
+            .mockRejectedValueOnce(compatibilityError)
+            .mockResolvedValueOnce({
+                conversations: {
+                    conversations: [conversation],
+                    page: 1,
+                    limit: 50,
+                    total: 1,
+                    totalPages: 1,
+                },
+            });
+
+        await getConversations({ organization_id: 42 });
+
+        expect(graphqlRequest).toHaveBeenCalledTimes(2);
+        const fallback = vi.mocked(graphqlRequest).mock.calls[1][0];
+        expect(fallback).not.toContain('socialConversationId');
+        expect(fallback).not.toContain('channel: $channel');
     });
 
     it('uses GraphQL for the complete inbox operation surface', async () => {

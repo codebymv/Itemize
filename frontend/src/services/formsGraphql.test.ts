@@ -7,6 +7,7 @@ import {
   getFormViaGraphql,
   getFormsViaGraphql,
   replaceFormFieldsViaGraphql,
+  resetFormListCapability,
   updateFormViaGraphql,
 } from './formsGraphql';
 
@@ -66,6 +67,7 @@ const response = (payload: unknown): Response =>
 
 describe('forms GraphQL consumer', () => {
   beforeEach(() => {
+    resetFormListCapability();
     vi.stubEnv('VITE_GRAPHQL_URL', 'https://graphql.test.itemize/graphql');
     vi.stubGlobal('fetch', vi.fn());
     vi.mocked(fetchCsrfToken).mockResolvedValue('forms-csrf');
@@ -139,6 +141,45 @@ describe('forms GraphQL consumer', () => {
     });
     expect((vi.mocked(fetch).mock.calls[0][1] as RequestInit).signal)
       .toBe(controller.signal);
+  });
+
+  it('falls back once to one legacy catalog request and derives the page contract', async () => {
+    const controller = new AbortController();
+    const catalog = [
+      { ...form, fields: undefined },
+      { ...form, id: 8, name: 'Published intake', slug: 'published-intake', status: 'published' as const, fields: undefined },
+      { ...form, id: 9, name: 'Archived intake', slug: 'archived-intake', status: 'archived' as const, fields: undefined },
+    ];
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(response({
+        errors: [{ message: 'Cannot query field "formPage" on type "Query".' }],
+      }))
+      .mockResolvedValueOnce(response({ data: { forms: catalog } }))
+      .mockResolvedValueOnce(response({ data: { forms: catalog } }));
+
+    await expect(getFormPageViaGraphql({
+      status: 'draft', search: ' registration ', page: 1, limit: 1,
+    }, 42, controller.signal)).resolves.toMatchObject({
+      forms: [{ id: 7, name: 'Registration' }],
+      pagination: { page: 1, limit: 1, total: 1, totalPages: 1 },
+      stats: { total: 3, draft: 1, published: 1, archived: 1 },
+    });
+    await getFormPageViaGraphql({ status: 'all', page: 1, limit: 2 }, 42, controller.signal);
+
+    expect(fetch).toHaveBeenCalledTimes(3);
+    const bodies = vi.mocked(fetch).mock.calls.map((call) =>
+      JSON.parse(String((call[1] as RequestInit).body)) as { query: string; variables: unknown },
+    );
+    expect(bodies.map(({ query }) => query.match(/query (\w+)/)?.[1])).toEqual([
+      'FormPage',
+      'FormPageLegacy',
+      'FormPageLegacy',
+    ]);
+    expect(bodies[1].variables).toEqual({});
+    expect(bodies[2].variables).toEqual({});
+    for (const call of vi.mocked(fetch).mock.calls) {
+      expect((call[1] as RequestInit).signal).toBe(controller.signal);
+    }
   });
 
   it('maps create/update inputs and preserves explicit nullable clearing', async () => {

@@ -12,6 +12,7 @@ import {
   reorderLandingPageSectionsViaGraphql,
   removeLandingPagePasswordViaGraphql,
   replaceLandingPageSectionsViaGraphql,
+  resetLandingPageListCapability,
   setLandingPagePasswordViaGraphql,
   updateLandingPageSectionViaGraphql,
   updateLandingPageViaGraphql,
@@ -82,6 +83,7 @@ const requestBodies = () =>
 
 describe('landing-page GraphQL consumers', () => {
   beforeEach(() => {
+    resetLandingPageListCapability();
     vi.clearAllMocks();
     vi.stubEnv('VITE_GRAPHQL_URL', 'https://graphql.test.itemize/graphql');
     vi.stubGlobal('fetch', vi.fn());
@@ -134,6 +136,65 @@ describe('landing-page GraphQL consumers', () => {
       page: { page: 2, pageSize: 10 },
     });
     expect(fetchCsrfToken).not.toHaveBeenCalled();
+  });
+
+  it('falls back once to one legacy page request with exact global status totals', async () => {
+    const controller = new AbortController();
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(response({
+        errors: [{ message: 'Cannot query field "stats" on type "LandingPagePage".' }],
+      }))
+      .mockResolvedValueOnce(response({ data: {
+        filtered: {
+          nodes: [page],
+          pageInfo: { page: 2, pageSize: 10, total: 11, totalPages: 2 },
+        },
+        all: { pageInfo: { total: 14 } },
+        draft: { pageInfo: { total: 6 } },
+        published: { pageInfo: { total: 7 } },
+        archived: { pageInfo: { total: 1 } },
+      } }))
+      .mockResolvedValueOnce(response({ data: {
+        filtered: {
+          nodes: [page],
+          pageInfo: { page: 1, pageSize: 20, total: 14, totalPages: 1 },
+        },
+        all: { pageInfo: { total: 14 } },
+        draft: { pageInfo: { total: 6 } },
+        published: { pageInfo: { total: 7 } },
+        archived: { pageInfo: { total: 1 } },
+      } }));
+
+    await expect(getLandingPagesViaGraphql(
+      { status: 'draft', search: ' launch ', page: 2, limit: 10 },
+      4,
+      controller.signal,
+    )).resolves.toMatchObject({
+      pagination: { page: 2, limit: 10, total: 11, totalPages: 2 },
+      stats: { total: 14, draft: 6, published: 7, archived: 1 },
+    });
+    await getLandingPagesViaGraphql({ status: 'all' }, 4, controller.signal);
+
+    expect(fetch).toHaveBeenCalledTimes(3);
+    const bodies = requestBodies();
+    expect(bodies.map(({ query }) => query.match(/query (\w+)/)?.[1])).toEqual([
+      'LandingPages',
+      'LandingPagesLegacy',
+      'LandingPagesLegacy',
+    ]);
+    expect(bodies[1].variables).toEqual({
+      filter: { status: 'draft', search: 'launch' },
+      page: { page: 2, pageSize: 10 },
+      summaryPage: { page: 1, pageSize: 1 },
+    });
+    expect(bodies[2].variables).toEqual({
+      filter: {},
+      page: { page: 1, pageSize: 20 },
+      summaryPage: { page: 1, pageSize: 1 },
+    });
+    for (const call of vi.mocked(fetch).mock.calls) {
+      expect((call[1] as RequestInit).signal).toBe(controller.signal);
+    }
   });
 
   it('uses protected GraphQL mutations for every page and section write', async () => {

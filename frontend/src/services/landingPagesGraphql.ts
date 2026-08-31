@@ -71,6 +71,49 @@ const pageFields = `
   createdAt updatedAt sectionCount sections { ${sectionFields} }
 `;
 
+type LandingPageStats = {
+  total: number;
+  draft: number;
+  published: number;
+  archived: number;
+};
+
+type LandingPagePagePayload = {
+  nodes: GqlPage[];
+  pageInfo: { page: number; pageSize: number; total: number; totalPages: number };
+  stats: LandingPageStats;
+};
+
+type LandingPageListCapability = 'unknown' | 'aggregate' | 'legacy';
+let landingPageListCapability: LandingPageListCapability = 'unknown';
+
+const landingPageListQuery = `query LandingPages($filter: LandingPageFilterInput, $page: PageInput) {
+  landingPages(filter: $filter, page: $page) {
+    nodes { ${pageFields} }
+    pageInfo { page pageSize total totalPages }
+    stats { total draft published archived }
+  }
+}`;
+
+const legacyLandingPageListQuery = `query LandingPagesLegacy(
+  $filter: LandingPageFilterInput,
+  $page: PageInput,
+  $summaryPage: PageInput
+) {
+  filtered: landingPages(filter: $filter, page: $page) {
+    nodes { ${pageFields} }
+    pageInfo { page pageSize total totalPages }
+  }
+  all: landingPages(page: $summaryPage) { pageInfo { total } }
+  draft: landingPages(filter: { status: "draft" }, page: $summaryPage) { pageInfo { total } }
+  published: landingPages(filter: { status: "published" }, page: $summaryPage) { pageInfo { total } }
+  archived: landingPages(filter: { status: "archived" }, page: $summaryPage) { pageInfo { total } }
+}`;
+
+const missingLandingPageStats = (error: unknown): boolean => error instanceof Error
+  && error.message.includes('Cannot query field')
+  && error.message.includes('stats');
+
 const mapSection = (section: GqlSection): PageSection => ({
   id: section.id,
   page_id: section.pageId,
@@ -158,44 +201,68 @@ export const getLandingPagesViaGraphql = async (
   organizationId?: number,
   signal?: AbortSignal,
 ) => {
+  const normalizedSearch = params.search?.trim();
   const variables = {
     filter: {
-      ...(params.status ? { status: params.status } : {}),
-      ...(params.search ? { search: params.search } : {}),
+      ...(params.status && params.status !== 'all' ? { status: params.status } : {}),
+      ...(normalizedSearch ? { search: normalizedSearch } : {}),
     },
     page: { page: params.page ?? 1, pageSize: params.limit ?? 20 },
   };
-  const data = await graphqlRequest<
-    {
-      landingPages: {
-        nodes: GqlPage[];
-        pageInfo: { page: number; pageSize: number; total: number; totalPages: number };
-        stats: { total: number; draft: number; published: number; archived: number };
-      };
-    },
-    typeof variables
-  >(
-    `query LandingPages($filter: LandingPageFilterInput, $page: PageInput) {
-      landingPages(filter: $filter, page: $page) {
-        nodes { ${pageFields} }
-        pageInfo { page pageSize total totalPages }
-        stats { total draft published archived }
-      }
-    }`,
-    variables,
-    organizationId,
-    signal,
-  );
+
+  let pageData: LandingPagePagePayload | null = null;
+  if (landingPageListCapability !== 'legacy') {
+    try {
+      const data = await graphqlRequest<
+        { landingPages: LandingPagePagePayload },
+        typeof variables
+      >(landingPageListQuery, variables, organizationId, signal);
+      landingPageListCapability = 'aggregate';
+      pageData = data.landingPages;
+    } catch (error) {
+      if (landingPageListCapability !== 'unknown' || !missingLandingPageStats(error)) throw error;
+      landingPageListCapability = 'legacy';
+    }
+  }
+
+  if (pageData === null) {
+    const data = await graphqlRequest<{
+      filtered: Omit<LandingPagePagePayload, 'stats'>;
+      all: { pageInfo: { total: number } };
+      draft: { pageInfo: { total: number } };
+      published: { pageInfo: { total: number } };
+      archived: { pageInfo: { total: number } };
+    }, typeof variables & { summaryPage: { page: number; pageSize: number } }>(
+      legacyLandingPageListQuery,
+      { ...variables, summaryPage: { page: 1, pageSize: 1 } },
+      organizationId,
+      signal,
+    );
+    pageData = {
+      ...data.filtered,
+      stats: {
+        total: data.all.pageInfo.total,
+        draft: data.draft.pageInfo.total,
+        published: data.published.pageInfo.total,
+        archived: data.archived.pageInfo.total,
+      },
+    };
+  }
+
   return {
-    pages: data.landingPages.nodes.map(mapPage),
+    pages: pageData.nodes.map(mapPage),
     pagination: {
-      page: data.landingPages.pageInfo.page,
-      limit: data.landingPages.pageInfo.pageSize,
-      total: data.landingPages.pageInfo.total,
-      totalPages: data.landingPages.pageInfo.totalPages,
+      page: pageData.pageInfo.page,
+      limit: pageData.pageInfo.pageSize,
+      total: pageData.pageInfo.total,
+      totalPages: pageData.pageInfo.totalPages,
     },
-    stats: data.landingPages.stats,
+    stats: pageData.stats,
   };
+};
+
+export const resetLandingPageListCapability = (): void => {
+  landingPageListCapability = 'unknown';
 };
 
 export const getLandingPageViaGraphql = async (

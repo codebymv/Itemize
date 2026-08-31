@@ -132,12 +132,16 @@ describe('fetching contract', () => {
     expect(pages).toContain('placeholderData: keepPreviousData');
     expect(pages).not.toContain('const fetchPages = useCallback');
     expect(pageService).toContain('stats { total draft published archived }');
+    expect(pageService).toContain('query LandingPagesLegacy(');
+    expect(pageService).toContain('resetLandingPageListCapability');
 
     expect(forms).toContain('formQueryKeys.page(organizationId, listParams)');
     expect(forms).toContain('placeholderData: keepPreviousData');
     expect(forms).not.toContain('const fetchForms = useCallback');
     expect(formService).toContain('query FormPage(');
     expect(formService).toContain('stats { total draft published archived }');
+    expect(formService).toContain('query FormPageLegacy');
+    expect(formService).toContain('resetFormListCapability');
   });
 
   it('keeps payment-setting business profiles bounded and explicitly incremental', () => {
@@ -371,6 +375,8 @@ describe('fetching contract', () => {
     expect(search).not.toContain('getContacts(');
     expect(search).not.toContain('getInvoices(');
     expect(service).toContain('query OrganizationGlobalSearch(');
+    expect(service).toContain('query OrganizationGlobalSearchLegacy(');
+    expect(service).toContain('resetGlobalSearchCapability');
     expect(service).toContain('page: { page: 1, pageSize: 3 }');
     expect(service).toContain('@include(if: $includeLongQuery)');
   });

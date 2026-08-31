@@ -93,6 +93,33 @@ const formPageQuery = `
   }
 `;
 
+const legacyFormPageQuery = `
+  query FormPageLegacy {
+    forms { ${formFields} }
+  }
+`;
+
+type FormPageStats = {
+  total: number;
+  draft: number;
+  published: number;
+  archived: number;
+};
+
+type FormPagePayload = {
+  nodes: GraphqlForm[];
+  pageInfo: { page: number; pageSize: number; total: number; totalPages: number };
+  stats: FormPageStats;
+};
+
+type FormListCapability = 'unknown' | 'aggregate' | 'legacy';
+let formListCapability: FormListCapability = 'unknown';
+
+const missingFormPage = (error: unknown): boolean => error instanceof Error && (
+  (error.message.includes('Cannot query field') && error.message.includes('formPage'))
+  || (error.message.includes('Unknown type') && error.message.includes('FormFilterInput'))
+);
+
 const formQuery = `
   query FormRead($id: Int!) {
     form(id: $id) { ${formFields} fields { ${fieldFields} } }
@@ -296,30 +323,78 @@ export const getFormPageViaGraphql = async (
   pagination: { page: number; limit: number; total: number; totalPages: number };
   stats: { total: number; draft: number; published: number; archived: number };
 }> => {
+  const page = params.page ?? 1;
+  const limit = params.limit ?? 20;
+  const normalizedSearch = params.search?.trim();
   const variables = {
     filter: {
       ...(params.status && params.status !== 'all' ? { status: params.status } : {}),
-      ...(params.search?.trim() ? { search: params.search.trim() } : {}),
+      ...(normalizedSearch ? { search: normalizedSearch } : {}),
     },
-    page: { page: params.page ?? 1, pageSize: params.limit ?? 20 },
+    page: { page, pageSize: limit },
   };
-  const data = await graphqlRequest<{
-    formPage: {
-      nodes: GraphqlForm[];
-      pageInfo: { page: number; pageSize: number; total: number; totalPages: number };
-      stats: { total: number; draft: number; published: number; archived: number };
+
+  let pageData: FormPagePayload | null = null;
+  if (formListCapability !== 'legacy') {
+    try {
+      const data = await graphqlRequest<{
+        formPage: FormPagePayload;
+      }, typeof variables>(formPageQuery, variables, organizationId, signal);
+      formListCapability = 'aggregate';
+      pageData = data.formPage;
+    } catch (error) {
+      if (formListCapability !== 'unknown' || !missingFormPage(error)) throw error;
+      formListCapability = 'legacy';
+    }
+  }
+
+  if (pageData === null) {
+    const data = await graphqlRequest<{ forms: GraphqlForm[] }, Record<string, never>>(
+      legacyFormPageQuery,
+      {},
+      organizationId,
+      signal,
+    );
+    const search = normalizedSearch?.toLocaleLowerCase();
+    const filtered = data.forms.filter((form) => {
+      if (params.status && params.status !== 'all' && form.status !== params.status) return false;
+      if (!search) return true;
+      return form.name.toLocaleLowerCase().includes(search)
+        || form.description?.toLocaleLowerCase().includes(search)
+        || form.slug.toLocaleLowerCase().includes(search);
+    });
+    const start = (page - 1) * limit;
+    pageData = {
+      nodes: filtered.slice(start, start + limit),
+      pageInfo: {
+        page,
+        pageSize: limit,
+        total: filtered.length,
+        totalPages: filtered.length === 0 ? 0 : Math.ceil(filtered.length / limit),
+      },
+      stats: {
+        total: data.forms.length,
+        draft: data.forms.filter((form) => form.status === 'draft').length,
+        published: data.forms.filter((form) => form.status === 'published').length,
+        archived: data.forms.filter((form) => form.status === 'archived').length,
+      },
     };
-  }, typeof variables>(formPageQuery, variables, organizationId, signal);
+  }
+
   return {
-    forms: data.formPage.nodes.map(mapForm),
+    forms: pageData.nodes.map(mapForm),
     pagination: {
-      page: data.formPage.pageInfo.page,
-      limit: data.formPage.pageInfo.pageSize,
-      total: data.formPage.pageInfo.total,
-      totalPages: data.formPage.pageInfo.totalPages,
+      page: pageData.pageInfo.page,
+      limit: pageData.pageInfo.pageSize,
+      total: pageData.pageInfo.total,
+      totalPages: pageData.pageInfo.totalPages,
     },
-    stats: data.formPage.stats,
+    stats: pageData.stats,
   };
+};
+
+export const resetFormListCapability = (): void => {
+  formListCapability = 'unknown';
 };
 
 export const getFormViaGraphql = async (

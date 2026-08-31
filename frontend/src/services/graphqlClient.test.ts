@@ -95,4 +95,21 @@ describe('GraphQL session recovery', () => {
     expect(refreshAuthenticatedSession).not.toHaveBeenCalled();
     expect(fetch).toHaveBeenCalledTimes(1);
   });
+
+  it('retains every validation message for bounded capability negotiation', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(response({
+      errors: [
+        { message: 'Cannot query field "newField" on type "Query".' },
+        { message: 'Unknown argument "newArgument" on field "Query.items".' },
+      ],
+    }, 400));
+
+    await expect(graphqlRequest('query { items { id } }', {}, 42)).rejects.toMatchObject({
+      message: 'Cannot query field "newField" on type "Query".',
+      messages: [
+        'Cannot query field "newField" on type "Query".',
+        'Unknown argument "newArgument" on field "Query.items".',
+      ],
+    });
+  });
 });
