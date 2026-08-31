@@ -43,7 +43,12 @@ describe('EmailTemplatesService', () => {
   });
 
   it('maps deterministic paging filters and PostgreSQL counts', async () => {
-    repository.findPage.mockResolvedValue({ rows: [row()], total: '1' });
+    repository.findPage.mockResolvedValue({
+      rows: [row()],
+      total: '1',
+      stats: { total: '7', active: '5', inactive: '2', categories: '3' },
+      categories: [{ category: 'OnBoarding', count: '4' }],
+    });
     await expect(service.list(
       4,
       { category: ' OnBoarding ', isActive: true, search: ' welcome_100% ' },
@@ -51,6 +56,8 @@ describe('EmailTemplatesService', () => {
     )).resolves.toMatchObject({
       nodes: [{ id: 9, organizationId: 4, bodyHtml: '<p>{{company}} {{first_name}}</p>' }],
       pageInfo: { page: 2, pageSize: 10, total: 1 },
+      stats: { total: 7, active: 5, inactive: 2, categories: 3 },
+      categories: [{ category: 'OnBoarding', count: 4 }],
     });
     expect(repository.findPage).toHaveBeenCalledWith({
       organizationId: 4,

@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Copy, FileText, FolderOpen, Mail, MoreHorizontal, Pencil, Plus, Send, Trash2, PieChart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +32,7 @@ import { getEmailTemplatesViaGraphql } from '@/services/emailTemplatesGraphql';
 import { templateCatalogQueryKeys } from '@/services/templateCatalogQueryKeys';
 
 type StatusFilter = 'all' | 'active' | 'inactive';
+const PAGE_SIZE = 20;
 
 export function EmailTemplatesPage() {
   const navigate = useNavigate();
@@ -41,41 +42,59 @@ export function EmailTemplatesPage() {
   const onboarding = useRouteOnboarding();
   const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({ onError: () => 'Failed to initialize.' });
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [page, setPage] = useState(1);
   const [templateToDelete, setTemplateToDelete] = useState<EmailTemplate | null>(null);
   const [workingId, setWorkingId] = useState<number | null>(null);
-  const templatesQueryKey = templateCatalogQueryKeys.email(organizationId);
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
+    return () => window.clearTimeout(timeout);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [categoryFilter, debouncedSearch, statusFilter]);
+
+  const templatesQueryKey = templateCatalogQueryKeys.emailPage(organizationId, {
+    search: debouncedSearch,
+    category: categoryFilter,
+    status: statusFilter,
+    page,
+    limit: PAGE_SIZE,
+  });
   const templatesQuery = useQuery({
     queryKey: templatesQueryKey,
-    queryFn: ({ signal }) => getEmailTemplatesViaGraphql({}, organizationId as number, signal),
+    queryFn: ({ signal }) => getEmailTemplatesViaGraphql({
+      page,
+      limit: PAGE_SIZE,
+      search: debouncedSearch || undefined,
+      category: categoryFilter === 'all' ? undefined : categoryFilter,
+      is_active: statusFilter === 'all' ? undefined : statusFilter === 'active',
+    }, organizationId as number, signal),
     enabled: organizationId !== null,
     staleTime: QUERY_STALE_TIME_MS,
     retry: shouldRetryQuery,
+    placeholderData: keepPreviousData,
   });
-  const templates = useMemo(() => templatesQuery.data?.templates ?? [], [templatesQuery.data]);
+  const templates = templatesQuery.data?.templates ?? [];
+  const pagination = templatesQuery.data?.pagination ?? {
+    page, limit: PAGE_SIZE, total: 0, totalPages: 0,
+  };
   const loading = orgLoading || (organizationId !== null && templatesQuery.isPending);
   const loadError = templatesQuery.error && !templatesQuery.data
     ? 'We could not load your email templates. Existing templates have not been changed.'
     : null;
 
-  const categories = useMemo(() => Array.from(new Set(templates.map(template => template.category).filter(Boolean))).sort(), [templates]);
-  const stats = useMemo(() => ({
-    total: templates.length,
-    active: templates.filter(template => template.is_active).length,
-    inactive: templates.filter(template => !template.is_active).length,
-    categories: categories.length,
-  }), [categories.length, templates]);
+  const categories = (templatesQuery.data?.categories ?? []).map(item => item.category);
+  const stats = templatesQuery.data?.stats ?? { total: 0, active: 0, inactive: 0, categories: 0 };
 
-  const filteredTemplates = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    return templates.filter(template => {
-      const matchesQuery = !query || template.name.toLowerCase().includes(query) || template.subject.toLowerCase().includes(query);
-      const matchesCategory = categoryFilter === 'all' || template.category === categoryFilter;
-      const matchesStatus = statusFilter === 'all' || template.is_active === (statusFilter === 'active');
-      return matchesQuery && matchesCategory && matchesStatus;
-    });
-  }, [categoryFilter, searchQuery, statusFilter, templates]);
+  useEffect(() => {
+    if (!templatesQuery.data) return;
+    const lastAvailablePage = Math.max(1, templatesQuery.data.pagination.totalPages);
+    if (page > lastAvailablePage) setPage(lastAvailablePage);
+  }, [page, templatesQuery.data]);
 
   const filters = (compact = false) => <div className={cn('flex gap-2', compact && 'flex-col')}>
     <Select value={categoryFilter} onValueChange={setCategoryFilter}><SelectTrigger className={compact ? 'h-11 w-full' : 'h-11 w-[142px] bg-muted/20'}><SelectValue placeholder="Category" /></SelectTrigger><SelectContent><SelectItem value="all">All categories</SelectItem>{categories.map(category => <SelectItem key={category} value={category}>{category}</SelectItem>)}</SelectContent></Select>
@@ -86,11 +105,8 @@ export function EmailTemplatesPage() {
     if (!organizationId) return;
     setWorkingId(template.id);
     try {
-      const copy = await duplicateEmailTemplate(template.id, organizationId);
-      queryClient.setQueryData<{ templates: EmailTemplate[]; total: number }>(templatesQueryKey, current => current ? {
-        templates: [copy, ...current.templates.filter(item => item.id !== copy.id)],
-        total: current.templates.some(item => item.id === copy.id) ? current.total : current.total + 1,
-      } : current);
+      await duplicateEmailTemplate(template.id, organizationId);
+      await queryClient.invalidateQueries({ queryKey: templateCatalogQueryKeys.email(organizationId) });
       toast({ title: 'Duplicated', description: 'Template duplicated successfully.' });
     } catch { toast({ title: 'Unable to duplicate', description: 'The template was not duplicated.', variant: 'destructive' }); }
     finally { setWorkingId(null); }
@@ -110,13 +126,7 @@ export function EmailTemplatesPage() {
     if (!organizationId || !templateToDelete) return false;
     try {
       await deleteEmailTemplate(templateToDelete.id, organizationId);
-      queryClient.setQueryData<{ templates: EmailTemplate[]; total: number }>(templatesQueryKey, current => {
-        if (!current?.templates.some(template => template.id === templateToDelete.id)) return current;
-        return {
-          templates: current.templates.filter(template => template.id !== templateToDelete.id),
-          total: Math.max(0, current.total - 1),
-        };
-      });
+      await queryClient.invalidateQueries({ queryKey: templateCatalogQueryKeys.email(organizationId) });
       setTemplateToDelete(null);
       return true;
     }
@@ -148,12 +158,20 @@ export function EmailTemplatesPage() {
     </FramedSection>}
     <Card><CardContent className="p-0">{loading ? <div className="space-y-4 p-6">{Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-20 w-full" />)}</div>
       : loadError ? <ErrorState title="Email templates unavailable" description={loadError} icon={FileText} onAction={() => void templatesQuery.refetch()} className="p-12" />
-      : filteredTemplates.length === 0 ? <EmptyState icon={FileText} kind={hasQuery ? 'results' : 'collection'} title={hasQuery ? 'No matching email templates' : 'No email templates yet'} description={hasQuery ? undefined : 'Create a reusable template for campaign and automation emails.'} actionLabel={hasQuery ? 'Clear filters' : 'New template'} onAction={hasQuery ? clearQuery : () => navigate('/email-templates/new')} className="p-12" />
-      : <div className="divide-y">{filteredTemplates.map(template => {
+      : templates.length === 0 ? <EmptyState icon={FileText} kind={hasQuery ? 'results' : 'collection'} title={hasQuery ? 'No matching email templates' : 'No email templates yet'} description={hasQuery ? undefined : 'Create a reusable template for campaign and automation emails.'} actionLabel={hasQuery ? 'Clear filters' : 'New template'} onAction={hasQuery ? clearQuery : () => navigate('/email-templates/new')} className="p-12" />
+      : <div className="divide-y">{templates.map(template => {
         const visual = getCatalogStatusVisual(template.is_active);
         return <div key={template.id} role="link" tabIndex={0} aria-label={`Edit ${template.name}`} className="group flex cursor-pointer items-center gap-3 px-3 py-4 interaction-row focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-4" onClick={() => navigate(`/email-templates/${template.id}`)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); navigate(`/email-templates/${template.id}`); } }}><div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full', visual.iconBackgroundClass)}><Mail className={cn('h-5 w-5', visual.iconClass)} /></div><div className="min-w-0 flex-1"><div className="flex min-w-0 items-center gap-2"><h3 className="truncate text-sm font-medium md:text-base">{template.name}</h3><Badge className={cn('shrink-0 text-xs', visual.badgeClass)}>{visual.label}</Badge>{template.has_unpublished_changes && <Badge className={cn('shrink-0 text-xs', DRAFT_EMAIL_TEMPLATE_VISUAL.badgeClass)}>{DRAFT_EMAIL_TEMPLATE_VISUAL.label}</Badge>}</div><p className="mt-1 truncate text-sm text-muted-foreground">{template.subject}</p><div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">{template.category && <span>{template.category}</span>}<span>{template.variables.length} variable{template.variables.length === 1 ? '' : 's'}</span></div></div><DropdownMenu><DropdownMenuTrigger asChild onClick={event => event.stopPropagation()}><Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" disabled={workingId === template.id} aria-label={`More actions for ${template.name}`}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end" onClick={event => event.stopPropagation()}><DropdownMenuItem onClick={() => navigate(`/email-templates/${template.id}`)} className="group/menu"><Pencil className="mr-2 h-4 w-4" />Edit template</DropdownMenuItem><DropdownMenuItem onClick={() => void handleSendTest(template)} disabled={!template.published_version || Boolean(template.has_unpublished_changes)}><Send className="mr-2 h-4 w-4" />Send published test</DropdownMenuItem><DropdownMenuItem onClick={() => void handleDuplicate(template)}><Copy className="mr-2 h-4 w-4" />Duplicate</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setTemplateToDelete(template)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div>;
       })}</div>}
     </CardContent></Card>
+    {pagination.totalPages > 1 && <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-sm text-muted-foreground">Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} templates</p>
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" onClick={() => setPage(current => Math.max(1, current - 1))} disabled={templatesQuery.isFetching || pagination.page <= 1}>Previous</Button>
+        <span className="min-w-20 text-center text-sm text-muted-foreground">{pagination.page} of {pagination.totalPages}</span>
+        <Button variant="outline" size="sm" onClick={() => setPage(current => Math.min(pagination.totalPages, current + 1))} disabled={templatesQuery.isFetching || pagination.page >= pagination.totalPages}>Next</Button>
+      </div>
+    </div>}
     {onboarding.featureKey && ONBOARDING_CONTENT[onboarding.featureKey] && <OnboardingModal isOpen={onboarding.showModal} onClose={onboarding.handleClose} onComplete={onboarding.handleComplete} onDismiss={onboarding.handleDismiss} content={ONBOARDING_CONTENT[onboarding.featureKey]} />}
     <DeleteDialog open={Boolean(templateToDelete)} onOpenChange={open => !open && setTemplateToDelete(null)} onConfirm={handleDelete} itemType="email-template" itemTitle={templateToDelete?.name} />
   </PageLayout>;

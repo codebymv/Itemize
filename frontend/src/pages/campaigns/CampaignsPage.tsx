@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Copy,
   Eye,
@@ -62,6 +63,8 @@ import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
+import { campaignQueryKeys } from '@/services/campaignQueryKeys';
 import {
   deleteCampaign,
   duplicateCampaign,
@@ -70,7 +73,6 @@ import {
   previewCampaign,
   resumeCampaign,
   sendCampaign,
-  type CampaignPreview,
   type EmailCampaign,
 } from '@/services/campaignsApi';
 import type { Campaign } from '@/types/campaigns';
@@ -85,6 +87,7 @@ const CAMPAIGN_STATUSES: Array<{ value: Campaign['status']; label: string }> = [
   { value: 'failed', label: 'Failed' },
   { value: 'cancelled', label: 'Cancelled' },
 ];
+const PAGE_SIZE = 20;
 
 function toCampaignListItem(campaign: EmailCampaign): Campaign {
   return {
@@ -116,83 +119,79 @@ function formatCampaignDate(value?: string): string | null {
 export function CampaignsPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const onboarding = useOnboardingTrigger('campaigns');
   const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({
     onError: () => 'Failed to initialize.',
   });
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [page, setPage] = useState(1);
   const [campaignToDelete, setCampaignToDelete] = useState<Campaign | null>(null);
   const [campaignToSend, setCampaignToSend] = useState<Campaign | null>(null);
-  const [sendPreview, setSendPreview] = useState<CampaignPreview | null>(null);
-  const [sendPreviewLoading, setSendPreviewLoading] = useState(false);
-  const [sendPreviewError, setSendPreviewError] = useState<string | null>(null);
   const [workingCampaignId, setWorkingCampaignId] = useState<number | null>(null);
-  const loadRequestRef = useRef(0);
-
-  const fetchCampaigns = useCallback(async () => {
-    if (orgLoading) {
-      setLoading(true);
-      return;
-    }
-    if (!organizationId) {
-      setCampaigns([]);
-      setLoading(false);
-      return;
-    }
-
-    const requestId = ++loadRequestRef.current;
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const first = await getCampaigns({ page: 1, limit: 100 }, organizationId);
-      const remaining = first.pagination.totalPages > 1
-        ? await Promise.all(
-            Array.from({ length: first.pagination.totalPages - 1 }, (_, index) =>
-              getCampaigns({ page: index + 2, limit: 100 }, organizationId),
-            ),
-          )
-        : [];
-      if (requestId === loadRequestRef.current) {
-        setCampaigns(
-          [first, ...remaining].flatMap(response => response.campaigns).map(toCampaignListItem),
-        );
-      }
-    } catch (error) {
-      console.error('Error fetching campaigns:', error);
-      if (requestId === loadRequestRef.current) {
-        setLoadError('We could not load your campaigns. Existing campaigns have not been changed.');
-      }
-    } finally {
-      if (requestId === loadRequestRef.current) setLoading(false);
-    }
-  }, [organizationId, orgLoading]);
 
   useEffect(() => {
-    void fetchCampaigns();
-  }, [fetchCampaigns]);
+    const timeout = window.setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
+    return () => window.clearTimeout(timeout);
+  }, [searchQuery]);
 
-  const stats = useMemo(() => ({
-    total: campaigns.length,
-    draft: campaigns.filter(campaign => campaign.status === 'draft').length,
-    inProgress: campaigns.filter(campaign => ['scheduled', 'sending', 'paused'].includes(campaign.status)).length,
-    delivered: campaigns.filter(campaign => campaign.status === 'sent').length,
-    failed: campaigns.filter(campaign => ['failed', 'cancelled'].includes(campaign.status)).length,
-  }), [campaigns]);
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, statusFilter]);
 
-  const filteredCampaigns = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    return campaigns.filter(campaign => {
-      const matchesSearch = !query
-        || campaign.name.toLowerCase().includes(query)
-        || campaign.subject.toLowerCase().includes(query);
-      const matchesStatus = statusFilter === 'all' || campaign.status === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
-  }, [campaigns, searchQuery, statusFilter]);
+  const queueQuery = useQuery({
+    queryKey: campaignQueryKeys.queue(organizationId, {
+      search: debouncedSearch,
+      status: statusFilter,
+      page,
+      limit: PAGE_SIZE,
+    }),
+    queryFn: ({ signal }) => getCampaigns({
+      page,
+      limit: PAGE_SIZE,
+      search: debouncedSearch || undefined,
+      status: statusFilter as EmailCampaign['status'] | 'all',
+    }, organizationId as number, signal),
+    enabled: organizationId !== null,
+    staleTime: QUERY_STALE_TIME_MS,
+    retry: shouldRetryQuery,
+    placeholderData: keepPreviousData,
+  });
+  const campaigns = useMemo(
+    () => (queueQuery.data?.campaigns ?? []).map(toCampaignListItem),
+    [queueQuery.data?.campaigns],
+  );
+  const pagination = queueQuery.data?.pagination ?? { page, limit: PAGE_SIZE, total: 0, totalPages: 0 };
+  const stats = queueQuery.data?.stats ?? { total: 0, failed: 0, draft: 0, inProgress: 0, delivered: 0 };
+  const loading = orgLoading || (organizationId !== null && queueQuery.isPending);
+  const loadError = queueQuery.error && !queueQuery.data
+    ? 'We could not load your campaigns. Existing campaigns have not been changed.'
+    : null;
+
+  useEffect(() => {
+    if (!queueQuery.data) return;
+    const lastAvailablePage = Math.max(1, queueQuery.data.pagination.totalPages);
+    if (page > lastAvailablePage) setPage(lastAvailablePage);
+  }, [page, queueQuery.data]);
+
+  const sendPreviewQuery = useQuery({
+    queryKey: campaignQueryKeys.audiencePreview(organizationId, campaignToSend?.id ?? null),
+    queryFn: ({ signal }) => previewCampaign(
+      campaignToSend?.id as number,
+      organizationId as number,
+      signal,
+    ),
+    enabled: campaignToSend !== null && organizationId !== null,
+    staleTime: 0,
+    retry: shouldRetryQuery,
+  });
+  const sendPreview = sendPreviewQuery.data ?? null;
+  const sendPreviewLoading = sendPreviewQuery.isPending && sendPreviewQuery.fetchStatus !== 'idle';
+  const sendPreviewError = sendPreviewQuery.isError
+    ? 'Recipient eligibility could not be verified. Sending is disabled until the preview succeeds.'
+    : null;
 
   const hasQuery = Boolean(searchQuery.trim()) || statusFilter !== 'all';
   const clearQuery = () => {
@@ -214,17 +213,16 @@ export function CampaignsPage() {
     </Select>
   );
 
-  const updateCampaign = (campaign: EmailCampaign) => {
-    const next = toCampaignListItem(campaign);
-    setCampaigns(current => current.map(item => item.id === next.id ? next : item));
-  };
+  const refreshQueue = () => queryClient.invalidateQueries({
+    queryKey: campaignQueryKeys.queues(organizationId),
+  });
 
   const handleDuplicate = async (campaign: Campaign) => {
     if (!organizationId) return;
     setWorkingCampaignId(campaign.id);
     try {
-      const copy = await duplicateCampaign(campaign.id, organizationId);
-      setCampaigns(current => [toCampaignListItem(copy), ...current]);
+      await duplicateCampaign(campaign.id, organizationId);
+      await refreshQueue();
       toast({ title: 'Duplicated', description: 'Campaign duplicated as a draft.' });
     } catch (error) {
       toast({ title: 'Unable to duplicate', description: 'The campaign was not duplicated.', variant: 'destructive' });
@@ -237,7 +235,8 @@ export function CampaignsPage() {
     if (!organizationId) return;
     setWorkingCampaignId(campaign.id);
     try {
-      updateCampaign(await pauseCampaign(campaign.id, organizationId));
+      await pauseCampaign(campaign.id, organizationId);
+      await refreshQueue();
       toast({ title: 'Paused', description: 'Campaign delivery has been paused.' });
     } catch (error) {
       toast({ title: 'Unable to pause', description: 'Campaign delivery is unchanged.', variant: 'destructive' });
@@ -251,7 +250,7 @@ export function CampaignsPage() {
     setWorkingCampaignId(campaign.id);
     try {
       await resumeCampaign(campaign.id, organizationId);
-      await fetchCampaigns();
+      await refreshQueue();
       toast({ title: 'Resumed', description: 'Campaign delivery has resumed.' });
     } catch (error) {
       toast({ title: 'Unable to resume', description: 'Campaign delivery remains paused.', variant: 'destructive' });
@@ -263,16 +262,6 @@ export function CampaignsPage() {
   const requestSend = async (campaign: Campaign) => {
     if (!organizationId) return;
     setCampaignToSend(campaign);
-    setSendPreview(null);
-    setSendPreviewError(null);
-    setSendPreviewLoading(true);
-    try {
-      setSendPreview(await previewCampaign(campaign.id, organizationId));
-    } catch (error) {
-      setSendPreviewError('Recipient eligibility could not be verified. Sending is disabled until the preview succeeds.');
-    } finally {
-      setSendPreviewLoading(false);
-    }
   };
 
   const confirmSend = async () => {
@@ -281,7 +270,10 @@ export function CampaignsPage() {
     setWorkingCampaignId(campaign.id);
     try {
       const result = await sendCampaign(campaign.id, organizationId);
-      updateCampaign(result.campaign);
+      queryClient.removeQueries({
+        queryKey: campaignQueryKeys.audiencePreview(organizationId, campaign.id),
+      });
+      await refreshQueue();
       setCampaignToSend(null);
       toast({
         title: 'Campaign started',
@@ -298,7 +290,13 @@ export function CampaignsPage() {
     if (!organizationId || !campaignToDelete) return false;
     try {
       await deleteCampaign(campaignToDelete.id, organizationId);
-      setCampaigns(current => current.filter(campaign => campaign.id !== campaignToDelete.id));
+      queryClient.removeQueries({
+        queryKey: campaignQueryKeys.bootstrap(organizationId, campaignToDelete.id),
+      });
+      queryClient.removeQueries({
+        queryKey: campaignQueryKeys.audiencePreview(organizationId, campaignToDelete.id),
+      });
+      await refreshQueue();
       setCampaignToDelete(null);
       return true;
     } catch (error) {
@@ -362,8 +360,8 @@ export function CampaignsPage() {
           {loading ? (
             <div className="space-y-4 p-6">{Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-20 w-full" />)}</div>
           ) : loadError ? (
-            <ErrorState title="Campaigns unavailable" description={loadError} icon={Megaphone} onAction={() => void fetchCampaigns()} className="p-12" />
-          ) : filteredCampaigns.length === 0 ? (
+            <ErrorState title="Campaigns unavailable" description={loadError} icon={Megaphone} onAction={() => void queueQuery.refetch()} className="p-12" />
+          ) : campaigns.length === 0 ? (
             <EmptyState
               icon={Megaphone}
               kind={hasQuery ? 'results' : 'collection'}
@@ -375,7 +373,7 @@ export function CampaignsPage() {
             />
           ) : (
             <div className="divide-y">
-              {filteredCampaigns.map(campaign => {
+              {campaigns.map(campaign => {
                 const visual = getCampaignStatusVisual(campaign.status);
                 const StatusIcon = visual.icon;
                 const working = workingCampaignId === campaign.id;
@@ -455,6 +453,37 @@ export function CampaignsPage() {
           )}
         </CardContent>
       </Card>
+
+      {pagination.totalPages > 1 && (
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground">
+            Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
+            {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
+            {pagination.total} campaigns
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(current => Math.max(1, current - 1))}
+              disabled={queueQuery.isFetching || pagination.page <= 1}
+            >
+              Previous
+            </Button>
+            <span className="min-w-20 text-center text-sm text-muted-foreground">
+              {pagination.page} of {pagination.totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(current => Math.min(pagination.totalPages, current + 1))}
+              disabled={queueQuery.isFetching || pagination.page >= pagination.totalPages}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
 
       <AlertDialog open={Boolean(campaignToSend)} onOpenChange={open => !open && setCampaignToSend(null)}>
         <AlertDialogContent>

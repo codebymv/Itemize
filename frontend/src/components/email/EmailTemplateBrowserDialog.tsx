@@ -6,6 +6,7 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, Di
 import { SearchField } from '@/components/ui/search-field';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { EmptyState } from '@/components/EmptyState';
+import { ErrorState } from '@/components/ErrorState';
 import { cn } from '@/lib/utils';
 
 export interface EmailTemplateBrowserItem {
@@ -25,6 +26,8 @@ interface EmailTemplateBrowserDialogProps<T extends EmailTemplateBrowserItem> {
   description?: string;
   items: T[];
   loading?: boolean;
+  error?: boolean;
+  onRetry?: () => void;
   selectedId?: T['id'] | null;
   onSelect: (item: T) => void | boolean;
   renderPreview?: (item: T) => ReactNode;
@@ -33,6 +36,17 @@ interface EmailTemplateBrowserDialogProps<T extends EmailTemplateBrowserItem> {
   footerAction?: ReactNode;
   emptyTitle?: string;
   emptyDescription?: string;
+  remoteQuery?: {
+    searchQuery: string;
+    category: string;
+    categories: string[];
+    total: number;
+    hasNextPage: boolean;
+    loadingMore?: boolean;
+    onSearchQueryChange: (value: string) => void;
+    onCategoryChange: (value: string) => void;
+    onLoadMore: () => void;
+  };
 }
 
 const categoryLabel = (value: string): string => value
@@ -46,6 +60,8 @@ export function EmailTemplateBrowserDialog<T extends EmailTemplateBrowserItem>({
   description = 'Select a reusable email design.',
   items,
   loading = false,
+  error = false,
+  onRetry,
   selectedId,
   onSelect,
   renderPreview,
@@ -54,6 +70,7 @@ export function EmailTemplateBrowserDialog<T extends EmailTemplateBrowserItem>({
   footerAction,
   emptyTitle = 'No email templates yet',
   emptyDescription = 'Create a template or compose this email from scratch.',
+  remoteQuery,
 }: EmailTemplateBrowserDialogProps<T>) {
   const [searchQuery, setSearchQuery] = useState('');
   const [category, setCategory] = useState('all');
@@ -67,24 +84,39 @@ export function EmailTemplateBrowserDialog<T extends EmailTemplateBrowserItem>({
     }
   }, [open]);
 
-  const categories = useMemo(() => Array.from(new Set(items
+  const activeSearchQuery = remoteQuery?.searchQuery ?? searchQuery;
+  const activeCategory = remoteQuery?.category ?? category;
+
+  const localCategories = useMemo(() => Array.from(new Set(items
     .map(item => item.category?.trim())
     .filter((value): value is string => Boolean(value))))
     .sort((left, right) => left.localeCompare(right)), [items]);
+  const categories = remoteQuery?.categories ?? localCategories;
 
   const filteredItems = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
+    if (remoteQuery) return items;
+    const query = activeSearchQuery.trim().toLowerCase();
     return items.filter(item => {
       const matchesQuery = !query
         || item.name.toLowerCase().includes(query)
         || item.subject.toLowerCase().includes(query);
-      const matchesCategory = category === 'all' || item.category === category;
+      const matchesCategory = activeCategory === 'all' || item.category === activeCategory;
       return matchesQuery && matchesCategory;
     });
-  }, [category, items, searchQuery]);
+  }, [activeCategory, activeSearchQuery, items, remoteQuery]);
 
   const previewItem = items.find(item => item.id === previewId) ?? null;
-  const hasQuery = Boolean(searchQuery.trim()) || category !== 'all';
+  const hasQuery = Boolean(activeSearchQuery.trim()) || activeCategory !== 'all';
+
+  const clearQuery = () => {
+    if (remoteQuery) {
+      remoteQuery.onSearchQueryChange('');
+      remoteQuery.onCategoryChange('all');
+      return;
+    }
+    setSearchQuery('');
+    setCategory('all');
+  };
 
   const choose = (item: T) => {
     if (onSelect(item) === false) return;
@@ -122,12 +154,12 @@ export function EmailTemplateBrowserDialog<T extends EmailTemplateBrowserItem>({
                 <SearchField
                     label="Search email templates"
                     placeholder="Search templates…"
-                    value={searchQuery}
-                    onValueChange={setSearchQuery}
+                    value={activeSearchQuery}
+                    onValueChange={remoteQuery?.onSearchQueryChange ?? setSearchQuery}
                     controlSize="compact"
                     containerClassName="min-w-0 flex-1"
                   />
-                <Select value={category} onValueChange={setCategory}>
+                <Select value={activeCategory} onValueChange={remoteQuery?.onCategoryChange ?? setCategory}>
                   <SelectTrigger controlSize="compact" className="w-[132px] shrink-0 sm:w-[168px]" aria-label="Filter email templates by category">
                     <SelectValue placeholder="Category" />
                   </SelectTrigger>
@@ -136,13 +168,21 @@ export function EmailTemplateBrowserDialog<T extends EmailTemplateBrowserItem>({
                     {categories.map(value => <SelectItem key={value} value={value}>{categoryLabel(value)}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                <span className="hidden shrink-0 text-sm text-muted-foreground sm:inline">{filteredItems.length}</span>
+                <span className="hidden shrink-0 text-sm text-muted-foreground sm:inline">{remoteQuery?.total ?? filteredItems.length}</span>
               </div>
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4">
               {loading ? (
                 <div className="flex h-full min-h-48 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-blue-600" /></div>
+              ) : error ? (
+                <ErrorState
+                  icon={FileText}
+                  title="Email templates unavailable"
+                  description="The template library could not be loaded. Nothing has been changed."
+                  onAction={onRetry}
+                  className="h-full min-h-48"
+                />
               ) : filteredItems.length === 0 ? (
                 <EmptyState
                   icon={FileText}
@@ -151,7 +191,7 @@ export function EmailTemplateBrowserDialog<T extends EmailTemplateBrowserItem>({
                   title={hasQuery ? 'No matching templates' : emptyTitle}
                   description={hasQuery ? undefined : emptyDescription}
                   actionLabel={hasQuery ? 'Clear filters' : undefined}
-                  onAction={hasQuery ? () => { setSearchQuery(''); setCategory('all'); } : undefined}
+                  onAction={hasQuery ? clearQuery : undefined}
                   className="h-full min-h-48"
                 />
               ) : (
@@ -180,6 +220,12 @@ export function EmailTemplateBrowserDialog<T extends EmailTemplateBrowserItem>({
                       </div>
                     );
                   })}
+                  {remoteQuery?.hasNextPage && <div className="flex justify-center p-3">
+                    <Button type="button" variant="outline" size="sm" onClick={remoteQuery.onLoadMore} disabled={remoteQuery.loadingMore}>
+                      {remoteQuery.loadingMore && <Loader2 className="h-4 w-4 animate-spin" />}
+                      Load more
+                    </Button>
+                  </div>}
                 </div>
               )}
             </div>

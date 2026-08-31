@@ -18,6 +18,9 @@ export type WorkflowStepRow = {
 };
 
 export type WorkflowValue = { workflow: WorkflowRow; steps: WorkflowStepRow[]; affectedEnrollments?: number };
+export type WorkflowStatsRow = {
+  total: string; active: string; inactive: string; running: string; completed: string; failed: string;
+};
 export type WorkflowStepValue = {
   stepType: string; stepConfig: Record<string, unknown>; conditionConfig: Record<string, unknown> | null;
   trueBranchStep: number | null; falseBranchStep: number | null;
@@ -55,7 +58,7 @@ export class WorkflowsRepository {
   async findPage(criteria: {
     organizationId: number; triggerType?: string; isActive?: boolean; searchPattern?: string;
     pageSize: number; offset: number;
-  }): Promise<{ rows: WorkflowRow[]; total: string }> {
+  }): Promise<{ rows: WorkflowRow[]; total: string; stats: WorkflowStatsRow }> {
     const parameters: unknown[] = [criteria.organizationId];
     const clauses = ['w.organization_id = $1'];
     if (criteria.triggerType !== undefined) {
@@ -70,6 +73,19 @@ export class WorkflowsRepository {
     }
     const where = clauses.join(' AND ');
     const count = await this.pool.query<{ total: string }>(`SELECT COUNT(*) AS total FROM workflows w WHERE ${where}`, parameters);
+    const stats = await this.pool.query<WorkflowStatsRow>(
+      `SELECT
+         COUNT(DISTINCT w.id) AS total,
+         COUNT(DISTINCT w.id) FILTER (WHERE w.is_active = TRUE) AS active,
+         COUNT(DISTINCT w.id) FILTER (WHERE w.is_active = FALSE) AS inactive,
+         COUNT(we.id) FILTER (WHERE we.status = 'active') AS running,
+         COUNT(we.id) FILTER (WHERE we.status = 'completed') AS completed,
+         COUNT(we.id) FILTER (WHERE we.status = 'failed') AS failed
+       FROM workflows w
+       LEFT JOIN workflow_enrollments we ON we.workflow_id = w.id
+       WHERE w.organization_id = $1`,
+      [criteria.organizationId],
+    );
     parameters.push(criteria.pageSize, criteria.offset);
     const result = await this.pool.query<WorkflowRow>(
       `SELECT ${workflowColumns()}, u.name AS created_by_name, ${aggregateColumns}
@@ -78,7 +94,13 @@ export class WorkflowsRepository {
        LIMIT $${parameters.length - 1} OFFSET $${parameters.length}`,
       parameters,
     );
-    return { rows: result.rows, total: count.rows[0]?.total ?? '0' };
+    return {
+      rows: result.rows,
+      total: count.rows[0]?.total ?? '0',
+      stats: stats.rows[0] ?? {
+        total: '0', active: '0', inactive: '0', running: '0', completed: '0', failed: '0',
+      },
+    };
   }
 
   async findById(organizationId: number, id: number): Promise<WorkflowValue | null> {

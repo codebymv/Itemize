@@ -1,6 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { WorkflowEnrollmentsDialog } from './WorkflowEnrollmentsDialog';
 
@@ -31,6 +32,17 @@ const enrollment = (id: number, status: 'active' | 'paused' | 'failed') => ({
   first_name: status, last_name: 'Contact', email: `${status}@example.test`,
 });
 
+const renderDialog = () => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <WorkflowEnrollmentsDialog open onOpenChange={vi.fn()} organizationId={4} workflowId={9} />
+    </QueryClientProvider>,
+  );
+};
+
 describe('WorkflowEnrollmentsDialog', () => {
   beforeAll(() => {
     Object.defineProperties(HTMLElement.prototype, {
@@ -60,7 +72,7 @@ describe('WorkflowEnrollmentsDialog', () => {
   });
 
   it('enrolls a selected contact and exposes state-appropriate lifecycle actions', async () => {
-    render(<WorkflowEnrollmentsDialog open onOpenChange={vi.fn()} organizationId={4} workflowId={9} />);
+    renderDialog();
 
     const user = userEvent.setup();
     expect(await screen.findByRole('dialog', { name: 'Automation runs' })).toBeInTheDocument();
@@ -78,7 +90,7 @@ describe('WorkflowEnrollmentsDialog', () => {
   });
 
   it('requires the shared confirmation dialog before terminal cancellation', async () => {
-    render(<WorkflowEnrollmentsDialog open onOpenChange={vi.fn()} organizationId={4} workflowId={9} />);
+    renderDialog();
     await screen.findByText('active Contact');
     fireEvent.click(screen.getAllByRole('button', { name: 'Cancel' })[0]);
     expect(await screen.findByRole('alertdialog', { name: 'Cancel this run?' })).toBeInTheDocument();

@@ -109,9 +109,6 @@ describe('campaign editor GraphQL bootstrap', () => {
   });
 
   it('remembers a legacy schema after the first missing-field negotiation', async () => {
-    const templatePage = response({ data: { emailTemplates: {
-      nodes: [template], pageInfo: { total: 1, hasNextPage: false },
-    } } });
     const segmentPage = response({ data: { segments: {
       nodes: [segment], pageInfo: { page: 1, totalPages: 1 },
     } } });
@@ -122,21 +119,19 @@ describe('campaign editor GraphQL bootstrap', () => {
       .mockResolvedValueOnce(response({ errors: [{
         message: 'Cannot query field "campaignEditorBootstrap" on type "Query".',
       }] }))
-      .mockResolvedValueOnce(templatePage)
       .mockResolvedValueOnce(segmentPage)
       .mockResolvedValueOnce(filterOptions)
-      .mockResolvedValueOnce(templatePage)
       .mockResolvedValueOnce(segmentPage)
       .mockResolvedValueOnce(filterOptions);
 
     await expect(getCampaignEditorBootstrapViaGraphql(4, null)).resolves.toMatchObject({
       campaign: null,
-      templates: [{ id: 3 }],
+      templates: [],
       segments: [{ id: 12 }],
     });
     await expect(getCampaignEditorBootstrapViaGraphql(4, null)).resolves.toMatchObject({
       campaign: null,
-      templates: [{ id: 3 }],
+      templates: [],
       segments: [{ id: 12 }],
     });
 
@@ -147,10 +142,8 @@ describe('campaign editor GraphQL bootstrap', () => {
     expect(operations.filter((operation) => operation === 'CampaignEditorBootstrap')).toHaveLength(1);
     expect(operations).toEqual([
       'CampaignEditorBootstrap',
-      'EmailTemplates',
       'Segments',
       'SegmentFilterOptions',
-      'EmailTemplates',
       'Segments',
       'SegmentFilterOptions',
     ]);

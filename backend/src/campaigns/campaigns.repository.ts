@@ -50,6 +50,10 @@ export type CampaignAudiencePreviewRow = {
   recipientCount: number; segmentType: string; segmentId: number | null;
   tagIds: number[]; excludedTagIds: number[];
 };
+export type CampaignStatsRow = {
+  total: number | string; failed: number | string; draft: number | string;
+  in_progress: number | string; delivered: number | string;
+};
 
 export class CampaignValidationError extends Error {
   constructor(message: string, readonly field: string) {
@@ -82,7 +86,7 @@ export class CampaignsRepository {
 
   async findPage(criteria: {
     organizationId: number; status?: string; searchPattern?: string; pageSize: number; offset: number;
-  }): Promise<{ rows: CampaignRow[]; total: string }> {
+  }): Promise<{ rows: CampaignRow[]; total: string; stats: CampaignStatsRow }> {
     const parameters: unknown[] = [criteria.organizationId];
     const clauses = ['c.organization_id = $1'];
     if (criteria.status !== undefined) {
@@ -98,6 +102,17 @@ export class CampaignsRepository {
       `SELECT COUNT(*) AS total FROM email_campaigns c WHERE ${where}`,
       parameters,
     );
+    const stats = await this.pool.query<CampaignStatsRow>(
+      `SELECT
+         COUNT(*) AS total,
+         COUNT(*) FILTER (WHERE status IN ('failed','cancelled')) AS failed,
+         COUNT(*) FILTER (WHERE status = 'draft') AS draft,
+         COUNT(*) FILTER (WHERE status IN ('scheduled','sending','paused')) AS in_progress,
+         COUNT(*) FILTER (WHERE status = 'sent') AS delivered
+       FROM email_campaigns
+       WHERE organization_id = $1`,
+      [criteria.organizationId],
+    );
     parameters.push(criteria.pageSize, criteria.offset);
     const rows = await this.pool.query<CampaignRow>(
       `SELECT ${campaignReadColumns()}, et.name AS template_name, u.name AS created_by_name
@@ -109,7 +124,11 @@ export class CampaignsRepository {
        LIMIT $${parameters.length - 1} OFFSET $${parameters.length}`,
       parameters,
     );
-    return { rows: rows.rows, total: count.rows[0]?.total ?? '0' };
+    return {
+      rows: rows.rows,
+      total: count.rows[0]?.total ?? '0',
+      stats: stats.rows[0] ?? { total: 0, failed: 0, draft: 0, in_progress: 0, delivered: 0 },
+    };
   }
 
   async findById(organizationId: number, id: number): Promise<{ row: CampaignRow; links: CampaignLinkRow[] } | null> {

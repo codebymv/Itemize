@@ -70,6 +70,12 @@ export class SegmentsService {
       return {
         nodes: result.rows.map((row) => this.mapSegment(row)),
         pageInfo: pageInfo(normalizedPage.page, normalizedPage.pageSize, result.total),
+        stats: {
+          total: Number(result.stats.total),
+          dynamic: Number(result.stats.dynamic),
+          staticCount: Number(result.stats.static_count),
+          contacts: Number(result.stats.contacts),
+        },
       };
     } catch (error) { this.rethrow(error); }
   }

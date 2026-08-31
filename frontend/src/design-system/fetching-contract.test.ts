@@ -68,11 +68,11 @@ describe('fetching contract', () => {
     const page = read('pages/campaigns/CampaignDetailPage.tsx');
     const service = read('services/campaignEditorGraphql.ts');
 
-    expect(page).toContain('"campaign-editor-bootstrap",');
+    expect(page).toContain('campaignQueryKeys.bootstrap(organizationId, validCampaignId)');
     expect(page).toContain('getCampaignEditorBootstrapViaGraphql(');
     expect(page).toContain('queryFn: ({ signal })');
     expect(page).not.toContain('const loadCampaign = useCallback');
-    expect(page).toContain('"campaign-recipients",');
+    expect(page).toContain('campaignQueryKeys.recipients(organizationId, campaign?.id ?? null)');
     expect(service).toContain('query CampaignEditorBootstrap(');
     expect(service).toContain("let capability: Capability = 'unknown'");
     expect(service).toContain('resetCampaignEditorCapability');
@@ -100,7 +100,7 @@ describe('fetching contract', () => {
     const service = read('services/signaturesGraphql.ts');
     const keys = read('services/signatureQueryKeys.ts');
 
-    expect(documentEditor).toContain('"signature-document-editor",');
+    expect(documentEditor).toContain('signatureQueryKeys.document(organizationId, documentId)');
     expect(documentEditor).toContain('queryFn: ({ signal })');
     expect(documentEditor).not.toContain('const loadDocument = useCallback');
     expect(documentEditor).not.toContain('await loadDocument()');
@@ -198,7 +198,7 @@ describe('fetching contract', () => {
     const smsEditor = read('pages/sms-templates/SMSTemplateEditorPage.tsx');
     const keys = read('services/templateCatalogQueryKeys.ts');
 
-    expect(emailList).toContain('templateCatalogQueryKeys.email(organizationId)');
+    expect(emailList).toContain('templateCatalogQueryKeys.emailPage(organizationId');
     expect(emailList).toContain('queryFn: ({ signal })');
     expect(emailList).not.toContain('const fetchTemplates = useCallback');
     expect(emailList).not.toContain('requestRef');
@@ -206,8 +206,11 @@ describe('fetching contract', () => {
     expect(smsList).toContain('queryFn: ({ signal })');
     expect(smsList).not.toContain('const fetchTemplates = useCallback');
     expect(smsList).not.toContain('requestRef');
-    expect(emailEditor).toContain('enabled: templateBrowserOpen && organizationId !== null');
-    expect(emailEditor).toContain('templateCatalogQueryKeys.email(organizationId)');
+    expect(emailEditor).toContain('OrganizationEmailTemplateBrowserDialog');
+    const emailPicker = read('components/email/OrganizationEmailTemplateBrowserDialog.tsx');
+    expect(emailPicker).toContain('useInfiniteQuery');
+    expect(emailPicker).toContain('enabled: open');
+    expect(emailPicker).toContain('queryFn: ({ pageParam, signal })');
     expect(smsEditor).toContain('templateCatalogQueryKeys.sms(organizationId)');
     expect(keys).toContain("['email-templates', organizationId]");
     expect(keys).toContain("['sms-templates', organizationId]");
@@ -219,7 +222,7 @@ describe('fetching contract', () => {
     const service = read('services/segmentsGraphql.ts');
     const keys = read('services/segmentQueryKeys.ts');
 
-    expect(list).toContain('segmentQueryKeys.catalog(organizationId)');
+    expect(list).toContain('segmentQueryKeys.page(organizationId');
     expect(list).toContain('queryFn: ({ signal })');
     expect(list).not.toContain('const fetchSegments = useCallback');
     expect(list).not.toContain('requestRef');

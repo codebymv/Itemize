@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useEffect, useState } from 'react';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { 
   Plus, Zap, Play, Pause, MoreHorizontal, Copy, Trash2,
@@ -57,6 +58,8 @@ import {
 import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { getWorkflowStatusVisual } from './constants/workflowConstants';
 import { cn } from '@/lib/utils';
+import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
+import { workflowQueryKeys } from '@/services/workflowQueryKeys';
 
 const TRIGGER_TYPE_ICONS: Partial<Record<WorkflowTriggerType, LucideIcon>> = {
   contact_added: Users,
@@ -71,15 +74,15 @@ const TRIGGER_TYPE_ICONS: Partial<Record<WorkflowTriggerType, LucideIcon>> = {
   manual: Play,
   scheduled: Clock,
 };
+const PAGE_SIZE = 20;
 
 export function AutomationsPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   // Onboarding
   const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('automations');
 
-  const [workflows, setWorkflows] = useState<Workflow[]>([]);
-  const [loading, setLoading] = useState(true);
   const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({
     onError: () => 'Failed to initialize. Please check your connection.'
   });
@@ -87,10 +90,9 @@ export function AutomationsPage() {
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [triggerFilter, setTriggerFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [page, setPage] = useState(1);
   const [workflowToDelete, setWorkflowToDelete] = useState<Workflow | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [workingWorkflowId, setWorkingWorkflowId] = useState<number | null>(null);
-  const loadRequestRef = useRef(0);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setDebouncedSearchQuery(searchQuery.trim()), 250);
@@ -98,52 +100,50 @@ export function AutomationsPage() {
   }, [searchQuery]);
 
   useEffect(() => {
-    if (orgLoading) {
-      setLoading(true);
-      return;
-    }
+    setPage(1);
+  }, [debouncedSearchQuery, statusFilter, triggerFilter]);
 
-    if (!organizationId) {
-      setLoading(false);
-    }
-  }, [organizationId, initError, orgLoading]);
-
-  // Fetch workflows
-  const fetchWorkflows = useCallback(async () => {
-    if (!organizationId) {
-      if (!orgLoading) {
-        setWorkflows([]);
-        setLoading(false);
-      }
-      return;
-    }
-
-    const requestId = ++loadRequestRef.current;
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const response = await getWorkflows(organizationId, {
-        trigger_type: triggerFilter !== 'all'
-          ? triggerFilter as WorkflowTriggerType
-          : undefined,
-        is_active: statusFilter !== 'all' ? statusFilter === 'active' : undefined,
-        search: debouncedSearchQuery || undefined,
-      });
-
-      if (requestId === loadRequestRef.current) setWorkflows(response.workflows);
-    } catch (error) {
-      console.error('Error fetching workflows:', error);
-      if (requestId === loadRequestRef.current) {
-        setLoadError('We could not load your automations. Your existing workflows have not been changed.');
-      }
-    } finally {
-      if (requestId === loadRequestRef.current) setLoading(false);
-    }
-  }, [organizationId, orgLoading, triggerFilter, statusFilter, debouncedSearchQuery]);
+  const queueQuery = useQuery({
+    queryKey: workflowQueryKeys.queue(organizationId, {
+      search: debouncedSearchQuery,
+      trigger: triggerFilter,
+      status: statusFilter,
+      page,
+      limit: PAGE_SIZE,
+    }),
+    queryFn: ({ signal }) => getWorkflows(organizationId as number, {
+      trigger_type: triggerFilter !== 'all' ? triggerFilter as WorkflowTriggerType : undefined,
+      is_active: statusFilter !== 'all' ? statusFilter === 'active' : undefined,
+      search: debouncedSearchQuery || undefined,
+      page,
+      limit: PAGE_SIZE,
+    }, signal),
+    enabled: organizationId !== null,
+    staleTime: QUERY_STALE_TIME_MS,
+    retry: shouldRetryQuery,
+    placeholderData: keepPreviousData,
+  });
+  const workflows = queueQuery.data?.workflows ?? [];
+  const pagination = queueQuery.data?.pagination ?? {
+    page, limit: PAGE_SIZE, total: 0, totalPages: 0,
+  };
+  const stats = queueQuery.data?.stats ?? {
+    total: 0, active: 0, inactive: 0, running: 0, completed: 0, failed: 0,
+  };
+  const loading = orgLoading || (organizationId !== null && queueQuery.isPending);
+  const loadError = queueQuery.error && !queueQuery.data
+    ? 'We could not load your automations. Your existing workflows have not been changed.'
+    : null;
 
   useEffect(() => {
-    fetchWorkflows();
-  }, [fetchWorkflows]);
+    if (!queueQuery.data) return;
+    const lastAvailablePage = Math.max(1, queueQuery.data.pagination.totalPages);
+    if (page > lastAvailablePage) setPage(lastAvailablePage);
+  }, [page, queueQuery.data]);
+
+  const refreshQueue = () => queryClient.invalidateQueries({
+    queryKey: workflowQueryKeys.queues(organizationId),
+  });
 
   const getApiErrorMessage = (error: unknown, fallback: string): string => {
     if (error && typeof error === 'object' && 'response' in error) {
@@ -168,7 +168,7 @@ export function AutomationsPage() {
         await activateWorkflow(workflow.id, organizationId);
         toast({ title: 'Activated', description: 'Workflow activated successfully' });
       }
-      await fetchWorkflows();
+      await refreshQueue();
     } catch (error: unknown) {
       toast({
         title: 'Error',
@@ -186,7 +186,13 @@ export function AutomationsPage() {
 
     try {
       await deleteWorkflow(workflowToDelete.id, organizationId);
-      setWorkflows((prev) => prev.filter((workflow) => workflow.id !== workflowToDelete.id));
+      queryClient.removeQueries({
+        queryKey: workflowQueryKeys.detail(organizationId, workflowToDelete.id),
+      });
+      queryClient.removeQueries({
+        queryKey: workflowQueryKeys.enrollments(organizationId, workflowToDelete.id),
+      });
+      await refreshQueue();
       setWorkflowToDelete(null);
       return true;
     } catch (error) {
@@ -202,7 +208,7 @@ export function AutomationsPage() {
     try {
       await duplicateWorkflow(workflow.id, organizationId);
       toast({ title: 'Duplicated', description: 'Workflow duplicated successfully' });
-      await fetchWorkflows();
+      await refreshQueue();
     } catch (error) {
       toast({
         title: 'Error',
@@ -225,16 +231,6 @@ export function AutomationsPage() {
       </PageLayout>
     );
   }
-
-  // Stats calculation
-  const stats = {
-    total: workflows.length,
-    active: workflows.filter(w => w.is_active).length,
-    inactive: workflows.filter(w => !w.is_active).length,
-    running: workflows.reduce((sum, w) => sum + (w.enrollment_stats?.active_count ?? w.active_enrollments ?? 0), 0),
-    totalCompleted: workflows.reduce((sum, w) => sum + (w.stats?.completed || 0), 0),
-    totalFailed: workflows.reduce((sum, w) => sum + (w.enrollment_stats?.failed_count ?? w.stats?.failed ?? 0), 0),
-  };
 
   const hasQuery = Boolean(searchQuery.trim()) || triggerFilter !== 'all' || statusFilter !== 'all';
   const activeFilterCount = Number(triggerFilter !== 'all') + Number(statusFilter !== 'all');
@@ -350,9 +346,9 @@ export function AutomationsPage() {
             <StatCard
               title="Failed runs"
               badgeText="Failed"
-              value={stats.totalFailed}
+              value={stats.failed}
               icon={XCircle}
-              description={`${stats.totalFailed} need${stats.totalFailed === 1 ? 's' : ''} attention`}
+              description={`${stats.failed} need${stats.failed === 1 ? 's' : ''} attention`}
               colorTheme="red"
               isLoading={loading}
             />
@@ -386,9 +382,9 @@ export function AutomationsPage() {
             <StatCard
               title="Completed runs"
               badgeText="Completed"
-              value={stats.totalCompleted}
+              value={stats.completed}
               icon={CheckCircle}
-              description={`${stats.totalCompleted} successful`}
+              description={`${stats.completed} successful`}
               colorTheme="green"
               isLoading={loading}
             />
@@ -409,7 +405,7 @@ export function AutomationsPage() {
               title="Automations unavailable"
               description={loadError}
               icon={Zap}
-              onAction={() => void fetchWorkflows()}
+              onAction={() => void queueQuery.refetch()}
               className="p-12"
             />
           ) : workflows.length === 0 ? (
@@ -492,6 +488,36 @@ export function AutomationsPage() {
           )}
         </CardContent>
       </Card>
+      {pagination.totalPages > 1 && (
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground">
+            Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
+            {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
+            {pagination.total} automations
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(current => Math.max(1, current - 1))}
+              disabled={queueQuery.isFetching || pagination.page <= 1}
+            >
+              Previous
+            </Button>
+            <span className="min-w-20 text-center text-sm text-muted-foreground">
+              {pagination.page} of {pagination.totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage(current => Math.min(pagination.totalPages, current + 1))}
+              disabled={queueQuery.isFetching || pagination.page >= pagination.totalPages}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
       <DeleteDialog
         open={Boolean(workflowToDelete)}
         onOpenChange={(open) => !open && setWorkflowToDelete(null)}

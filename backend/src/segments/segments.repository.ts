@@ -45,6 +45,13 @@ export type SegmentMutationOutcome =
 
 export type DeleteSegmentOutcome = 'deleted' | 'not_found' | 'in_use';
 
+export type SegmentStatsRow = {
+  total: number;
+  dynamic: number;
+  static_count: number;
+  contacts: number;
+};
+
 const selection = `
   s.id, s.organization_id, s.name, s.description, s.color, s.icon,
   s.filter_type, s.filters, s.segment_type, s.static_contact_ids,
@@ -66,7 +73,7 @@ export class SegmentsRepository {
   async findPage(input: {
     organizationId: number; isActive?: boolean; search?: string;
     pageSize: number; offset: number;
-  }): Promise<{ rows: SegmentRow[]; total: number }> {
+  }): Promise<{ rows: SegmentRow[]; total: number; stats: SegmentStatsRow }> {
     const clauses = ['s.organization_id = $1'];
     const params: unknown[] = [input.organizationId];
     if (input.isActive !== undefined) {
@@ -77,21 +84,36 @@ export class SegmentsRepository {
       params.push(`%${input.search}%`);
       clauses.push(`(s.name ILIKE $${params.length} OR s.description ILIKE $${params.length})`);
     }
-    const count = await this.pool.query<{ total: number }>(
-      `SELECT COUNT(*)::int AS total FROM segments s
-       WHERE ${clauses.join(' AND ')}`,
-      params,
-    );
-    params.push(input.pageSize, input.offset);
-    const result = await this.pool.query<SegmentRow>(
-      `SELECT ${selection}
-       FROM segments s LEFT JOIN users creator ON creator.id = s.created_by
-       WHERE ${clauses.join(' AND ')}
-       ORDER BY lower(s.name), s.id
-       LIMIT $${params.length - 1} OFFSET $${params.length}`,
-      params,
-    );
-    return { rows: result.rows, total: Number(count.rows[0].total) };
+    const rowParams = [...params, input.pageSize, input.offset];
+    const [count, result, stats] = await Promise.all([
+      this.pool.query<{ total: number }>(
+        `SELECT COUNT(*)::int AS total FROM segments s
+         WHERE ${clauses.join(' AND ')}`,
+        params,
+      ),
+      this.pool.query<SegmentRow>(
+        `SELECT ${selection}
+         FROM segments s LEFT JOIN users creator ON creator.id = s.created_by
+         WHERE ${clauses.join(' AND ')}
+         ORDER BY lower(s.name), s.id
+         LIMIT $${rowParams.length - 1} OFFSET $${rowParams.length}`,
+        rowParams,
+      ),
+      this.pool.query<SegmentStatsRow>(
+        `SELECT COUNT(*)::int AS total,
+                COUNT(*) FILTER (WHERE segment_type = 'dynamic')::int AS dynamic,
+                COUNT(*) FILTER (WHERE segment_type = 'static')::int AS static_count,
+                COALESCE(SUM(contact_count), 0)::int AS contacts
+         FROM segments
+         WHERE organization_id = $1`,
+        [input.organizationId],
+      ),
+    ]);
+    return {
+      rows: result.rows,
+      total: Number(count.rows[0]?.total ?? 0),
+      stats: stats.rows[0] ?? { total: 0, dynamic: 0, static_count: 0, contacts: 0 },
+    };
   }
 
   async findById(

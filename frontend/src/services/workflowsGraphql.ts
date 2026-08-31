@@ -1,5 +1,5 @@
-import type { Workflow, WorkflowEnrollment, WorkflowStep } from './automationsApi';
-import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
+import type { Workflow, WorkflowEnrollment, WorkflowStats, WorkflowStep } from './automationsApi';
+import { GraphqlRequestError, graphqlMutationRequest, graphqlRequest } from './graphqlClient';
 
 type GraphqlWorkflowStep = {
   id: number; workflowId: number; stepOrder: number; stepType: WorkflowStep['step_type'];
@@ -11,7 +11,7 @@ type GraphqlWorkflow = {
   triggerType: Workflow['trigger_type']; triggerConfig: Record<string, unknown>;
   scheduledContactId: number | null; nextTriggerAt: string | null; lastTriggeredAt: string | null;
   isActive: boolean; stats: Workflow['stats']; createdById: number | null; createdByName: string | null;
-  createdAt: string; updatedAt: string; steps: GraphqlWorkflowStep[]; stepCount: number;
+  createdAt: string; updatedAt: string; steps?: GraphqlWorkflowStep[]; stepCount: number;
   activeEnrollments: number; enrollmentStats: {
     activeCount: number; completedCount: number; failedCount: number; totalCount: number;
   }; affectedEnrollments: number;
@@ -38,6 +38,12 @@ const fields = `
   enrollmentStats { activeCount completedCount failedCount totalCount }
   steps { id workflowId stepOrder stepType stepConfig conditionConfig trueBranchStep falseBranchStep }
 `;
+const listFields = `
+  id organizationId name description triggerType triggerConfig scheduledContactId
+  nextTriggerAt lastTriggeredAt isActive stats createdById createdByName createdAt updatedAt
+  stepCount activeEnrollments affectedEnrollments
+  enrollmentStats { activeCount completedCount failedCount totalCount }
+`;
 const enrollmentFields = `
   id workflowId contactId currentStep status triggerData context errorMessage
   enrolledAt nextActionAt completedAt firstName lastName email company
@@ -60,7 +66,7 @@ const mapWorkflow = (workflow: GraphqlWorkflow): Workflow => ({
   ...(workflow.createdById === null ? {} : { created_by: workflow.createdById }),
   ...(workflow.createdByName === null ? {} : { created_by_name: workflow.createdByName }),
   created_at: workflow.createdAt, updated_at: workflow.updatedAt,
-  steps: workflow.steps.map(mapStep), step_count: workflow.stepCount,
+  steps: (workflow.steps ?? []).map(mapStep), step_count: workflow.stepCount,
   active_enrollments: workflow.activeEnrollments,
   enrollment_stats: {
     active_count: workflow.enrollmentStats.activeCount,
@@ -107,33 +113,125 @@ const mapUpdateInput = (input: WorkflowUpdateInput) => ({
   ...(input.steps === undefined ? {} : { steps: mapSteps(input.steps) }),
 });
 
+type WorkflowQueuePage = {
+  nodes: GraphqlWorkflow[];
+  pageInfo: { page: number; pageSize: number; total: number; totalPages: number };
+  stats: WorkflowStats;
+};
+type WorkflowQueueData = { workflows: WorkflowQueuePage };
+type WorkflowQueueVariables = {
+  filter: { triggerType?: string; isActive?: boolean; search?: string };
+  page: { page: number; pageSize: number };
+};
+type LegacyWorkflowQueueData = {
+  workflows: Omit<WorkflowQueuePage, 'stats'>;
+  workflowPerformance: {
+    summary: {
+      totalWorkflows: number; activeWorkflows: number; completedEnrollments: number;
+      activeEnrollments: number; failedEnrollments: number;
+    };
+  };
+};
+let workflowQueueCapability: 'unknown' | 'current' | 'legacy' = 'unknown';
+
+export const resetWorkflowQueueCapabilities = (): void => {
+  workflowQueueCapability = 'unknown';
+};
+
+const legacyWorkflowQueue = async (
+  variables: WorkflowQueueVariables,
+  organizationId: number,
+  signal?: AbortSignal,
+): Promise<WorkflowQueueData> => {
+  const data = await graphqlRequest<LegacyWorkflowQueueData, WorkflowQueueVariables>(
+    `query WorkflowDefinitionsLegacy($filter: WorkflowFilterInput, $page: PageInput) {
+      workflows(filter: $filter, page: $page) {
+        nodes { ${listFields} }
+        pageInfo { page pageSize total totalPages }
+      }
+      workflowPerformance {
+        summary {
+          totalWorkflows activeWorkflows completedEnrollments activeEnrollments failedEnrollments
+        }
+      }
+    }`,
+    variables,
+    organizationId,
+    signal,
+  );
+  const summary = data.workflowPerformance.summary;
+  return {
+    workflows: {
+      ...data.workflows,
+      stats: {
+        total: summary.totalWorkflows,
+        active: summary.activeWorkflows,
+        inactive: Math.max(0, summary.totalWorkflows - summary.activeWorkflows),
+        running: summary.activeEnrollments,
+        completed: summary.completedEnrollments,
+        failed: summary.failedEnrollments,
+      },
+    },
+  };
+};
+
 export const getWorkflowsViaGraphql = async (
   organizationId: number,
-  filters: { trigger_type?: Workflow['trigger_type']; is_active?: boolean; search?: string } = {},
-): Promise<{ workflows: Workflow[]; total: number }> => {
-  const workflows: Workflow[] = [];
-  let page = 1;
-  let total = 0;
-  let hasNextPage = true;
-  while (hasNextPage) {
-    const data = await graphqlRequest<
-      { workflows: { nodes: GraphqlWorkflow[]; pageInfo: { total: number; hasNextPage: boolean } } },
-      { filter: { triggerType?: string; isActive?: boolean; search?: string }; page: { page: number; pageSize: number } }
-    >(`query WorkflowDefinitions($filter: WorkflowFilterInput, $page: PageInput) {
-      workflows(filter: $filter, page: $page) { nodes { ${fields} } pageInfo { total hasNextPage } }
-    }`, {
-      filter: {
-        ...(filters.trigger_type === undefined ? {} : { triggerType: filters.trigger_type }),
-        ...(filters.is_active === undefined ? {} : { isActive: filters.is_active }),
-        ...(filters.search === undefined ? {} : { search: filters.search }),
-      }, page: { page, pageSize: 100 },
-    }, organizationId);
-    workflows.push(...data.workflows.nodes.map(mapWorkflow));
-    total = data.workflows.pageInfo.total;
-    hasNextPage = data.workflows.pageInfo.hasNextPage;
-    page += 1;
+  filters: {
+    trigger_type?: Workflow['trigger_type']; is_active?: boolean; search?: string;
+    page?: number; limit?: number;
+  } = {},
+  signal?: AbortSignal,
+): Promise<{
+  workflows: Workflow[];
+  total: number;
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+  stats: WorkflowStats;
+}> => {
+  const variables: WorkflowQueueVariables = {
+    filter: {
+      ...(filters.trigger_type === undefined ? {} : { triggerType: filters.trigger_type }),
+      ...(filters.is_active === undefined ? {} : { isActive: filters.is_active }),
+      ...(filters.search?.trim() ? { search: filters.search.trim() } : {}),
+    },
+    page: { page: filters.page ?? 1, pageSize: filters.limit ?? 20 },
+  };
+  let data: WorkflowQueueData;
+  if (workflowQueueCapability !== 'legacy') {
+    try {
+      data = await graphqlRequest<WorkflowQueueData, WorkflowQueueVariables>(
+        `query WorkflowDefinitions($filter: WorkflowFilterInput, $page: PageInput) {
+          workflows(filter: $filter, page: $page) {
+            nodes { ${listFields} }
+            pageInfo { page pageSize total totalPages }
+            stats { total active inactive running completed failed }
+          }
+        }`,
+        variables,
+        organizationId,
+        signal,
+      );
+      workflowQueueCapability = 'current';
+    } catch (error) {
+      if (!(error instanceof GraphqlRequestError) || !/Cannot query field "stats"/.test(error.message)) throw error;
+      workflowQueueCapability = 'legacy';
+      data = await legacyWorkflowQueue(variables, organizationId, signal);
+    }
+  } else {
+    data = await legacyWorkflowQueue(variables, organizationId, signal);
   }
-  return { workflows, total };
+  const pageInfo = data.workflows.pageInfo;
+  return {
+    workflows: data.workflows.nodes.map(mapWorkflow),
+    total: pageInfo.total,
+    pagination: {
+      page: pageInfo.page,
+      limit: pageInfo.pageSize,
+      total: pageInfo.total,
+      totalPages: pageInfo.totalPages,
+    },
+    stats: data.workflows.stats,
+  };
 };
 
 export const getWorkflowViaGraphql = async (id: number, organizationId: number): Promise<Workflow> => {
@@ -199,6 +297,7 @@ export const getWorkflowEnrollmentsViaGraphql = async (
   workflowId: number,
   organizationId: number,
   params: { status?: string; page?: number; limit?: number } = {},
+  signal?: AbortSignal,
 ): Promise<{
   enrollments: WorkflowEnrollment[];
   pagination: { page: number; limit: number; total: number; totalPages: number };
@@ -219,7 +318,7 @@ export const getWorkflowEnrollmentsViaGraphql = async (
   }`, {
     workflowId, filter: params.status === undefined ? {} : { status: params.status },
     page: { page, pageSize: limit },
-  }, organizationId);
+  }, organizationId, signal);
   return {
     enrollments: data.workflowEnrollments.nodes.map(mapEnrollment),
     pagination: {

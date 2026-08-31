@@ -38,7 +38,11 @@ describe('email-template permanent GraphQL transport', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(adapter.getEmailTemplatesViaGraphql).mockResolvedValue({
-      templates: [template], total: 1,
+      templates: [template],
+      total: 1,
+      pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+      stats: { total: 1, active: 1, inactive: 0, categories: 1 },
+      categories: [{ category: 'general', count: 1 }],
     });
     vi.mocked(adapter.getEmailTemplateViaGraphql).mockResolvedValue(template);
     vi.mocked(adapter.getEmailTemplateCategoriesViaGraphql).mockResolvedValue({ categories: [] });

@@ -38,6 +38,34 @@ export type EmailTemplateInput = {
   is_active?: boolean;
 };
 
+export type EmailTemplateStats = {
+  total: number;
+  active: number;
+  inactive: number;
+  categories: number;
+};
+
+export type EmailTemplateCategory = {
+  category: string;
+  count: number;
+};
+
+export type EmailTemplateListParams = {
+  category?: string;
+  is_active?: boolean;
+  search?: string;
+  page?: number;
+  limit?: number;
+};
+
+export type EmailTemplateListResponse = {
+  templates: EmailTemplate[];
+  total: number;
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+  stats: EmailTemplateStats;
+  categories: EmailTemplateCategory[];
+};
+
 type EmailTemplateUpdate = Partial<Omit<EmailTemplateInput, 'organization_id'>>;
 
 export const emailTemplateFields = `
@@ -92,53 +120,130 @@ const mapUpdateInput = (input: EmailTemplateUpdate) => ({
   ...(input.is_active === undefined ? {} : { isActive: input.is_active }),
 });
 
+type EmailTemplatePagePayload = {
+  nodes: GraphqlEmailTemplate[];
+  pageInfo: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+    hasNextPage: boolean;
+  };
+  stats: EmailTemplateStats;
+  categories: EmailTemplateCategory[];
+};
+
+type EmailTemplateListCapability = 'unknown' | 'aggregate' | 'legacy';
+let emailTemplateListCapability: EmailTemplateListCapability = 'unknown';
+
+const listQuery = `query EmailTemplates($filter: EmailTemplateFilterInput, $page: PageInput) {
+  emailTemplates(filter: $filter, page: $page) {
+    nodes { ${emailTemplateFields} }
+    pageInfo { page pageSize total totalPages hasNextPage }
+    stats { total active inactive categories }
+    categories { category count }
+  }
+}`;
+
+const legacyListQuery = `query EmailTemplatesLegacy(
+  $filter: EmailTemplateFilterInput,
+  $page: PageInput,
+  $summaryPage: PageInput
+) {
+  filtered: emailTemplates(filter: $filter, page: $page) {
+    nodes { ${emailTemplateFields} }
+    pageInfo { page pageSize total totalPages hasNextPage }
+  }
+  all: emailTemplates(page: $summaryPage) { pageInfo { total } }
+  active: emailTemplates(filter: { isActive: true }, page: $summaryPage) { pageInfo { total } }
+  inactive: emailTemplates(filter: { isActive: false }, page: $summaryPage) { pageInfo { total } }
+  emailTemplateCategories { category count }
+}`;
+
+const missingListMetadata = (error: unknown): boolean => error instanceof Error
+  && error.message.includes('Cannot query field')
+  && (error.message.includes('stats') || error.message.includes('categories'));
+
+const responseFromPage = (page: EmailTemplatePagePayload): EmailTemplateListResponse => ({
+  templates: page.nodes.map(mapEmailTemplate),
+  total: page.pageInfo.total,
+  pagination: {
+    page: page.pageInfo.page,
+    limit: page.pageInfo.pageSize,
+    total: page.pageInfo.total,
+    totalPages: page.pageInfo.totalPages,
+  },
+  stats: page.stats,
+  categories: page.categories,
+});
+
 export const getEmailTemplatesViaGraphql = async (
-  filters: { category?: string; is_active?: boolean; search?: string } = {},
+  params: EmailTemplateListParams = {},
   organizationId?: number,
   signal?: AbortSignal,
-): Promise<{ templates: EmailTemplate[]; total: number }> => {
-  const templates: EmailTemplate[] = [];
-  let page = 1;
-  let total = 0;
-  let hasNextPage = true;
-  while (hasNextPage) {
-    const data = await graphqlRequest<
-      { emailTemplates: { nodes: GraphqlEmailTemplate[]; pageInfo: { total: number; hasNextPage: boolean } } },
-      { filter: { category?: string; isActive?: boolean; search?: string }; page: { page: number; pageSize: number } }
-    >(
-      `query EmailTemplates($filter: EmailTemplateFilterInput, $page: PageInput) {
-        emailTemplates(filter: $filter, page: $page) {
-          nodes { ${emailTemplateFields} }
-          pageInfo { total hasNextPage }
-        }
-      }`,
-      {
-        filter: {
-          ...(filters.category === undefined ? {} : { category: filters.category }),
-          ...(filters.is_active === undefined ? {} : { isActive: filters.is_active }),
-          ...(filters.search === undefined ? {} : { search: filters.search }),
-        },
-        page: { page, pageSize: 100 },
-      },
-      organizationId,
-      signal,
-    );
-    templates.push(...data.emailTemplates.nodes.map(mapEmailTemplate));
-    total = data.emailTemplates.pageInfo.total;
-    hasNextPage = data.emailTemplates.pageInfo.hasNextPage;
-    page += 1;
+): Promise<EmailTemplateListResponse> => {
+  const page = params.page ?? 1;
+  const limit = params.limit ?? 100;
+  const normalizedSearch = params.search?.trim();
+  const filter = {
+    ...(params.category === undefined ? {} : { category: params.category }),
+    ...(params.is_active === undefined ? {} : { isActive: params.is_active }),
+    ...(normalizedSearch ? { search: normalizedSearch } : {}),
+  };
+  const variables = { filter, page: { page, pageSize: limit } };
+
+  if (emailTemplateListCapability !== 'legacy') {
+    try {
+      const data = await graphqlRequest<
+        { emailTemplates: EmailTemplatePagePayload },
+        typeof variables
+      >(listQuery, variables, organizationId, signal);
+      emailTemplateListCapability = 'aggregate';
+      return responseFromPage(data.emailTemplates);
+    } catch (error) {
+      if (emailTemplateListCapability !== 'unknown' || !missingListMetadata(error)) throw error;
+      emailTemplateListCapability = 'legacy';
+    }
   }
-  return { templates, total };
+
+  const data = await graphqlRequest<{
+    filtered: Omit<EmailTemplatePagePayload, 'stats' | 'categories'>;
+    all: { pageInfo: { total: number } };
+    active: { pageInfo: { total: number } };
+    inactive: { pageInfo: { total: number } };
+    emailTemplateCategories: EmailTemplateCategory[];
+  }, typeof variables & { summaryPage: { page: number; pageSize: number } }>(
+    legacyListQuery,
+    { ...variables, summaryPage: { page: 1, pageSize: 1 } },
+    organizationId,
+    signal,
+  );
+  return responseFromPage({
+    ...data.filtered,
+    stats: {
+      total: data.all.pageInfo.total,
+      active: data.active.pageInfo.total,
+      inactive: data.inactive.pageInfo.total,
+      categories: data.emailTemplateCategories.length,
+    },
+    categories: data.emailTemplateCategories,
+  });
+};
+
+export const resetEmailTemplateListCapability = (): void => {
+  emailTemplateListCapability = 'unknown';
 };
 
 export const getEmailTemplateViaGraphql = async (
   id: number,
   organizationId?: number,
+  signal?: AbortSignal,
 ): Promise<EmailTemplate> => {
   const data = await graphqlRequest<{ emailTemplate: GraphqlEmailTemplate }, { id: number }>(
     `query EmailTemplate($id: Int!) { emailTemplate(id: $id) { ${emailTemplateFields} } }`,
     { id },
     organizationId,
+    signal,
   );
   return mapEmailTemplate(data.emailTemplate);
 };

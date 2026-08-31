@@ -52,6 +52,18 @@ export type EmailTemplateCriteria = {
   offset: number;
 };
 
+export type EmailTemplateStatsRow = {
+  total: string;
+  active: string;
+  inactive: string;
+  categories: string;
+};
+
+export type EmailTemplateCategoryRow = {
+  category: string;
+  count: string;
+};
+
 const columns = (alias = 'et') => `
   ${alias}.id, ${alias}.organization_id, ${alias}.name, ${alias}.subject,
   ${alias}.preheader, ${alias}.body_html, ${alias}.body_text, ${alias}.variables, ${alias}.category,
@@ -92,7 +104,12 @@ export class EmailTemplatesRepository {
     return result.rows[0] ?? null;
   }
 
-  async findPage(criteria: EmailTemplateCriteria): Promise<{ rows: EmailTemplateRow[]; total: string }> {
+  async findPage(criteria: EmailTemplateCriteria): Promise<{
+    rows: EmailTemplateRow[];
+    total: string;
+    stats: EmailTemplateStatsRow;
+    categories: EmailTemplateCategoryRow[];
+  }> {
     const parameters: unknown[] = [criteria.organizationId];
     const clauses = ['et.organization_id = $1'];
     if (criteria.category !== undefined) {
@@ -108,29 +125,53 @@ export class EmailTemplatesRepository {
       clauses.push(`(et.name ILIKE $${parameters.length} ESCAPE '\\' OR et.subject ILIKE $${parameters.length} ESCAPE '\\')`);
     }
     const where = clauses.join(' AND ');
-    const count = await this.pool.query<{ total: string }>(
-      `SELECT COUNT(*) AS total FROM email_templates et WHERE ${where}`,
-      parameters,
-    );
-    parameters.push(criteria.pageSize, criteria.offset);
-    const rows = await this.pool.query<EmailTemplateRow>(
-      `SELECT ${columns()}, ${versionColumns}, u.name AS created_by_name
-       FROM email_templates et
-       LEFT JOIN email_template_versions draft ON draft.id = et.draft_version_id
-         AND draft.organization_id = et.organization_id
-       LEFT JOIN email_template_versions published ON published.id = et.published_version_id
-         AND published.organization_id = et.organization_id
-       LEFT JOIN users u ON u.id = et.created_by
-       WHERE ${where}
-       ORDER BY et.updated_at DESC, et.id DESC
-       LIMIT $${parameters.length - 1} OFFSET $${parameters.length}`,
-      parameters,
-    );
-    return { rows: rows.rows, total: count.rows[0]?.total ?? '0' };
+    const rowParameters = [...parameters, criteria.pageSize, criteria.offset];
+    const [count, rows, stats, categories] = await Promise.all([
+      this.pool.query<{ total: string }>(
+        `SELECT COUNT(*) AS total FROM email_templates et WHERE ${where}`,
+        parameters,
+      ),
+      this.pool.query<EmailTemplateRow>(
+        `SELECT ${columns()}, ${versionColumns}, u.name AS created_by_name
+         FROM email_templates et
+         LEFT JOIN email_template_versions draft ON draft.id = et.draft_version_id
+           AND draft.organization_id = et.organization_id
+         LEFT JOIN email_template_versions published ON published.id = et.published_version_id
+           AND published.organization_id = et.organization_id
+         LEFT JOIN users u ON u.id = et.created_by
+         WHERE ${where}
+         ORDER BY et.updated_at DESC, et.id DESC
+         LIMIT $${rowParameters.length - 1} OFFSET $${rowParameters.length}`,
+        rowParameters,
+      ),
+      this.pool.query<EmailTemplateStatsRow>(
+        `SELECT COUNT(*) AS total,
+                COUNT(*) FILTER (WHERE is_active) AS active,
+                COUNT(*) FILTER (WHERE NOT is_active) AS inactive,
+                COUNT(DISTINCT category) AS categories
+         FROM email_templates
+         WHERE organization_id = $1`,
+        [criteria.organizationId],
+      ),
+      this.pool.query<EmailTemplateCategoryRow>(
+        `SELECT category, COUNT(*) AS count
+         FROM email_templates
+         WHERE organization_id = $1
+         GROUP BY category
+         ORDER BY category ASC`,
+        [criteria.organizationId],
+      ),
+    ]);
+    return {
+      rows: rows.rows,
+      total: count.rows[0]?.total ?? '0',
+      stats: stats.rows[0] ?? { total: '0', active: '0', inactive: '0', categories: '0' },
+      categories: categories.rows,
+    };
   }
 
-  async categories(organizationId: number): Promise<Array<{ category: string; count: string }>> {
-    const result = await this.pool.query<{ category: string; count: string }>(
+  async categories(organizationId: number): Promise<EmailTemplateCategoryRow[]> {
+    const result = await this.pool.query<EmailTemplateCategoryRow>(
       `SELECT category, COUNT(*) AS count
        FROM email_templates
        WHERE organization_id = $1

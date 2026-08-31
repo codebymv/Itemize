@@ -18,7 +18,7 @@ export type GraphqlSegment = {
   segmentType: 'dynamic' | 'static'; staticContactIds: number[]; contactCount: number;
   lastCalculatedAt: string | null; isActive: boolean; usedInCampaigns: number;
   usedInAutomations: number; createdById: number | null; createdByName: string | null;
-  createdAt: string; updatedAt: string; history: GraphqlHistory[];
+  createdAt: string; updatedAt: string; history?: GraphqlHistory[];
 };
 
 type GraphqlContact = {
@@ -80,44 +80,153 @@ export const mapSegment = (segment: GraphqlSegment): Segment => ({
   })),
 });
 
-export const getSegmentsViaGraphql = async (
-  params: { is_active?: boolean; search?: string } = {},
+export type SegmentStats = {
+  total: number;
+  dynamic: number;
+  staticCount: number;
+  contacts: number;
+};
+
+export type SegmentListParams = {
+  is_active?: boolean;
+  search?: string;
+  page?: number;
+  limit?: number;
+};
+
+export type SegmentListResponse = {
+  segments: Segment[];
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+  stats: SegmentStats;
+};
+
+type SegmentPagePayload = {
+  nodes: GraphqlSegment[];
+  pageInfo: { page: number; pageSize: number; total: number; totalPages: number };
+  stats: SegmentStats;
+};
+
+type SegmentListCapability = 'unknown' | 'aggregate' | 'legacy';
+let segmentListCapability: SegmentListCapability = 'unknown';
+
+const segmentPageQuery = `query SegmentPage($filter: SegmentListFilterInput, $page: PageInput) {
+  segments(filter: $filter, page: $page) {
+    nodes { ${segmentFields} }
+    pageInfo { page pageSize total totalPages }
+    stats { total dynamic staticCount contacts }
+  }
+}`;
+
+const legacySegmentPageQuery = `query LegacySegmentPage(
+  $filter: SegmentListFilterInput,
+  $page: PageInput,
+  $summaryPage: PageInput
+) {
+  filtered: segments(filter: $filter, page: $page) {
+    nodes { ${segmentFields} }
+    pageInfo { page pageSize total totalPages }
+  }
+  summary: segments(page: $summaryPage) {
+    nodes { segmentType contactCount }
+    pageInfo { page total totalPages }
+  }
+}`;
+
+const legacySegmentSummaryQuery = `query LegacySegmentSummary($summaryPage: PageInput) {
+  summary: segments(page: $summaryPage) {
+    nodes { segmentType contactCount }
+    pageInfo { page total totalPages }
+  }
+}`;
+
+const mapSegmentPage = (page: SegmentPagePayload): SegmentListResponse => ({
+  segments: page.nodes.map(mapSegment),
+  pagination: {
+    page: page.pageInfo.page,
+    limit: page.pageInfo.pageSize,
+    total: page.pageInfo.total,
+    totalPages: page.pageInfo.totalPages,
+  },
+  stats: page.stats,
+});
+
+const missingSegmentStats = (error: unknown): boolean => error instanceof Error
+  && error.message.includes('Cannot query field')
+  && error.message.includes('stats');
+
+export const getSegmentPageViaGraphql = async (
+  params: SegmentListParams = {},
   organizationId?: number,
   signal?: AbortSignal,
-): Promise<Segment[]> => {
-  type SegmentPageData = { segments: {
-    nodes: GraphqlSegment[];
-    pageInfo: { page: number; totalPages: number };
-  } };
+): Promise<SegmentListResponse> => {
+  const normalizedSearch = params.search?.trim();
   const variables = {
     filter: {
       ...(params.is_active === undefined ? {} : { isActive: params.is_active }),
-      ...(params.search === undefined ? {} : { search: params.search }),
+      ...(normalizedSearch ? { search: normalizedSearch } : {}),
     },
-    page: { page: 1, pageSize: 100 },
+    page: { page: params.page ?? 1, pageSize: params.limit ?? 100 },
   };
-  const query = `query Segments($filter: SegmentListFilterInput, $page: PageInput) {
-    segments(filter: $filter, page: $page) {
-      nodes { ${segmentFields} }
-      pageInfo { page totalPages }
+
+  if (segmentListCapability !== 'legacy') {
+    try {
+      const data = await graphqlRequest<
+        { segments: SegmentPagePayload },
+        typeof variables
+      >(segmentPageQuery, variables, organizationId, signal);
+      segmentListCapability = 'aggregate';
+      return mapSegmentPage(data.segments);
+    } catch (error) {
+      if (segmentListCapability !== 'unknown' || !missingSegmentStats(error)) throw error;
+      segmentListCapability = 'legacy';
     }
-  }`;
-  const first = await graphqlRequest<
-    SegmentPageData,
-    { filter: { isActive?: boolean; search?: string }; page: { page: number; pageSize: number } }
-  >(query, variables, organizationId, signal);
-  const pages = await Promise.all(
+  }
+
+  type LegacyPayload = {
+    filtered: Omit<SegmentPagePayload, 'stats'>;
+    summary: {
+      nodes: Array<Pick<GraphqlSegment, 'segmentType' | 'contactCount'>>;
+      pageInfo: { page: number; total: number; totalPages: number };
+    };
+  };
+  const summaryPage = { page: 1, pageSize: 100 };
+  const first = await graphqlRequest<LegacyPayload, typeof variables & { summaryPage: typeof summaryPage }>(
+    legacySegmentPageQuery,
+    { ...variables, summaryPage },
+    organizationId,
+    signal,
+  );
+  const remaining = await Promise.all(
     Array.from(
-      { length: Math.max(0, first.segments.pageInfo.totalPages - 1) },
-      (_, index) => graphqlRequest<SegmentPageData, typeof variables>(
-        query,
-        { ...variables, page: { ...variables.page, page: index + 2 } },
+      { length: Math.max(0, first.summary.pageInfo.totalPages - 1) },
+      (_, index) => graphqlRequest<Pick<LegacyPayload, 'summary'>, { summaryPage: typeof summaryPage }>(
+        legacySegmentSummaryQuery,
+        { summaryPage: { ...summaryPage, page: index + 2 } },
         organizationId,
         signal,
       ),
     ),
   );
-  return [first, ...pages].flatMap((page) => page.segments.nodes.map(mapSegment));
+  const summary = [first, ...remaining].flatMap(result => result.summary.nodes);
+  return mapSegmentPage({
+    ...first.filtered,
+    stats: {
+      total: first.summary.pageInfo.total,
+      dynamic: summary.filter(item => item.segmentType === 'dynamic').length,
+      staticCount: summary.filter(item => item.segmentType === 'static').length,
+      contacts: summary.reduce((total, item) => total + item.contactCount, 0),
+    },
+  });
+};
+
+export const getSegmentsViaGraphql = async (
+  params: SegmentListParams = {},
+  organizationId?: number,
+  signal?: AbortSignal,
+): Promise<Segment[]> => (await getSegmentPageViaGraphql(params, organizationId, signal)).segments;
+
+export const resetSegmentListCapability = (): void => {
+  segmentListCapability = 'unknown';
 };
 
 export const getSegmentViaGraphql = async (id: number, organizationId?: number): Promise<Segment> => {

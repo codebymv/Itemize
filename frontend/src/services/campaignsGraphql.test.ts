@@ -11,6 +11,7 @@ import {
   sendCampaignTestViaGraphql,
   sendCampaignViaGraphql,
   pauseCampaignViaGraphql,
+  resetCampaignQueueCapabilities,
   resumeCampaignViaGraphql,
   scheduleCampaignViaGraphql,
   unscheduleCampaignViaGraphql,
@@ -46,6 +47,7 @@ const response = (payload: unknown): Response => ({
 describe('campaign GraphQL consumer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetCampaignQueueCapabilities();
     vi.stubEnv('VITE_GRAPHQL_URL', 'https://graphql.test.itemize/graphql');
     vi.stubGlobal('fetch', vi.fn());
     vi.mocked(fetchCsrfToken).mockResolvedValue('campaign-csrf');
@@ -138,12 +140,19 @@ describe('campaign GraphQL consumer', () => {
     expect(fetchCsrfToken).not.toHaveBeenCalled();
   });
 
-  it('maps paginated reads, filters, joined fields, and legacy casing', async () => {
+  it('maps paginated reads, global stats, filters, joined fields, and cancellation', async () => {
     vi.mocked(fetch).mockResolvedValueOnce(response({ data: { campaigns: {
       nodes: [campaign], pageInfo: { page: 2, pageSize: 25, total: 26, totalPages: 2 },
+      stats: { total: 31, failed: 2, draft: 8, inProgress: 4, delivered: 17 },
     } } }));
-    const result = await getCampaignsViaGraphql({ status: 'draft', search: 'launch', page: 2, limit: 25 }, 4);
+    const controller = new AbortController();
+    const result = await getCampaignsViaGraphql(
+      { status: 'draft', search: 'launch', page: 2, limit: 25 },
+      4,
+      controller.signal,
+    );
     expect(result.pagination).toEqual({ page: 2, limit: 25, total: 26, totalPages: 2 });
+    expect(result.stats).toEqual({ total: 31, failed: 2, draft: 8, inProgress: 4, delivered: 17 });
     expect(result.campaigns[0]).toMatchObject({
       organization_id: 4, segment_id: 12, template_name: 'Welcome',
       links: [{ campaign_id: 9, original_url: 'https://itemize.cloud' }],
@@ -151,6 +160,43 @@ describe('campaign GraphQL consumer', () => {
     const body = JSON.parse(String((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body));
     expect(body.variables).toEqual({
       filter: { status: 'draft', search: 'launch' }, page: { page: 2, pageSize: 25 },
+    });
+    expect((vi.mocked(fetch).mock.calls[0][1] as RequestInit).signal).toBe(controller.signal);
+  });
+
+  it('falls back once to a single legacy queue request with exact global stats', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(response({
+        errors: [{ message: 'Cannot query field "stats" on type "CampaignPage".' }],
+      }))
+      .mockResolvedValueOnce(response({ data: {
+        campaigns: {
+          nodes: [campaign],
+          pageInfo: { page: 2, pageSize: 20, total: 1, totalPages: 2 },
+        },
+        draft: { pageInfo: { total: 2 } },
+        scheduled: { pageInfo: { total: 1 } },
+        sending: { pageInfo: { total: 1 } },
+        paused: { pageInfo: { total: 1 } },
+        sent: { pageInfo: { total: 3 } },
+        failed: { pageInfo: { total: 1 } },
+        cancelled: { pageInfo: { total: 1 } },
+      } }));
+
+    await expect(getCampaignsViaGraphql(
+      { status: 'draft', search: ' launch ', page: 2, limit: 20 },
+      4,
+    )).resolves.toMatchObject({
+      pagination: { page: 2, limit: 20, total: 1, totalPages: 2 },
+      stats: { total: 10, failed: 2, draft: 2, inProgress: 3, delivered: 3 },
+    });
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+    const fallbackBody = JSON.parse(String((vi.mocked(fetch).mock.calls[1][1] as RequestInit).body));
+    expect(fallbackBody.query).toContain('query CampaignsLegacy');
+    expect(fallbackBody.variables).toEqual({
+      filter: { status: 'draft', search: 'launch' },
+      page: { page: 2, pageSize: 20 },
     });
   });
 

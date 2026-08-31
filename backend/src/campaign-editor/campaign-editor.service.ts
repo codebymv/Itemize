@@ -20,12 +20,14 @@ export class CampaignEditorService {
     organizationId: number,
     campaignId?: number | null,
   ): Promise<CampaignEditorBootstrap> {
-    const [campaign, templates, segments, filterOptions] = await Promise.all([
-      campaignId == null
-        ? Promise.resolve(null)
-        : this.campaigns.detail(organizationId, campaignId),
-      this.allTemplates(organizationId),
-      this.allSegments(organizationId),
+    const campaign = campaignId == null
+      ? null
+      : await this.campaigns.detail(organizationId, campaignId);
+    const [templates, segments, filterOptions] = await Promise.all([
+      campaign?.templateId
+        ? this.templates.detail(organizationId, campaign.templateId).then((template) => [template])
+        : Promise.resolve([]),
+      this.availableSegments(organizationId, campaign?.segmentId ?? null),
       this.segments.filterOptions(organizationId),
     ]);
     const audiencePreview = campaign
@@ -36,37 +38,16 @@ export class CampaignEditorService {
     return { campaign, templates, segments, filterOptions, audiencePreview };
   }
 
-  private async allTemplates(organizationId: number) {
-    const nodes = [];
-    let pageNumber = 1;
-    let totalPages = 1;
-    do {
-      const result = await this.templates.list(
-        organizationId,
-        {},
-        page(pageNumber),
-      );
-      nodes.push(...result.nodes);
-      totalPages = result.pageInfo.totalPages;
-      pageNumber += 1;
-    } while (pageNumber <= totalPages);
-    return nodes;
-  }
-
-  private async allSegments(organizationId: number) {
-    const nodes = [];
-    let pageNumber = 1;
-    let totalPages = 1;
-    do {
-      const result = await this.segments.list(
-        organizationId,
-        {},
-        page(pageNumber),
-      );
-      nodes.push(...result.nodes);
-      totalPages = result.pageInfo.totalPages;
-      pageNumber += 1;
-    } while (pageNumber <= totalPages);
-    return nodes;
+  private async availableSegments(organizationId: number, selectedId: number | null) {
+    const result = await this.segments.list(
+      organizationId,
+      { isActive: true },
+      page(1),
+    );
+    if (!selectedId || result.nodes.some((segment) => segment.id === selectedId)) {
+      return result.nodes;
+    }
+    const selected = await this.segments.get(organizationId, selectedId);
+    return [...result.nodes, selected];
   }
 }

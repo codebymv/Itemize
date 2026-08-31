@@ -10,7 +10,7 @@ import {
 } from './campaignsGraphql';
 import {
   emailTemplateFields,
-  getEmailTemplatesViaGraphql,
+  getEmailTemplateViaGraphql,
   mapEmailTemplate,
   type GraphqlEmailTemplate,
 } from './emailTemplatesGraphql';
@@ -61,20 +61,22 @@ const legacyBootstrap = async (
   campaignId: number | null,
   signal?: AbortSignal,
 ): Promise<CampaignEditorBootstrapData> => {
-  const [campaign, templateResponse, segments, filterOptions] = await Promise.all([
+  const [campaign, segments, filterOptions] = await Promise.all([
     campaignId == null
       ? Promise.resolve(null)
       : getCampaignViaGraphql(campaignId, organizationId, signal),
-    getEmailTemplatesViaGraphql({}, organizationId, signal),
     getSegmentsViaGraphql({}, organizationId, signal),
     getSegmentFilterOptionsViaGraphql(organizationId, signal),
   ]);
+  const templates = campaign?.template_id
+    ? [await getEmailTemplateViaGraphql(campaign.template_id, organizationId, signal)]
+    : [];
   const audiencePreview = campaignId != null && editable(campaign)
     ? await previewCampaignViaGraphql(campaignId, organizationId, signal)
     : null;
   return {
     campaign,
-    templates: templateResponse.templates,
+    templates,
     segments,
     filterOptions,
     audiencePreview,

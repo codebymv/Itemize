@@ -13,6 +13,7 @@ import {
     previewSegmentViaGraphql,
     recalculateSegmentViaGraphql,
     updateSegmentViaGraphql,
+    type SegmentListParams,
 } from './segmentsGraphql';
 
 // ======================
@@ -95,13 +96,16 @@ export interface FilterOptions {
 // ======================
 
 /**
- * Get all segments
+ * Get one bounded segment page.
  */
 export const getSegments = async (
-    params: { is_active?: boolean; search?: string } = {},
-    organizationId?: number
+    params: SegmentListParams = {},
+    organizationId?: number,
+    signal?: AbortSignal,
 ): Promise<Segment[]> => {
-    return getSegmentsViaGraphql(params, organizationId);
+    return signal
+        ? getSegmentsViaGraphql(params, organizationId, signal)
+        : getSegmentsViaGraphql(params, organizationId);
 };
 
 /**

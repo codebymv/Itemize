@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Filter, MoreHorizontal, Pencil, Plus, RefreshCw, Trash2, Users, PieChart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
@@ -27,9 +27,10 @@ import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
 import { getCatalogStatusVisual } from '@/pages/campaigns/constants/campaignVisuals';
 import { calculateSegment, deleteSegment, type Segment } from '@/services/segmentsApi';
 import { segmentQueryKeys } from '@/services/segmentQueryKeys';
-import { getSegmentsViaGraphql } from '@/services/segmentsGraphql';
+import { getSegmentPageViaGraphql } from '@/services/segmentsGraphql';
 
 type StatusFilter = 'all' | 'active' | 'inactive';
+const PAGE_SIZE = 20;
 
 export function SegmentsPage() {
   const navigate = useNavigate();
@@ -38,38 +39,55 @@ export function SegmentsPage() {
   const onboarding = useRouteOnboarding();
   const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({ onError: () => 'Failed to initialize.' });
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [page, setPage] = useState(1);
   const [segmentToDelete, setSegmentToDelete] = useState<Segment | null>(null);
   const [workingId, setWorkingId] = useState<number | null>(null);
-  const catalogQueryKey = segmentQueryKeys.catalog(organizationId);
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
+    return () => window.clearTimeout(timeout);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, statusFilter]);
+
+  const catalogQueryKey = segmentQueryKeys.page(organizationId, {
+    search: debouncedSearch,
+    status: statusFilter,
+    page,
+    limit: PAGE_SIZE,
+  });
   const catalogQuery = useQuery({
     queryKey: catalogQueryKey,
-    queryFn: ({ signal }) => getSegmentsViaGraphql({}, organizationId as number, signal),
+    queryFn: ({ signal }) => getSegmentPageViaGraphql({
+      page,
+      limit: PAGE_SIZE,
+      search: debouncedSearch || undefined,
+      is_active: statusFilter === 'all' ? undefined : statusFilter === 'active',
+    }, organizationId as number, signal),
     enabled: organizationId !== null,
     staleTime: QUERY_STALE_TIME_MS,
     retry: shouldRetryQuery,
+    placeholderData: keepPreviousData,
   });
-  const segments = useMemo(() => catalogQuery.data ?? [], [catalogQuery.data]);
+  const segments = catalogQuery.data?.segments ?? [];
+  const pagination = catalogQuery.data?.pagination ?? {
+    page, limit: PAGE_SIZE, total: 0, totalPages: 0,
+  };
   const loading = orgLoading || (organizationId !== null && catalogQuery.isPending);
   const loadError = catalogQuery.error && !catalogQuery.data
     ? 'We could not load your segments. Existing segments have not been changed.'
     : null;
 
-  const stats = useMemo(() => ({
-    total: segments.length,
-    dynamic: segments.filter(segment => segment.segment_type === 'dynamic').length,
-    staticCount: segments.filter(segment => segment.segment_type === 'static').length,
-    contacts: segments.reduce((sum, segment) => sum + (segment.contact_count || 0), 0),
-  }), [segments]);
+  const stats = catalogQuery.data?.stats ?? { total: 0, dynamic: 0, staticCount: 0, contacts: 0 };
 
-  const filteredSegments = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    return segments.filter(segment => {
-      const matchesQuery = !query || segment.name.toLowerCase().includes(query) || segment.description?.toLowerCase().includes(query);
-      const matchesStatus = statusFilter === 'all' || segment.is_active === (statusFilter === 'active');
-      return matchesQuery && matchesStatus;
-    });
-  }, [searchQuery, segments, statusFilter]);
+  useEffect(() => {
+    if (!catalogQuery.data) return;
+    const lastAvailablePage = Math.max(1, catalogQuery.data.pagination.totalPages);
+    if (page > lastAvailablePage) setPage(lastAvailablePage);
+  }, [catalogQuery.data, page]);
 
   const statusSelect = (compact = false) => (
     <Select value={statusFilter} onValueChange={value => setStatusFilter(value as StatusFilter)}>
@@ -83,9 +101,7 @@ export function SegmentsPage() {
     setWorkingId(segment.id);
     try {
       const updated = await calculateSegment(segment.id, organizationId);
-      queryClient.setQueryData<Segment[]>(catalogQueryKey, current =>
-        current?.map(item => item.id === updated.id ? updated : item),
-      );
+      await queryClient.invalidateQueries({ queryKey: segmentQueryKeys.catalog(organizationId) });
       void queryClient.invalidateQueries({ queryKey: ['campaign-editor-bootstrap'] });
       toast({ title: 'Recalculated', description: `${updated.contact_count} contacts match this segment.` });
     } catch {
@@ -97,9 +113,7 @@ export function SegmentsPage() {
     if (!organizationId || !segmentToDelete) return false;
     try {
       await deleteSegment(segmentToDelete.id, organizationId);
-      queryClient.setQueryData<Segment[]>(catalogQueryKey, current =>
-        current?.filter(segment => segment.id !== segmentToDelete.id),
-      );
+      await queryClient.invalidateQueries({ queryKey: segmentQueryKeys.catalog(organizationId) });
       void queryClient.invalidateQueries({ queryKey: ['campaign-editor-bootstrap'] });
       setSegmentToDelete(null);
       return true;
@@ -134,8 +148,8 @@ export function SegmentsPage() {
       <Card><CardContent className="p-0">
         {loading ? <div className="space-y-4 p-6">{Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-20 w-full" />)}</div>
           : loadError ? <ErrorState title="Segments unavailable" description={loadError} icon={Filter} onAction={() => void catalogQuery.refetch()} className="p-12" />
-          : filteredSegments.length === 0 ? <EmptyState icon={Filter} kind={hasQuery ? 'results' : 'collection'} title={hasQuery ? 'No matching segments' : 'No segments yet'} description={hasQuery ? undefined : 'Create a segment to group and target contacts.'} actionLabel={hasQuery ? 'Clear filters' : 'New segment'} onAction={hasQuery ? clearQuery : () => navigate('/segments/new')} className="p-12" />
-          : <div className="divide-y">{filteredSegments.map(segment => {
+          : segments.length === 0 ? <EmptyState icon={Filter} kind={hasQuery ? 'results' : 'collection'} title={hasQuery ? 'No matching segments' : 'No segments yet'} description={hasQuery ? undefined : 'Create a segment to group and target contacts.'} actionLabel={hasQuery ? 'Clear filters' : 'New segment'} onAction={hasQuery ? clearQuery : () => navigate('/segments/new')} className="p-12" />
+          : <div className="divide-y">{segments.map(segment => {
             const visual = getCatalogStatusVisual(segment.is_active);
             const TypeIcon = segment.segment_type === 'dynamic' ? RefreshCw : Users;
             return <div
@@ -158,6 +172,15 @@ export function SegmentsPage() {
             </div>;
           })}</div>}
       </CardContent></Card>
+
+      {pagination.totalPages > 1 && <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-muted-foreground">Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} segments</p>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setPage(current => Math.max(1, current - 1))} disabled={catalogQuery.isFetching || pagination.page <= 1}>Previous</Button>
+          <span className="min-w-20 text-center text-sm text-muted-foreground">{pagination.page} of {pagination.totalPages}</span>
+          <Button variant="outline" size="sm" onClick={() => setPage(current => Math.min(pagination.totalPages, current + 1))} disabled={catalogQuery.isFetching || pagination.page >= pagination.totalPages}>Next</Button>
+        </div>
+      </div>}
 
       {onboarding.featureKey && ONBOARDING_CONTENT[onboarding.featureKey] && <OnboardingModal isOpen={onboarding.showModal} onClose={onboarding.handleClose} onComplete={onboarding.handleComplete} onDismiss={onboarding.handleDismiss} content={ONBOARDING_CONTENT[onboarding.featureKey]} />}
       <DeleteDialog open={Boolean(segmentToDelete)} onOpenChange={open => !open && setSegmentToDelete(null)} onConfirm={handleDelete} itemType="segment" itemTitle={segmentToDelete?.name} />

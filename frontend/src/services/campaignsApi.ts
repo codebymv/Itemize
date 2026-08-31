@@ -153,6 +153,14 @@ export interface CampaignPreview {
     excludedTagIds: number[];
 }
 
+export interface CampaignStats {
+    total: number;
+    failed: number;
+    draft: number;
+    inProgress: number;
+    delivered: number;
+}
+
 // ======================
 // API Functions
 // ======================
@@ -167,9 +175,12 @@ export const getCampaigns = async (
         limit?: number;
         search?: string;
     } = {},
-    organizationId?: number
-): Promise<{ campaigns: EmailCampaign[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> => {
-    return getCampaignsViaGraphql(params, organizationId);
+    organizationId?: number,
+    signal?: AbortSignal,
+): Promise<{ campaigns: EmailCampaign[]; pagination: { page: number; limit: number; total: number; totalPages: number }; stats: CampaignStats }> => {
+    return signal === undefined
+        ? getCampaignsViaGraphql(params, organizationId)
+        : getCampaignsViaGraphql(params, organizationId, signal);
 };
 
 /**
@@ -298,9 +309,12 @@ export const getCampaignRecipients = async (
  */
 export const previewCampaign = async (
     campaignId: number,
-    organizationId?: number
+    organizationId?: number,
+    signal?: AbortSignal,
 ): Promise<CampaignPreview> => {
-    return previewCampaignViaGraphql(campaignId, organizationId);
+    return signal === undefined
+        ? previewCampaignViaGraphql(campaignId, organizationId)
+        : previewCampaignViaGraphql(campaignId, organizationId, signal);
 };
 
 /**

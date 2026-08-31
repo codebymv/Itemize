@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useParams, useNavigate } from 'react-router-dom';
 import ReactFlow, {
   Node,
@@ -57,7 +58,7 @@ import { ShellBackButton } from '@/components/layout/ShellBackButton';
 import { HeaderAction } from '@/components/layout/DesktopHeaderTools';
 import { ErrorState } from '@/components/ErrorState';
 import { EmailPreviewPane } from '@/components/email/EmailPreviewPane';
-import { EmailTemplateBrowserDialog } from '@/components/email/EmailTemplateBrowserDialog';
+import { OrganizationEmailTemplateBrowserDialog } from '@/components/email/OrganizationEmailTemplateBrowserDialog';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useDirtyState } from '@/hooks/useDirtyState';
@@ -70,7 +71,6 @@ import {
   deactivateWorkflow,
   Workflow,
   WorkflowStep,
-  getEmailTemplates,
   EmailTemplate,
 } from '@/services/automationsApi';
 import {
@@ -82,6 +82,7 @@ import { getWorkflowStatusVisual } from './constants/workflowConstants';
 import { cn } from '@/lib/utils';
 import { serializeWorkflowNodes } from './workflowEditorModel';
 import { CanvasViewControls } from '@/components/Canvas/CanvasViewControls';
+import { workflowQueryKeys } from '@/services/workflowQueryKeys';
 
 function WorkflowCanvasControls() {
   const { zoomIn, zoomOut, fitView } = useReactFlow();
@@ -197,6 +198,7 @@ export function WorkflowBuilderPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { organizationId } = useOrganization({
     onError: () => {
       toast({
@@ -237,6 +239,9 @@ export function WorkflowBuilderPage() {
   const selectedNode = useMemo(
     () => nodes.find((node) => node.id === selectedNodeId) ?? null,
     [nodes, selectedNodeId],
+  );
+  const selectedEmailTemplate = emailTemplates.find(
+    template => template.id === selectedNode?.data.step_config?.template_id,
   );
 
   const workflowDraft = useMemo(() => ({
@@ -323,6 +328,7 @@ export function WorkflowBuilderPage() {
           trigger_config: triggerConfig,
           steps,
         });
+        await queryClient.invalidateQueries({ queryKey: workflowQueryKeys.queues(organizationId) });
         toast({ title: 'Created', description: 'Workflow created successfully' });
         navigate(`/automations/${newWorkflow.id}`);
         return newWorkflow;
@@ -335,6 +341,7 @@ export function WorkflowBuilderPage() {
           trigger_config: triggerConfig,
           steps,
         });
+        await queryClient.invalidateQueries({ queryKey: workflowQueryKeys.queues(organizationId) });
         markClean();
         toast({ title: 'Saved', description: 'Workflow saved successfully' });
         return updatedWorkflow;
@@ -350,7 +357,7 @@ export function WorkflowBuilderPage() {
       setSaving(false);
     }
     return null;
-  }, [organizationId, name, description, triggerType, triggerConfig, nodes, isNewWorkflow, id, navigate, toast, markClean]);
+  }, [organizationId, name, description, triggerType, triggerConfig, nodes, isNewWorkflow, id, navigate, toast, markClean, queryClient]);
 
   const handleToggleActive = useCallback(async () => {
     if (!organizationId || !id) return;
@@ -374,6 +381,7 @@ export function WorkflowBuilderPage() {
         setIsActive(true);
         toast({ title: 'Activated', description: 'Workflow activated successfully' });
       }
+      await queryClient.invalidateQueries({ queryKey: workflowQueryKeys.queues(organizationId) });
     } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       toast({
         title: 'Error',
@@ -381,9 +389,9 @@ export function WorkflowBuilderPage() {
         variant: 'destructive',
       });
     }
-  }, [organizationId, id, isActive, isDirty, handleSave, toast, validateForActivation]);
+  }, [organizationId, id, isActive, isDirty, handleSave, toast, validateForActivation, queryClient]);
 
-  // Fetch workflow and email templates
+  // Fetch workflow. Template discovery is owned by the lazy template browser.
   useEffect(() => {
     const fetchData = async () => {
       if (!organizationId) return;
@@ -391,10 +399,6 @@ export function WorkflowBuilderPage() {
       setLoading(true);
       setLoadError(null);
       try {
-        // Fetch email templates
-        const templatesResponse = await getEmailTemplates(organizationId, { is_active: true });
-        setEmailTemplates(templatesResponse.templates);
-
         // Fetch workflow if editing
         if (!isNewWorkflow && id) {
           const workflowData = await getWorkflow(parseInt(id), organizationId);
@@ -620,7 +624,7 @@ export function WorkflowBuilderPage() {
     switch (stepType) {
       case 'send_email': {
         const template = emailTemplates.find(t => t.id === config.template_id);
-        return template?.name || 'Select template';
+        return template?.name || config.template_name || 'Select template';
       }
       case 'add_tag':
         return `Add: ${config.tag_name || 'tag'}`;
@@ -900,8 +904,8 @@ export function WorkflowBuilderPage() {
                   <Label>Email template</Label>
                   <div className="flex min-w-0 items-center gap-3 rounded-lg border p-3">
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{emailTemplates.find(template => template.id === selectedNode.data.step_config?.template_id)?.name || 'No template selected'}</p>
-                      <p className="truncate text-xs text-muted-foreground">{emailTemplates.find(template => template.id === selectedNode.data.step_config?.template_id)?.subject || 'Choose a published automation email.'}</p>
+                      <p className="truncate text-sm font-medium">{selectedEmailTemplate?.name || selectedNode.data.step_config?.template_name || 'No template selected'}</p>
+                      <p className="truncate text-xs text-muted-foreground">{selectedEmailTemplate?.subject || (selectedNode.data.step_config?.template_id ? 'Published automation email' : 'Choose a published automation email.')}</p>
                     </div>
                     <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={() => setShowTemplateBrowser(true)}>
                       {selectedNode.data.step_config?.template_id ? 'Change' : 'Browse'}
@@ -1135,18 +1139,20 @@ export function WorkflowBuilderPage() {
           )}
         </SheetContent>
       </Sheet>
-      {organizationId && <EmailTemplateBrowserDialog
+      {organizationId && <OrganizationEmailTemplateBrowserDialog
+        organizationId={organizationId}
         open={showTemplateBrowser}
         onOpenChange={setShowTemplateBrowser}
         title="Choose an automation template"
         description="Active templates available to this organization."
-        items={emailTemplates.map(template => ({
-          ...template,
-          meta: `${template.variables.length} variable${template.variables.length === 1 ? '' : 's'}`,
-        }))}
+        activeOnly
+        getMeta={template => `${template.variables.length} variable${template.variables.length === 1 ? '' : 's'}`}
         selectedId={selectedNode?.data.step_config?.template_id || null}
         onSelect={template => {
           if (!selectedNode) return;
+          setEmailTemplates(current => current.some(item => item.id === template.id)
+            ? current.map(item => item.id === template.id ? template : item)
+            : [...current, template]);
           handleUpdateNodeConfig({ ...selectedNode.data.step_config, template_id: template.id, template_name: template.name });
         }}
         renderPreview={template => <EmailPreviewPane organizationId={organizationId} content={{ subject: template.subject, preheader: template.preheader || '', bodyHtml: template.body_html, bodyText: template.body_text || '' }} className="h-full" />}

@@ -9,10 +9,11 @@ describe('CampaignEditorService', () => {
     audiencePreview: jest.fn(),
   } as unknown as jest.Mocked<CampaignsService>;
   const templates = {
-    list: jest.fn(),
+    detail: jest.fn(),
   } as unknown as jest.Mocked<EmailTemplatesService>;
   const segments = {
     list: jest.fn(),
+    get: jest.fn(),
     filterOptions: jest.fn(),
   } as unknown as jest.Mocked<SegmentsService>;
   const service = new CampaignEditorService(campaigns, templates, segments);
@@ -27,8 +28,11 @@ describe('CampaignEditorService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    templates.list.mockResolvedValue({ nodes: [], pageInfo: pageInfo(1, 0) });
-    segments.list.mockResolvedValue({ nodes: [], pageInfo: pageInfo(1, 0) });
+    segments.list.mockResolvedValue({
+      nodes: [],
+      pageInfo: pageInfo(1, 0),
+      stats: { total: 0, dynamic: 0, staticCount: 0, contacts: 0 },
+    });
     segments.filterOptions.mockResolvedValue({
       fields: [], tags: [], users: [], pipelines: [],
     });
@@ -65,41 +69,29 @@ describe('CampaignEditorService', () => {
     expect(campaigns.audiencePreview).toHaveBeenCalledTimes(1);
   });
 
-  it('returns complete template and segment catalogs across pages', async () => {
-    templates.list
-      .mockResolvedValueOnce({
-        nodes: [{ id: 1 } as never],
-        pageInfo: pageInfo(1, 2),
-      })
-      .mockResolvedValueOnce({
-        nodes: [{ id: 2 } as never],
-        pageInfo: pageInfo(2, 2),
-      });
-    segments.list
-      .mockResolvedValueOnce({
-        nodes: [{ id: 3 } as never],
-        pageInfo: pageInfo(1, 2),
-      })
-      .mockResolvedValueOnce({
-        nodes: [{ id: 4 } as never],
-        pageInfo: pageInfo(2, 2),
-      });
+  it('returns selected content plus one bounded page of available segments', async () => {
+    campaigns.detail.mockResolvedValue({
+      id: 7, status: 'sent', templateId: 1, segmentId: 4,
+    } as never);
+    templates.detail.mockResolvedValue({ id: 1 } as never);
+    segments.list.mockResolvedValueOnce({
+      nodes: [{ id: 3 } as never],
+      pageInfo: pageInfo(1, 2),
+      stats: { total: 2, dynamic: 2, staticCount: 0, contacts: 8 },
+    });
+    segments.get.mockResolvedValue({ id: 4 } as never);
 
-    await expect(service.bootstrap(42, null)).resolves.toMatchObject({
-      templates: [{ id: 1 }, { id: 2 }],
+    await expect(service.bootstrap(42, 7)).resolves.toMatchObject({
+      templates: [{ id: 1 }],
       segments: [{ id: 3 }, { id: 4 }],
     });
-    expect(templates.list).toHaveBeenNthCalledWith(
-      2,
+    expect(templates.detail).toHaveBeenCalledWith(42, 1);
+    expect(segments.list).toHaveBeenCalledTimes(1);
+    expect(segments.list).toHaveBeenCalledWith(
       42,
-      {},
-      expect.objectContaining({ page: 2, pageSize: 100 }),
+      { isActive: true },
+      expect.objectContaining({ page: 1, pageSize: 100 }),
     );
-    expect(segments.list).toHaveBeenNthCalledWith(
-      2,
-      42,
-      {},
-      expect.objectContaining({ page: 2, pageSize: 100 }),
-    );
+    expect(segments.get).toHaveBeenCalledWith(42, 4);
   });
 });

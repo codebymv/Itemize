@@ -152,11 +152,21 @@ describe('Segments GraphQL PostgreSQL contract', () => {
   it('keeps bounded list and membership behavior deterministic', async () => {
     const list = await graphql(
       `query List($filter: SegmentListFilterInput, $page: PageInput) {
-        segments(filter: $filter, page: $page) { nodes { id name } pageInfo { total pageSize } }
+        segments(filter: $filter, page: $page) {
+          nodes { id name }
+          pageInfo { total pageSize }
+          stats { total dynamic staticCount contacts }
+        }
       }`, { filter: { search: 'Gold', isActive: true }, page: { page: 1, pageSize: 10 } },
       { csrf: false },
     ).expect(200);
     expect(list.body.data.segments.pageInfo).toMatchObject({ total: 1, pageSize: 10 });
+    expect(list.body.data.segments.stats).toEqual(expect.objectContaining({
+      total: expect.any(Number),
+      dynamic: expect.any(Number),
+      staticCount: expect.any(Number),
+      contacts: expect.any(Number),
+    }));
     const id = Number(list.body.data.segments.nodes[0].id);
     const contacts = await graphql(
       `query Contacts($id: Int!, $page: PageInput) {

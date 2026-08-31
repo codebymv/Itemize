@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { FileText, Loader2, Mail, Pencil, Settings2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -8,7 +8,7 @@ import {
 } from "@/components/email/EmailContentEditor";
 import { EmailPreviewPane } from "@/components/email/EmailPreviewPane";
 import { EmailStudioDialog } from "@/components/email/EmailStudioDialog";
-import { EmailTemplateBrowserDialog } from "@/components/email/EmailTemplateBrowserDialog";
+import { OrganizationEmailTemplateBrowserDialog } from "@/components/email/OrganizationEmailTemplateBrowserDialog";
 import { ErrorState } from "@/components/ErrorState";
 import { OrganizationErrorState } from "@/components/OrganizationErrorState";
 import { HeaderAction } from "@/components/layout/DesktopHeaderTools";
@@ -43,12 +43,9 @@ import { useOrganization } from "@/hooks/useOrganization";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { QUERY_STALE_TIME_MS, shouldRetryQuery } from "@/lib/queryPolicy";
 import {
-  getEmailTemplateCatalogVisual,
   getEmailTemplatePublicationVisual,
 } from "./constants/emailTemplateVisuals";
-import { toBadgeStatus } from "@/lib/statusVisuals";
 import {
   createEmailTemplateDraft,
   getEmailTemplate,
@@ -58,7 +55,6 @@ import {
   type EmailTemplate,
   type EmailTemplateDraftInput,
 } from "@/services/emailApi";
-import { getEmailTemplatesViaGraphql } from "@/services/emailTemplatesGraphql";
 import { templateCatalogQueryKeys } from "@/services/templateCatalogQueryKeys";
 
 interface EditorState extends EmailContentValue {
@@ -136,17 +132,6 @@ export function EmailTemplateEditorPage() {
   const [studioMode, setStudioMode] = useState<"edit" | "preview">("edit");
   const [templateBrowserOpen, setTemplateBrowserOpen] = useState(false);
   const [templateDetailsOpen, setTemplateDetailsOpen] = useState(false);
-  const catalogQueryKey = templateCatalogQueryKeys.email(organizationId);
-  const catalogQuery = useQuery({
-    queryKey: catalogQueryKey,
-    queryFn: ({ signal }) => getEmailTemplatesViaGraphql({}, organizationId as number, signal),
-    enabled: templateBrowserOpen && organizationId !== null,
-    staleTime: QUERY_STALE_TIME_MS,
-    retry: shouldRetryQuery,
-  });
-  const templateLibrary = catalogQuery.data?.templates ?? [];
-  const templateLibraryLoading = catalogQuery.isPending && templateBrowserOpen;
-
   const loadTemplate = useCallback(async () => {
     if (isNew || !organizationId || !id) {
       if (isNew && !orgLoading) setLoading(false);
@@ -174,29 +159,10 @@ export function EmailTemplateEditorPage() {
     setStudioOpen(true);
     setStudioMode("edit");
   }, [id]);
-  useEffect(() => {
-    if (!templateBrowserOpen || !catalogQuery.error || catalogQuery.data) return;
-    toast({
-      title: "Unable to load templates",
-      description: "Your template library is temporarily unavailable.",
-      variant: "destructive",
+  const patchCatalog = useCallback((_saved: EmailTemplate) => {
+    void queryClient.invalidateQueries({
+      queryKey: templateCatalogQueryKeys.email(organizationId),
     });
-  }, [catalogQuery.data, catalogQuery.error, templateBrowserOpen, toast]);
-
-  const patchCatalog = useCallback((saved: EmailTemplate) => {
-    queryClient.setQueryData<{ templates: EmailTemplate[]; total: number }>(
-      templateCatalogQueryKeys.email(organizationId),
-      current => {
-        if (!current) return current;
-        const exists = current.templates.some(item => item.id === saved.id);
-        return {
-          templates: exists
-            ? current.templates.map(item => item.id === saved.id ? saved : item)
-            : [saved, ...current.templates],
-          total: exists ? current.total : current.total + 1,
-        };
-      },
-    );
   }, [organizationId, queryClient]);
 
   const { isDirty, markClean } = useDirtyState({
@@ -603,19 +569,15 @@ export function EmailTemplateEditorPage() {
         onPublish={() => void handlePublish()}
       />
 
-      <EmailTemplateBrowserDialog
+      {organizationId && <OrganizationEmailTemplateBrowserDialog
+        organizationId={organizationId}
         open={templateBrowserOpen}
         onOpenChange={setTemplateBrowserOpen}
         title="Browse email templates"
         description="Choose a template to edit."
-        items={templateLibrary.map((item) => ({
-          ...item,
-          status: toBadgeStatus(getEmailTemplateCatalogVisual(item.is_active)),
-          meta: item.published_version
-            ? `Version ${item.published_version}`
-            : "Not published",
-        }))}
-        loading={templateLibraryLoading}
+        getMeta={(item) => item.published_version
+          ? `Version ${item.published_version}`
+          : "Not published"}
         selectedId={template?.id || null}
         headerAction={
           <Button
@@ -649,7 +611,7 @@ export function EmailTemplateEditorPage() {
         )}
         emptyTitle="No email templates yet"
         emptyDescription="Create your first reusable campaign or automation email."
-      />
+      />}
 
       <Dialog open={templateDetailsOpen} onOpenChange={setTemplateDetailsOpen}>
         <DialogContent className="sm:max-w-lg">

@@ -5,8 +5,9 @@ import {
   deleteSegmentViaGraphql,
   getSegmentEditorBootstrapViaGraphql,
   getSegmentFilterOptionsViaGraphql,
-  getSegmentsViaGraphql,
+  getSegmentPageViaGraphql,
   previewSegmentViaGraphql,
+  resetSegmentListCapability,
 } from './segmentsGraphql';
 
 vi.mock('@/lib/api', () => ({
@@ -32,6 +33,7 @@ const response = (payload: unknown): Response => ({
 
 describe('segments GraphQL consumer', () => {
   beforeEach(() => {
+    resetSegmentListCapability();
     vi.stubEnv('VITE_GRAPHQL_URL', 'https://graphql.test.itemize/graphql');
     vi.stubGlobal('fetch', vi.fn());
     vi.mocked(fetchCsrfToken).mockResolvedValue('segment-csrf');
@@ -45,37 +47,62 @@ describe('segments GraphQL consumer', () => {
   it('maps bounded list and dynamic filter casing to the REST contract', async () => {
     const controller = new AbortController();
     vi.mocked(fetch).mockResolvedValueOnce(response({ data: {
-      segments: { nodes: [segment], pageInfo: { page: 1, totalPages: 1 } },
+      segments: {
+        nodes: [segment],
+        pageInfo: { page: 2, pageSize: 20, total: 21, totalPages: 2 },
+        stats: { total: 8, dynamic: 5, staticCount: 3, contacts: 41 },
+      },
     } }));
-    await expect(getSegmentsViaGraphql(
-      { is_active: true, search: 'active' }, 3, controller.signal,
-    )).resolves.toEqual([
-      expect.objectContaining({
+    await expect(getSegmentPageViaGraphql(
+      { is_active: true, search: ' active ', page: 2, limit: 20 }, 3, controller.signal,
+    )).resolves.toMatchObject({
+      segments: [expect.objectContaining({
         id: 7, organization_id: 3, segment_type: 'dynamic', filter_type: 'and',
         contact_count: 2, is_active: true,
-      }),
-    ]);
+      })],
+      pagination: { page: 2, limit: 20, total: 21, totalPages: 2 },
+      stats: { total: 8, dynamic: 5, staticCount: 3, contacts: 41 },
+    });
     const init = vi.mocked(fetch).mock.calls[0][1] as RequestInit;
     const body = JSON.parse(String(init.body));
     expect(body.variables).toEqual({
-      filter: { isActive: true, search: 'active' }, page: { page: 1, pageSize: 100 },
+      filter: { isActive: true, search: 'active' }, page: { page: 2, pageSize: 20 },
     });
     expect((init.headers as Record<string, string>)['x-organization-id']).toBe('3');
     expect(init.signal).toBe(controller.signal);
   });
 
-  it('walks every bounded list page so the retained array is never truncated', async () => {
+  it('negotiates legacy stats once and only walks legacy summary pages', async () => {
     vi.mocked(fetch)
+      .mockResolvedValueOnce(response({ errors: [{
+        message: 'Cannot query field "stats" on type "SegmentPage".',
+      }] }))
       .mockResolvedValueOnce(response({ data: {
-        segments: { nodes: [segment], pageInfo: { page: 1, totalPages: 2 } },
+        filtered: {
+          nodes: [segment],
+          pageInfo: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
+        },
+        summary: {
+          nodes: [{ segmentType: 'dynamic', contactCount: 2 }],
+          pageInfo: { page: 1, total: 2, totalPages: 2 },
+        },
       } }))
       .mockResolvedValueOnce(response({ data: {
-        segments: { nodes: [{ ...segment, id: 8, name: 'Second' }], pageInfo: { page: 2, totalPages: 2 } },
+        summary: {
+          nodes: [{ segmentType: 'static', contactCount: 3 }],
+          pageInfo: { page: 2, total: 2, totalPages: 2 },
+        },
       } }));
-    const result = await getSegmentsViaGraphql({}, 3);
-    expect(result.map((item) => item.id)).toEqual([7, 8]);
-    const second = JSON.parse(String((vi.mocked(fetch).mock.calls[1][1] as RequestInit).body));
-    expect(second.variables.page).toEqual({ page: 2, pageSize: 100 });
+    const result = await getSegmentPageViaGraphql({ page: 1, limit: 20 }, 3);
+    expect(result).toMatchObject({
+      segments: [{ id: 7 }],
+      stats: { total: 2, dynamic: 1, staticCount: 1, contacts: 5 },
+    });
+    const operations = vi.mocked(fetch).mock.calls.map(([, init]) => {
+      const body = JSON.parse(String((init as RequestInit).body));
+      return String(body.query).match(/query\s+([A-Za-z0-9_]+)/)?.[1];
+    });
+    expect(operations).toEqual(['SegmentPage', 'LegacySegmentPage', 'LegacySegmentSummary']);
   });
 
   it('maps mutations, obtains CSRF, and verifies delete identity', async () => {

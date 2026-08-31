@@ -42,6 +42,15 @@ export class Segment {
 export class SegmentPage {
   @Field(() => [Segment]) nodes: Segment[];
   @Field(() => PageInfo) pageInfo: PageInfo;
+  @Field(() => SegmentStats) stats: SegmentStats;
+}
+
+@ObjectType()
+export class SegmentStats {
+  @Field(() => Int) total: number;
+  @Field(() => Int) dynamic: number;
+  @Field(() => Int) staticCount: number;
+  @Field(() => Int) contacts: number;
 }
 
 @ObjectType()

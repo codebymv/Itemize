@@ -167,10 +167,10 @@ export function GlobalSearch({ open, onClose, hasPaidAccess }: GlobalSearchProps
               getWhiteboards(),
               getWireframes(),
               getVaults(),
-              hasPaidAccess ? getSegments({ search: query }) : Promise.resolve([]),
+              hasPaidAccess ? getSegments({ search: query, page: 1, limit: 3 }) : Promise.resolve([]),
               hasPaidAccess ? getCampaigns({ search: query, limit: 3 }) : Promise.resolve({ campaigns: [] }),
               hasPaidAccess
-                ? getWorkflows(Number(getOrgId() || 0), { search: query })
+                ? getWorkflows(Number(getOrgId() || 0), { search: query, limit: 3 })
                 : Promise.resolve({ workflows: [] })
             ]);
             const [listsData, notesData, whiteboardsData, wireframesData, vaultsData, segmentsData, campaignsData, automationsData] = contentResults;

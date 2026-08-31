@@ -10,6 +10,7 @@ import {
   getEmailTemplatesViaGraphql,
   previewEmailTemplateViaGraphql,
   publishEmailTemplateViaGraphql,
+  resetEmailTemplateListCapability,
   saveEmailTemplateDraftViaGraphql,
   updateEmailTemplateViaGraphql,
 } from './emailTemplatesGraphql';
@@ -54,6 +55,7 @@ const response = (payload: unknown): Response => ({
 
 describe('email-template GraphQL consumer', () => {
   beforeEach(() => {
+    resetEmailTemplateListCapability();
     vi.clearAllMocks();
     vi.stubEnv('VITE_GRAPHQL_URL', 'https://graphql.test.itemize/graphql');
     vi.stubGlobal('fetch', vi.fn());
@@ -65,37 +67,68 @@ describe('email-template GraphQL consumer', () => {
     vi.unstubAllGlobals();
   });
 
-  it('walks every page and maps filters and legacy field casing', async () => {
+  it('loads one bounded page with global catalog metadata and cancellation', async () => {
     const controller = new AbortController();
-    vi.mocked(fetch)
-      .mockResolvedValueOnce(response({ data: { emailTemplates: {
-        nodes: [template], pageInfo: { total: 2, hasNextPage: true },
-      } } }))
-      .mockResolvedValueOnce(response({ data: { emailTemplates: {
-        nodes: [{ ...template, id: 10, name: 'Follow up' }],
-        pageInfo: { total: 2, hasNextPage: false },
-      } } }));
+    vi.mocked(fetch).mockResolvedValueOnce(response({ data: { emailTemplates: {
+      nodes: [template],
+      pageInfo: { page: 2, pageSize: 20, total: 21, totalPages: 2, hasNextPage: false },
+      stats: { total: 40, active: 32, inactive: 8, categories: 4 },
+      categories: [{ category: 'onboarding', count: 12 }],
+    } } }));
 
     const result = await getEmailTemplatesViaGraphql(
-      { category: 'onboarding', is_active: true, search: 'welcome' },
+      { category: 'onboarding', is_active: true, search: ' welcome ', page: 2, limit: 20 },
       4,
       controller.signal,
     );
-    expect(result.total).toBe(2);
-    expect(result.templates).toHaveLength(2);
+    expect(result).toMatchObject({
+      total: 21,
+      pagination: { page: 2, limit: 20, total: 21, totalPages: 2 },
+      stats: { total: 40, active: 32, inactive: 8, categories: 4 },
+      categories: [{ category: 'onboarding', count: 12 }],
+    });
+    expect(result.templates).toHaveLength(1);
     expect(result.templates[0]).toMatchObject({
       id: 9, organization_id: 4, body_html: '<p>{{company}}</p>', is_active: true,
     });
-    const bodies = vi.mocked(fetch).mock.calls.map((call) =>
-      JSON.parse(String((call[1] as RequestInit).body)),
-    );
-    expect(bodies.map((body) => body.variables.page.page)).toEqual([1, 2]);
-    expect(bodies[0].variables.filter).toEqual({
+    expect(fetch).toHaveBeenCalledOnce();
+    const body = JSON.parse(String((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body));
+    expect(body.variables.page).toEqual({ page: 2, pageSize: 20 });
+    expect(body.variables.filter).toEqual({
       category: 'onboarding', isActive: true, search: 'welcome',
     });
-    expect(vi.mocked(fetch).mock.calls.every((call) =>
-      (call[1] as RequestInit).signal === controller.signal,
-    )).toBe(true);
+    expect((vi.mocked(fetch).mock.calls[0][1] as RequestInit).signal).toBe(controller.signal);
+  });
+
+  it('negotiates legacy catalog metadata once without walking result pages', async () => {
+    const legacyPayload = response({ data: {
+      filtered: {
+        nodes: [template],
+        pageInfo: { page: 1, pageSize: 20, total: 1, totalPages: 1, hasNextPage: false },
+      },
+      all: { pageInfo: { total: 8 } },
+      active: { pageInfo: { total: 6 } },
+      inactive: { pageInfo: { total: 2 } },
+      emailTemplateCategories: [{ category: 'onboarding', count: 3 }],
+    } });
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(response({ errors: [{
+        message: 'Cannot query field "stats" on type "EmailTemplatePage".',
+      }] }))
+      .mockResolvedValueOnce(legacyPayload)
+      .mockResolvedValueOnce(legacyPayload);
+
+    await expect(getEmailTemplatesViaGraphql({ page: 1, limit: 20 }, 4)).resolves.toMatchObject({
+      templates: [{ id: 9 }],
+      stats: { total: 8, active: 6, inactive: 2, categories: 1 },
+    });
+    await getEmailTemplatesViaGraphql({ page: 1, limit: 20 }, 4);
+
+    const operations = vi.mocked(fetch).mock.calls.map(([, init]) => {
+      const request = JSON.parse(String((init as RequestInit).body));
+      return String(request.query).match(/query\s+([A-Za-z0-9_]+)/)?.[1];
+    });
+    expect(operations).toEqual(['EmailTemplates', 'EmailTemplatesLegacy', 'EmailTemplatesLegacy']);
   });
 
   it('maps detail and category reads without response-envelope drift', async () => {

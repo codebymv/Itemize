@@ -7,7 +7,7 @@ import {
   ScheduleCampaignInput,
   UpdateCampaignInput,
 } from './campaign.inputs';
-import { Campaign, CampaignAudiencePreview, CampaignLink, CampaignPage, DeleteCampaignResult } from './campaign.types';
+import { Campaign, CampaignAudiencePreview, CampaignLink, CampaignPage, CampaignStats, DeleteCampaignResult } from './campaign.types';
 import {
   CampaignLinkRow,
   CampaignRow,
@@ -43,6 +43,7 @@ export class CampaignsService {
     return {
       nodes: result.rows.map((row) => this.map(row)),
       pageInfo: pageInfo(normalizedPage.page, normalizedPage.pageSize, total),
+      stats: this.stats(result.stats),
     };
   }
 
@@ -189,6 +190,16 @@ export class CampaignsService {
         field: 'id', reason: 'INVALID_CAMPAIGN_ID',
       });
     }
+  }
+
+  private stats(row: { total: number | string; failed: number | string; draft: number | string; in_progress: number | string; delivered: number | string }): CampaignStats {
+    return {
+      total: this.count(row.total, 'campaigns.stats.total'),
+      failed: this.count(row.failed, 'campaigns.stats.failed'),
+      draft: this.count(row.draft, 'campaigns.stats.draft'),
+      inProgress: this.count(row.in_progress, 'campaigns.stats.inProgress'),
+      delivered: this.count(row.delivered, 'campaigns.stats.delivered'),
+    };
   }
 
   private required(value: string, field: string, max: number, trim = true): string {

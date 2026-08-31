@@ -12,6 +12,8 @@ import {
     publishEmailTemplateViaGraphql,
     saveEmailTemplateDraftViaGraphql,
     type EmailTemplateInput,
+    type EmailTemplateListParams,
+    type EmailTemplateListResponse,
     type EmailTemplatePreview,
 } from './emailTemplatesGraphql';
 import {
@@ -83,9 +85,12 @@ export interface SendEmailResult {
  */
 export const getEmailTemplates = async (
     organizationId?: number,
-    filters?: { category?: string; is_active?: boolean; search?: string }
-): Promise<{ templates: EmailTemplate[]; total: number }> => {
-    return getEmailTemplatesViaGraphql(filters, organizationId);
+    filters?: EmailTemplateListParams,
+    signal?: AbortSignal,
+): Promise<EmailTemplateListResponse> => {
+    return signal
+        ? getEmailTemplatesViaGraphql(filters, organizationId, signal)
+        : getEmailTemplatesViaGraphql(filters, organizationId);
 };
 
 /**

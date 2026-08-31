@@ -95,6 +95,27 @@ export class EmailTemplatePage {
 
   @Field(() => PageInfo)
   pageInfo: PageInfo;
+
+  @Field(() => EmailTemplateStats)
+  stats: EmailTemplateStats;
+
+  @Field(() => [EmailTemplateCategory])
+  categories: EmailTemplateCategory[];
+}
+
+@ObjectType()
+export class EmailTemplateStats {
+  @Field(() => Int)
+  total: number;
+
+  @Field(() => Int)
+  active: number;
+
+  @Field(() => Int)
+  inactive: number;
+
+  @Field(() => Int)
+  categories: number;
 }
 
 @ObjectType()

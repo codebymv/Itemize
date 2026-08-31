@@ -144,6 +144,7 @@ describe('Campaign management GraphQL PostgreSQL contract', () => {
         campaigns(filter: $filter, page: $page) {
           nodes { ${fields} }
           pageInfo { page pageSize total totalPages }
+          stats { total failed draft inProgress delivered }
         }
       }`,
       { filter: { status: 'draft', search: 'launch' }, page: { page: 1, pageSize: 1 } },
@@ -152,6 +153,9 @@ describe('Campaign management GraphQL PostgreSQL contract', () => {
     expect(listed.body.errors).toBeUndefined();
     expect(listed.body.data.campaigns.nodes[0].id).toBe(id);
     expect(listed.body.data.campaigns.pageInfo).toMatchObject({ page: 1, pageSize: 1 });
+    expect(listed.body.data.campaigns.stats).toMatchObject({
+      total: 1, failed: 0, draft: 1, inProgress: 0, delivered: 0,
+    });
   });
 
   it('serializes partial updates, clears explicit nulls, validates references, and conceals tenants', async () => {

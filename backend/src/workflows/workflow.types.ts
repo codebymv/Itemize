@@ -49,9 +49,20 @@ export class Workflow {
 }
 
 @ObjectType()
+export class WorkflowStats {
+  @Field(() => Int) total: number;
+  @Field(() => Int) active: number;
+  @Field(() => Int) inactive: number;
+  @Field(() => Int) running: number;
+  @Field(() => Int) completed: number;
+  @Field(() => Int) failed: number;
+}
+
+@ObjectType()
 export class WorkflowPage {
   @Field(() => [Workflow]) nodes: Workflow[];
   @Field(() => PageInfo) pageInfo: PageInfo;
+  @Field(() => WorkflowStats) stats: WorkflowStats;
 }
 
 @ObjectType()

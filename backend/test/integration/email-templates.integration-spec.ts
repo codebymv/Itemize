@@ -150,6 +150,8 @@ describe('Email templates GraphQL PostgreSQL contract', () => {
         emailTemplates(filter: $filter, page: $page) {
           nodes { ${fields} }
           pageInfo { page pageSize total hasNextPage }
+          stats { total active inactive categories }
+          categories { category count }
         }
         emailTemplateCategories { category count }
       }`,
@@ -159,6 +161,19 @@ describe('Email templates GraphQL PostgreSQL contract', () => {
     expect(listed.body.errors).toBeUndefined();
     expect(listed.body.data.emailTemplates.nodes[0].id).toBe(id);
     expect(listed.body.data.emailTemplates.pageInfo).toMatchObject({ page: 1, pageSize: 1, total: 1 });
+    expect(listed.body.data.emailTemplates.stats).toEqual(expect.objectContaining({
+      total: expect.any(Number),
+      active: expect.any(Number),
+      inactive: expect.any(Number),
+      categories: expect.any(Number),
+    }));
+    expect(listed.body.data.emailTemplates.stats.active
+      + listed.body.data.emailTemplates.stats.inactive).toBe(
+      listed.body.data.emailTemplates.stats.total,
+    );
+    expect(listed.body.data.emailTemplates.categories).toContainEqual({
+      category: 'OnBoarding', count: 1,
+    });
     expect(listed.body.data.emailTemplateCategories).toContainEqual({ category: 'OnBoarding', count: 1 });
   });
 

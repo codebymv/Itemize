@@ -119,11 +119,22 @@ export class Campaign {
 }
 
 @ObjectType()
+export class CampaignStats {
+  @Field(() => Int) total: number;
+  @Field(() => Int) failed: number;
+  @Field(() => Int) draft: number;
+  @Field(() => Int) inProgress: number;
+  @Field(() => Int) delivered: number;
+}
+
+@ObjectType()
 export class CampaignPage {
   @Field(() => [Campaign])
   nodes: Campaign[];
   @Field(() => PageInfo)
   pageInfo: PageInfo;
+  @Field(() => CampaignStats)
+  stats: CampaignStats;
 }
 
 @ObjectType()

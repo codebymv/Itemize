@@ -3,7 +3,7 @@ import { itemizeGraphqlError } from '../common/graphql-error';
 import { PageInput, pageInfo } from '../common/pagination';
 import { CreateWorkflowInput, UpdateWorkflowInput, WorkflowFilterInput, WorkflowStepInput } from './workflow.inputs';
 import { isWorkflowStep, normalizeWorkflowTrigger, WORKFLOW_STEP_TYPES, WORKFLOW_TRIGGER_TYPES } from './workflow.registry';
-import { DeleteWorkflowResult, Workflow, WorkflowPage, WorkflowStep } from './workflow.types';
+import { DeleteWorkflowResult, Workflow, WorkflowPage, WorkflowStats, WorkflowStep } from './workflow.types';
 import {
   ScheduleValue, WorkflowRow, WorkflowsRepository, WorkflowStepRow, WorkflowStepValue, WorkflowValue,
 } from './workflows.repository';
@@ -31,6 +31,7 @@ export class WorkflowsService {
     return {
       nodes: result.rows.map((row) => this.map({ workflow: row, steps: [] })),
       pageInfo: pageInfo(normalizedPage.page, normalizedPage.pageSize, total),
+      stats: this.stats(result.stats),
     };
   }
 
@@ -233,6 +234,20 @@ export class WorkflowsService {
     const parsed = Number(value);
     if (!Number.isSafeInteger(parsed) || parsed < 0 || parsed > 2_147_483_647) throw new Error(`Unsafe workflow count at ${field}`);
     return parsed;
+  }
+
+  private stats(row: {
+    total: string | number; active: string | number; inactive: string | number;
+    running: string | number; completed: string | number; failed: string | number;
+  }): WorkflowStats {
+    return {
+      total: this.count(row.total, 'workflows.stats.total'),
+      active: this.count(row.active, 'workflows.stats.active'),
+      inactive: this.count(row.inactive, 'workflows.stats.inactive'),
+      running: this.count(row.running, 'workflows.stats.running'),
+      completed: this.count(row.completed, 'workflows.stats.completed'),
+      failed: this.count(row.failed, 'workflows.stats.failed'),
+    };
   }
 
   private limit(limit: { current: number; limit: number; plan: string }): never {

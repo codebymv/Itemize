@@ -47,6 +47,16 @@ export class EmailTemplatesService {
     return {
       nodes: result.rows.map(this.map),
       pageInfo: pageInfo(normalizedPage.page, normalizedPage.pageSize, total),
+      stats: {
+        total: this.count(result.stats.total, 'emailTemplates.stats.total'),
+        active: this.count(result.stats.active, 'emailTemplates.stats.active'),
+        inactive: this.count(result.stats.inactive, 'emailTemplates.stats.inactive'),
+        categories: this.count(result.stats.categories, 'emailTemplates.stats.categories'),
+      },
+      categories: result.categories.map((row) => ({
+        category: row.category,
+        count: this.count(row.count, `emailTemplates.categories.${row.category}`),
+      })),
     };
   }
 

@@ -1,5 +1,5 @@
-import type { CampaignPreview, CampaignRecipient, EmailCampaign } from './campaignsApi';
-import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
+import type { CampaignPreview, CampaignRecipient, CampaignStats, EmailCampaign } from './campaignsApi';
+import { GraphqlRequestError, graphqlMutationRequest, graphqlRequest } from './graphqlClient';
 
 type GraphqlCampaignLink = {
   id: number; campaignId: number; originalUrl: string; trackingUrl: string | null;
@@ -152,33 +152,115 @@ const mapInput = (input: Partial<EmailCampaign>) => ({
   ...(input.excluded_tag_ids === undefined ? {} : { excludedTagIds: input.excluded_tag_ids }),
 });
 
+type CampaignPageData = {
+  campaigns: {
+    nodes: GraphqlCampaign[];
+    pageInfo: { page: number; pageSize: number; total: number; totalPages: number };
+    stats?: CampaignStats;
+  };
+};
+type CampaignVariables = { filter: { status?: string; search?: string }; page: { page: number; pageSize: number } };
+
 export const getCampaignsViaGraphql = async (
   params: { status?: EmailCampaign['status'] | 'all'; page?: number; limit?: number; search?: string } = {},
   organizationId?: number,
-): Promise<{ campaigns: EmailCampaign[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> => {
-  const data = await graphqlRequest<
-    { campaigns: { nodes: GraphqlCampaign[]; pageInfo: { page: number; pageSize: number; total: number; totalPages: number } } },
-    { filter: { status?: string; search?: string }; page: { page: number; pageSize: number } }
-  >(
-    `query Campaigns($filter: CampaignFilterInput, $page: PageInput) {
-      campaigns(filter: $filter, page: $page) {
-        nodes { ${campaignFields} }
-        pageInfo { page pageSize total totalPages }
-      }
-    }`,
-    {
-      filter: {
-        ...(params.status === undefined ? {} : { status: params.status }),
-        ...(params.search === undefined ? {} : { search: params.search }),
-      },
-      page: { page: params.page ?? 1, pageSize: params.limit ?? 50 },
+  signal?: AbortSignal,
+): Promise<{ campaigns: EmailCampaign[]; pagination: { page: number; limit: number; total: number; totalPages: number }; stats: CampaignStats }> => {
+  const variables: CampaignVariables = {
+    filter: {
+      ...(params.status === undefined || params.status === 'all' ? {} : { status: params.status }),
+      ...(params.search?.trim() ? { search: params.search.trim() } : {}),
     },
-    organizationId,
-  );
+    page: { page: params.page ?? 1, pageSize: params.limit ?? 50 },
+  };
+  let data: CampaignPageData;
+  if (campaignQueueCapability !== 'legacy') {
+    try {
+      data = await graphqlRequest<CampaignPageData, CampaignVariables>(
+        `query Campaigns($filter: CampaignFilterInput, $page: PageInput) {
+          campaigns(filter: $filter, page: $page) {
+            nodes { ${campaignFields} }
+            pageInfo { page pageSize total totalPages }
+            stats { total failed draft inProgress delivered }
+          }
+        }`,
+        variables,
+        organizationId,
+        signal,
+      );
+      campaignQueueCapability = 'current';
+    } catch (error) {
+      if (!(error instanceof GraphqlRequestError) || !/Cannot query field "stats"/.test(error.message)) throw error;
+      campaignQueueCapability = 'legacy';
+      data = await legacyCampaignQueue(variables, organizationId, signal);
+    }
+  } else {
+    data = await legacyCampaignQueue(variables, organizationId, signal);
+  }
   const page = data.campaigns.pageInfo;
   return {
     campaigns: data.campaigns.nodes.map(mapCampaign),
     pagination: { page: page.page, limit: page.pageSize, total: page.total, totalPages: page.totalPages },
+    stats: data.campaigns.stats ?? EMPTY_CAMPAIGN_STATS,
+  };
+};
+
+type LegacyCampaignQueueData = {
+  campaigns: { nodes: GraphqlCampaign[]; pageInfo: { page: number; pageSize: number; total: number; totalPages: number } };
+  draft: { pageInfo: { total: number } };
+  scheduled: { pageInfo: { total: number } };
+  sending: { pageInfo: { total: number } };
+  paused: { pageInfo: { total: number } };
+  sent: { pageInfo: { total: number } };
+  failed: { pageInfo: { total: number } };
+  cancelled: { pageInfo: { total: number } };
+};
+const EMPTY_CAMPAIGN_STATS: CampaignStats = { total: 0, failed: 0, draft: 0, inProgress: 0, delivered: 0 };
+let campaignQueueCapability: 'unknown' | 'current' | 'legacy' = 'unknown';
+
+export const resetCampaignQueueCapabilities = (): void => {
+  campaignQueueCapability = 'unknown';
+};
+
+const legacyCampaignQueue = async (
+  variables: CampaignVariables,
+  organizationId?: number,
+  signal?: AbortSignal,
+): Promise<{ campaigns: CampaignPageData['campaigns'] }> => {
+  const data = await graphqlRequest<
+    LegacyCampaignQueueData,
+    CampaignVariables
+  >(
+    `query CampaignsLegacy($filter: CampaignFilterInput, $page: PageInput) {
+      campaigns(filter: $filter, page: $page) {
+        nodes { ${campaignFields} }
+        pageInfo { page pageSize total totalPages }
+      }
+      draft: campaigns(filter: { status: "draft" }, page: { page: 1, pageSize: 1 }) { pageInfo { total } }
+      scheduled: campaigns(filter: { status: "scheduled" }, page: { page: 1, pageSize: 1 }) { pageInfo { total } }
+      sending: campaigns(filter: { status: "sending" }, page: { page: 1, pageSize: 1 }) { pageInfo { total } }
+      paused: campaigns(filter: { status: "paused" }, page: { page: 1, pageSize: 1 }) { pageInfo { total } }
+      sent: campaigns(filter: { status: "sent" }, page: { page: 1, pageSize: 1 }) { pageInfo { total } }
+      failed: campaigns(filter: { status: "failed" }, page: { page: 1, pageSize: 1 }) { pageInfo { total } }
+      cancelled: campaigns(filter: { status: "cancelled" }, page: { page: 1, pageSize: 1 }) { pageInfo { total } }
+    }`,
+    variables,
+    organizationId,
+    signal,
+  );
+  return {
+    campaigns: {
+      ...data.campaigns,
+      stats: {
+        total: data.draft.pageInfo.total + data.scheduled.pageInfo.total + data.sending.pageInfo.total
+          + data.paused.pageInfo.total + data.sent.pageInfo.total + data.failed.pageInfo.total
+          + data.cancelled.pageInfo.total,
+        draft: data.draft.pageInfo.total,
+        inProgress: data.scheduled.pageInfo.total + data.sending.pageInfo.total + data.paused.pageInfo.total,
+        delivered: data.sent.pageInfo.total,
+        failed: data.failed.pageInfo.total + data.cancelled.pageInfo.total,
+      },
+    },
   };
 };
 

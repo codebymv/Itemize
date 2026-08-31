@@ -8,6 +8,7 @@ import {
   enrollContactInWorkflowViaGraphql,
   getWorkflowEnrollmentsViaGraphql,
   getWorkflowsViaGraphql,
+  resetWorkflowQueueCapabilities,
   retryWorkflowEnrollmentViaGraphql,
   updateWorkflowViaGraphql,
 } from './workflowsGraphql';
@@ -43,33 +44,65 @@ const response = (payload: unknown): Response => ({
 describe('workflow GraphQL consumer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetWorkflowQueueCapabilities();
     vi.stubEnv('VITE_GRAPHQL_URL', 'https://graphql.test.itemize/graphql');
     vi.stubGlobal('fetch', vi.fn());
     vi.mocked(fetchCsrfToken).mockResolvedValue('workflow-csrf');
   });
   afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
 
-  it('walks every page and maps filters, steps, and enrollment counts to the REST contract', async () => {
-    vi.mocked(fetch)
-      .mockResolvedValueOnce(response({ data: { workflows: {
-        nodes: [workflow], pageInfo: { total: 2, hasNextPage: true },
-      } } }))
-      .mockResolvedValueOnce(response({ data: { workflows: {
-        nodes: [{ ...workflow, id: 10, name: 'Follow up', steps: [] }],
-        pageInfo: { total: 2, hasNextPage: false },
-      } } }));
+  it('maps one cancellable workflow page with filters and organization-wide stats', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(response({ data: { workflows: {
+      nodes: [workflow],
+      pageInfo: { page: 2, pageSize: 25, total: 26, totalPages: 2 },
+      stats: { total: 8, active: 3, inactive: 5, running: 7, completed: 12, failed: 2 },
+    } } }));
+    const controller = new AbortController();
     const result = await getWorkflowsViaGraphql(4, {
-      trigger_type: 'contact_added', is_active: false, search: 'welcome',
-    });
-    expect(result.total).toBe(2);
+      trigger_type: 'contact_added', is_active: false, search: ' welcome ', page: 2, limit: 25,
+    }, controller.signal);
+    expect(result.pagination).toEqual({ page: 2, limit: 25, total: 26, totalPages: 2 });
+    expect(result.stats).toEqual({ total: 8, active: 3, inactive: 5, running: 7, completed: 12, failed: 2 });
     expect(result.workflows[0]).toMatchObject({
       id: 9, organization_id: 4, trigger_type: 'contact_added', step_count: 1,
       enrollment_stats: { active_count: 0, total_count: 0 },
-      steps: [{ workflow_id: 9, step_order: 1, step_type: 'add_tag' }],
     });
-    const bodies = vi.mocked(fetch).mock.calls.map((call) => JSON.parse(String((call[1] as RequestInit).body)));
-    expect(bodies.map((body) => body.variables.page.page)).toEqual([1, 2]);
-    expect(bodies[0].variables.filter).toEqual({ triggerType: 'contact_added', isActive: false, search: 'welcome' });
+    const request = vi.mocked(fetch).mock.calls[0][1] as RequestInit;
+    const body = JSON.parse(String(request.body));
+    expect(body.variables).toEqual({
+      filter: { triggerType: 'contact_added', isActive: false, search: 'welcome' },
+      page: { page: 2, pageSize: 25 },
+    });
+    expect(request.signal).toBe(controller.signal);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses one consolidated legacy queue request after schema capability detection', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(response({
+        errors: [{ message: 'Cannot query field "stats" on type "WorkflowPage".' }],
+      }))
+      .mockResolvedValueOnce(response({ data: {
+        workflows: {
+          nodes: [workflow],
+          pageInfo: { page: 1, pageSize: 20, total: 1, totalPages: 1 },
+        },
+        workflowPerformance: { summary: {
+          totalWorkflows: 8,
+          activeWorkflows: 3,
+          completedEnrollments: 12,
+          activeEnrollments: 7,
+          failedEnrollments: 2,
+        } },
+      } }));
+
+    await expect(getWorkflowsViaGraphql(4, { page: 1, limit: 20 })).resolves.toMatchObject({
+      pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+      stats: { total: 8, active: 3, inactive: 5, running: 7, completed: 12, failed: 2 },
+    });
+    expect(fetch).toHaveBeenCalledTimes(2);
+    const fallbackBody = JSON.parse(String((vi.mocked(fetch).mock.calls[1][1] as RequestInit).body));
+    expect(fallbackBody.query).toContain('query WorkflowDefinitionsLegacy');
   });
 
   it('maps protected definition writes and verifies delete postconditions', async () => {

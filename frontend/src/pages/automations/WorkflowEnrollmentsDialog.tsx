@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, Pause, Play, RefreshCw, RotateCcw, UserPlus, XCircle } from 'lucide-react';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
@@ -20,6 +21,8 @@ import {
 import { getContacts } from '@/services/contactsApi';
 import type { Contact } from '@/types';
 import { cn } from '@/lib/utils';
+import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
+import { workflowQueryKeys } from '@/services/workflowQueryKeys';
 import { getWorkflowEnrollmentStatusVisual } from './constants/workflowConstants';
 
 type Props = {
@@ -50,57 +53,76 @@ const formatDateTime = (value?: string): string | null => {
 
 export function WorkflowEnrollmentsDialog({ open, onOpenChange, organizationId, workflowId }: Props) {
   const { toast } = useToast();
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [enrollments, setEnrollments] = useState<WorkflowEnrollment[]>([]);
+  const queryClient = useQueryClient();
   const [selectedContactId, setSelectedContactId] = useState('');
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [submittedSearch, setSubmittedSearch] = useState('');
   const [working, setWorking] = useState<string | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, totalPages: 1 });
   const [enrollmentToCancel, setEnrollmentToCancel] = useState<WorkflowEnrollment | null>(null);
 
-  const loadEnrollments = useCallback(async (requestedPage = 1) => {
-    const result = await getWorkflowEnrollments(workflowId, organizationId, { page: requestedPage, limit: 50 });
-    setEnrollments(result.enrollments);
-    setPagination(result.pagination);
-    setPage(result.pagination.page);
-  }, [organizationId, workflowId]);
-
-  const loadContacts = useCallback(async (query = '') => {
-    const result = await getContacts({
-      organization_id: organizationId, status: 'active', search: query.trim() || undefined,
-      sort_by: 'first_name', sort_order: 'asc', page: 1, limit: 25,
-    }, organizationId);
-    setContacts(result.contacts);
-  }, [organizationId]);
-
-  const loadData = useCallback(async (contactQuery = '') => {
-    setLoading(true);
-    setLoadError(null);
-    try {
-      await Promise.all([loadContacts(contactQuery), loadEnrollments(1)]);
-    } catch (error) {
-      setLoadError(errorMessage(error, 'Failed to load automation runs'));
-    } finally {
-      setLoading(false);
-    }
-  }, [loadContacts, loadEnrollments]);
+  const contactsQuery = useQuery({
+    queryKey: ['workflow-enrollment-contacts', organizationId, submittedSearch],
+    queryFn: ({ signal }) => getContacts({
+      organization_id: organizationId,
+      status: 'active',
+      search: submittedSearch || undefined,
+      sort_by: 'first_name',
+      sort_order: 'asc',
+      page: 1,
+      limit: 25,
+    }, organizationId, signal),
+    enabled: open,
+    staleTime: QUERY_STALE_TIME_MS,
+    retry: shouldRetryQuery,
+  });
+  const enrollmentsQuery = useQuery({
+    queryKey: workflowQueryKeys.enrollmentPage(organizationId, workflowId, page, 50),
+    queryFn: ({ signal }) => getWorkflowEnrollments(
+      workflowId,
+      organizationId,
+      { page, limit: 50 },
+      signal,
+    ),
+    enabled: open,
+    staleTime: QUERY_STALE_TIME_MS,
+    retry: shouldRetryQuery,
+    placeholderData: keepPreviousData,
+  });
+  const contacts = contactsQuery.data?.contacts ?? [];
+  const enrollments = enrollmentsQuery.data?.enrollments ?? [];
+  const pagination = enrollmentsQuery.data?.pagination ?? { page, limit: 50, total: 0, totalPages: 1 };
+  const loading = contactsQuery.isPending || enrollmentsQuery.isPending;
+  const refreshing = contactsQuery.isFetching || enrollmentsQuery.isFetching;
+  const loadError = enrollmentsQuery.error
+    ? errorMessage(enrollmentsQuery.error, 'Failed to load automation runs')
+    : contactsQuery.error
+      ? errorMessage(contactsQuery.error, 'Failed to load contacts')
+      : null;
 
   useEffect(() => {
-    if (open) void loadData();
-  }, [loadData, open]);
+    setPage(1);
+    setSelectedContactId('');
+  }, [organizationId, workflowId]);
+
+  useEffect(() => {
+    if (!enrollmentsQuery.data) return;
+    const lastAvailablePage = Math.max(1, enrollmentsQuery.data.pagination.totalPages);
+    if (page > lastAvailablePage) setPage(lastAvailablePage);
+  }, [enrollmentsQuery.data, page]);
+
+  const refreshData = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: workflowQueryKeys.enrollments(organizationId, workflowId) }),
+      queryClient.invalidateQueries({ queryKey: ['workflow-enrollment-contacts', organizationId] }),
+      queryClient.invalidateQueries({ queryKey: workflowQueryKeys.queues(organizationId) }),
+    ]);
+  };
 
   const searchContacts = async () => {
-    setLoading(true);
-    try {
-      await loadContacts(search);
-    } catch (error) {
-      toast({ title: 'Error', description: errorMessage(error, 'Failed to load contacts'), variant: 'destructive' });
-    } finally {
-      setLoading(false);
-    }
+    const nextSearch = search.trim();
+    if (nextSearch === submittedSearch) await contactsQuery.refetch();
+    else setSubmittedSearch(nextSearch);
   };
 
   const enroll = async () => {
@@ -110,7 +132,8 @@ export function WorkflowEnrollmentsDialog({ open, onOpenChange, organizationId, 
     try {
       await enrollContact(workflowId, contactId, organizationId, { source: 'manual' });
       setSelectedContactId('');
-      await loadEnrollments(1);
+      setPage(1);
+      await refreshData();
       toast({ title: 'Enrolled', description: 'Contact enrolled successfully' });
     } catch (error) {
       toast({ title: 'Error', description: errorMessage(error, 'Failed to enroll contact'), variant: 'destructive' });
@@ -126,7 +149,7 @@ export function WorkflowEnrollmentsDialog({ open, onOpenChange, organizationId, 
       else if (action === 'resume') await resumeEnrollment(workflowId, enrollment.id, organizationId);
       else if (action === 'retry') await retryEnrollment(workflowId, enrollment.id, organizationId);
       else await cancelEnrollment(workflowId, enrollment.id, organizationId);
-      await loadEnrollments(page);
+      await refreshData();
       const pastTense = { pause: 'paused', resume: 'resumed', retry: 'retried', cancel: 'cancelled' }[action];
       toast({ title: 'Updated', description: `Run ${pastTense} successfully` });
     } catch (error) {
@@ -141,18 +164,6 @@ export function WorkflowEnrollmentsDialog({ open, onOpenChange, organizationId, 
     const target = enrollmentToCancel;
     setEnrollmentToCancel(null);
     await changeState(target, 'cancel');
-  };
-
-  const changePage = async (nextPage: number) => {
-    setLoading(true);
-    setLoadError(null);
-    try {
-      await loadEnrollments(nextPage);
-    } catch (error) {
-      setLoadError(errorMessage(error, 'Failed to load automation runs'));
-    } finally {
-      setLoading(false);
-    }
   };
 
   return (
@@ -171,7 +182,7 @@ export function WorkflowEnrollmentsDialog({ open, onOpenChange, organizationId, 
                 onKeyDown={(event) => {
                   if (event.key === 'Enter') { event.preventDefault(); void searchContacts(); }
                 }} placeholder="Name or email" />
-              <Button type="button" variant="outline" onClick={() => void searchContacts()} disabled={loading}>Search</Button>
+              <Button type="button" variant="outline" onClick={() => void searchContacts()} disabled={contactsQuery.isFetching}>Search</Button>
             </div>
             <Label htmlFor="workflow-contact">Contact</Label>
             <Select value={selectedContactId} onValueChange={setSelectedContactId}>
@@ -198,8 +209,8 @@ export function WorkflowEnrollmentsDialog({ open, onOpenChange, organizationId, 
             <p className="text-sm font-medium">Run history</p>
             <p className="text-xs text-muted-foreground">{pagination.total} total</p>
           </div>
-          <Button type="button" variant="ghost" size="sm" onClick={() => void loadData(search)} disabled={loading}>
-            <RefreshCw className={cn('mr-2 h-4 w-4', loading && 'animate-spin')} /> Refresh
+          <Button type="button" variant="ghost" size="sm" onClick={() => void refreshData()} disabled={refreshing}>
+            <RefreshCw className={cn('mr-2 h-4 w-4', refreshing && 'animate-spin')} /> Refresh
           </Button>
         </div>
 
@@ -209,7 +220,7 @@ export function WorkflowEnrollmentsDialog({ open, onOpenChange, organizationId, 
               kind="inline"
               title="Unable to load automation runs"
               description={loadError}
-              onAction={() => void loadData(search)}
+              onAction={() => void refreshData()}
             />
           )}
           {!loading && !loadError && enrollments.length === 0 && (
@@ -271,12 +282,12 @@ export function WorkflowEnrollmentsDialog({ open, onOpenChange, organizationId, 
           <div className="flex items-center justify-between border-t pt-3">
             <p className="text-xs text-muted-foreground">Page {pagination.page} of {pagination.totalPages}</p>
             <div className="flex gap-2">
-              <Button type="button" variant="outline" size="sm" disabled={loading || pagination.page <= 1}
-                onClick={() => void changePage(pagination.page - 1)}>
+              <Button type="button" variant="outline" size="sm" disabled={enrollmentsQuery.isFetching || pagination.page <= 1}
+                onClick={() => setPage(pagination.page - 1)}>
                 <ChevronLeft className="mr-1 h-4 w-4" /> Previous
               </Button>
-              <Button type="button" variant="outline" size="sm" disabled={loading || pagination.page >= pagination.totalPages}
-                onClick={() => void changePage(pagination.page + 1)}>
+              <Button type="button" variant="outline" size="sm" disabled={enrollmentsQuery.isFetching || pagination.page >= pagination.totalPages}
+                onClick={() => setPage(pagination.page + 1)}>
                 Next <ChevronRight className="ml-1 h-4 w-4" />
               </Button>
             </div>

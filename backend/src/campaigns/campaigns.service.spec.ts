@@ -29,7 +29,7 @@ describe('CampaignsService', () => {
   });
 
   it('maps deterministic paging, escaped search, and PostgreSQL numerics', async () => {
-    repository.findPage.mockResolvedValue({ rows: [row({ open_rate: '12.50' })], total: '1' });
+    repository.findPage.mockResolvedValue({ rows: [row({ open_rate: '12.50' })], total: '1', stats: { total: '8', failed: '1', draft: '2', in_progress: '3', delivered: '2' } });
     await expect(service.list(
       4,
       { status: 'draft', search: ' launch_100% ' },
@@ -37,6 +37,7 @@ describe('CampaignsService', () => {
     )).resolves.toMatchObject({
       nodes: [{ id: 9, organizationId: 4, openRate: 12.5, links: [] }],
       pageInfo: { page: 2, pageSize: 10, total: 1 },
+      stats: { total: 8, failed: 1, draft: 2, inProgress: 3, delivered: 2 },
     });
     expect(repository.findPage).toHaveBeenCalledWith({
       organizationId: 4, status: 'draft', searchPattern: '%launch\\_100\\%%',

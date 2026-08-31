@@ -82,6 +82,15 @@ export interface Workflow {
   };
 }
 
+export interface WorkflowStats {
+  total: number;
+  active: number;
+  inactive: number;
+  running: number;
+  completed: number;
+  failed: number;
+}
+
 export interface WorkflowEnrollment {
   id: number;
   workflow_id: number;
@@ -135,8 +144,17 @@ export const getWorkflows = async (organizationId: number, params?: {
   trigger_type?: WorkflowTriggerType;
   is_active?: boolean;
   search?: string;
-}): Promise<{ workflows: Workflow[]; total: number }> => {
-  return getWorkflowsViaGraphql(organizationId, params);
+  page?: number;
+  limit?: number;
+}, signal?: AbortSignal): Promise<{
+  workflows: Workflow[];
+  total: number;
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+  stats: WorkflowStats;
+}> => {
+  return signal === undefined
+    ? getWorkflowsViaGraphql(organizationId, params)
+    : getWorkflowsViaGraphql(organizationId, params, signal);
 };
 
 export const getWorkflow = async (id: number, organizationId: number): Promise<Workflow> => {
@@ -200,12 +218,15 @@ export const getWorkflowEnrollments = async (
     status?: string;
     page?: number;
     limit?: number;
-  }
+  },
+  signal?: AbortSignal,
 ): Promise<{
   enrollments: WorkflowEnrollment[];
   pagination: { page: number; limit: number; total: number; totalPages: number };
 }> => {
-  return getWorkflowEnrollmentsViaGraphql(workflowId, organizationId, params);
+  return signal === undefined
+    ? getWorkflowEnrollmentsViaGraphql(workflowId, organizationId, params)
+    : getWorkflowEnrollmentsViaGraphql(workflowId, organizationId, params, signal);
 };
 
 export const cancelEnrollment = async (
@@ -252,8 +273,12 @@ export const getEmailTemplates = async (organizationId: number, params?: {
   category?: string;
   is_active?: boolean;
   search?: string;
-}): Promise<{ templates: EmailTemplate[]; total: number }> => {
-  return getEmailTemplatesViaGraphql(params, organizationId);
+  page?: number;
+  limit?: number;
+}, signal?: AbortSignal) => {
+  return signal
+    ? getEmailTemplatesViaGraphql(params, organizationId, signal)
+    : getEmailTemplatesViaGraphql(params, organizationId);
 };
 
 export const getEmailTemplate = async (id: number, organizationId: number): Promise<EmailTemplate> => {

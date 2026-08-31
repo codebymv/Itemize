@@ -84,7 +84,7 @@ import {
 import { ErrorState } from "@/components/ErrorState";
 import { OrganizationErrorState } from "@/components/OrganizationErrorState";
 import { EmailPreviewPane } from "@/components/email/EmailPreviewPane";
-import { EmailTemplateBrowserDialog } from "@/components/email/EmailTemplateBrowserDialog";
+import { OrganizationEmailTemplateBrowserDialog } from "@/components/email/OrganizationEmailTemplateBrowserDialog";
 import {
   HeaderAction,
   HeaderActionLabel,
@@ -117,6 +117,7 @@ import {
   type CampaignRecipient,
   type EmailCampaign,
 } from "@/services/campaignsApi";
+import { campaignQueryKeys } from "@/services/campaignQueryKeys";
 import type { EmailTemplate } from "@/services/emailApi";
 import type { FilterOptions, Segment } from "@/services/segmentsApi";
 import {
@@ -285,11 +286,7 @@ export function CampaignDetailPage() {
     : null;
   const invalidCampaignId = !isNew && validCampaignId === null;
   const campaignBootstrapKey = `${organizationId ?? "none"}:${validCampaignId ?? "new"}`;
-  const campaignEditorQueryKey = [
-    "campaign-editor-bootstrap",
-    organizationId,
-    validCampaignId,
-  ] as const;
+  const campaignEditorQueryKey = campaignQueryKeys.bootstrap(organizationId, validCampaignId);
   const bootstrapQuery = useQuery({
     queryKey: campaignEditorQueryKey,
     queryFn: ({ signal }) => getCampaignEditorBootstrapViaGraphql(
@@ -338,9 +335,7 @@ export function CampaignDetailPage() {
   const dirty = editable && formKey(form) !== savedFormKey;
   const recipientsQuery = useQuery({
     queryKey: [
-      "campaign-recipients",
-      organizationId,
-      campaign?.id,
+      ...campaignQueryKeys.recipients(organizationId, campaign?.id ?? null),
       recipientStatus,
       recipientPage,
     ],
@@ -378,11 +373,7 @@ export function CampaignDetailPage() {
     nextAudiencePreview: CampaignPreview | null,
   ) => {
     if (!organizationId || !filterOptions) return;
-    const targetKey = [
-      "campaign-editor-bootstrap",
-      organizationId,
-      nextCampaign.id,
-    ] as const;
+    const targetKey = campaignQueryKeys.bootstrap(organizationId, nextCampaign.id);
     queryClient.setQueryData<CampaignEditorBootstrapData>(targetKey, {
       campaign: nextCampaign,
       templates,
@@ -684,7 +675,7 @@ export function CampaignDetailPage() {
         applyBootstrap(refreshed.data);
       }
       void queryClient.invalidateQueries({
-        queryKey: ["campaign-recipients", organizationId, campaign.id],
+        queryKey: campaignQueryKeys.recipients(organizationId, campaign.id),
       });
       toast({ title: "Campaign resumed", description: result.message });
     } catch {
@@ -703,7 +694,7 @@ export function CampaignDetailPage() {
     setWorking(true);
     try {
       const copy = await duplicateCampaign(campaign.id, organizationId);
-      void queryClient.invalidateQueries({ queryKey: ["campaigns", organizationId] });
+      void queryClient.invalidateQueries({ queryKey: campaignQueryKeys.queues(organizationId) });
       toast({
         title: "Campaign duplicated",
         description: "A new draft is ready to edit.",
@@ -725,7 +716,7 @@ export function CampaignDetailPage() {
     try {
       await deleteCampaign(campaign.id, organizationId);
       queryClient.removeQueries({ queryKey: campaignEditorQueryKey });
-      void queryClient.invalidateQueries({ queryKey: ["campaigns", organizationId] });
+      void queryClient.invalidateQueries({ queryKey: campaignQueryKeys.queues(organizationId) });
       navigate("/campaigns");
       return true;
     } catch {
@@ -1866,22 +1857,21 @@ export function CampaignDetailPage() {
       </Dialog>
 
       {organizationId && (
-        <EmailTemplateBrowserDialog
+        <OrganizationEmailTemplateBrowserDialog
+          organizationId={organizationId}
           open={templateBrowserOpen}
           onOpenChange={setTemplateBrowserOpen}
           title="Choose a campaign template"
           description="Active templates available to this organization."
-          items={templates
-            .filter(
-              (template) =>
-                template.is_active || template.id === form.templateId,
-            )
-            .map((template) => ({
-              ...template,
-              meta: `${template.variables.length} variable${template.variables.length === 1 ? "" : "s"}`,
-            }))}
+          activeOnly
+          getMeta={(template) => `${template.variables.length} variable${template.variables.length === 1 ? "" : "s"}`}
           selectedId={form.templateId}
-          onSelect={(template) => updateForm("templateId", template.id)}
+          onSelect={(template) => {
+            setTemplates(current => current.some(item => item.id === template.id)
+              ? current.map(item => item.id === template.id ? template : item)
+              : [...current, template]);
+            updateForm("templateId", template.id);
+          }}
           renderPreview={(template) => (
             <EmailPreviewPane
               organizationId={organizationId}

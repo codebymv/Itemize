@@ -164,10 +164,17 @@ describe('Workflow definitions GraphQL PostgreSQL contract', () => {
         workflows(filter: $filter, page: $page) {
           nodes { id name triggerType isActive stepCount }
           pageInfo { page pageSize total hasNextPage }
+          stats { total active inactive running completed failed }
         }
       }`, { filter: { triggerType: 'manual', isActive: false, search: prefix }, page: { page: 1, pageSize: 1 } }, false).expect(200);
     expect(listed.body.errors).toBeUndefined();
     expect(listed.body.data.workflows.pageInfo).toEqual({ page: 1, pageSize: 1, total: 2, hasNextPage: true });
+    expect(listed.body.data.workflows.stats).toMatchObject({
+      total: expect.any(Number), active: expect.any(Number), inactive: expect.any(Number),
+      running: expect.any(Number), completed: expect.any(Number), failed: expect.any(Number),
+    });
+    expect(listed.body.data.workflows.stats.active + listed.body.data.workflows.stats.inactive)
+      .toBe(listed.body.data.workflows.stats.total);
     expect(listed.body.data.workflows.nodes).toHaveLength(1);
     expect(listed.body.data.workflows.nodes[0].id).toBe(Math.max(...inserted.rows.map((row) => Number(row.id))));
 
