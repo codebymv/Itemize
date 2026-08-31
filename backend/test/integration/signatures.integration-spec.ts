@@ -612,14 +612,16 @@ describe('E-signature GraphQL read contract', () => {
         signatureDocuments(filter: $filter, page: $page) {
           nodes { ${documentFields} }
           pageInfo { page pageSize total totalPages hasNextPage hasPreviousPage }
+          stats { total invalid draft active completed }
         }
       }`,
-      { filter: { status: 'DRAFT' }, page: { page: 1, pageSize: 1 } },
+      { filter: { statuses: ['DRAFT'], search: 'NDA' }, page: { page: 1, pageSize: 1 } },
     ).expect(200);
     expect(listed.body.errors).toBeUndefined();
     expect(listed.body.data.signatureDocuments).toMatchObject({
       nodes: [{ id: secondDocumentId, status: 'DRAFT', recipientCount: 0 }],
       pageInfo: { page: 1, pageSize: 1, total: 2, totalPages: 2, hasNextPage: true },
+      stats: { total: 2, invalid: 0, draft: 2, active: 0, completed: 0 },
     });
 
   });

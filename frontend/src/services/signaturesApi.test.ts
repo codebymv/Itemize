@@ -58,6 +58,7 @@ describe('signature API transport boundaries', () => {
     vi.mocked(graphql.listSignatureDocumentsViaGraphql).mockResolvedValue({
       items: [],
       pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
+      stats: { total: 0, invalid: 0, draft: 0, active: 0, completed: 0 },
     });
   });
 

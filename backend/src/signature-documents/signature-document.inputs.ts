@@ -5,6 +5,12 @@ import { SignatureDocumentStatus } from './signature-document.enums';
 export class SignatureDocumentFilterInput {
   @Field(() => SignatureDocumentStatus, { nullable: true })
   status?: SignatureDocumentStatus;
+
+  @Field(() => [SignatureDocumentStatus], { nullable: true })
+  statuses?: SignatureDocumentStatus[];
+
+  @Field(() => String, { nullable: true })
+  search?: string;
 }
 
 @InputType()

@@ -2,6 +2,8 @@ import { getApiUrl } from '@/lib/api';
 import type {
   SignatureDocument,
   SignatureDocumentDetails,
+  SignatureDocumentListParams,
+  SignatureDocumentStats,
   SignatureEmailPreviewRequest,
   SignatureEmailPreviewResponse,
   SignatureField,
@@ -173,6 +175,13 @@ const isReliabilitySchemaMismatch = (error: unknown): boolean =>
   error instanceof GraphqlRequestError
   && /Cannot query field "(?:pageCount|deliveryState|completionState|isReady)"/.test(error.message);
 
+const isDocumentQueueSchemaMismatch = (error: unknown): boolean =>
+  error instanceof GraphqlRequestError
+  && (
+    /Cannot query field "stats"/.test(error.message)
+    || /Field "(?:statuses|search)" is not defined by type "SignatureDocumentFilterInput"/.test(error.message)
+  );
+
 type ReliabilityScope = 'document' | 'template';
 type ReliabilityCapability = 'unknown' | 'current' | 'legacy';
 
@@ -180,10 +189,12 @@ const reliabilityCapabilities: Record<ReliabilityScope, ReliabilityCapability> =
   document: 'unknown',
   template: 'unknown',
 };
+let documentQueueCapability: ReliabilityCapability = 'unknown';
 
 export const resetSignatureReliabilityCapabilities = (): void => {
   reliabilityCapabilities.document = 'unknown';
   reliabilityCapabilities.template = 'unknown';
+  documentQueueCapability = 'unknown';
 };
 
 const withLegacyReliabilitySelection = async <T>(
@@ -393,8 +404,9 @@ const templateInput = (payload: Partial<SignatureTemplate> & { roles?: Signature
 });
 
 export const listSignatureDocumentsViaGraphql = async (
-  params: { status?: SignatureStatus; page?: number; limit?: number } = {},
+  params: SignatureDocumentListParams = {},
   organizationId?: number,
+  signal?: AbortSignal,
 ) => {
   type DocumentListData = {
     signatureDocuments: {
@@ -407,46 +419,121 @@ export const listSignatureDocumentsViaGraphql = async (
         hasNextPage: boolean;
         hasPreviousPage: boolean;
       };
+      stats?: SignatureDocumentStats;
     };
   };
   type DocumentListVariables = {
-    filter: { status?: GqlDocumentStatus };
+    filter: { status?: GqlDocumentStatus; statuses?: GqlDocumentStatus[]; search?: string };
     page: { page: number; pageSize: number };
   };
+  const normalizedSearch = params.search?.trim();
   const variables: DocumentListVariables = {
-    filter: params.status
-      ? { status: params.status.toUpperCase() as GqlDocumentStatus }
-      : {},
+    filter: {
+      ...(params.status
+        ? { status: params.status.toUpperCase() as GqlDocumentStatus }
+        : {}),
+      ...(params.statuses?.length
+        ? { statuses: params.statuses.map(status => status.toUpperCase() as GqlDocumentStatus) }
+        : {}),
+      ...(normalizedSearch ? { search: normalizedSearch } : {}),
+    },
     page: { page: params.page ?? 1, pageSize: params.limit ?? 20 },
   };
-  const query = (fields: string) =>
+  const query = (fields: string, includeStats = true) =>
     `query SignatureDocumentReads($filter:SignatureDocumentFilterInput,$page:PageInput){
       signatureDocuments(filter:$filter,page:$page){
         nodes{${fields}}
         pageInfo{page pageSize total totalPages hasNextPage hasPreviousPage}
+        ${includeStats ? 'stats{total invalid draft active completed}' : ''}
       }
     }`;
-  const data = await withLegacyReliabilitySelection(
+  const statsFor = (documents: SignatureDocument[]) => documents.reduce<SignatureDocumentStats>((totals, document) => {
+    totals.total += 1;
+    if (document.status === 'draft') totals.draft += 1;
+    else if (document.status === 'completed') totals.completed += 1;
+    else if (document.status === 'cancelled' || document.status === 'expired') totals.invalid += 1;
+    else totals.active += 1;
+    return totals;
+  }, { total: 0, invalid: 0, draft: 0, active: 0, completed: 0 });
+
+  const currentRequest = () => withLegacyReliabilitySelection(
     () => graphqlRequest<DocumentListData, DocumentListVariables>(
-      query(documentFields),
-      variables,
-      organizationId,
+      query(documentFields), variables, organizationId, signal,
     ),
     () => graphqlRequest<DocumentListData, DocumentListVariables>(
-      query(legacyDocumentFields),
-      variables,
-      organizationId,
+      query(legacyDocumentFields), variables, organizationId, signal,
     ),
   );
 
+  if (documentQueueCapability !== 'legacy') {
+    try {
+      const data = await currentRequest();
+      documentQueueCapability = 'current';
+      return {
+        items: data.signatureDocuments.nodes.map(mapDocument),
+        pagination: {
+          page: data.signatureDocuments.pageInfo.page,
+          limit: data.signatureDocuments.pageInfo.pageSize,
+          total: data.signatureDocuments.pageInfo.total,
+          totalPages: data.signatureDocuments.pageInfo.totalPages,
+        },
+        stats: data.signatureDocuments.stats ?? { total: 0, invalid: 0, draft: 0, active: 0, completed: 0 },
+      };
+    } catch (error) {
+      if (!isDocumentQueueSchemaMismatch(error)) throw error;
+      documentQueueCapability = 'legacy';
+    }
+  }
+
+  const legacyPage = (page: number) => {
+    const legacyVariables: DocumentListVariables = {
+      filter: {},
+      page: { page, pageSize: 100 },
+    };
+    return withLegacyReliabilitySelection(
+      () => graphqlRequest<DocumentListData, DocumentListVariables>(
+        query(documentFields, false), legacyVariables, organizationId, signal,
+      ),
+      () => graphqlRequest<DocumentListData, DocumentListVariables>(
+        query(legacyDocumentFields, false), legacyVariables, organizationId, signal,
+      ),
+    );
+  };
+  const first = await legacyPage(1);
+  const legacyDocuments = first.signatureDocuments.nodes.map(mapDocument);
+  for (let legacyPageNumber = 2; legacyPageNumber <= first.signatureDocuments.pageInfo.totalPages; legacyPageNumber += 1) {
+    const next = await legacyPage(legacyPageNumber);
+    legacyDocuments.push(...next.signatureDocuments.nodes.map(mapDocument));
+  }
+  const requestedStatuses = params.statuses?.length
+    ? params.statuses
+    : params.status
+      ? [params.status]
+      : undefined;
+  const normalizedLegacySearch = normalizedSearch?.toLowerCase();
+  const filtered = legacyDocuments.filter(document => {
+    const matchesStatus = !requestedStatuses?.length || requestedStatuses.includes(document.status);
+    const matchesSearch = !normalizedLegacySearch || [
+      document.title,
+      document.document_number,
+      document.description,
+      document.message,
+    ].some(value => value?.toLowerCase().includes(normalizedLegacySearch));
+    return matchesStatus && matchesSearch;
+  });
+  const requestedPage = params.page ?? 1;
+  const requestedLimit = params.limit ?? 20;
+  const start = (requestedPage - 1) * requestedLimit;
+
   return {
-    items: data.signatureDocuments.nodes.map(mapDocument),
+    items: filtered.slice(start, start + requestedLimit),
     pagination: {
-      page: data.signatureDocuments.pageInfo.page,
-      limit: data.signatureDocuments.pageInfo.pageSize,
-      total: data.signatureDocuments.pageInfo.total,
-      totalPages: data.signatureDocuments.pageInfo.totalPages,
+      page: requestedPage,
+      limit: requestedLimit,
+      total: filtered.length,
+      totalPages: Math.ceil(filtered.length / requestedLimit),
     },
+    stats: statsFor(legacyDocuments),
   };
 };
 

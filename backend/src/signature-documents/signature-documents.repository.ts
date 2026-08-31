@@ -62,6 +62,14 @@ export type SignatureDocumentUpdates = Partial<Omit<SignatureDocumentValues, 're
   recipients?: SignatureRecipientWrite[]; fields?: SignatureFieldWrite[];
 };
 
+export type SignatureDocumentStatsRow = {
+  total: number | string;
+  invalid: number | string;
+  draft: number | string;
+  active: number | string;
+  completed: number | string;
+};
+
 export class SignatureQuotaExceededError extends Error {}
 export class SignatureReferenceError extends Error {}
 
@@ -99,13 +107,42 @@ export class SignatureDocumentsRepository {
     return hasPaidEntitlement(result.rows[0]);
   }
 
-  async findPage(input: { organizationId: number; status?: SignatureDocumentStatus; pageSize: number; offset: number }): Promise<{ rows: SignatureDocumentRow[]; total: number }> {
+  async findPage(input: {
+    organizationId: number;
+    statuses?: SignatureDocumentStatus[];
+    search?: string;
+    pageSize: number;
+    offset: number;
+  }): Promise<{ rows: SignatureDocumentRow[]; total: number; stats: SignatureDocumentStatsRow }> {
     return this.snapshot(async (client) => {
       const params: unknown[] = [input.organizationId];
       const conditions = ['d.organization_id = $1'];
-      if (input.status !== undefined) { params.push(input.status); conditions.push(`d.status = $${params.length}`); }
+      if (input.statuses?.length) {
+        params.push(input.statuses);
+        conditions.push(`d.status = ANY($${params.length}::text[])`);
+      }
+      if (input.search) {
+        params.push(`%${input.search}%`);
+        conditions.push(`(
+          d.title ILIKE $${params.length}
+          OR d.document_number ILIKE $${params.length}
+          OR d.description ILIKE $${params.length}
+          OR d.message ILIKE $${params.length}
+        )`);
+      }
       const where = conditions.join(' AND ');
       const count = await client.query<{ total: string }>(`SELECT COUNT(*) AS total FROM signature_documents d WHERE ${where}`, params);
+      const stats = await client.query<SignatureDocumentStatsRow>(
+        `SELECT
+           COUNT(*) AS total,
+           COUNT(*) FILTER (WHERE status IN ('cancelled','expired')) AS invalid,
+           COUNT(*) FILTER (WHERE status = 'draft') AS draft,
+           COUNT(*) FILTER (WHERE status IN ('sent','in_progress')) AS active,
+           COUNT(*) FILTER (WHERE status = 'completed') AS completed
+         FROM signature_documents
+         WHERE organization_id = $1`,
+        [input.organizationId],
+      );
       params.push(input.pageSize, input.offset);
       const rows = await client.query<SignatureDocumentRow>(
         `SELECT ${documentColumns},
@@ -116,7 +153,11 @@ export class SignatureDocumentsRepository {
          ORDER BY d.created_at DESC, d.id DESC
          LIMIT $${params.length - 1} OFFSET $${params.length}`, params,
       );
-      return { rows: rows.rows, total: Number(count.rows[0]?.total ?? 0) };
+      return {
+        rows: rows.rows,
+        total: Number(count.rows[0]?.total ?? 0),
+        stats: stats.rows[0] ?? { total: 0, invalid: 0, draft: 0, active: 0, completed: 0 },
+      };
     });
   }
 

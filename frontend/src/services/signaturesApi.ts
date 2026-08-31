@@ -131,6 +131,22 @@ export interface SignatureDocumentDetails {
   }>;
 }
 
+export interface SignatureDocumentStats {
+  total: number;
+  invalid: number;
+  draft: number;
+  active: number;
+  completed: number;
+}
+
+export interface SignatureDocumentListParams {
+  status?: SignatureStatus;
+  statuses?: SignatureStatus[];
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
 export const createSignatureDocument = async (payload: Partial<SignatureDocument>, organizationId?: number) => {
   return organizationId === undefined
     ? createSignatureDocumentViaGraphql(payload)
@@ -165,11 +181,17 @@ export const deleteSignatureDocumentFile = async (id: number, organizationId?: n
     : removeSignatureDocumentFileViaGraphql(id, organizationId);
 };
 
-export const listSignatureDocuments = async (params: { status?: SignatureStatus; page?: number; limit?: number } = {}) => {
-  return listSignatureDocumentsViaGraphql(params);
+export const listSignatureDocuments = async (
+  params: SignatureDocumentListParams = {},
+  organizationId?: number,
+  signal?: AbortSignal,
+) => {
+  return organizationId === undefined && signal === undefined
+    ? listSignatureDocumentsViaGraphql(params)
+    : listSignatureDocumentsViaGraphql(params, organizationId, signal);
 };
 
-export const getSignatures = async (params: { status?: SignatureStatus; page?: number; limit?: number; search?: string } = {}) => {
+export const getSignatures = async (params: SignatureDocumentListParams = {}) => {
   const result = await listSignatureDocumentsViaGraphql(params);
   return { documents: result.items, pagination: result.pagination };
 };

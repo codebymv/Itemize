@@ -87,9 +87,19 @@ export class SignatureAuditEvent {
 }
 
 @ObjectType()
+export class SignatureDocumentStats {
+  @Field(() => Int) total: number;
+  @Field(() => Int) invalid: number;
+  @Field(() => Int) draft: number;
+  @Field(() => Int) active: number;
+  @Field(() => Int) completed: number;
+}
+
+@ObjectType()
 export class SignatureDocumentPage {
   @Field(() => [SignatureDocument]) nodes: SignatureDocument[];
   @Field(() => PageInfo) pageInfo: PageInfo;
+  @Field(() => SignatureDocumentStats) stats: SignatureDocumentStats;
 }
 
 @ObjectType()

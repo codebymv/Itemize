@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Send, XCircle, Download, Eye, FileSignature, FileText, CheckCircle, ChevronDown, MoreVertical, Trash2, RefreshCw, PieChart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,6 +9,7 @@ import { PageLayout } from '@/components/layout/PageLayout';
 import { HeaderAction, HeaderCombinedQuery, HeaderFilters, HeaderSearch } from '@/components/layout/DesktopHeaderTools';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { Card, CardContent } from '@/components/ui/card';
 import { StatCard } from '@/components/StatCard';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
@@ -16,10 +18,12 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { ExpandedRowActionLabel, ExpandedRowActions } from '@/components/ui/expanded-row';
 import { useToast } from '@/hooks/use-toast';
+import { useOrganization } from '@/hooks/useOrganization';
+import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
 import { ListRowSkeleton } from '@/components/ui/loading-skeletons';
 import FieldPlacementCanvas from './components/FieldPlacementCanvas';
 import { getRecipientStatusVisual, getSignatureOperationalVisual } from './constants/signatureConstants';
-import { filterDocuments, getDocumentStats, type DocumentStatusFilter } from './signatureCatalog';
+import { type DocumentStatusFilter } from './signatureCatalog';
 import {
   SignatureDocument,
   SignatureDocumentDetails,
@@ -32,44 +36,86 @@ import {
   deleteSignatureDocument,
   downloadSignedDocument
 } from '@/services/signaturesApi';
+import { signatureQueryKeys } from '@/services/signatureQueryKeys';
+
+const PAGE_SIZE = 20;
+
+const statusesForFilter: Record<DocumentStatusFilter, SignatureDocument['status'][] | undefined> = {
+  all: undefined,
+  active: ['sent', 'in_progress'],
+  draft: ['draft'],
+  completed: ['completed'],
+  invalid: ['cancelled', 'expired'],
+};
 
 export function SignaturesPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [documents, setDocuments] = useState<SignatureDocument[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const { organizationId, isLoading: organizationLoading, error: organizationError } = useOrganization();
   const [expandedDocumentId, setExpandedDocumentId] = useState<number | null>(null);
-  const [expandedDocumentData, setExpandedDocumentData] = useState<SignatureDocumentDetails | null>(null);
-  const [loadingPreview, setLoadingPreview] = useState(false);
-  const [previewError, setPreviewError] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<DocumentStatusFilter>('all');
+  const [page, setPage] = useState(1);
   const [deleteDocumentId, setDeleteDocumentId] = useState<number | null>(null);
 
-  const stats = useMemo(() => getDocumentStats(documents), [documents]);
-
-  const fetchDocuments = useCallback(async () => {
-    try {
-      setLoading(true);
-      setLoadError(null);
-      const response = await listSignatureDocuments();
-      setDocuments(response.items || []);
-    } catch (error) {
-      setLoadError('Documents could not be loaded. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  useEffect(() => {
+    const timeout = window.setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
+    return () => window.clearTimeout(timeout);
+  }, [searchQuery]);
 
   useEffect(() => {
-    fetchDocuments();
-  }, [fetchDocuments]);
+    setPage(1);
+    setExpandedDocumentId(null);
+  }, [debouncedSearch, statusFilter]);
 
-  const filteredDocuments = useMemo(
-    () => filterDocuments(documents, { search: searchQuery, status: statusFilter }),
-    [documents, searchQuery, statusFilter],
-  );
+  const queueQueryKey = signatureQueryKeys.documentQueue(organizationId, {
+    search: debouncedSearch,
+    status: statusFilter,
+    page,
+    limit: PAGE_SIZE,
+  });
+  const queueQuery = useQuery({
+    queryKey: queueQueryKey,
+    queryFn: ({ signal }) => listSignatureDocuments({
+      statuses: statusesForFilter[statusFilter],
+      search: debouncedSearch || undefined,
+      page,
+      limit: PAGE_SIZE,
+    }, organizationId as number, signal),
+    enabled: organizationId !== null,
+    staleTime: QUERY_STALE_TIME_MS,
+    retry: shouldRetryQuery,
+    placeholderData: keepPreviousData,
+  });
+  const documents = useMemo(() => queueQuery.data?.items ?? [], [queueQuery.data?.items]);
+  const pagination = queueQuery.data?.pagination ?? { page, limit: PAGE_SIZE, total: 0, totalPages: 0 };
+  const stats = queueQuery.data?.stats ?? { total: 0, invalid: 0, draft: 0, active: 0, completed: 0 };
+  const loading = organizationLoading || (organizationId !== null && queueQuery.isPending);
+  const loadError = queueQuery.error && !queueQuery.data
+    ? 'Documents could not be loaded. Please try again.'
+    : null;
+  const expandedQuery = useQuery({
+    queryKey: signatureQueryKeys.document(organizationId, expandedDocumentId),
+    queryFn: ({ signal }) => getSignatureDocument(
+      expandedDocumentId as number,
+      organizationId as number,
+      signal,
+    ),
+    enabled: expandedDocumentId !== null && organizationId !== null,
+    staleTime: QUERY_STALE_TIME_MS,
+    retry: shouldRetryQuery,
+  });
+  const expandedDocumentData = expandedQuery.data ?? null;
+  const loadingPreview = expandedQuery.isPending && expandedQuery.fetchStatus !== 'idle';
+  const previewError = expandedQuery.isError && !expandedQuery.data;
+
+  useEffect(() => {
+    if (!queueQuery.data) return;
+    const lastAvailablePage = Math.max(1, queueQuery.data.pagination.totalPages);
+    if (page > lastAvailablePage) setPage(lastAvailablePage);
+  }, [page, queueQuery.data]);
 
   const statusSelect = (compact = false) => (
     <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as DocumentStatusFilter)}>
@@ -89,41 +135,56 @@ export function SignaturesPage() {
   const filterCount = Number(statusFilter !== 'all');
   const queryCount = filterCount + Number(searchQuery.trim().length > 0);
 
+  const refreshQueue = async (updated?: SignatureDocument) => {
+    if (!organizationId) return;
+    if (updated) {
+      queryClient.setQueryData<SignatureDocumentDetails>(
+        signatureQueryKeys.document(organizationId, updated.id),
+        current => current ? { ...current, document: updated } : current,
+      );
+    }
+    await queryClient.invalidateQueries({ queryKey: signatureQueryKeys.documents(organizationId) });
+  };
+
   const handleSend = async (id: number) => {
+    if (!organizationId) return;
     try {
-      await sendSignatureDocument(id);
+      const updated = await sendSignatureDocument(id, organizationId);
       toast({ title: 'Signature request queued' });
-      fetchDocuments();
+      await refreshQueue(updated);
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to send signature request', variant: 'destructive' });
     }
   };
 
   const handleResend = async (id: number) => {
+    if (!organizationId) return;
     try {
-      await remindSignatureDocument(id);
+      const updated = await remindSignatureDocument(id, organizationId);
       toast({ title: 'Signature reminder queued' });
-      fetchDocuments();
+      await refreshQueue(updated);
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to resend signature request', variant: 'destructive' });
     }
   };
 
   const handleRetry = async (id: number) => {
+    if (!organizationId) return;
     try {
-      await retrySignatureDocument(id);
+      const updated = await retrySignatureDocument(id, organizationId);
       toast({ title: 'Failed processing queued for retry' });
-      fetchDocuments();
+      await refreshQueue(updated);
     } catch (error) {
       toast({ title: 'Retry unavailable', description: 'The failed step could not be retried.', variant: 'destructive' });
     }
   };
 
   const handleCancel = async (id: number) => {
+    if (!organizationId) return;
     try {
-      await cancelSignatureDocument(id);
+      const updated = await cancelSignatureDocument(id, organizationId);
       toast({ title: 'Signature request cancelled' });
-      fetchDocuments();
+      await refreshQueue(updated);
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to cancel request', variant: 'destructive' });
     }
@@ -141,10 +202,13 @@ export function SignaturesPage() {
   };
 
   const handleDelete = async (): Promise<boolean> => {
-    if (!deleteDocumentId) return false;
+    if (!deleteDocumentId || !organizationId) return false;
     try {
-      await deleteSignatureDocument(deleteDocumentId);
-      setDocuments((current) => current.filter((document) => document.id !== deleteDocumentId));
+      await deleteSignatureDocument(deleteDocumentId, organizationId);
+      queryClient.removeQueries({
+        queryKey: signatureQueryKeys.document(organizationId, deleteDocumentId),
+      });
+      await queryClient.invalidateQueries({ queryKey: signatureQueryKeys.documents(organizationId) });
       setDeleteDocumentId(null);
       return true;
     } catch (error) {
@@ -152,32 +216,25 @@ export function SignaturesPage() {
     }
   };
 
-  const loadExpandedDocument = async (documentId: number) => {
-    setExpandedDocumentId(documentId);
-    setExpandedDocumentData(null);
-    setPreviewError(false);
-    setLoadingPreview(true);
-
-    try {
-      const data = await getSignatureDocument(documentId);
-      setExpandedDocumentData(data);
-    } catch {
-      setPreviewError(true);
-    } finally {
-      setLoadingPreview(false);
-    }
-  };
-
   const handleToggleExpand = (documentId: number, e: React.MouseEvent) => {
     e.stopPropagation();
     if (expandedDocumentId === documentId) {
       setExpandedDocumentId(null);
-      setExpandedDocumentData(null);
-      setPreviewError(false);
       return;
     }
-    void loadExpandedDocument(documentId);
+    setExpandedDocumentId(documentId);
   };
+
+  if (organizationError) {
+    return (
+      <PageLayout
+        title="DOCUMENTS"
+        icon={<FileSignature className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+      >
+        <OrganizationErrorState title="Unable to load documents" icon={FileSignature} />
+      </PageLayout>
+    );
+  }
 
   return (
     <PageLayout
@@ -280,15 +337,15 @@ export function SignaturesPage() {
                 <ErrorState
                   title="Documents unavailable"
                   description={loadError}
-                  onAction={() => void fetchDocuments()}
+                  onAction={() => void queueQuery.refetch()}
                   className="px-6"
                 />
-              ) : filteredDocuments.length === 0 ? (
+              ) : documents.length === 0 ? (
                 <EmptyState
                   icon={FileSignature}
                   kind={queryCount > 0 ? 'results' : 'collection'}
-                  title={documents.length === 0 ? 'No documents yet' : 'No documents match your search'}
-                  description={documents.length === 0
+                  title={stats.total === 0 ? 'No documents yet' : 'No documents match your search'}
+                  description={stats.total === 0
                     ? 'Create a document to start collecting signatures.'
                     : undefined}
                   actionLabel={queryCount > 0 ? 'Clear filters' : 'New document'}
@@ -299,7 +356,7 @@ export function SignaturesPage() {
                 />
               ) : (
                 <div className="divide-y">
-                  {filteredDocuments.map((doc) => {
+                  {documents.map((doc) => {
                     const isExpanded = expandedDocumentId === doc.id;
                     const statusVisual = getSignatureOperationalVisual(doc);
                     const StatusIcon = statusVisual.icon;
@@ -541,7 +598,7 @@ export function SignaturesPage() {
                                 icon={FileSignature}
                                 title="Unable to load document preview"
                                 description="The document is still available to edit."
-                                onRetry={() => void loadExpandedDocument(doc.id)}
+                                onRetry={() => void expandedQuery.refetch()}
                               />
                             ) : expandedDocumentData ? (
                               <div className="space-y-4">
@@ -579,6 +636,37 @@ export function SignaturesPage() {
               )}
             </CardContent>
           </Card>
+
+          {pagination.totalPages > 1 && (
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-muted-foreground">
+                Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}
+                {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
+                {pagination.total} documents
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(current => Math.max(1, current - 1))}
+                  disabled={queueQuery.isFetching || pagination.page <= 1}
+                >
+                  Previous
+                </Button>
+                <span className="min-w-20 text-center text-sm text-muted-foreground">
+                  {pagination.page} of {pagination.totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(current => Math.min(pagination.totalPages, current + 1))}
+                  disabled={queueQuery.isFetching || pagination.page >= pagination.totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
 
       <DeleteDialog
         open={deleteDocumentId !== null}

@@ -99,6 +99,7 @@ import {
   updateSignatureDocument,
   uploadSignatureDocument,
 } from "@/services/signaturesApi";
+import { signatureQueryKeys } from "@/services/signatureQueryKeys";
 import FieldPlacementCanvas from "./components/FieldPlacementCanvas";
 import SendSignatureModal from "./components/SendSignatureModal";
 import {
@@ -171,11 +172,7 @@ export default function SignatureEditorPage() {
     ? parsedDocumentId
     : null;
   const invalidDocumentId = isExisting && documentId === null;
-  const documentQueryKey = [
-    "signature-document-editor",
-    organizationId,
-    documentId,
-  ] as const;
+  const documentQueryKey = signatureQueryKeys.document(organizationId, documentId);
   const documentQuery = useQuery({
     queryKey: documentQueryKey,
     queryFn: ({ signal }) => getSignatureDocument(
@@ -366,7 +363,7 @@ export default function SignatureEditorPage() {
   ) => {
     if (!organizationId) return;
     queryClient.setQueryData<SignatureDocumentDetails>(
-      ["signature-document-editor", organizationId, updatedDocument.id],
+      signatureQueryKeys.document(organizationId, updatedDocument.id),
       (current) => ({
         document: updatedDocument,
         recipients: detailOverrides.recipients
@@ -466,7 +463,7 @@ export default function SignatureEditorPage() {
       }, organizationId);
       cacheDocumentDetails(updated, { recipients, fields });
       await sendSignatureDocument(document.id, organizationId);
-      void queryClient.invalidateQueries({ queryKey: ["signature-documents", organizationId] });
+      void queryClient.invalidateQueries({ queryKey: signatureQueryKeys.documents(organizationId) });
       toast({ title: "Signature request sent" });
       setShowSendModal(false);
       navigate("/documents");
@@ -544,9 +541,9 @@ export default function SignatureEditorPage() {
     try {
       await deleteSignatureDocument(document.id, organizationId);
       queryClient.removeQueries({
-        queryKey: ["signature-document-editor", organizationId, document.id],
+        queryKey: signatureQueryKeys.document(organizationId, document.id),
       });
-      void queryClient.invalidateQueries({ queryKey: ["signature-documents", organizationId] });
+      void queryClient.invalidateQueries({ queryKey: signatureQueryKeys.documents(organizationId) });
       navigate("/documents");
       return true;
     } catch {
