@@ -74,30 +74,48 @@ export const getInvoiceBusinessesViaGraphql = async (
   let page = 1;
   let hasNextPage = true;
   while (hasNextPage) {
-    const data = await graphqlRequest<
-      {
-        invoiceBusinesses: {
-          nodes: GraphqlInvoiceBusiness[];
-          pageInfo: { hasNextPage: boolean };
-        };
-      },
-      { page: { page: number; pageSize: number } }
-    >(
-      `query InvoiceBusinesses($page: PageInput) {
-        invoiceBusinesses(page: $page) {
-          nodes { ${invoiceBusinessFields} }
-          pageInfo { hasNextPage }
-        }
-      }`,
-      { page: { page, pageSize: 100 } },
-      organizationId,
-      signal,
-    );
-    businesses.push(...data.invoiceBusinesses.nodes.map(mapBusiness));
-    hasNextPage = data.invoiceBusinesses.pageInfo.hasNextPage;
+    const data = await getInvoiceBusinessPageViaGraphql(page, 100, organizationId, signal);
+    businesses.push(...data.businesses);
+    hasNextPage = page < data.pagination.totalPages;
     page += 1;
   }
   return businesses;
+};
+
+export const getInvoiceBusinessPageViaGraphql = async (
+  page = 1,
+  limit = 20,
+  organizationId?: number,
+  signal?: AbortSignal,
+): Promise<{
+  businesses: Business[];
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+}> => {
+  const data = await graphqlRequest<{
+    invoiceBusinesses: {
+      nodes: GraphqlInvoiceBusiness[];
+      pageInfo: { page: number; pageSize: number; total: number; totalPages: number };
+    };
+  }, { page: { page: number; pageSize: number } }>(
+    `query InvoiceBusinessPage($page: PageInput) {
+      invoiceBusinesses(page: $page) {
+        nodes { ${invoiceBusinessFields} }
+        pageInfo { page pageSize total totalPages }
+      }
+    }`,
+    { page: { page, pageSize: limit } },
+    organizationId,
+    signal,
+  );
+  return {
+    businesses: data.invoiceBusinesses.nodes.map(mapBusiness),
+    pagination: {
+      page: data.invoiceBusinesses.pageInfo.page,
+      limit: data.invoiceBusinesses.pageInfo.pageSize,
+      total: data.invoiceBusinesses.pageInfo.total,
+      totalPages: data.invoiceBusinesses.pageInfo.totalPages,
+    },
+  };
 };
 
 export const getInvoiceBusinessViaGraphql = async (

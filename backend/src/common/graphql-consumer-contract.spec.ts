@@ -72,14 +72,23 @@ const isFunctionParameterReference = (
       || ts.isFunctionExpression(current)
       || ts.isMethodDeclaration(current)
     ) {
-      return current.parameters.some(
+      if (current.parameters.some(
         (parameter) => ts.isIdentifier(parameter.name)
           && parameter.name.text === unwrapped.text,
-      );
+      )) return true;
     }
     current = current.parent;
   }
   return false;
+};
+
+const isFunctionParameterCall = (
+  call: ts.CallExpression,
+  expression: ts.Expression,
+): boolean => {
+  const unwrapped = unwrapExpression(expression);
+  return ts.isCallExpression(unwrapped)
+    && isFunctionParameterReference(call, unwrapped.expression);
 };
 
 const extractConsumerOperations = (
@@ -87,15 +96,40 @@ const extractConsumerOperations = (
   sourceFile: ts.SourceFile,
   checker: ts.TypeChecker,
 ): ConsumerOperation[] => {
+  type Bindings = ReadonlyMap<string, ts.Expression>;
+
+  const resolveBoolean = (
+    originalExpression: ts.Expression,
+    bindings: Bindings,
+  ): boolean | null => {
+    const expression = unwrapExpression(originalExpression);
+    if (expression.kind === ts.SyntaxKind.TrueKeyword) return true;
+    if (expression.kind === ts.SyntaxKind.FalseKeyword) return false;
+    if (ts.isIdentifier(expression) && bindings.has(expression.text)) {
+      return resolveBoolean(bindings.get(expression.text)!, bindings);
+    }
+    if (
+      ts.isPrefixUnaryExpression(expression)
+      && expression.operator === ts.SyntaxKind.ExclamationToken
+    ) {
+      const value = resolveBoolean(expression.operand, bindings);
+      return value === null ? null : !value;
+    }
+    return null;
+  };
+
   const resolveString = (
     originalExpression: ts.Expression,
     resolving = new Set<string>(),
+    bindings: Bindings = new Map(),
   ): string | null => {
     const expression = unwrapExpression(originalExpression);
     if (ts.isStringLiteral(expression) || ts.isNoSubstitutionTemplateLiteral(expression)) {
       return expression.text;
     }
     if (ts.isIdentifier(expression)) {
+      const bound = bindings.get(expression.text);
+      if (bound) return resolveString(bound, resolving, bindings);
       let symbol = checker.getSymbolAtLocation(expression);
       if (symbol && (symbol.flags & ts.SymbolFlags.Alias)) {
         symbol = checker.getAliasedSymbol(symbol);
@@ -108,20 +142,56 @@ const extractConsumerOperations = (
       const identity = `${declaration.getSourceFile().fileName}:${declaration.pos}`;
       if (resolving.has(identity)) return null;
       const nextResolving = new Set(resolving).add(identity);
-      return resolveString(declaration.initializer, nextResolving);
+      return resolveString(declaration.initializer, nextResolving, bindings);
+    }
+    if (ts.isConditionalExpression(expression)) {
+      const condition = resolveBoolean(expression.condition, bindings);
+      if (condition === null) return null;
+      return resolveString(
+        condition ? expression.whenTrue : expression.whenFalse,
+        resolving,
+        bindings,
+      );
+    }
+    if (ts.isCallExpression(expression) && ts.isIdentifier(expression.expression)) {
+      let symbol = checker.getSymbolAtLocation(expression.expression);
+      if (symbol && (symbol.flags & ts.SymbolFlags.Alias)) {
+        symbol = checker.getAliasedSymbol(symbol);
+      }
+      const declaration = symbol?.declarations?.find(
+        (candidate): candidate is ts.VariableDeclaration & {
+          initializer: ts.ArrowFunction | ts.FunctionExpression;
+        } => {
+          if (!ts.isVariableDeclaration(candidate) || !candidate.initializer) {
+            return false;
+          }
+          return ts.isArrowFunction(candidate.initializer)
+            || ts.isFunctionExpression(candidate.initializer);
+        },
+      );
+      const factory = declaration?.initializer;
+      if (!factory || ts.isBlock(factory.body)) return null;
+      const factoryBindings = new Map(bindings);
+      for (const [index, parameter] of factory.parameters.entries()) {
+        if (!ts.isIdentifier(parameter.name)) return null;
+        const value = expression.arguments[index] ?? parameter.initializer;
+        if (!value) return null;
+        factoryBindings.set(parameter.name.text, value);
+      }
+      return resolveString(factory.body, resolving, factoryBindings);
     }
     if (
       ts.isBinaryExpression(expression)
       && expression.operatorToken.kind === ts.SyntaxKind.PlusToken
     ) {
-      const left = resolveString(expression.left, resolving);
-      const right = resolveString(expression.right, resolving);
+      const left = resolveString(expression.left, resolving, bindings);
+      const right = resolveString(expression.right, resolving, bindings);
       return left === null || right === null ? null : `${left}${right}`;
     }
     if (ts.isTemplateExpression(expression)) {
       let result = expression.head.text;
       for (const span of expression.templateSpans) {
-        const substitution = resolveString(span.expression, resolving);
+        const substitution = resolveString(span.expression, resolving, bindings);
         if (substitution === null) return null;
         result += substitution + span.literal.text;
       }
@@ -166,6 +236,7 @@ const extractConsumerOperations = (
           node.arguments[0]
           && (
             isFunctionParameterReference(node, node.arguments[0])
+            || isFunctionParameterCall(node, node.arguments[0])
             || ts.isPropertyAccessExpression(unwrapExpression(node.arguments[0]))
           )
         ) {

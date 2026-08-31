@@ -321,12 +321,12 @@ export const saveEmailTemplateDraftViaGraphql = async (
 ): Promise<EmailTemplate> => {
   const data = await graphqlMutationRequest<
     { saveEmailTemplateDraft: GraphqlEmailTemplate },
-    { id: number; input: ReturnType<typeof mapUpdateInput> }
+    { id: number; input: ReturnType<typeof mapCreateInput> }
   >(
-    `mutation SaveEmailTemplateDraft($id: Int!, $input: UpdateEmailTemplateInput!) {
+    `mutation SaveEmailTemplateDraft($id: Int!, $input: CreateEmailTemplateInput!) {
       saveEmailTemplateDraft(id: $id, input: $input) { ${emailTemplateFields} }
     }`,
-    { id, input: mapUpdateInput(input) },
+    { id, input: mapCreateInput(input) },
     organizationId,
   );
   return mapEmailTemplate(data.saveEmailTemplateDraft);

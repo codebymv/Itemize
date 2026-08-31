@@ -329,9 +329,14 @@ export const getPages = async (
         page?: number;
         limit?: number;
     } = {},
-    organizationId?: number
-): Promise<{ pages: Page[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> => {
-    return getLandingPagesViaGraphql(params, organizationId);
+    organizationId?: number,
+    signal?: AbortSignal,
+): Promise<{
+    pages: Page[];
+    pagination: { page: number; limit: number; total: number; totalPages: number };
+    stats: { total: number; draft: number; published: number; archived: number };
+}> => {
+    return getLandingPagesViaGraphql(params, organizationId, signal);
 };
 
 export const getPage = async (

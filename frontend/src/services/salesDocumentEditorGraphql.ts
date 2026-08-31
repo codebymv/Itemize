@@ -3,7 +3,6 @@ import type {
   Business,
   Invoice,
   PaymentSettings,
-  Product,
 } from './invoicesApi';
 import type { Estimate } from './estimatesApi';
 import {
@@ -21,7 +20,7 @@ import {
 } from './estimatesGraphql';
 import { graphqlRequest } from './graphqlClient';
 import {
-  getInvoiceBusinessesViaGraphql,
+  getInvoiceBusinessPageViaGraphql,
   type GraphqlInvoiceBusiness,
   invoiceBusinessFields,
   mapBusiness,
@@ -38,16 +37,9 @@ import {
   invoiceDetailFields,
   mapInvoice,
 } from './invoicesGraphql';
-import {
-  getProductsViaGraphql,
-  type GraphqlProduct,
-  mapProduct,
-  productFields,
-} from './productsGraphql';
 
 export interface InvoiceEditorBootstrapData {
   contacts: Contact[];
-  products: Product[];
   businesses: Business[];
   settings: PaymentSettings;
   invoice: Invoice | null;
@@ -55,7 +47,6 @@ export interface InvoiceEditorBootstrapData {
 
 export interface EstimateEditorBootstrapData {
   contacts: Contact[];
-  products: Product[];
   estimate: Estimate | null;
   initialContact: Contact | null;
 }
@@ -68,7 +59,6 @@ const invoiceBootstrapQuery = `
   query InvoiceEditorBootstrap($invoiceId: Int) {
     invoiceEditorBootstrap(invoiceId: $invoiceId) {
       contacts { ${contactFields} }
-      products { ${productFields} }
       businesses { ${invoiceBusinessFields} }
       settings { ${invoiceSettingsFields} }
       invoice { ${invoiceDetailFields} }
@@ -83,7 +73,6 @@ const estimateBootstrapQuery = `
       initialContactId: $initialContactId
     ) {
       contacts { ${contactFields} }
-      products { ${productFields} }
       estimate { ${estimateDetailFields} }
       initialContact { ${contactFields} }
     }
@@ -100,10 +89,9 @@ const legacyInvoiceBootstrap = async (
   invoiceId: number | null,
   signal?: AbortSignal,
 ): Promise<InvoiceEditorBootstrapData> => {
-  const [contacts, products, businesses, settings, invoice] = await Promise.all([
+  const [contacts, businesses, settings, invoice] = await Promise.all([
     getContactsViaGraphql({}, organizationId, signal),
-    getProductsViaGraphql({}, organizationId, signal),
-    getInvoiceBusinessesViaGraphql(organizationId, signal),
+    getInvoiceBusinessPageViaGraphql(1, 100, organizationId, signal),
     getInvoiceSettingsViaGraphql(organizationId, signal),
     invoiceId == null
       ? Promise.resolve(null)
@@ -111,8 +99,7 @@ const legacyInvoiceBootstrap = async (
   ]);
   return {
     contacts: contacts.contacts,
-    products,
-    businesses,
+    businesses: businesses.businesses,
     settings,
     invoice,
   };
@@ -124,9 +111,8 @@ const legacyEstimateBootstrap = async (
   initialContactId: number | null,
   signal?: AbortSignal,
 ): Promise<EstimateEditorBootstrapData> => {
-  const [contactsResponse, products, estimate] = await Promise.all([
+  const [contactsResponse, estimate] = await Promise.all([
     getContactsViaGraphql({}, organizationId, signal),
-    getProductsViaGraphql({}, organizationId, signal),
     estimateId == null
       ? Promise.resolve(null)
       : getEstimateViaGraphql(estimateId, organizationId, signal),
@@ -139,7 +125,6 @@ const legacyEstimateBootstrap = async (
     : await getContactViaGraphql(initialContactId, organizationId, signal);
   return {
     contacts: contactsResponse.contacts,
-    products,
     estimate,
     initialContact,
   };
@@ -157,7 +142,6 @@ export const getInvoiceEditorBootstrapViaGraphql = async (
     const data = await graphqlRequest<{
       invoiceEditorBootstrap: {
         contacts: GraphqlContact[];
-        products: GraphqlProduct[];
         businesses: GraphqlInvoiceBusiness[];
         settings: GraphqlInvoiceSettings;
         invoice: GraphqlInvoice | null;
@@ -171,7 +155,6 @@ export const getInvoiceEditorBootstrapViaGraphql = async (
     invoiceCapability = 'aggregate';
     return {
       contacts: data.invoiceEditorBootstrap.contacts.map(mapContact),
-      products: data.invoiceEditorBootstrap.products.map(mapProduct),
       businesses: data.invoiceEditorBootstrap.businesses.map(mapBusiness),
       settings: mapInvoiceSettings(data.invoiceEditorBootstrap.settings),
       invoice: data.invoiceEditorBootstrap.invoice
@@ -206,7 +189,6 @@ export const getEstimateEditorBootstrapViaGraphql = async (
     const data = await graphqlRequest<{
       estimateEditorBootstrap: {
         contacts: GraphqlContact[];
-        products: GraphqlProduct[];
         estimate: GraphqlEstimate | null;
         initialContact: GraphqlContact | null;
       };
@@ -219,7 +201,6 @@ export const getEstimateEditorBootstrapViaGraphql = async (
     estimateCapability = 'aggregate';
     return {
       contacts: data.estimateEditorBootstrap.contacts.map(mapContact),
-      products: data.estimateEditorBootstrap.products.map(mapProduct),
       estimate: data.estimateEditorBootstrap.estimate
         ? mapEstimate(data.estimateEditorBootstrap.estimate)
         : null,

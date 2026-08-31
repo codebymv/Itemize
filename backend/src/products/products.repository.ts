@@ -38,9 +38,18 @@ export type ProductUpdates = Partial<ProductValues>;
 export type ProductCriteria = {
   organizationId: number;
   isActive?: boolean;
+  productType?: string;
   searchPattern?: string;
   pageSize: number;
   offset: number;
+};
+
+export type ProductStatsRow = {
+  total: string;
+  active: string;
+  inactive: string;
+  one_time: string;
+  recurring: string;
 };
 
 const productSelection = `
@@ -79,12 +88,16 @@ export class ProductsRepository {
 
   async findPage(
     criteria: ProductCriteria,
-  ): Promise<{ rows: ProductRow[]; total: number }> {
+  ): Promise<{ rows: ProductRow[]; total: string; stats: ProductStatsRow }> {
     const parameters: unknown[] = [criteria.organizationId];
     const clauses = ['organization_id = $1'];
     if (criteria.isActive !== undefined) {
       parameters.push(criteria.isActive);
       clauses.push(`is_active = $${parameters.length}`);
+    }
+    if (criteria.productType !== undefined) {
+      parameters.push(criteria.productType);
+      clauses.push(`product_type = $${parameters.length}`);
     }
     if (criteria.searchPattern !== undefined) {
       parameters.push(criteria.searchPattern);
@@ -93,20 +106,38 @@ export class ProductsRepository {
       );
     }
     const where = clauses.join(' AND ');
-    const count = await this.pool.query<{ total: string }>(
-      `SELECT COUNT(*) AS total FROM products WHERE ${where}`,
-      parameters,
-    );
-    parameters.push(criteria.pageSize, criteria.offset);
-    const rows = await this.pool.query<ProductRow>(
-      `SELECT ${productSelection}
-       FROM products
-       WHERE ${where}
-       ORDER BY lower(name), id
-       LIMIT $${parameters.length - 1} OFFSET $${parameters.length}`,
-      parameters,
-    );
-    return { rows: rows.rows, total: Number(count.rows[0].total) };
+    const rowParameters = [...parameters, criteria.pageSize, criteria.offset];
+    const [count, rows, stats] = await Promise.all([
+      this.pool.query<{ total: string }>(
+        `SELECT COUNT(*) AS total FROM products WHERE ${where}`,
+        parameters,
+      ),
+      this.pool.query<ProductRow>(
+        `SELECT ${productSelection}
+         FROM products
+         WHERE ${where}
+         ORDER BY lower(name), id
+         LIMIT $${rowParameters.length - 1} OFFSET $${rowParameters.length}`,
+        rowParameters,
+      ),
+      this.pool.query<ProductStatsRow>(
+        `SELECT COUNT(*) AS total,
+                COUNT(*) FILTER (WHERE is_active) AS active,
+                COUNT(*) FILTER (WHERE NOT is_active) AS inactive,
+                COUNT(*) FILTER (WHERE product_type = 'one_time') AS one_time,
+                COUNT(*) FILTER (WHERE product_type = 'recurring') AS recurring
+         FROM products
+         WHERE organization_id = $1`,
+        [criteria.organizationId],
+      ),
+    ]);
+    return {
+      rows: rows.rows,
+      total: count.rows[0]?.total ?? '0',
+      stats: stats.rows[0] ?? {
+        total: '0', active: '0', inactive: '0', one_time: '0', recurring: '0',
+      },
+    };
   }
 
   async create(

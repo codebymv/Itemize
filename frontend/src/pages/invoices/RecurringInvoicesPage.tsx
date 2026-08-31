@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     Plus,
     RefreshCw,
@@ -49,17 +49,19 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { getContacts } from '@/services/contactsApi';
 import {
     createRecurringInvoice,
     deleteRecurringInvoice,
     generateRecurringInvoiceNow,
-    getRecurringInvoices,
+    getRecurringInvoice,
+    getRecurringInvoicePage,
     pauseRecurringInvoice,
     RecurringFrequency,
     RecurringInvoice,
+    RecurringStatus,
     resumeRecurringInvoice,
 } from '@/services/recurringInvoicesApi';
+import { recurringInvoiceQueryKeys } from '@/services/recurringInvoiceQueryKeys';
 import { getRecurringInvoicePreviewBootstrapViaGraphql } from '@/services/recurringInvoicePreviewGraphql';
 import { useOrganization } from '@/hooks/useOrganization';
 import { InvoicePreviewCard } from './components/InvoicePreviewCard';
@@ -84,18 +86,15 @@ import { InvoiceViewSelect, type InvoiceView } from './components/InvoiceViewSel
 import { getRecurringStatusVisual } from './constants/recurringConstants';
 import { ExpandedRowActionLabel, ExpandedRowActions } from '@/components/ui/expanded-row';
 import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
+import { ContactCatalogPicker } from '@/components/ContactCatalogPicker';
+import type { Contact } from '@/types';
 
 const RECURRING_FREQUENCIES: RecurringFrequency[] = ['weekly', 'monthly', 'quarterly', 'yearly'];
+const PAGE_SIZE = 20;
+const EMPTY_RECURRING_INVOICES: RecurringInvoice[] = [];
 
 const isRecurringFrequency = (value: string): value is RecurringFrequency =>
     RECURRING_FREQUENCIES.includes(value as RecurringFrequency);
-
-interface Contact {
-    id: number;
-    first_name?: string;
-    last_name?: string;
-    email?: string;
-}
 
 interface LineItem {
     id: string;
@@ -140,7 +139,9 @@ export function RecurringInvoicesPage() {
 
     const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [activeTab, setActiveTab] = useState<string>('all');
+    const [page, setPage] = useState(1);
 
     // Expanded recurring state
     const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -160,6 +161,7 @@ export function RecurringInvoicesPage() {
     // Form state
     const [templateName, setTemplateName] = useState('');
     const [contactId, setContactId] = useState<number | undefined>();
+    const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
     const [customerName, setCustomerName] = useState('');
     const [frequency, setFrequency] = useState<'weekly' | 'monthly' | 'quarterly' | 'yearly'>('monthly');
     const [startDate, setStartDate] = useState('');
@@ -173,18 +175,39 @@ export function RecurringInvoicesPage() {
         toast({ title: 'Error', description: initError, variant: 'destructive' });
     }, [initError, toast]);
 
-    const listQueryKey = ['recurring-invoices', organizationId, 'all'] as const;
+    useEffect(() => {
+        const timeout = window.setTimeout(() => setDebouncedSearch(searchQuery.trim()), 250);
+        return () => window.clearTimeout(timeout);
+    }, [searchQuery]);
+
+    useEffect(() => {
+        setPage(1);
+        setExpandedId(null);
+    }, [activeTab, debouncedSearch]);
+
+    const listParams = {
+        status: activeTab as RecurringStatus | 'all',
+        search: debouncedSearch || undefined,
+        page,
+        limit: PAGE_SIZE,
+    };
+    const listQueryKey = recurringInvoiceQueryKeys.page(organizationId, listParams);
     const recurringInvoicesQuery = useQuery({
         queryKey: listQueryKey,
-        queryFn: ({ signal }) => getRecurringInvoices('all', organizationId!, signal),
+        queryFn: ({ signal }) => getRecurringInvoicePage(listParams, organizationId!, signal),
         enabled: Boolean(organizationId) && !initError,
         staleTime: QUERY_STALE_TIME_MS,
         retry: shouldRetryQuery,
+        placeholderData: keepPreviousData,
     });
-    const recurringInvoices = useMemo(
-        () => recurringInvoicesQuery.data ?? [],
-        [recurringInvoicesQuery.data],
-    );
+    const recurringInvoices = recurringInvoicesQuery.data?.recurringInvoices
+        ?? EMPTY_RECURRING_INVOICES;
+    const pagination = recurringInvoicesQuery.data?.pagination ?? {
+        page, limit: PAGE_SIZE, total: 0, totalPages: 0,
+    };
+    const stats = recurringInvoicesQuery.data?.stats ?? {
+        total: 0, active: 0, paused: 0, completed: 0,
+    };
     const loading = orgLoading || (
         Boolean(organizationId)
         && recurringInvoicesQuery.isPending
@@ -193,18 +216,36 @@ export function RecurringInvoicesPage() {
         ? 'Recurring schedules could not be loaded. Please try again.'
         : null;
 
-    const contactsQuery = useQuery({
-        queryKey: ['recurring-invoice-create-contacts', organizationId],
-        queryFn: ({ signal }) => getContacts(
-            { limit: 100, sort_by: 'first_name', sort_order: 'asc' },
+    useEffect(() => {
+        if (!recurringInvoicesQuery.data) return;
+        const lastAvailablePage = Math.max(1, pagination.totalPages);
+        if (page > lastAvailablePage) setPage(lastAvailablePage);
+    }, [page, pagination.totalPages, recurringInvoicesQuery.data]);
+
+    const requestedScheduleValue = Number(searchParams.get('schedule'));
+    const requestedScheduleId = Number.isSafeInteger(requestedScheduleValue)
+        && requestedScheduleValue > 0
+        ? requestedScheduleValue
+        : null;
+    const requestedScheduleIsLoaded = requestedScheduleId !== null
+        && recurringInvoices.some((recurring) => recurring.id === requestedScheduleId);
+    const requestedScheduleQuery = useQuery({
+        queryKey: ['recurring-invoice-deep-link', organizationId, requestedScheduleId],
+        queryFn: ({ signal }) => getRecurringInvoice(
+            requestedScheduleId!,
             organizationId!,
             signal,
         ),
-        enabled: Boolean(organizationId) && dialogOpen,
+        enabled: Boolean(organizationId)
+            && requestedScheduleId !== null
+            && !requestedScheduleIsLoaded,
         staleTime: QUERY_STALE_TIME_MS,
         retry: shouldRetryQuery,
     });
-    const contacts: Contact[] = contactsQuery.data?.contacts ?? [];
+    const displayedRecurringInvoices = requestedScheduleQuery.data
+        && !requestedScheduleIsLoaded
+        ? [requestedScheduleQuery.data, ...recurringInvoices]
+        : recurringInvoices;
 
     const previewQuery = useQuery({
         queryKey: ['recurring-invoice-preview', organizationId, expandedId],
@@ -224,41 +265,27 @@ export function RecurringInvoicesPage() {
     const previewError = previewQuery.isError;
 
     const cacheRecurringInvoice = (updated: RecurringInvoice) => {
-        queryClient.setQueryData<RecurringInvoice[]>(listQueryKey, (current) => {
-            if (!current) return [updated];
-            return current.some((invoice) => invoice.id === updated.id)
-                ? current.map((invoice) => invoice.id === updated.id ? updated : invoice)
-                : [updated, ...current];
-        });
         queryClient.setQueryData(
             ['recurring-invoice-preview', organizationId, updated.id],
             (current: typeof previewQuery.data) => current
                 ? { ...current, recurringInvoice: updated }
                 : current,
         );
+        void queryClient.invalidateQueries({
+            queryKey: recurringInvoiceQueryKeys.pages(organizationId),
+        });
     };
 
     const openCreateDialog = () => {
         setTemplateName('');
         setContactId(undefined);
+        setSelectedContact(null);
         setCustomerName('');
         setFrequency('monthly');
         setStartDate(new Date().toISOString().split('T')[0]);
         setEndDate('');
         setLineItems([{ id: crypto.randomUUID(), name: '', description: '', quantity: 1, unit_price: 0, tax_rate: 0 }]);
         setDialogOpen(true);
-    };
-
-    const handleContactChange = (contactIdStr: string) => {
-        if (contactIdStr === 'none') {
-            setContactId(undefined);
-            return;
-        }
-        const selectedContact = contacts.find(c => c.id === parseInt(contactIdStr));
-        if (selectedContact) {
-            setContactId(selectedContact.id);
-            setCustomerName(`${selectedContact.first_name} ${selectedContact.last_name}`.trim());
-        }
     };
 
     const addLineItem = () => {
@@ -353,15 +380,10 @@ export function RecurringInvoicesPage() {
                 title: 'Invoice Generated', 
                 description: `${result.invoice_number} created successfully`
             });
-            queryClient.setQueryData<RecurringInvoice[]>(listQueryKey, (current) =>
-                current?.map((invoice) => invoice.id === id ? {
-                    ...invoice,
-                    next_run_date: result.next_run_date,
-                    status: result.template_status,
-                    invoices_generated: invoice.invoices_generated + (result.replayed ? 0 : 1),
-                } : invoice),
-            );
             await Promise.all([
+                queryClient.invalidateQueries({
+                    queryKey: recurringInvoiceQueryKeys.pages(organizationId),
+                }),
                 queryClient.invalidateQueries({
                     queryKey: ['recurring-invoice-preview', organizationId, id],
                 }),
@@ -387,9 +409,9 @@ export function RecurringInvoicesPage() {
         if (!organizationId || !recurringToDelete) return false;
         try {
             await deleteRecurringInvoice(recurringToDelete.id, organizationId);
-            queryClient.setQueryData<RecurringInvoice[]>(listQueryKey, (current) =>
-                current?.filter((invoice) => invoice.id !== recurringToDelete.id),
-            );
+            await queryClient.invalidateQueries({
+                queryKey: recurringInvoiceQueryKeys.pages(organizationId),
+            });
             queryClient.removeQueries({
                 queryKey: ['recurring-invoice-preview', organizationId, recurringToDelete.id],
             });
@@ -428,14 +450,22 @@ export function RecurringInvoicesPage() {
     };
 
     useEffect(() => {
-        const requestedId = Number(searchParams.get('schedule'));
-        if (!Number.isSafeInteger(requestedId) || requestedId <= 0 || loading) return;
-        if (!recurringInvoices.some((recurring) => recurring.id === requestedId)) return;
-        if (autoExpandedScheduleRef.current === requestedId) return;
+        if (requestedScheduleId === null || loading) return;
+        const requestedScheduleIsAvailable = requestedScheduleIsLoaded
+            || requestedScheduleQuery.data?.id === requestedScheduleId;
+        if (!requestedScheduleIsAvailable) {
+            return;
+        }
+        if (autoExpandedScheduleRef.current === requestedScheduleId) return;
 
-        autoExpandedScheduleRef.current = requestedId;
-        setExpandedId(requestedId);
-    }, [loading, recurringInvoices, searchParams]);
+        autoExpandedScheduleRef.current = requestedScheduleId;
+        setExpandedId(requestedScheduleId);
+    }, [
+        loading,
+        requestedScheduleId,
+        requestedScheduleIsLoaded,
+        requestedScheduleQuery.data,
+    ]);
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-US', {
@@ -462,40 +492,6 @@ export function RecurringInvoicesPage() {
         }
         return 'Unknown';
     };
-
-    const stats = useMemo(() => {
-        return {
-            active: recurringInvoices.filter(r => r.status === 'active').length,
-            paused: recurringInvoices.filter(r => r.status === 'paused').length,
-            completed: recurringInvoices.filter(r => r.status === 'completed').length,
-        };
-    }, [recurringInvoices]);
-
-    const filteredRecurring = useMemo(() => {
-        let filtered = recurringInvoices;
-
-        switch (activeTab) {
-            case 'active':
-                filtered = filtered.filter(r => r.status === 'active');
-                break;
-            case 'paused':
-                filtered = filtered.filter(r => r.status === 'paused');
-                break;
-            case 'completed':
-                filtered = filtered.filter(r => r.status === 'completed');
-                break;
-        }
-
-        if (searchQuery) {
-            const query = searchQuery.toLowerCase();
-            filtered = filtered.filter(r =>
-                r.template_name?.toLowerCase().includes(query) ||
-                getContactName(r).toLowerCase().includes(query)
-            );
-        }
-
-        return filtered;
-    }, [recurringInvoices, activeTab, searchQuery]);
 
     const total = lineItems.reduce((sum, item) => {
         return sum + (item.quantity * item.unit_price * (1 + item.tax_rate / 100));
@@ -637,7 +633,7 @@ export function RecurringInvoicesPage() {
                         ) : (
                             <ErrorState kind="section" title="Unable to load recurring schedules" description={loadError} onAction={() => void recurringInvoicesQuery.refetch()} />
                         )
-                    ) : filteredRecurring.length === 0 ? (
+                    ) : displayedRecurringInvoices.length === 0 ? (
                         <EmptyState
                             icon={RefreshCw}
                             kind={headerQueryCount > 0 ? 'results' : 'collection'}
@@ -651,7 +647,7 @@ export function RecurringInvoicesPage() {
                         />
                     ) : (
                         <div className="divide-y">
-                            {filteredRecurring.map((recurring) => {
+                            {displayedRecurringInvoices.map((recurring) => {
                                 const isExpanded = expandedId === recurring.id;
                                 const statusVisual = getRecurringStatusVisual(recurring.status);
                                 const StatusIcon = statusVisual.icon;
@@ -970,6 +966,35 @@ export function RecurringInvoicesPage() {
                 </CardContent>
             </Card>
 
+            {pagination.totalPages > 1 && (
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-sm text-muted-foreground">
+                        {pagination.total} schedule{pagination.total === 1 ? '' : 's'}
+                    </p>
+                    <div className="flex items-center justify-between gap-2 sm:justify-end">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPage((current) => Math.max(1, current - 1))}
+                            disabled={recurringInvoicesQuery.isFetching || pagination.page <= 1}
+                        >
+                            Previous
+                        </Button>
+                        <span className="min-w-20 text-center text-sm text-muted-foreground">
+                            {pagination.page} of {pagination.totalPages}
+                        </span>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPage((current) => Math.min(pagination.totalPages, current + 1))}
+                            disabled={recurringInvoicesQuery.isFetching || pagination.page >= pagination.totalPages}
+                        >
+                            Next
+                        </Button>
+                    </div>
+                </div>
+            )}
+
             {/* Create Recurring Dialog */}
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <ModalContent size="lg">
@@ -990,39 +1015,18 @@ export function RecurringInvoicesPage() {
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>Customer</Label>
-                                <Select
-                                    value={contactId?.toString() || 'none'}
-                                    onValueChange={handleContactChange}
-                                    disabled={contactsQuery.isPending}
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Select contact" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="none">
-                                            {contactsQuery.isPending ? 'Loading contacts...' : 'Select...'}
-                                        </SelectItem>
-                                        {contacts.map(contact => (
-                                            <SelectItem key={contact.id} value={contact.id.toString()}>
-                                                {contact.first_name} {contact.last_name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                {contactsQuery.isError && (
-                                    <div className="flex items-center gap-2 text-xs text-destructive">
-                                        <span>Contacts unavailable.</span>
-                                        <Button
-                                            type="button"
-                                            variant="link"
-                                            size="sm"
-                                            className="h-auto p-0 text-xs"
-                                            onClick={() => void contactsQuery.refetch()}
-                                        >
-                                            Try again
-                                        </Button>
-                                    </div>
-                                )}
+                                <ContactCatalogPicker
+                                    organizationId={organizationId}
+                                    selectedContact={selectedContact}
+                                    onSelect={(contact) => {
+                                        setSelectedContact(contact);
+                                        setContactId(contact?.id);
+                                        setCustomerName(contact
+                                            ? `${contact.first_name ?? ''} ${contact.last_name ?? ''}`.trim()
+                                            : '');
+                                    }}
+                                    placeholder="Select contact"
+                                />
                             </div>
                             <div className="space-y-2">
                                 <Label>Frequency *</Label>

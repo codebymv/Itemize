@@ -66,6 +66,24 @@ describe('LandingPagesService', () => {
     service = new LandingPagesService(repository);
   });
 
+  it('returns filtered page metadata and organization-wide status counts', async () => {
+    repository.list.mockResolvedValue({
+      rows: [pageRow],
+      total: 1,
+      stats: { total: 9, draft: 3, published: 5, archived: 1 },
+    });
+    await expect(service.list(
+      4,
+      { status: 'published', search: ' launch ' },
+      { page: 2, pageSize: 10 },
+    )).resolves.toMatchObject({
+      nodes: [{ id: 12, name: 'Launch page' }],
+      pageInfo: { page: 2, pageSize: 10, total: 1 },
+      stats: { total: 9, draft: 3, published: 5, archived: 1 },
+    });
+    expect(repository.list).toHaveBeenCalledWith(4, 'published', 'launch', 2, 10);
+  });
+
   it('normalizes create input and distinguishes generated from explicit slugs', async () => {
     repository.create.mockResolvedValue({
       page: pageRow,

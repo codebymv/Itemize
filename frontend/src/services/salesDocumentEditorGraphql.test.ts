@@ -33,24 +33,6 @@ const contact = {
   updatedAt: '2026-08-01T00:00:00.000Z',
 };
 
-const product = {
-  id: 21,
-  organizationId: 42,
-  name: 'Workshop',
-  description: null,
-  sku: null,
-  price: '125.00',
-  currency: 'USD',
-  productType: 'one_time',
-  billingPeriod: null,
-  taxRate: '0',
-  taxable: true,
-  isActive: true,
-  createdById: null,
-  createdAt: '2026-08-01T00:00:00.000Z',
-  updatedAt: '2026-08-01T00:00:00.000Z',
-};
-
 const business = {
   id: 31,
   organizationId: 42,
@@ -118,7 +100,6 @@ describe('sales document editor GraphQL bootstrap', () => {
       data: {
         invoiceEditorBootstrap: {
           contacts: [contact],
-          products: [product],
           businesses: [business],
           settings,
           invoice: null,
@@ -128,7 +109,6 @@ describe('sales document editor GraphQL bootstrap', () => {
 
     await expect(getInvoiceEditorBootstrapViaGraphql(42, null)).resolves.toEqual({
       contacts: [expect.objectContaining({ id: 11, first_name: 'Maya' })],
-      products: [expect.objectContaining({ id: 21, price: 125 })],
       businesses: [expect.objectContaining({ id: 31, name: 'Itemize QA' })],
       settings: expect.objectContaining({ default_payment_terms: 30 }),
       invoice: null,
@@ -136,6 +116,7 @@ describe('sales document editor GraphQL bootstrap', () => {
 
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(bodyAt(0).query).toContain('query InvoiceEditorBootstrap');
+    expect(bodyAt(0).query).not.toContain('products {');
     expect(bodyAt(0).variables).toEqual({ invoiceId: null });
   });
 
@@ -144,7 +125,6 @@ describe('sales document editor GraphQL bootstrap', () => {
       data: {
         estimateEditorBootstrap: {
           contacts: [],
-          products: [product],
           estimate: null,
           initialContact: contact,
         },
@@ -178,14 +158,11 @@ describe('sales document editor GraphQL bootstrap', () => {
         },
       },
     });
-    const products = response({
-      data: { products: { nodes: [product], pageInfo: { hasNextPage: false } } },
-    });
     const businesses = response({
       data: {
         invoiceBusinesses: {
           nodes: [business],
-          pageInfo: { hasNextPage: false },
+          pageInfo: { page: 1, pageSize: 100, total: 1, totalPages: 1 },
         },
       },
     });
@@ -193,19 +170,17 @@ describe('sales document editor GraphQL bootstrap', () => {
     vi.mocked(fetch)
       .mockResolvedValueOnce(missingField)
       .mockResolvedValueOnce(contacts)
-      .mockResolvedValueOnce(products)
       .mockResolvedValueOnce(businesses)
       .mockResolvedValueOnce(invoiceSettings)
       .mockResolvedValueOnce(contacts)
-      .mockResolvedValueOnce(products)
       .mockResolvedValueOnce(businesses)
       .mockResolvedValueOnce(invoiceSettings);
 
     await getInvoiceEditorBootstrapViaGraphql(42, null);
     await getInvoiceEditorBootstrapViaGraphql(42, null);
 
-    expect(fetch).toHaveBeenCalledTimes(9);
-    expect(bodyAt(5).query).toContain('query ContactReads');
-    expect(bodyAt(5).query).not.toContain('invoiceEditorBootstrap');
+    expect(fetch).toHaveBeenCalledTimes(7);
+    expect(bodyAt(4).query).toContain('query ContactReads');
+    expect(bodyAt(4).query).not.toContain('invoiceEditorBootstrap');
   });
 });

@@ -150,9 +150,10 @@ describe('Product catalog GraphQL PostgreSQL contract', () => {
         products(filter: $filter) {
           nodes { id organizationId name sku }
           pageInfo { total }
+          stats { total active inactive oneTime recurring }
         }
       }`,
-      { filter: { search: '%_' } },
+      { filter: { search: '%_', productType: 'one_time' } },
       false,
     ).expect(200);
     expect(listed.body.errors).toBeUndefined();
@@ -166,6 +167,7 @@ describe('Product catalog GraphQL PostgreSQL contract', () => {
         },
       ],
       pageInfo: { total: 1 },
+      stats: expect.objectContaining({ total: 1, active: 1, oneTime: 1 }),
     });
     expect(
       listed.body.data.products.nodes.map((product: { id: number }) => product.id),

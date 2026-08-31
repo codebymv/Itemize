@@ -49,6 +49,11 @@ describe('fetching contract', () => {
     expect(service).toContain('query InvoiceEditorBootstrap(');
     expect(service).toContain('query EstimateEditorBootstrap(');
     expect(service).toContain('resetSalesDocumentEditorCapabilities');
+    expect(service).not.toContain('products { ${productFields} }');
+    const picker = read('pages/invoices/components/ProductCatalogPicker.tsx');
+    expect(picker).toContain('useInfiniteQuery');
+    expect(picker).toContain('enabled: open && organizationId !== null');
+    expect(picker).toContain('queryFn: ({ pageParam, signal })');
   });
 
   it('uses one cancellable contact-detail route read model', () => {
@@ -78,19 +83,90 @@ describe('fetching contract', () => {
     expect(service).toContain('resetCampaignEditorCapability');
   });
 
-  it('keeps recurring-invoice support data lazy and consolidates expanded previews', () => {
+  it('bounds recurring schedules while keeping support data lazy and previews consolidated', () => {
     const page = read('pages/invoices/RecurringInvoicesPage.tsx');
+    const contactPicker = read('components/ContactCatalogPicker.tsx');
+    const listService = read('services/recurringInvoicesGraphql.ts');
     const service = read('services/recurringInvoicePreviewGraphql.ts');
 
-    expect(page).toContain("['recurring-invoices', organizationId, 'all']");
+    expect(page).toContain('recurringInvoiceQueryKeys.page(organizationId, listParams)');
+    expect(page).toContain('getRecurringInvoicePage(listParams, organizationId!, signal)');
+    expect(page).toContain('placeholderData: keepPreviousData');
     expect(page).toContain("['recurring-invoice-preview', organizationId, expandedId]");
     expect(page).toContain('queryFn: ({ signal })');
-    expect(page).toContain('enabled: Boolean(organizationId) && dialogOpen');
+    expect(page).toContain('<ContactCatalogPicker');
+    expect(contactPicker).toContain('useInfiniteQuery({');
+    expect(contactPicker).toContain('enabled: open && organizationId !== null');
     expect(page).not.toContain('getProducts(');
+    expect(page).not.toContain("getRecurringInvoices('all'");
     expect(page).not.toContain('const fetchRecurringInvoices = useCallback');
+    expect(listService).toContain('query RecurringInvoicePage(');
+    expect(listService).toContain('stats { total active paused completed }');
     expect(service).toContain('query RecurringInvoicePreviewBootstrap(');
     expect(service).toContain("let capability: Capability = 'unknown'");
     expect(service).toContain('resetRecurringInvoicePreviewCapability');
+  });
+
+  it('uses one bounded, cancellable product catalog page with server-owned statistics', () => {
+    const page = read('pages/invoices/ProductsPage.tsx');
+    const service = read('services/productsGraphql.ts');
+    const keys = read('services/productQueryKeys.ts');
+
+    expect(page).toContain('productQueryKeys.page(organizationId');
+    expect(page).toContain('queryFn: ({ signal })');
+    expect(page).toContain('getProductPageViaGraphql({');
+    expect(page).not.toContain('const fetchProducts = useCallback');
+    expect(page).not.toContain('filterProductCatalog(');
+    expect(service).toContain('stats { total active inactive oneTime recurring }');
+    expect(service).toContain('resetProductListCapability');
+    expect(keys).toContain("['products', organizationId]");
+  });
+
+  it('uses bounded server-owned catalogs for landing pages and forms', () => {
+    const pages = read('pages/pages/LandingPagesPage.tsx');
+    const forms = read('pages/forms/FormsPage.tsx');
+    const pageService = read('services/landingPagesGraphql.ts');
+    const formService = read('services/formsGraphql.ts');
+
+    expect(pages).toContain('landingPageQueryKeys.page(organizationId, listParams)');
+    expect(pages).toContain('placeholderData: keepPreviousData');
+    expect(pages).not.toContain('const fetchPages = useCallback');
+    expect(pageService).toContain('stats { total draft published archived }');
+
+    expect(forms).toContain('formQueryKeys.page(organizationId, listParams)');
+    expect(forms).toContain('placeholderData: keepPreviousData');
+    expect(forms).not.toContain('const fetchForms = useCallback');
+    expect(formService).toContain('query FormPage(');
+    expect(formService).toContain('stats { total draft published archived }');
+  });
+
+  it('keeps payment-setting business profiles bounded and explicitly incremental', () => {
+    const hook = read('pages/settings/hooks/usePaymentsTab.ts');
+    const service = read('services/invoiceBusinessesGraphql.ts');
+    const card = read('pages/settings/components/BusinessProfileCard.tsx');
+
+    expect(hook).toContain('getBusinessPage(1, 20, targetOrganizationId)');
+    expect(hook).toContain('loadMoreBusinesses');
+    expect(service).toContain('query InvoiceBusinessPage(');
+    expect(card).toContain('Load more businesses');
+  });
+
+  it('keeps business support reads within a fixed request budget', () => {
+    const organization = read('pages/settings/OrganizationSettings.tsx');
+    const invoiceBootstrap = read('services/salesDocumentEditorGraphql.ts');
+    const recurringPreview = read('services/recurringInvoicePreviewGraphql.ts');
+
+    expect(organization).toContain('getBusinessPage(1, 100, organizationId)');
+    expect(organization).toMatch(/getBusiness\(\s*configuredDefaultBusinessId,/);
+    expect(organization).not.toContain('getBusinesses(');
+    expect(invoiceBootstrap).toContain(
+      'getInvoiceBusinessPageViaGraphql(1, 100, organizationId, signal)',
+    );
+    expect(invoiceBootstrap).not.toContain('getInvoiceBusinessesViaGraphql(');
+    expect(recurringPreview).toContain(
+      'getInvoiceBusinessPageViaGraphql(1, 100, organizationId, signal)',
+    );
+    expect(recurringPreview).not.toContain('getInvoiceBusinessesViaGraphql(');
   });
 
   it('uses cancellable aggregate reads for both signature editors', () => {
@@ -202,10 +278,11 @@ describe('fetching contract', () => {
     expect(emailList).toContain('queryFn: ({ signal })');
     expect(emailList).not.toContain('const fetchTemplates = useCallback');
     expect(emailList).not.toContain('requestRef');
-    expect(smsList).toContain('templateCatalogQueryKeys.sms(organizationId)');
+    expect(smsList).toContain('templateCatalogQueryKeys.smsPage(organizationId');
     expect(smsList).toContain('queryFn: ({ signal })');
     expect(smsList).not.toContain('const fetchTemplates = useCallback');
     expect(smsList).not.toContain('requestRef');
+    expect(smsList).not.toContain('filteredTemplates');
     expect(emailEditor).toContain('OrganizationEmailTemplateBrowserDialog');
     const emailPicker = read('components/email/OrganizationEmailTemplateBrowserDialog.tsx');
     expect(emailPicker).toContain('useInfiniteQuery');
@@ -279,6 +356,23 @@ describe('fetching contract', () => {
     expect(notifications).toContain('refetchIntervalInBackground: false');
     expect(policy).toContain("'NOT_FOUND'");
     expect(policy).toContain('PERMANENT_GRAPHQL_CODES.has(code)');
+  });
+
+  it('keeps debounced global search to two cancellable lifecycle reads', () => {
+    const search = read('components/GlobalSearch.tsx');
+    const service = read('services/globalSearchGraphql.ts');
+
+    expect(search).toContain('getWorkspaceContentSnapshotViaGraphql(controller.signal)');
+    expect(search).toContain('searchOrganizationViaGraphql(');
+    expect(search).toContain('hasPaidAccess && organizationId !== null');
+    expect(search).not.toContain("localStorage.getItem('current_org_id')");
+    expect(search).toContain('controller.abort()');
+    expect(search).not.toContain('fetchCanvasLists(');
+    expect(search).not.toContain('getContacts(');
+    expect(search).not.toContain('getInvoices(');
+    expect(service).toContain('query OrganizationGlobalSearch(');
+    expect(service).toContain('page: { page: 1, pageSize: 3 }');
+    expect(service).toContain('@include(if: $includeLongQuery)');
   });
 
   it('documents route ownership, cancellation, retries, and invalidation', () => {

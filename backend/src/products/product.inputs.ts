@@ -7,6 +7,9 @@ export class ProductFilterInput {
 
   @Field(() => String, { nullable: true })
   search?: string;
+
+  @Field(() => String, { nullable: true })
+  productType?: string;
 }
 
 @InputType()

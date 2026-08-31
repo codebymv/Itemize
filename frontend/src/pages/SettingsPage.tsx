@@ -572,6 +572,8 @@ function PaymentsSettings({ setSaveButton, showCheckoutSuccess, onCloseCheckoutS
     taxRateInput,
     loadError,
     businessesLoadError,
+    hasMoreBusinesses,
+    loadingMoreBusinesses,
     businessDialogOpen,
     editingBusiness,
     businessFormData,
@@ -579,6 +581,7 @@ function PaymentsSettings({ setSaveButton, showCheckoutSuccess, onCloseCheckoutS
     deleteDialogOpen,
     businessToDelete,
     refetchData,
+    loadMoreBusinesses,
     handleSaveSettings,
     updateField,
     setTaxRateInput,
@@ -709,6 +712,9 @@ function PaymentsSettings({ setSaveButton, showCheckoutSuccess, onCloseCheckoutS
         loading={loading}
         loadError={businessesLoadError}
         onRetry={refetchData}
+        hasMore={hasMoreBusinesses}
+        loadingMore={loadingMoreBusinesses}
+        onLoadMore={() => void loadMoreBusinesses()}
         onAddBusiness={openBusinessDialog}
         onEditBusiness={openBusinessDialog}
         onDeleteBusiness={handleDeleteClick}
@@ -786,7 +792,7 @@ export function SettingsPage() {
             setSaveButton={setSaveButton}
             showCheckoutSuccess={showCheckoutSuccess}
             onCloseCheckoutSuccess={() => setShowCheckoutSuccess(false)}
-            onCheckoutConfirmed={refreshSubscription}
+            onCheckoutConfirmed={async () => { await refreshSubscription(); }}
           />
         )}
         {location.pathname === '/settings' && <AccountSettings />}

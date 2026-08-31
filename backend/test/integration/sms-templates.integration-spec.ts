@@ -71,11 +71,15 @@ describe('SMS templates GraphQL PostgreSQL contract', () => {
     });
     const listed = await graphql(memberToken, organizationId,
       `query List($filter: SmsTemplateFilterInput, $page: PageInput) { smsTemplates(filter: $filter, page: $page) {
-        nodes { ${fields} } pageInfo { total hasNextPage } } smsTemplateCategories { category count }
+        nodes { ${fields} } pageInfo { total hasNextPage }
+        stats { total active inactive categories } categories { category count } }
+        smsTemplateCategories { category count }
         smsMessageInfo(message: "${'^'.repeat(81)}") { length segments encoding charsRemaining } }`,
       { filter: { category: 'Reminders', isActive: true, search: 'reminder' }, page: { page: 1, pageSize: 1 } }, false).expect(200);
     expect(listed.body.errors).toBeUndefined();
     expect(listed.body.data.smsTemplates.pageInfo.total).toBe(1);
+    expect(listed.body.data.smsTemplates.stats).toMatchObject({ total: 1, active: 1, inactive: 0, categories: 1 });
+    expect(listed.body.data.smsTemplates.categories).toContainEqual({ category: 'Reminders', count: 1 });
     expect(listed.body.data.smsTemplateCategories).toContainEqual({ category: 'Reminders', count: 1 });
     expect(listed.body.data.smsMessageInfo).toEqual({ length: 162, segments: 2, encoding: 'GSM', charsRemaining: 144 });
   });

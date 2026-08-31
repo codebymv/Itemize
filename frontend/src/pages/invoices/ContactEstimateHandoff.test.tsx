@@ -125,7 +125,6 @@ describe('contact to estimate handoff', () => {
     invoicesApi.getProducts.mockResolvedValue([]);
     editorApi.getEstimateEditorBootstrapViaGraphql.mockResolvedValue({
       contacts: [],
-      products: [],
       estimate: null,
       initialContact: null,
     });
@@ -163,7 +162,6 @@ describe('contact to estimate handoff', () => {
   it('loads the authoritative contact and prefills the new estimate', async () => {
     editorApi.getEstimateEditorBootstrapViaGraphql.mockResolvedValue({
       contacts: [],
-      products: [],
       estimate: null,
       initialContact: contact,
     });

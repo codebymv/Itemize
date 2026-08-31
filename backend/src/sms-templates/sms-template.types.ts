@@ -26,15 +26,25 @@ export class SmsTemplate {
 }
 
 @ObjectType()
-export class SmsTemplatePage {
-  @Field(() => [SmsTemplate]) nodes: SmsTemplate[];
-  @Field(() => PageInfo) pageInfo: PageInfo;
+export class SmsTemplateStats {
+  @Field(() => Int) total: number;
+  @Field(() => Int) active: number;
+  @Field(() => Int) inactive: number;
+  @Field(() => Int) categories: number;
 }
 
 @ObjectType()
 export class SmsTemplateCategory {
   @Field(() => String) category: string;
   @Field(() => Int) count: number;
+}
+
+@ObjectType()
+export class SmsTemplatePage {
+  @Field(() => [SmsTemplate]) nodes: SmsTemplate[];
+  @Field(() => PageInfo) pageInfo: PageInfo;
+  @Field(() => SmsTemplateStats) stats: SmsTemplateStats;
+  @Field(() => [SmsTemplateCategory]) categories: SmsTemplateCategory[];
 }
 
 @ObjectType()

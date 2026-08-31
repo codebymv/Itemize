@@ -11,6 +11,8 @@ export type SmsTemplateRow = {
 export type SmsTemplateValues = { name: string; message: string; variables: string[]; category: string; isActive: boolean };
 export type SmsTemplateUpdates = Partial<Omit<SmsTemplateValues, 'variables'>>;
 export type SmsTemplateCriteria = { organizationId: number; category?: string; isActive?: boolean; searchPattern?: string; pageSize: number; offset: number };
+export type SmsTemplateStatsRow = { total: string; active: string; inactive: string; categories: string };
+export type SmsTemplateCategoryRow = { category: string; count: string };
 
 const columns = (alias = 'st') => `${alias}.id, ${alias}.organization_id, ${alias}.name, ${alias}.message,
   ${alias}.variables, ${alias}.category, ${alias}.is_active, ${alias}.created_by,
@@ -27,7 +29,12 @@ export class SmsTemplatesRepository {
     return result.rows[0] ?? null;
   }
 
-  async findPage(criteria: SmsTemplateCriteria): Promise<{ rows: SmsTemplateRow[]; total: string }> {
+  async findPage(criteria: SmsTemplateCriteria): Promise<{
+    rows: SmsTemplateRow[];
+    total: string;
+    stats: SmsTemplateStatsRow;
+    categories: SmsTemplateCategoryRow[];
+  }> {
     const parameters: unknown[] = [criteria.organizationId];
     const clauses = ['st.organization_id = $1'];
     if (criteria.category !== undefined) { parameters.push(criteria.category); clauses.push(`st.category = $${parameters.length}`); }
@@ -37,16 +44,43 @@ export class SmsTemplatesRepository {
       clauses.push(`(st.name ILIKE $${parameters.length} ESCAPE '\\' OR st.message ILIKE $${parameters.length} ESCAPE '\\')`);
     }
     const where = clauses.join(' AND ');
-    const count = await this.pool.query<{ total: string }>(`SELECT COUNT(*) AS total FROM sms_templates st WHERE ${where}`, parameters);
-    parameters.push(criteria.pageSize, criteria.offset);
-    const rows = await this.pool.query<SmsTemplateRow>(
-      `SELECT ${columns()}, u.name AS created_by_name FROM sms_templates st
-       LEFT JOIN users u ON u.id = st.created_by WHERE ${where}
-       ORDER BY st.updated_at DESC, st.id DESC LIMIT $${parameters.length - 1} OFFSET $${parameters.length}`, parameters);
-    return { rows: rows.rows, total: count.rows[0]?.total ?? '0' };
+    const rowParameters = [...parameters, criteria.pageSize, criteria.offset];
+    const [count, rows, stats, categories] = await Promise.all([
+      this.pool.query<{ total: string }>(
+        `SELECT COUNT(*) AS total FROM sms_templates st WHERE ${where}`,
+        parameters,
+      ),
+      this.pool.query<SmsTemplateRow>(
+        `SELECT ${columns()}, u.name AS created_by_name FROM sms_templates st
+         LEFT JOIN users u ON u.id = st.created_by WHERE ${where}
+         ORDER BY st.updated_at DESC, st.id DESC
+         LIMIT $${rowParameters.length - 1} OFFSET $${rowParameters.length}`,
+        rowParameters,
+      ),
+      this.pool.query<SmsTemplateStatsRow>(
+        `SELECT COUNT(*) AS total,
+                COUNT(*) FILTER (WHERE is_active) AS active,
+                COUNT(*) FILTER (WHERE NOT is_active) AS inactive,
+                COUNT(DISTINCT category) AS categories
+         FROM sms_templates
+         WHERE organization_id = $1`,
+        [criteria.organizationId],
+      ),
+      this.pool.query<SmsTemplateCategoryRow>(
+        `SELECT category, COUNT(*) AS count FROM sms_templates
+         WHERE organization_id = $1 GROUP BY category ORDER BY category ASC`,
+        [criteria.organizationId],
+      ),
+    ]);
+    return {
+      rows: rows.rows,
+      total: count.rows[0]?.total ?? '0',
+      stats: stats.rows[0] ?? { total: '0', active: '0', inactive: '0', categories: '0' },
+      categories: categories.rows,
+    };
   }
 
-  async categories(organizationId: number) {
+  async categories(organizationId: number): Promise<SmsTemplateCategoryRow[]> {
     return (await this.pool.query<{ category: string; count: string }>(
       `SELECT category, COUNT(*) AS count FROM sms_templates WHERE organization_id = $1
        GROUP BY category ORDER BY category ASC`, [organizationId])).rows;

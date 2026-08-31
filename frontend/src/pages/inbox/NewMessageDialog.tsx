@@ -1,14 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Check, ChevronsUpDown, Loader2, Mail, MessageSquareText, Send } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Loader2, Mail, MessageSquareText, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
 import {
   Dialog,
   DialogContent,
@@ -19,18 +11,23 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { getContacts } from '@/services/contactsApi';
 import { sendEmailToContact } from '@/services/emailApi';
 import { sendSmsToContact } from '@/services/smsApi';
 import type { Contact } from '@/types';
+import { ContactCatalogPicker } from '@/components/ContactCatalogPicker';
 import { plainTextToEmailHtml } from './messageContent';
 
 type Channel = 'email' | 'sms';
+
+const contactName = (contact: Contact) =>
+  `${contact.first_name ?? ''} ${contact.last_name ?? ''}`.trim()
+  || contact.email
+  || contact.phone
+  || 'Unnamed contact';
 
 interface NewMessageDialogProps {
   open: boolean;
@@ -39,12 +36,6 @@ interface NewMessageDialogProps {
   onQueued: (conversationId?: number) => void | Promise<void>;
 }
 
-const contactName = (contact: Contact) =>
-  `${contact.first_name ?? ''} ${contact.last_name ?? ''}`.trim()
-  || contact.email
-  || contact.phone
-  || 'Unnamed contact';
-
 export function NewMessageDialog({
   open,
   organizationId,
@@ -52,51 +43,19 @@ export function NewMessageDialog({
   onQueued,
 }: NewMessageDialogProps) {
   const { toast } = useToast();
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [loadingContacts, setLoadingContacts] = useState(false);
-  const [contactPickerOpen, setContactPickerOpen] = useState(false);
-  const [contactId, setContactId] = useState<number | null>(null);
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [channel, setChannel] = useState<Channel>('email');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
-    if (!open) return;
-    let active = true;
-    setLoadingContacts(true);
-    void getContacts({ status: 'active', sort_by: 'first_name', sort_order: 'asc', limit: 100 }, organizationId)
-      .then(response => {
-        if (active) setContacts(response.contacts);
-      })
-      .catch(() => {
-        if (active) {
-          toast({
-            title: 'Unable to load contacts',
-            description: 'Try opening the composer again.',
-            variant: 'destructive',
-          });
-        }
-      })
-      .finally(() => {
-        if (active) setLoadingContacts(false);
-      });
-    return () => { active = false; };
-  }, [open, organizationId, toast]);
-
-  useEffect(() => {
     if (open) return;
-    setContactId(null);
+    setSelectedContact(null);
     setChannel('email');
     setSubject('');
     setMessage('');
-    setContactPickerOpen(false);
   }, [open]);
-
-  const selectedContact = useMemo(
-    () => contacts.find(contact => contact.id === contactId) ?? null,
-    [contacts, contactId],
-  );
   const canEmail = Boolean(selectedContact?.email);
   const canSms = Boolean(selectedContact?.phone);
   const canSend = Boolean(
@@ -159,54 +118,13 @@ export function NewMessageDialog({
         <div className="min-h-0 space-y-5 overflow-y-auto px-6 py-1">
           <div className="space-y-2">
             <Label>Contact</Label>
-            <Popover open={contactPickerOpen} onOpenChange={setContactPickerOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={contactPickerOpen}
-                  className="h-11 w-full justify-between bg-background px-3 font-normal"
-                  disabled={loadingContacts}
-                >
-                  <span className="min-w-0 truncate">
-                    {loadingContacts ? 'Loading contacts...' : selectedContact ? contactName(selectedContact) : 'Choose a contact'}
-                  </span>
-                  {loadingContacts
-                    ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
-                    : <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent align="start" className="w-[--radix-popover-trigger-width] p-0">
-                <Command>
-                  <CommandInput placeholder="Search contacts..." />
-                  <CommandList>
-                    <CommandEmpty>No contacts found.</CommandEmpty>
-                    <CommandGroup>
-                      {contacts.map(contact => (
-                        <CommandItem
-                          key={contact.id}
-                          value={`${contactName(contact)} ${contact.email ?? ''} ${contact.phone ?? ''}`}
-                          onSelect={() => {
-                            setContactId(contact.id);
-                            setContactPickerOpen(false);
-                          }}
-                          className="gap-3 py-3"
-                        >
-                          <Check className={cn('h-4 w-4 shrink-0', contact.id === contactId ? 'opacity-100' : 'opacity-0')} />
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate">{contactName(contact)}</span>
-                            <span className="block truncate text-xs text-muted-foreground">
-                              {[contact.email, contact.phone].filter(Boolean).join(' · ') || 'No email or phone'}
-                            </span>
-                          </span>
-                        </CommandItem>
-                      ))}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
+            <ContactCatalogPicker
+              organizationId={organizationId}
+              selectedContact={selectedContact}
+              onSelect={setSelectedContact}
+              status="active"
+              allowNone={false}
+            />
           </div>
 
           <Tabs value={channel} onValueChange={value => setChannel(value as Channel)}>

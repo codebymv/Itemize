@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useEffect, useState } from 'react';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     Plus,
     Package,
@@ -55,16 +56,16 @@ import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import {
-    getProducts,
     createProduct,
     updateProduct,
     deleteProduct,
     Product,
 } from '@/services/invoicesApi';
+import { getProductPageViaGraphql } from '@/services/productsGraphql';
+import { productQueryKeys } from '@/services/productQueryKeys';
+import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
 import {
-    filterProductCatalog,
-    getProductCatalogStats,
     getProductTaxInclusiveTotal,
     type ProductStatusFilter,
     type ProductTypeFilter,
@@ -102,9 +103,11 @@ const defaultFormData: ProductFormData = {
     taxable: true,
     is_active: true,
 };
+const PAGE_SIZE = 20;
 
 export function ProductsPage() {
     const { toast } = useToast();
+    const queryClient = useQueryClient();
     // Route-aware onboarding (will show 'invoices' onboarding for all Sales & Payments routes)
     const {
         showModal: showOnboarding,
@@ -114,18 +117,17 @@ export function ProductsPage() {
         featureKey: onboardingFeatureKey,
     } = useRouteOnboarding();
 
-    const [products, setProducts] = useState<Product[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [loadError, setLoadError] = useState<string | null>(null);
-    const { organizationId, error: initError } = useOrganization({
+    const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({
         onError: () => {
             toast({ title: 'Error', description: 'Failed to initialize', variant: 'destructive' });
             return 'Failed to initialize';
         }
     });
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<ProductStatusFilter>('active');
     const [typeFilter, setTypeFilter] = useState<ProductTypeFilter>('all');
+    const [page, setPage] = useState(1);
 
     // Dialog state
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -135,32 +137,51 @@ export function ProductsPage() {
     const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
     useEffect(() => {
-        if (!organizationId) {
-            setLoading(false);
-        }
-    }, [organizationId]);
+        const timeout = window.setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
+        return () => window.clearTimeout(timeout);
+    }, [searchQuery]);
 
     useEffect(() => {
-        if (initError) setLoadError(initError);
-    }, [initError]);
+        setPage(1);
+    }, [debouncedSearch, statusFilter, typeFilter]);
 
-    const fetchProducts = useCallback(async () => {
-        if (!organizationId) return;
-        setLoading(true);
-        setLoadError(null);
-        try {
-            const data = await getProducts({}, organizationId);
-            setProducts(data || []);
-        } catch (error) {
-            setLoadError('Products could not be loaded. Please try again.');
-        } finally {
-            setLoading(false);
-        }
-    }, [organizationId]);
+    const productsQuery = useQuery({
+        queryKey: productQueryKeys.page(organizationId, {
+            search: debouncedSearch,
+            status: statusFilter,
+            type: typeFilter,
+            page,
+            limit: PAGE_SIZE,
+        }),
+        queryFn: ({ signal }) => getProductPageViaGraphql({
+            page,
+            limit: PAGE_SIZE,
+            search: debouncedSearch || undefined,
+            is_active: statusFilter === 'all' ? undefined : statusFilter === 'active',
+            product_type: typeFilter === 'all' ? undefined : typeFilter,
+        }, organizationId as number, signal),
+        enabled: organizationId !== null,
+        staleTime: QUERY_STALE_TIME_MS,
+        retry: shouldRetryQuery,
+        placeholderData: keepPreviousData,
+    });
+    const products = productsQuery.data?.products ?? [];
+    const pagination = productsQuery.data?.pagination ?? {
+        page, limit: PAGE_SIZE, total: 0, totalPages: 0,
+    };
+    const stats = productsQuery.data?.stats ?? {
+        total: 0, active: 0, inactive: 0, oneTime: 0, recurring: 0,
+    };
+    const loading = orgLoading || (organizationId !== null && productsQuery.isPending);
+    const loadError = initError ?? (productsQuery.error && !productsQuery.data
+        ? 'Products could not be loaded. Please try again.'
+        : null);
 
     useEffect(() => {
-        fetchProducts();
-    }, [fetchProducts]);
+        if (!productsQuery.data) return;
+        const lastAvailablePage = Math.max(1, productsQuery.data.pagination.totalPages);
+        if (page > lastAvailablePage) setPage(lastAvailablePage);
+    }, [page, productsQuery.data]);
 
     const openCreateDialog = () => {
         setEditingProduct(null);
@@ -198,7 +219,7 @@ export function ProductsPage() {
                 toast({ title: 'Created', description: 'Product created successfully' });
             }
             setDialogOpen(false);
-            fetchProducts();
+            await queryClient.invalidateQueries({ queryKey: productQueryKeys.all(organizationId) });
         } catch (error) {
             toast({ title: 'Error', description: 'Failed to save product', variant: 'destructive' });
         } finally {
@@ -210,7 +231,7 @@ export function ProductsPage() {
         if (!organizationId || !productToDelete) return false;
         try {
             await deleteProduct(productToDelete.id, organizationId);
-            setProducts(prev => prev.filter(p => p.id !== productToDelete.id));
+            await queryClient.invalidateQueries({ queryKey: productQueryKeys.all(organizationId) });
             setProductToDelete(null);
             return true;
         } catch (error) {
@@ -225,12 +246,6 @@ export function ProductsPage() {
         }).format(amount);
     };
 
-    const filteredProducts = filterProductCatalog(products, {
-        searchQuery,
-        status: statusFilter,
-        type: typeFilter,
-    });
-    const stats = getProductCatalogStats(products);
     const statusFilterCount = Number(statusFilter !== 'active');
     const typeFilterCount = Number(typeFilter !== 'all');
     const headerFilterCount = statusFilterCount + typeFilterCount;
@@ -376,23 +391,23 @@ export function ProductsPage() {
                         initError ? (
                             <OrganizationErrorState kind="section" title="Unable to load products" />
                         ) : (
-                            <ErrorState kind="section" title="Unable to load products" description={loadError} onAction={() => void fetchProducts()} />
+                            <ErrorState kind="section" title="Unable to load products" description={loadError} onAction={() => void productsQuery.refetch()} />
                         )
-                    ) : filteredProducts.length === 0 ? (
+                    ) : products.length === 0 ? (
                         <EmptyState
                             icon={Package}
-                            kind={products.length === 0 ? 'collection' : 'results'}
-                            title={products.length === 0 ? 'No products yet' : 'No matching products'}
-                            description={products.length === 0
+                            kind={stats.total === 0 ? 'collection' : 'results'}
+                            title={stats.total === 0 ? 'No products yet' : 'No matching products'}
+                            description={stats.total === 0
                                 ? 'Create reusable products and services for faster invoicing'
                                 : undefined}
-                            actionLabel={products.length === 0 ? 'Add product' : 'Clear filters'}
-                            onAction={products.length === 0 ? openCreateDialog : resetCatalogQuery}
+                            actionLabel={stats.total === 0 ? 'Add product' : 'Clear filters'}
+                            onAction={stats.total === 0 ? openCreateDialog : resetCatalogQuery}
                             className="p-12"
                         />
                     ) : (
                         <div className="divide-y">
-                            {filteredProducts.map((product) => {
+                            {products.map((product) => {
                                 const ProductTypeIcon = product.product_type === 'recurring' ? RefreshCw : Tag;
                                 const statusVisual = getProductStatusVisual(product.is_active);
 
@@ -486,6 +501,18 @@ export function ProductsPage() {
                     )}
                 </CardContent>
             </Card>
+            {pagination.totalPages > 1 && (
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-sm text-muted-foreground">
+                        Showing {((pagination.page - 1) * pagination.limit) + 1} to {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} products
+                    </p>
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setPage(current => Math.max(1, current - 1))} disabled={productsQuery.isFetching || pagination.page <= 1}>Previous</Button>
+                        <span className="min-w-20 text-center text-sm text-muted-foreground">{pagination.page} of {pagination.totalPages}</span>
+                        <Button variant="outline" size="sm" onClick={() => setPage(current => Math.min(pagination.totalPages, current + 1))} disabled={productsQuery.isFetching || pagination.page >= pagination.totalPages}>Next</Button>
+                    </div>
+                </div>
+            )}
 
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <ModalContent size="md">

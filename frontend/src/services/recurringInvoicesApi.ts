@@ -5,10 +5,15 @@ import {
   getRecurringInvoiceViaGraphql,
   getRecurringInvoiceHistoryViaGraphql,
   getRecurringInvoiceNumberPreviewViaGraphql,
+  getRecurringInvoicePageViaGraphql,
   getRecurringInvoicesViaGraphql,
   pauseRecurringInvoiceViaGraphql,
   resumeRecurringInvoiceViaGraphql,
   updateRecurringInvoiceViaGraphql,
+} from './recurringInvoicesGraphql';
+import type {
+  RecurringInvoiceListParams,
+  RecurringInvoiceListResponse,
 } from './recurringInvoicesGraphql';
 
 export type RecurringFrequency = 'weekly' | 'monthly' | 'quarterly' | 'yearly';
@@ -91,6 +96,14 @@ export const getRecurringInvoices = async (
   return signal === undefined
     ? getRecurringInvoicesViaGraphql(status, organizationId)
     : getRecurringInvoicesViaGraphql(status, organizationId, signal);
+};
+
+export const getRecurringInvoicePage = async (
+  params: RecurringInvoiceListParams = {},
+  organizationId?: number,
+  signal?: AbortSignal,
+): Promise<RecurringInvoiceListResponse> => {
+  return getRecurringInvoicePageViaGraphql(params, organizationId, signal);
 };
 
 export const getRecurringInvoice = async (

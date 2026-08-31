@@ -2,6 +2,15 @@ import { Field, InputType, Int } from '@nestjs/graphql';
 import { GraphQLJSON } from 'graphql-scalars';
 
 @InputType()
+export class FormFilterInput {
+  @Field(() => String, { nullable: true })
+  status?: string;
+
+  @Field(() => String, { nullable: true })
+  search?: string;
+}
+
+@InputType()
 export class FormFieldInput {
   @Field(() => Int, { nullable: true })
   id?: number;

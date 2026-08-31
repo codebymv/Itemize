@@ -71,14 +71,15 @@ may require negotiation once, but subsequent reads use the successful provider
 field and channel-filter shape directly instead of replaying expected failures.
 
 Invoice and estimate editors now each own one cancellable bootstrap query. The
-invoice bootstrap returns the document, recent contact choices, the complete
-product and business catalogs, and invoice settings in one client operation.
-The estimate bootstrap returns its document and catalogs and can include a URL-
-selected contact that is outside the recent contact page. Server-side catalog
-pagination remains complete without exposing a request waterfall to the client;
-recurring schedule detail stays conditional because most invoices do not have
-one. Older deployments negotiate the former parallel reads once and retain that
-capability for the session.
+invoice bootstrap returns the document, recent contact choices, a bounded
+business page, and invoice settings in one client operation. Products are an
+explicitly lazy, server-searched picker rather than bootstrap payload. The
+estimate bootstrap returns its document and recent contacts and can include a
+URL-selected contact that is outside that page. The legacy `products` schema
+field remains selection-aware: current operations omit it, so its repository
+read does not run. Older deployments negotiate the former parallel reads once,
+retain that capability for the session, and use one bounded business read
+instead of walking every page.
 
 Contact detail now loads the authoritative contact, its bounded activity
 timeline, and the four rendered related-content previews through one
@@ -104,10 +105,12 @@ Contacts are fetched only when creation opens, the unused eager product catalog
 has been removed, and expanding a schedule uses one
 `RecurringInvoicePreviewBootstrap` operation for the full schedule, advisory
 invoice number, and preview business. The client remembers rolling-schema
-capability before using its parallel compatibility path. Create, pause, resume,
-generate, and delete update the organization-scoped caches directly. Generation
-invalidates the expanded preview and dashboard snapshot because they own the
-derived invoice number, schedule detail, and financial summary data.
+capability before using its parallel compatibility path; that path uses one
+bounded business read and never follows pagination. Create, pause, resume,
+generate, and delete update the organization-scoped caches directly.
+Generation invalidates the expanded preview and dashboard snapshot because
+they own the derived invoice number, schedule detail, and financial summary
+data.
 
 Signature document and template editors now each own one cancellable,
 organization-scoped aggregate query. Those server operations already return
@@ -164,14 +167,21 @@ refresh keeps the last complete snapshot visible. The initial snapshot remains
 bounded to 50 rows per type and exposes each type's total/continuation state;
 editor-only detail and vault unlock data remain lazy.
 
-Email and SMS template lists now each own one bounded, organization-scoped,
-cancellable catalog cache. Search, category, and publication-status controls
-are local projections of that complete catalog, so changing them does not
-create server query variants. The email editor's template browser lazily reuses
-the same fresh catalog instead of maintaining an orphaned loader. Duplicate,
-delete, draft, publish, and SMS save mutations patch the authoritative catalog
-entry directly; opening a list or picker after those mutations therefore does
-not require a compensating reload.
+Global search now waits for a two-character debounced query and owns at most
+two cancellable reads: one reusable workspace snapshot and one bounded
+`OrganizationGlobalSearch` operation. The organization operation searches
+segments, campaigns, and workflows immediately, adds contacts, invoices, and
+signature documents only from three characters onward, and returns at most
+three rows per module. This replaces the former eleven-request, two-wave fanout;
+closing the dialog or changing the query aborts both obsolete reads.
+
+Email and SMS template lists now each own bounded, organization-scoped,
+cancellable page caches. Search, category, and publication status are
+server-owned query dimensions, while global summary counts and categories are
+returned alongside the page. The email editor's template browser incrementally
+loads the same catalog family instead of maintaining an orphaned loader.
+Duplicate, delete, draft, publish, and save mutations invalidate only the
+authoritative catalog family.
 
 Segments follow the same bounded-catalog rule: list search and availability are
 local projections of one cancellable organization cache. Recalculation,
@@ -206,6 +216,8 @@ Use these ownership budgets when reviewing a route:
 | Warm private route change | Zero shell reads + one critical route operation |
 | Detail-dependent route | One route operation + explicitly documented lazy detail reads |
 | Returning to fresh cached route | Zero reads |
+| Compatibility support resource | One bounded read; never an implicit all-page loop |
+| Off-page selected support record | One bounded page + at most one direct record lookup |
 
 A visually separate card is not a separate fetch lifecycle. Separate a query
 only when it is independently paginated, live, lazy, permissioned, mutated, or
@@ -238,6 +250,10 @@ allowed to fail without failing the rest of the route.
   `UNAUTHENTICATED` codes remain permanent even when the HTTP envelope is 200.
 - Mutations do not retry unless the server enforces a stable idempotency key.
 - Polling pauses in hidden documents and does not duplicate a realtime stream.
+- Route and compatibility code does not call all-page adapters. Infinite
+  catalogs are driven by a visible Load more interaction or scroll boundary.
+- Optional aggregate fields do not execute repository reads when omitted from
+  the GraphQL selection.
 - Mutation success patches authoritative returned data and narrowly invalidates
   derived snapshots.
 - Search and typeahead reads debounce input, cancel obsolete requests, and keep

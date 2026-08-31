@@ -132,7 +132,6 @@ export function InvoiceEditorPage() {
         ? organization.settings.defaultBusinessId
         : undefined;
     const [contacts, setContacts] = useState<Contact[]>([]);
-    const [products, setProducts] = useState<Product[]>([]);
     const [businesses, setBusinesses] = useState<Business[]>([]);
     const [settings, setSettings] = useState<PaymentSettings | null>(null);
     const [loadedInvoice, setLoadedInvoice] = useState<Invoice | null>(null);
@@ -301,21 +300,18 @@ export function InvoiceEditorPage() {
     }, [loading, notes, termsAndConditions]);
 
     // Product selection handler
-    const handleProductSelect = (lineItemId: string, productIdStr: string) => {
-        if (productIdStr === 'custom') {
+    const handleProductSelect = (lineItemId: string, product: Product | null) => {
+        if (!product) {
             updateLineItem(lineItemId, { product_id: undefined });
             return;
         }
-        const product = products.find(p => p.id === parseInt(productIdStr));
-        if (product) {
-            updateLineItem(lineItemId, {
-                product_id: product.id,
-                name: product.name,
-                description: product.description || '',
-                unit_price: product.price,
-                tax_rate: product.tax_rate || 0,
-            });
-        }
+        updateLineItem(lineItemId, {
+            product_id: product.id,
+            name: product.name,
+            description: product.description || '',
+            unit_price: product.price,
+            tax_rate: product.tax_rate || 0,
+        });
     };
 
     // Wrapper for handleSave to pass invoice data
@@ -447,7 +443,6 @@ export function InvoiceEditorPage() {
         const data = bootstrapQuery.data;
         setInitialized(false);
         setContacts(data.contacts);
-        setProducts(data.products);
         setBusinesses(data.businesses);
         setSettings(data.settings);
 
@@ -969,7 +964,7 @@ export function InvoiceEditorPage() {
                 {/* Line Items - Table Style */}
                 <LineItemsTable
                     lineItems={lineItems}
-                    products={products}
+                    organizationId={organizationId}
                     currency={currency}
                     onAddLineItem={addLineItem}
                     onRemoveLineItem={removeLineItem}

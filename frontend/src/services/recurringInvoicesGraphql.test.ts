@@ -8,7 +8,7 @@ import {
   getRecurringInvoiceViaGraphql,
   getRecurringInvoiceHistoryViaGraphql,
   getRecurringInvoiceNumberPreviewViaGraphql,
-  getRecurringInvoicesViaGraphql,
+  getRecurringInvoicePageViaGraphql,
   pauseRecurringInvoiceViaGraphql,
   resumeRecurringInvoiceViaGraphql,
   updateRecurringInvoiceViaGraphql,
@@ -38,24 +38,32 @@ const row = (extra: Record<string, unknown> = {}) => ({
 describe('recurring invoice GraphQL adapter', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('walks every page and maps decimal strings into the retained list', async () => {
-    vi.mocked(graphqlRequest)
-      .mockResolvedValueOnce({
-        recurringInvoices: { nodes: [row()], pageInfo: { totalPages: 2 } },
-      })
-      .mockResolvedValueOnce({
-        recurringInvoices: {
-          nodes: [row({ id: 9, templateName: 'Second' })],
-          pageInfo: { totalPages: 2 },
-        },
-      });
-    const result = await getRecurringInvoicesViaGraphql('active', 4);
-    expect(result).toHaveLength(2);
-    expect(result[0]).toMatchObject({ template_name: 'Retainer', total: 26 });
-    expect(vi.mocked(graphqlRequest).mock.calls.map((call) => call[1])).toEqual([
-      { filter: { status: 'active' }, page: { page: 1, pageSize: 100 } },
-      { filter: { status: 'active' }, page: { page: 2, pageSize: 100 } },
-    ]);
+  it('returns one bounded server-filtered page with global stats', async () => {
+    vi.mocked(graphqlRequest).mockResolvedValueOnce({
+      recurringInvoices: {
+        nodes: [row()],
+        pageInfo: { page: 2, pageSize: 20, total: 24, totalPages: 2 },
+        stats: { total: 31, active: 24, paused: 5, completed: 2 },
+      },
+    });
+    const result = await getRecurringInvoicePageViaGraphql({
+      status: 'active', search: '  Ada  ', page: 2, limit: 20,
+    }, 4);
+    expect(result).toMatchObject({
+      recurringInvoices: [{ template_name: 'Retainer', total: 26 }],
+      pagination: { page: 2, limit: 20, total: 24, totalPages: 2 },
+      stats: { total: 31, active: 24, paused: 5, completed: 2 },
+    });
+    expect(graphqlRequest).toHaveBeenCalledWith(
+      expect.stringContaining('stats { total active paused completed }'),
+      {
+        filter: { status: 'active', search: 'Ada' },
+        page: { page: 2, pageSize: 20 },
+      },
+      4,
+      undefined,
+    );
+    expect(graphqlRequest).toHaveBeenCalledTimes(1);
   });
 
   it('maps detail and protected create/update/delete inputs', async () => {

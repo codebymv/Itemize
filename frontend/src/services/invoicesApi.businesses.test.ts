@@ -5,6 +5,7 @@ import {
   deleteBusiness,
   deleteBusinessLogo,
   getBusiness,
+  getBusinessPage,
   getBusinesses,
   updateBusiness,
   uploadBusinessLogo,
@@ -13,6 +14,7 @@ import {
   createInvoiceBusinessViaGraphql,
   deleteInvoiceBusinessViaGraphql,
   getInvoiceBusinessesViaGraphql,
+  getInvoiceBusinessPageViaGraphql,
   getInvoiceBusinessViaGraphql,
   removeInvoiceBusinessLogoViaGraphql,
   updateInvoiceBusinessViaGraphql,
@@ -30,6 +32,7 @@ vi.mock('./invoiceBusinessesGraphql', () => ({
   createInvoiceBusinessViaGraphql: vi.fn(),
   deleteInvoiceBusinessViaGraphql: vi.fn(),
   getInvoiceBusinessesViaGraphql: vi.fn(),
+  getInvoiceBusinessPageViaGraphql: vi.fn(),
   getInvoiceBusinessViaGraphql: vi.fn(),
   removeInvoiceBusinessLogoViaGraphql: vi.fn(),
   updateInvoiceBusinessViaGraphql: vi.fn(),
@@ -52,6 +55,10 @@ describe('invoice business API transport selection', () => {
 
   it('routes profile state through GraphQL while retaining multipart HTTP', async () => {
     vi.mocked(getInvoiceBusinessesViaGraphql).mockResolvedValue([business]);
+    vi.mocked(getInvoiceBusinessPageViaGraphql).mockResolvedValue({
+      businesses: [business],
+      pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+    });
     vi.mocked(getInvoiceBusinessViaGraphql).mockResolvedValue(business);
     vi.mocked(createInvoiceBusinessViaGraphql).mockResolvedValue(business);
     vi.mocked(updateInvoiceBusinessViaGraphql).mockResolvedValue(business);
@@ -65,6 +72,7 @@ describe('invoice business API transport selection', () => {
       data: { data: { logo_url: '/uploads/logos/safe.png' } },
     });
     await getBusinesses(4);
+    await getBusinessPage(1, 20, 4);
     await getBusiness(8, 4);
     await createBusiness(business, 4);
     await updateBusiness(8, { name: 'Itemize Studio' }, 4);
@@ -76,6 +84,7 @@ describe('invoice business API transport selection', () => {
       4,
     );
     expect(getInvoiceBusinessesViaGraphql).toHaveBeenCalledWith(4);
+    expect(getInvoiceBusinessPageViaGraphql).toHaveBeenCalledWith(1, 20, 4, undefined);
     expect(getInvoiceBusinessViaGraphql).toHaveBeenCalledWith(8, 4);
     expect(createInvoiceBusinessViaGraphql).toHaveBeenCalledWith(business, 4);
     expect(updateInvoiceBusinessViaGraphql).toHaveBeenCalledWith(

@@ -1,11 +1,13 @@
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { CsrfProtected, OrganizationScoped, RequiresPlan } from '../common/metadata';
+import { PageInput } from '../common/pagination';
 import { RequestContextService } from '../request-context/request-context.service';
-import { CreateFormInput, FormFieldInput, UpdateFormInput } from './form.inputs';
+import { CreateFormInput, FormFieldInput, FormFilterInput, UpdateFormInput } from './form.inputs';
 import {
   DeleteFormResult,
   DeleteFormSubmissionResult,
   Form,
+  FormPage,
   FormSubmissionPage,
   ReplaceFormFieldsResult,
 } from './form.types';
@@ -25,6 +27,15 @@ export class FormsResolver {
     @Args('status', { type: () => String, nullable: true }) status?: string,
   ): Promise<Form[]> {
     return this.forms.list(this.organizationId(), status);
+  }
+
+  @OrganizationScoped()
+  @Query(() => FormPage)
+  formPage(
+    @Args('filter', { nullable: true }) filter?: FormFilterInput,
+    @Args('page', { nullable: true }) page?: PageInput,
+  ): Promise<FormPage> {
+    return this.forms.listPage(this.organizationId(), filter, page);
   }
 
   @OrganizationScoped()

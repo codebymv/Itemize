@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,14 +21,12 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Deal, PipelineStage, Contact } from '@/types';
 import { createDeal } from '@/services/pipelinesApi';
-import { getContacts } from '@/services/contactsApi';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { createDealFormSchema, type CreateDealFormValues } from '@/lib/formSchemas';
 import logger from '@/lib/logger';
-
-const NO_CONTACT_VALUE = '__no_contact__';
+import { ContactCatalogPicker } from '@/components/ContactCatalogPicker';
 
 const getApiErrorMessage = (error: unknown, fallback: string): string => {
   const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
@@ -54,7 +52,7 @@ export function CreateDealModal({
 }: CreateDealModalProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
 
   const form = useForm<CreateDealFormValues>({
     resolver: zodResolver(createDealFormSchema),
@@ -67,19 +65,6 @@ export function CreateDealModal({
       expected_close_date: '',
     },
   });
-
-  // Fetch contacts for dropdown
-  useEffect(() => {
-    const fetchContacts = async () => {
-      try {
-        const response = await getContacts({ organization_id: organizationId, limit: 100 });
-        setContacts(response.contacts);
-      } catch (error) {
-        logger.error('Error fetching contacts:', error);
-      }
-    };
-    fetchContacts();
-  }, [organizationId]);
 
   const handleSubmit = async (values: CreateDealFormValues) => {
     setLoading(true);
@@ -96,6 +81,7 @@ export function CreateDealModal({
       });
       onCreated(deal);
       form.reset();
+      setSelectedContact(null);
     } catch (error) {
       logger.error('Error creating deal:', error);
       toast({
@@ -106,12 +92,6 @@ export function CreateDealModal({
     } finally {
       setLoading(false);
     }
-  };
-
-  const getContactDisplayName = (contact: Contact) => {
-    const name = [contact.first_name, contact.last_name].filter(Boolean).join(' ');
-    if (name && contact.company) return `${name} (${contact.company})`;
-    return name || contact.email || contact.company || 'Unnamed';
   };
 
   return (
@@ -203,24 +183,15 @@ export function CreateDealModal({
               render={({ field }) => (
                 <FormItem className="space-y-2">
                   <FormLabel htmlFor="contact" style={{ fontFamily: '"Raleway", sans-serif' }}>Contact</FormLabel>
-                  <Select
-                    onValueChange={(value) =>
-                      field.onChange(value === NO_CONTACT_VALUE ? '' : value)
-                    }
-                    value={field.value || NO_CONTACT_VALUE}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a contact (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={NO_CONTACT_VALUE}>No contact</SelectItem>
-                      {contacts.map((contact) => (
-                        <SelectItem key={contact.id} value={contact.id.toString()}>
-                          {getContactDisplayName(contact)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <ContactCatalogPicker
+                    organizationId={organizationId}
+                    selectedContact={selectedContact}
+                    onSelect={(contact) => {
+                      setSelectedContact(contact);
+                      field.onChange(contact ? String(contact.id) : '');
+                    }}
+                    placeholder="Select a contact (optional)"
+                  />
                 </FormItem>
               )}
             />

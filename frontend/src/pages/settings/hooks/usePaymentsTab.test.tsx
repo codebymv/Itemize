@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { PaymentSettings } from '@/services/invoicesApi';
 import { GraphqlRequestError } from '@/services/graphqlClient';
@@ -6,7 +6,7 @@ import { usePaymentsTab } from './usePaymentsTab';
 
 const mocks = vi.hoisted(() => ({
   getPaymentSettings: vi.fn(),
-  getBusinesses: vi.fn(),
+  getBusinessPage: vi.fn(),
   useOrganization: vi.fn(),
   toast: vi.fn(),
 }));
@@ -21,7 +21,7 @@ vi.mock('@/hooks/use-toast', () => ({
 
 vi.mock('@/services/invoicesApi', () => ({
   getPaymentSettings: mocks.getPaymentSettings,
-  getBusinesses: mocks.getBusinesses,
+  getBusinessPage: mocks.getBusinessPage,
   updatePaymentSettings: vi.fn(),
   createBusiness: vi.fn(),
   updateBusiness: vi.fn(),
@@ -50,11 +50,14 @@ describe('usePaymentsTab', () => {
       refresh: vi.fn(),
     });
     mocks.getPaymentSettings.mockResolvedValue(settings);
-    mocks.getBusinesses.mockResolvedValue([]);
+    mocks.getBusinessPage.mockResolvedValue({
+      businesses: [],
+      pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
+    });
   });
 
   it('keeps payment settings usable when business profiles fail to load', async () => {
-    mocks.getBusinesses.mockRejectedValue(new Error('business query failed'));
+    mocks.getBusinessPage.mockRejectedValue(new Error('business query failed'));
 
     const { result } = renderHook(() => usePaymentsTab());
 
@@ -105,7 +108,7 @@ describe('usePaymentsTab', () => {
     await Promise.resolve();
 
     expect(mocks.getPaymentSettings).not.toHaveBeenCalled();
-    expect(mocks.getBusinesses).not.toHaveBeenCalled();
+    expect(mocks.getBusinessPage).not.toHaveBeenCalled();
   });
 
   it('finishes loading with an organization recovery state when no organization exists', async () => {
@@ -123,7 +126,7 @@ describe('usePaymentsTab', () => {
 
     expect(result.current.loadError).toBe('organization');
     expect(mocks.getPaymentSettings).not.toHaveBeenCalled();
-    expect(mocks.getBusinesses).not.toHaveBeenCalled();
+    expect(mocks.getBusinessPage).not.toHaveBeenCalled();
   });
 
   it('continues loading when organization refresh repairs the account', async () => {
@@ -142,8 +145,32 @@ describe('usePaymentsTab', () => {
 
     expect(refresh).toHaveBeenCalledOnce();
     expect(mocks.getPaymentSettings).toHaveBeenCalledWith(84);
-    expect(mocks.getBusinesses).toHaveBeenCalledWith(84);
+    expect(mocks.getBusinessPage).toHaveBeenCalledWith(1, 20, 84);
     expect(result.current.settings).toEqual(settings);
     expect(result.current.loadError).toBeNull();
+  });
+
+  it('loads additional business pages only when requested', async () => {
+    const business = {
+      id: 1, organization_id: 42, name: 'Primary', is_active: true,
+      created_at: '2026-08-01T00:00:00Z', updated_at: '2026-08-01T00:00:00Z',
+    };
+    mocks.getBusinessPage
+      .mockResolvedValueOnce({
+        businesses: [business],
+        pagination: { page: 1, limit: 20, total: 21, totalPages: 2 },
+      })
+      .mockResolvedValueOnce({
+        businesses: [{ ...business, id: 2, name: 'Secondary' }],
+        pagination: { page: 2, limit: 20, total: 21, totalPages: 2 },
+      });
+    const { result } = renderHook(() => usePaymentsTab());
+    await waitFor(() => expect(result.current.hasMoreBusinesses).toBe(true));
+
+    await act(async () => result.current.loadMoreBusinesses());
+
+    expect(mocks.getBusinessPage).toHaveBeenLastCalledWith(2, 20, 42);
+    expect(result.current.businesses.map((item) => item.name)).toEqual(['Primary', 'Secondary']);
+    expect(result.current.hasMoreBusinesses).toBe(false);
   });
 });

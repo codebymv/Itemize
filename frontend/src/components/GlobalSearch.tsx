@@ -9,14 +9,10 @@ import { SearchField } from '@/components/ui/search-field';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { FailureNotice } from '@/components/FailureNotice';
+import { useOrganization } from '@/hooks/useOrganization';
 import { cn } from '@/lib/utils';
-import { fetchCanvasLists, getNotes, getWhiteboards, getWireframes, getVaults } from '@/services/api';
-import { getContacts } from '@/services/contactsApi';
-import { getSegments } from '@/services/segmentsApi';
-import { getCampaigns } from '@/services/campaignsApi';
-import { getWorkflows } from '@/services/automationsApi';
-import { getInvoices } from '@/services/invoicesApi';
-import { getSignatures } from '@/services/signaturesApi';
+import { searchOrganizationViaGraphql } from '@/services/globalSearchGraphql';
+import { getWorkspaceContentSnapshotViaGraphql } from '@/services/workspaceContentSnapshotGraphql';
 import { normalizeWhiteboardSearchRows } from './globalSearchUtils';
 import type { Invoice } from '@/services/invoicesApi';
 import type { SignatureDocument } from '@/services/signaturesApi';
@@ -53,6 +49,7 @@ const STATIC_PAGES: SearchResult[] = [
 
 export function GlobalSearch({ open, onClose, hasPaidAccess }: GlobalSearchProps) {
   const navigate = useNavigate();
+  const { organizationId } = useOrganization();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -130,11 +127,8 @@ export function GlobalSearch({ open, onClose, hasPaidAccess }: GlobalSearchProps
     }
   }, [handleSelect, open, onClose, results, selectedIndex, query]);
 
-  const getOrgId = useCallback(() => {
-    return localStorage.getItem('current_org_id');
-  }, []);
-
   useEffect(() => {
+    const controller = new AbortController();
     const search = async () => {
       if (!query.trim()) {
         setResults([]);
@@ -161,20 +155,47 @@ export function GlobalSearch({ open, onClose, hasPaidAccess }: GlobalSearchProps
 
         if (query.length > 1) {
           try {
+            const emptyOrganizationResults = {
+              segments: [], campaigns: [], workflows: [], contacts: [], invoices: [], signatures: [],
+            };
             const contentResults = await Promise.allSettled([
-              fetchCanvasLists(),
-              getNotes(),
-              getWhiteboards(),
-              getWireframes(),
-              getVaults(),
-              hasPaidAccess ? getSegments({ search: query, page: 1, limit: 3 }) : Promise.resolve([]),
-              hasPaidAccess ? getCampaigns({ search: query, limit: 3 }) : Promise.resolve({ campaigns: [] }),
-              hasPaidAccess
-                ? getWorkflows(Number(getOrgId() || 0), { search: query, limit: 3 })
-                : Promise.resolve({ workflows: [] })
+              getWorkspaceContentSnapshotViaGraphql(controller.signal),
+              hasPaidAccess && organizationId !== null
+                ? searchOrganizationViaGraphql(
+                    query,
+                    organizationId,
+                    controller.signal,
+                  )
+                : Promise.resolve(emptyOrganizationResults),
             ]);
-            const [listsData, notesData, whiteboardsData, wireframesData, vaultsData, segmentsData, campaignsData, automationsData] = contentResults;
+            if (controller.signal.aborted) return;
+            const [workspaceData, organizationData] = contentResults;
             if (contentResults.some((result) => result.status === 'rejected')) setSearchError(true);
+
+            const listsData = workspaceData.status === 'fulfilled'
+              ? { status: 'fulfilled' as const, value: workspaceData.value.lists }
+              : workspaceData;
+            const notesData = workspaceData.status === 'fulfilled'
+              ? { status: 'fulfilled' as const, value: workspaceData.value.notes }
+              : workspaceData;
+            const whiteboardsData = workspaceData.status === 'fulfilled'
+              ? { status: 'fulfilled' as const, value: workspaceData.value.whiteboards }
+              : workspaceData;
+            const wireframesData = workspaceData.status === 'fulfilled'
+              ? { status: 'fulfilled' as const, value: workspaceData.value.wireframes }
+              : workspaceData;
+            const vaultsData = workspaceData.status === 'fulfilled'
+              ? { status: 'fulfilled' as const, value: { vaults: workspaceData.value.vaults } }
+              : workspaceData;
+            const segmentsData = organizationData.status === 'fulfilled'
+              ? { status: 'fulfilled' as const, value: organizationData.value.segments }
+              : organizationData;
+            const campaignsData = organizationData.status === 'fulfilled'
+              ? { status: 'fulfilled' as const, value: { campaigns: organizationData.value.campaigns } }
+              : organizationData;
+            const automationsData = organizationData.status === 'fulfilled'
+              ? { status: 'fulfilled' as const, value: { workflows: organizationData.value.workflows } }
+              : organizationData;
 
             if (listsData.status === 'fulfilled' && Array.isArray(listsData.value)) {
               const matchedLists = listsData.value
@@ -298,11 +319,27 @@ export function GlobalSearch({ open, onClose, hasPaidAccess }: GlobalSearchProps
             }
 
             if (hasPaidAccess && query.length > 2) {
-              const paidResults = await Promise.allSettled([
-                getContacts({ search: query, limit: 3 }),
-                getInvoices({ search: query, limit: 3 }),
-                getSignatures({ search: query, limit: 3 })
-              ]);
+              const paidResults = organizationData.status === 'fulfilled'
+                ? [
+                    {
+                      status: 'fulfilled' as const,
+                      value: { contacts: organizationData.value.contacts.map((contact) => ({
+                        id: contact.id,
+                        first_name: contact.firstName,
+                        last_name: contact.lastName,
+                        email: contact.email,
+                      })) },
+                    },
+                    {
+                      status: 'fulfilled' as const,
+                      value: { invoices: organizationData.value.invoices as unknown as Invoice[] },
+                    },
+                    {
+                      status: 'fulfilled' as const,
+                      value: { documents: organizationData.value.signatures as unknown as SignatureDocument[] },
+                    },
+                  ]
+                : [organizationData, organizationData, organizationData];
               const [contactsData, invoicesData, signaturesData] = paidResults;
               if (paidResults.some((result) => result.status === 'rejected')) setSearchError(true);
               
@@ -372,18 +409,22 @@ export function GlobalSearch({ open, onClose, hasPaidAccess }: GlobalSearchProps
           }
         }
 
-        setResults(allResults);
+        if (!controller.signal.aborted) setResults(allResults);
       } catch (error) {
+        if (controller.signal.aborted) return;
         console.error('Search error', error);
         setSearchError(true);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     };
 
     const debounce = setTimeout(search, 300);
-    return () => clearTimeout(debounce);
-  }, [query, getOrgId, hasPaidAccess, searchAttempt]);
+    return () => {
+      clearTimeout(debounce);
+      controller.abort();
+    };
+  }, [query, hasPaidAccess, organizationId, searchAttempt]);
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>

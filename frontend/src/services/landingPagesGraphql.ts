@@ -156,6 +156,7 @@ const mapPageInput = (
 export const getLandingPagesViaGraphql = async (
   params: { status?: Page['status'] | 'all'; search?: string; page?: number; limit?: number },
   organizationId?: number,
+  signal?: AbortSignal,
 ) => {
   const variables = {
     filter: {
@@ -169,6 +170,7 @@ export const getLandingPagesViaGraphql = async (
       landingPages: {
         nodes: GqlPage[];
         pageInfo: { page: number; pageSize: number; total: number; totalPages: number };
+        stats: { total: number; draft: number; published: number; archived: number };
       };
     },
     typeof variables
@@ -177,10 +179,12 @@ export const getLandingPagesViaGraphql = async (
       landingPages(filter: $filter, page: $page) {
         nodes { ${pageFields} }
         pageInfo { page pageSize total totalPages }
+        stats { total draft published archived }
       }
     }`,
     variables,
     organizationId,
+    signal,
   );
   return {
     pages: data.landingPages.nodes.map(mapPage),
@@ -190,6 +194,7 @@ export const getLandingPagesViaGraphql = async (
       total: data.landingPages.pageInfo.total,
       totalPages: data.landingPages.pageInfo.totalPages,
     },
+    stats: data.landingPages.stats,
   };
 };
 

@@ -982,10 +982,20 @@ must also have stable request ownership, freshness, and failure behavior.
   invalidate only derived snapshots. Avoid page-wide refetch sequences.
 - Compatibility fallbacks must remember a negotiated capability. Do not repeat
   a ladder of intentionally failing schema requests on every list refresh.
+- A route, editor bootstrap, preview, or compatibility fallback may not walk
+  every server page. Fetch one bounded support page, lazy-load additional
+  choices behind an explicit user action, and resolve a selected deep-linked
+  record directly when it falls outside that page.
+- Aggregate resolvers must honor the requested GraphQL selection. A legacy
+  compatibility field may remain in the schema, but its repository read must
+  not run when the current operation omits that field.
 
 Cold-route request budgets are measured by ownership: shell bootstrap, the
 route's critical operation, and explicitly documented secondary reads. A new
 card does not receive a new request merely because it is visually separate.
+Compatibility mode changes operation shape, not cardinality: each support
+resource still receives at most one bounded read. An off-page selected record
+may add one direct lookup; it must never trigger an implicit page-walking loop.
 
 See [the measured fetching audit](./fetching-audit.md) for the current request
 budgets, observed route counts, and prioritized migration queue.

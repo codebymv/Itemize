@@ -9,6 +9,7 @@ import {
     deleteInvoiceBusinessViaGraphql,
     removeInvoiceBusinessLogoViaGraphql,
     getInvoiceBusinessesViaGraphql,
+    getInvoiceBusinessPageViaGraphql,
     getInvoiceBusinessViaGraphql,
     updateInvoiceBusinessViaGraphql,
 } from './invoiceBusinessesGraphql';
@@ -427,6 +428,13 @@ export const deleteLogo = async (organizationId?: number): Promise<{ success: bo
 export const getBusinesses = async (organizationId?: number): Promise<Business[]> => {
     return getInvoiceBusinessesViaGraphql(organizationId);
 };
+
+export const getBusinessPage = async (
+    page = 1,
+    limit = 20,
+    organizationId?: number,
+    signal?: AbortSignal,
+) => getInvoiceBusinessPageViaGraphql(page, limit, organizationId, signal);
 
 export const getBusiness = async (
     businessId: number,

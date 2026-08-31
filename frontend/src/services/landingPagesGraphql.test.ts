@@ -101,6 +101,7 @@ describe('landing-page GraphQL consumers', () => {
             landingPages: {
               nodes: [page],
               pageInfo: { page: 2, pageSize: 10, total: 11, totalPages: 2 },
+              stats: { total: 14, draft: 6, published: 7, archived: 1 },
             },
           },
         }),
@@ -121,6 +122,7 @@ describe('landing-page GraphQL consumers', () => {
         },
       ],
       pagination: { page: 2, limit: 10, total: 11, totalPages: 2 },
+      stats: { total: 14, draft: 6, published: 7, archived: 1 },
     });
     await expect(getLandingPageViaGraphql(12, 4)).resolves.toMatchObject({
       id: 12,

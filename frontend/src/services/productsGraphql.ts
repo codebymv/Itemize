@@ -44,6 +44,152 @@ export const mapProduct = (product: GraphqlProduct): Product => ({
   updated_at: product.updatedAt,
 });
 
+export type ProductStats = {
+  total: number;
+  active: number;
+  inactive: number;
+  oneTime: number;
+  recurring: number;
+};
+
+export type ProductListParams = {
+  is_active?: boolean;
+  product_type?: Product['product_type'];
+  search?: string;
+  page?: number;
+  limit?: number;
+};
+
+export type ProductListResponse = {
+  products: Product[];
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+  stats: ProductStats;
+};
+
+type ProductPagePayload = {
+  nodes: GraphqlProduct[];
+  pageInfo: { page: number; pageSize: number; total: number; totalPages: number; hasNextPage: boolean };
+  stats: ProductStats;
+};
+
+type ProductListCapability = 'unknown' | 'aggregate' | 'legacy';
+let productListCapability: ProductListCapability = 'unknown';
+
+const productPageQuery = `query ProductPage($filter: ProductFilterInput, $page: PageInput) {
+  products(filter: $filter, page: $page) {
+    nodes { ${productFields} }
+    pageInfo { page pageSize total totalPages hasNextPage }
+    stats { total active inactive oneTime recurring }
+  }
+}`;
+
+const legacyProductPageQuery = `query ProductPageLegacy(
+  $filter: ProductFilterInput,
+  $page: PageInput,
+  $summaryPage: PageInput
+) {
+  filtered: products(filter: $filter, page: $page) {
+    nodes { ${productFields} }
+    pageInfo { page pageSize total totalPages hasNextPage }
+  }
+  all: products(page: $summaryPage) {
+    nodes { productType }
+    pageInfo { total }
+  }
+  active: products(filter: { isActive: true }, page: $summaryPage) { pageInfo { total } }
+  inactive: products(filter: { isActive: false }, page: $summaryPage) { pageInfo { total } }
+}`;
+
+const missingProductMetadata = (error: unknown): boolean => error instanceof Error
+  && error.message.includes('Cannot query field')
+  && (error.message.includes('stats') || error.message.includes('productType'));
+
+const responseFromPage = (value: ProductPagePayload): ProductListResponse => ({
+  products: value.nodes.map(mapProduct),
+  pagination: {
+    page: value.pageInfo.page,
+    limit: value.pageInfo.pageSize,
+    total: value.pageInfo.total,
+    totalPages: value.pageInfo.totalPages,
+  },
+  stats: value.stats,
+});
+
+export const getProductPageViaGraphql = async (
+  params: ProductListParams = {},
+  organizationId?: number,
+  signal?: AbortSignal,
+): Promise<ProductListResponse> => {
+  const page = params.page ?? 1;
+  const limit = params.limit ?? 20;
+  const normalizedSearch = params.search?.trim();
+  const filter = {
+    ...(params.is_active === undefined ? {} : { isActive: params.is_active }),
+    ...(params.product_type === undefined ? {} : { productType: params.product_type }),
+    ...(normalizedSearch ? { search: normalizedSearch } : {}),
+  };
+  const variables = { filter, page: { page, pageSize: limit } };
+
+  if (productListCapability !== 'legacy') {
+    try {
+      const data = await graphqlRequest<{ products: ProductPagePayload }, typeof variables>(
+        productPageQuery,
+        variables,
+        organizationId,
+        signal,
+      );
+      productListCapability = 'aggregate';
+      return responseFromPage(data.products);
+    } catch (error) {
+      if (productListCapability !== 'unknown' || !missingProductMetadata(error)) throw error;
+      productListCapability = 'legacy';
+    }
+  }
+
+  const legacyFilter = {
+    ...(params.is_active === undefined ? {} : { isActive: params.is_active }),
+    ...(normalizedSearch ? { search: normalizedSearch } : {}),
+  };
+  const data = await graphqlRequest<{
+    filtered: Omit<ProductPagePayload, 'stats'>;
+    all: { nodes: Array<{ productType: Product['product_type'] }>; pageInfo: { total: number } };
+    active: { pageInfo: { total: number } };
+    inactive: { pageInfo: { total: number } };
+  }, { filter: typeof legacyFilter; page: { page: number; pageSize: number }; summaryPage: { page: number; pageSize: number } }>(
+    legacyProductPageQuery,
+    { filter: legacyFilter, page: variables.page, summaryPage: { page: 1, pageSize: 100 } },
+    organizationId,
+    signal,
+  );
+  const legacyNodes = params.product_type === undefined
+    ? data.filtered.nodes
+    : data.filtered.nodes.filter((product) => product.productType === params.product_type);
+  const filteredTotal = params.product_type === undefined
+    ? data.filtered.pageInfo.total
+    : legacyNodes.length;
+  return responseFromPage({
+    ...data.filtered,
+    nodes: legacyNodes,
+    pageInfo: {
+      ...data.filtered.pageInfo,
+      total: filteredTotal,
+      totalPages: filteredTotal === 0 ? 0 : Math.ceil(filteredTotal / data.filtered.pageInfo.pageSize),
+      hasNextPage: false,
+    },
+    stats: {
+      total: data.all.pageInfo.total,
+      active: data.active.pageInfo.total,
+      inactive: data.inactive.pageInfo.total,
+      oneTime: data.all.nodes.filter((product) => product.productType === 'one_time').length,
+      recurring: data.all.nodes.filter((product) => product.productType === 'recurring').length,
+    },
+  });
+};
+
+export const resetProductListCapability = (): void => {
+  productListCapability = 'unknown';
+};
+
 const mapCreateInput = (product: Partial<Product>) => {
   const productType = product.product_type ?? 'one_time';
   return {
@@ -95,38 +241,9 @@ export const getProductsViaGraphql = async (
   let page = 1;
   let hasNextPage = true;
   while (hasNextPage) {
-    const data = await graphqlRequest<
-      {
-        products: {
-          nodes: GraphqlProduct[];
-          pageInfo: { hasNextPage: boolean };
-        };
-      },
-      {
-        filter: { isActive?: boolean; search?: string };
-        page: { page: number; pageSize: number };
-      }
-    >(
-      `query Products($filter: ProductFilterInput, $page: PageInput) {
-        products(filter: $filter, page: $page) {
-          nodes { ${productFields} }
-          pageInfo { hasNextPage }
-        }
-      }`,
-      {
-        filter: {
-          ...(filter.is_active === undefined
-            ? {}
-            : { isActive: filter.is_active }),
-          ...(filter.search === undefined ? {} : { search: filter.search }),
-        },
-        page: { page, pageSize: 100 },
-      },
-      organizationId,
-      signal,
-    );
-    products.push(...data.products.nodes.map(mapProduct));
-    hasNextPage = data.products.pageInfo.hasNextPage;
+    const data = await getProductPageViaGraphql({ ...filter, page, limit: 100 }, organizationId, signal);
+    products.push(...data.products);
+    hasNextPage = page < data.pagination.totalPages;
     page += 1;
   }
   return products;

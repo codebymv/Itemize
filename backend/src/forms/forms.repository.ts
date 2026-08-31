@@ -190,6 +190,64 @@ export class FormsRepository {
     }
   }
 
+  async findPage(criteria: {
+    organizationId: number;
+    status?: string;
+    searchPattern?: string;
+    pageSize: number;
+    offset: number;
+  }): Promise<{
+    rows: FormRow[];
+    total: number;
+    stats: { total: number; draft: number; published: number; archived: number };
+  }> {
+    const values: unknown[] = [criteria.organizationId];
+    const clauses = ['f.organization_id = $1'];
+    if (criteria.status !== undefined) {
+      values.push(criteria.status);
+      clauses.push(`f.status = $${values.length}`);
+    }
+    if (criteria.searchPattern !== undefined) {
+      values.push(criteria.searchPattern);
+      clauses.push(`(
+        f.name ILIKE $${values.length} ESCAPE '\\'
+        OR f.description ILIKE $${values.length} ESCAPE '\\'
+        OR f.slug ILIKE $${values.length} ESCAPE '\\'
+      )`);
+    }
+    const where = clauses.join(' AND ');
+    const rowValues = [...values, criteria.pageSize, criteria.offset];
+    const [count, rows, stats] = await Promise.all([
+      this.pool.query<{ total: number }>(
+        `SELECT COUNT(*)::int AS total FROM forms f WHERE ${where}`,
+        values,
+      ),
+      this.pool.query<FormRow>(
+        `SELECT ${formSelection}
+         FROM forms f
+         WHERE ${where}
+         ORDER BY f.created_at DESC, f.id DESC
+         LIMIT $${rowValues.length - 1} OFFSET $${rowValues.length}`,
+        rowValues,
+      ),
+      this.pool.query<{
+        total: number; draft: number; published: number; archived: number;
+      }>(
+        `SELECT COUNT(*)::int AS total,
+                COUNT(*) FILTER (WHERE status = 'draft')::int AS draft,
+                COUNT(*) FILTER (WHERE status = 'published')::int AS published,
+                COUNT(*) FILTER (WHERE status = 'archived')::int AS archived
+         FROM forms WHERE organization_id = $1`,
+        [criteria.organizationId],
+      ),
+    ]);
+    return {
+      rows: rows.rows,
+      total: count.rows[0]?.total ?? 0,
+      stats: stats.rows[0] ?? { total: 0, draft: 0, published: 0, archived: 0 },
+    };
+  }
+
   async findById(
     organizationId: number,
     formId: number,

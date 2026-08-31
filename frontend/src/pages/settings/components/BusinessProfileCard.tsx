@@ -13,6 +13,9 @@ interface BusinessProfileCardProps {
   loading?: boolean;
   loadError?: boolean;
   onRetry?: () => void;
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
   onAddBusiness: () => void;
   onEditBusiness: (business: Business) => void;
   onDeleteBusiness: (business: Business) => void;
@@ -23,6 +26,9 @@ export const BusinessProfileCard: React.FC<BusinessProfileCardProps> = ({
   loading = false,
   loadError = false,
   onRetry,
+  hasMore = false,
+  loadingMore = false,
+  onLoadMore,
   onAddBusiness,
   onEditBusiness,
   onDeleteBusiness,
@@ -133,6 +139,17 @@ export const BusinessProfileCard: React.FC<BusinessProfileCardProps> = ({
                 </div>
               </div>
             ))}
+            {hasMore && onLoadMore && (
+              <Button
+                type="button"
+                variant="outline"
+                className="min-h-11 w-full"
+                onClick={onLoadMore}
+                disabled={loadingMore}
+              >
+                {loadingMore ? 'Loading businesses...' : 'Load more businesses'}
+              </Button>
+            )}
           </div>
         )}
       </CardContent>

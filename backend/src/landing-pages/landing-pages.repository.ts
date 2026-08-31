@@ -126,43 +126,58 @@ export class LandingPagesRepository {
     search: string | undefined,
     page: number,
     pageSize: number,
-  ): Promise<{ rows: LandingPageRow[]; total: number }> {
-    const client = await this.pool.connect();
-    try {
-      const conditions = ['p.organization_id = $1'];
-      const values: unknown[] = [organizationId];
-      if (status) {
-        values.push(status);
-        conditions.push(`p.status = $${values.length}`);
-      }
-      if (search) {
-        values.push(`%${search.replace(/[\\%_]/g, '\\$&')}%`);
-        conditions.push(
-          `(p.name ILIKE $${values.length} ESCAPE '\\' OR p.slug ILIKE $${values.length} ESCAPE '\\')`,
-        );
-      }
-      values.push(pageSize, (page - 1) * pageSize);
-      const result = await client.query<LandingPageRow & { total_count: number }>(
+  ): Promise<{
+    rows: LandingPageRow[];
+    total: number;
+    stats: { total: number; draft: number; published: number; archived: number };
+  }> {
+    const conditions = ['p.organization_id = $1'];
+    const values: unknown[] = [organizationId];
+    if (status) {
+      values.push(status);
+      conditions.push(`p.status = $${values.length}`);
+    }
+    if (search) {
+      values.push(`%${search.replace(/[\\%_]/g, '\\$&')}%`);
+      conditions.push(
+        `(p.name ILIKE $${values.length} ESCAPE '\\' OR p.slug ILIKE $${values.length} ESCAPE '\\')`,
+      );
+    }
+    const rowValues = [...values, pageSize, (page - 1) * pageSize];
+    const [count, rows, stats] = await Promise.all([
+      this.pool.query<{ total: number }>(
+        `SELECT COUNT(*)::int AS total FROM pages p WHERE ${conditions.join(' AND ')}`,
+        values,
+      ),
+      this.pool.query<LandingPageRow>(
         `SELECT ${PAGE_COLUMNS},
                 u.name AS created_by_name,
-                COUNT(s.id)::int AS section_count,
-                COUNT(*) OVER()::int AS total_count
+                COUNT(s.id)::int AS section_count
          FROM pages p
          LEFT JOIN users u ON u.id = p.created_by
          LEFT JOIN page_sections s ON s.page_id = p.id
          WHERE ${conditions.join(' AND ')}
          GROUP BY p.id, u.name
          ORDER BY p.updated_at DESC, p.id DESC
-         LIMIT $${values.length - 1} OFFSET $${values.length}`,
-        values,
-      );
-      return {
-        rows: result.rows,
-        total: result.rows[0]?.total_count ?? 0,
-      };
-    } finally {
-      client.release();
-    }
+         LIMIT $${rowValues.length - 1} OFFSET $${rowValues.length}`,
+        rowValues,
+      ),
+      this.pool.query<{
+        total: number; draft: number; published: number; archived: number;
+      }>(
+        `SELECT COUNT(*)::int AS total,
+                COUNT(*) FILTER (WHERE status = 'draft')::int AS draft,
+                COUNT(*) FILTER (WHERE status = 'published')::int AS published,
+                COUNT(*) FILTER (WHERE status = 'archived')::int AS archived
+         FROM pages WHERE organization_id = $1`,
+        [organizationId],
+      ),
+    ]);
+    return {
+      rows: rows.rows,
+      total: count.rows[0]?.total ?? 0,
+      stats: stats.rows[0] ?? { total: 0, draft: 0, published: 0, archived: 0 },
+    };
   }
 
   async find(organizationId: number, pageId: number): Promise<PageAggregate | null> {

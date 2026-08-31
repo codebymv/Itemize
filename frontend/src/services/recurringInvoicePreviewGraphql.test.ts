@@ -82,7 +82,8 @@ describe('recurring invoice preview GraphQL bootstrap', () => {
     const detail = response({ data: { recurringInvoice } });
     const number = response({ data: { previewRecurringInvoiceNumber: 'INV-00042' } });
     const businesses = response({ data: { invoiceBusinesses: {
-      nodes: [business], pageInfo: { hasNextPage: false },
+      nodes: [business],
+      pageInfo: { page: 1, pageSize: 100, total: 1, totalPages: 1 },
     } } });
     vi.mocked(fetch)
       .mockResolvedValueOnce(response({ errors: [{
@@ -108,10 +109,10 @@ describe('recurring invoice preview GraphQL bootstrap', () => {
       'RecurringInvoicePreviewBootstrap',
       'RecurringInvoice',
       'PreviewRecurringInvoiceNumber',
-      'InvoiceBusinesses',
+      'InvoiceBusinessPage',
       'RecurringInvoice',
       'PreviewRecurringInvoiceNumber',
-      'InvoiceBusinesses',
+      'InvoiceBusinessPage',
     ]);
   });
 });

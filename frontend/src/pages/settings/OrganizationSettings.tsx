@@ -81,7 +81,7 @@ import type {
   OrganizationActivity,
   OrganizationAllowance,
 } from '@/services/organizationsGraphql';
-import { getBusinesses, type Business } from '@/services/invoicesApi';
+import { getBusiness, getBusinessPage, type Business } from '@/services/invoicesApi';
 import type { JsonRecord, OrganizationInvitation, OrganizationMember } from '@/types';
 import { AVAILABLE_PLANS_PATH } from '@/lib/settingsNavigation';
 
@@ -232,11 +232,35 @@ export function OrganizationSettings({
     if (!organizationId) return;
     setLoading(true);
     setDetailsLoadError(false);
+    const configuredDefaultBusinessId = settingId(
+      organization.settings,
+      'defaultBusinessId',
+    );
+    const loadBusinessChoices = async (): Promise<Business[]> => {
+      const firstPage = await getBusinessPage(1, 100, organizationId);
+      if (
+        configuredDefaultBusinessId == null
+        || firstPage.businesses.some(
+          (business) => business.id === configuredDefaultBusinessId,
+        )
+      ) {
+        return firstPage.businesses;
+      }
+      try {
+        const configuredBusiness = await getBusiness(
+          configuredDefaultBusinessId,
+          organizationId,
+        );
+        return [...firstPage.businesses, configuredBusiness];
+      } catch {
+        return firstPage.businesses;
+      }
+    };
     try {
       const [membersResult, invitationsResult, businessesResult, activityResult] = await Promise.allSettled([
         getOrganizationMembers(organizationId),
         canManage ? getOrganizationInvitations(organizationId) : Promise.resolve([]),
-        getBusinesses(organizationId),
+        loadBusinessChoices(),
         canManage ? getOrganizationActivity(organizationId, 20) : Promise.resolve([]),
       ]);
       if (membersResult.status === 'rejected') throw membersResult.reason;
@@ -259,7 +283,7 @@ export function OrganizationSettings({
     } finally {
       setLoading(false);
     }
-  }, [canManage, organizationId]);
+  }, [canManage, organization.settings, organizationId]);
 
   useEffect(() => {
     void loadDetails();

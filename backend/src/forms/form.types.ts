@@ -5,6 +5,7 @@ import {
   ObjectType,
 } from '@nestjs/graphql';
 import { GraphQLJSON } from 'graphql-scalars';
+import { PageInfo } from '../common/pagination';
 
 @ObjectType()
 export class FormField {
@@ -117,6 +118,26 @@ export class Form {
 
   @Field(() => GraphQLISODateTime)
   updatedAt: Date;
+}
+
+@ObjectType()
+export class FormStats {
+  @Field(() => Int) total: number;
+  @Field(() => Int) draft: number;
+  @Field(() => Int) published: number;
+  @Field(() => Int) archived: number;
+}
+
+@ObjectType()
+export class FormPage {
+  @Field(() => [Form])
+  nodes: Form[];
+
+  @Field(() => PageInfo)
+  pageInfo: PageInfo;
+
+  @Field(() => FormStats)
+  stats: FormStats;
 }
 
 @ObjectType()

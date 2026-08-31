@@ -6,6 +6,7 @@ import {
   getRecurringInvoice,
   getRecurringInvoiceHistory,
   getRecurringInvoiceNumberPreview,
+  getRecurringInvoicePage,
   getRecurringInvoices,
   pauseRecurringInvoice,
   resumeRecurringInvoice,
@@ -18,6 +19,7 @@ import {
   getRecurringInvoiceViaGraphql,
   getRecurringInvoiceHistoryViaGraphql,
   getRecurringInvoiceNumberPreviewViaGraphql,
+  getRecurringInvoicePageViaGraphql,
   getRecurringInvoicesViaGraphql,
   pauseRecurringInvoiceViaGraphql,
   resumeRecurringInvoiceViaGraphql,
@@ -31,6 +33,7 @@ vi.mock('./recurringInvoicesGraphql', () => ({
   getRecurringInvoiceViaGraphql: vi.fn(),
   getRecurringInvoiceHistoryViaGraphql: vi.fn(),
   getRecurringInvoiceNumberPreviewViaGraphql: vi.fn(),
+  getRecurringInvoicePageViaGraphql: vi.fn(),
   getRecurringInvoicesViaGraphql: vi.fn(),
   pauseRecurringInvoiceViaGraphql: vi.fn(),
   resumeRecurringInvoiceViaGraphql: vi.fn(),
@@ -64,13 +67,23 @@ describe('recurring invoice API transport', () => {
     vi.mocked(getRecurringInvoiceHistoryViaGraphql).mockResolvedValue([]);
     vi.mocked(getRecurringInvoiceNumberPreviewViaGraphql)
       .mockResolvedValue('INV-00009');
+    vi.mocked(getRecurringInvoicePageViaGraphql).mockResolvedValue({
+      recurringInvoices: [recurring],
+      pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+      stats: { total: 1, active: 1, paused: 0, completed: 0 },
+    });
 
     await expect(getRecurringInvoices('paused', 4)).resolves.toEqual([recurring]);
+    await expect(getRecurringInvoicePage({ status: 'active', page: 1 }, 4))
+      .resolves.toMatchObject({ recurringInvoices: [recurring] });
     await expect(getRecurringInvoice(8, 4)).resolves.toEqual(recurring);
     await expect(getRecurringInvoiceHistory(8, 4)).resolves.toEqual([]);
     await expect(getRecurringInvoiceNumberPreview(4)).resolves.toBe('INV-00009');
 
     expect(getRecurringInvoicesViaGraphql).toHaveBeenCalledWith('paused', 4);
+    expect(getRecurringInvoicePageViaGraphql).toHaveBeenCalledWith(
+      { status: 'active', page: 1 }, 4, undefined,
+    );
     expect(getRecurringInvoiceViaGraphql).toHaveBeenCalledWith(8, 4);
     expect(getRecurringInvoiceHistoryViaGraphql).toHaveBeenCalledWith(8, 4);
     expect(getRecurringInvoiceNumberPreviewViaGraphql).toHaveBeenCalledWith(4);

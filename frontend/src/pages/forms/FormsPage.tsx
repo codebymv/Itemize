@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, FileText, MoreHorizontal, Trash2, Copy, Eye, EyeOff, BarChart3, Pencil, Archive, ChevronDown, Maximize2, Loader2, PieChart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -25,7 +26,7 @@ import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { Form } from '@/types';
-import { getForms, getForm, updateForm, deleteForm, duplicateForm, createForm } from '@/services/formsApi';
+import { getFormPage, getForm, updateForm, deleteForm, duplicateForm, createForm } from '@/services/formsApi';
 import { useOrganization } from '@/hooks/useOrganization';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { HeaderAction, HeaderCombinedQuery, HeaderFilters, HeaderSearch } from '@/components/layout/DesktopHeaderTools';
@@ -42,9 +43,14 @@ import { ExpandedRowActionLabel, ExpandedRowActions } from '@/components/ui/expa
 import { FormPreviewCanvas } from '@/components/forms/FormPreviewCanvas';
 import { FormPreviewDialog } from '@/components/forms/FormPreviewDialog';
 import { publicFormPath } from '@/lib/publicContentRoutes';
+import { formQueryKeys } from '@/services/formQueryKeys';
+import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
+
+const PAGE_SIZE = 20;
 
 export function FormsPage() {
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const { toast } = useToast();
 
     // Route-aware onboarding (will show 'pages' onboarding for Pages & Forms group)
@@ -56,13 +62,12 @@ export function FormsPage() {
         featureKey: onboardingFeatureKey,
     } = useRouteOnboarding();
 
-    const [forms, setForms] = useState<Form[]>([]);
-    const [loading, setLoading] = useState(true);
     const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
+    const [page, setPage] = useState(1);
     const [formToDelete, setFormToDelete] = useState<Form | null>(null);
-    const [loadError, setLoadError] = useState<string | null>(null);
     const [expandedFormId, setExpandedFormId] = useState<number | null>(null);
     const [expandedFormData, setExpandedFormData] = useState<Form | null>(null);
     const [loadingExpandedId, setLoadingExpandedId] = useState<number | null>(null);
@@ -80,45 +85,58 @@ export function FormsPage() {
     }, [navigate, organizationId, toast]);
 
     useEffect(() => {
-        if (orgLoading) {
-            setLoading(true);
-            return;
-        }
-
-        if (!organizationId) {
-            setLoading(false);
-        }
-    }, [organizationId, initError, orgLoading]);
-
-    const fetchForms = useCallback(async () => {
-        if (!organizationId) {
-            if (!orgLoading) {
-                setForms([]);
-                setLoading(false);
-            }
-            return;
-        }
-        setLoading(true);
-        setLoadError(null);
-        try {
-            const response = await getForms(organizationId);
-            setForms(response.forms);
-        } catch (error) {
-            setLoadError(toastMessages.failedToLoad('forms'));
-        } finally {
-            setLoading(false);
-        }
-    }, [organizationId, orgLoading]);
+        const timeout = window.setTimeout(() => setDebouncedSearch(searchQuery.trim()), 250);
+        return () => window.clearTimeout(timeout);
+    }, [searchQuery]);
 
     useEffect(() => {
-        fetchForms();
-    }, [fetchForms]);
+        setPage(1);
+        setExpandedFormId(null);
+        setExpandedFormData(null);
+    }, [debouncedSearch, statusFilter]);
+
+    const listParams = {
+        status: statusFilter,
+        search: debouncedSearch,
+        page,
+        limit: PAGE_SIZE,
+    };
+    const formsQuery = useQuery({
+        queryKey: formQueryKeys.page(organizationId, listParams),
+        queryFn: ({ signal }) => getFormPage({
+            status: statusFilter as Form['status'] | 'all',
+            search: debouncedSearch || undefined,
+            page,
+            limit: PAGE_SIZE,
+        }, organizationId!, signal),
+        enabled: Boolean(organizationId) && !initError,
+        staleTime: QUERY_STALE_TIME_MS,
+        retry: shouldRetryQuery,
+        placeholderData: keepPreviousData,
+    });
+    const forms = formsQuery.data?.forms ?? [];
+    const pagination = formsQuery.data?.pagination ?? {
+        page, limit: PAGE_SIZE, total: 0, totalPages: 0,
+    };
+    const stats = formsQuery.data?.stats ?? {
+        total: 0, draft: 0, published: 0, archived: 0,
+    };
+    const loading = orgLoading || (Boolean(organizationId) && formsQuery.isPending);
+    const loadError = formsQuery.isError ? toastMessages.failedToLoad('forms') : null;
+
+    useEffect(() => {
+        if (!formsQuery.data) return;
+        const lastAvailablePage = Math.max(1, pagination.totalPages);
+        if (page > lastAvailablePage) setPage(lastAvailablePage);
+    }, [formsQuery.data, page, pagination.totalPages]);
 
     const handleToggleStatus = async (form: Form, newStatus: 'published' | 'draft') => {
         if (!organizationId) return;
         try {
             await updateForm(form.id, { status: newStatus }, organizationId);
-            setForms(prev => prev.map(f => f.id === form.id ? { ...f, status: newStatus } : f));
+            await queryClient.invalidateQueries({
+                queryKey: formQueryKeys.pages(organizationId),
+            });
             setExpandedFormData(current => current?.id === form.id ? { ...current, status: newStatus } : current);
             setPreviewForm(current => current?.id === form.id ? { ...current, status: newStatus } : current);
             toast({ title: newStatus === 'published' ? 'Form published' : 'Form unpublished' });
@@ -130,8 +148,10 @@ export function FormsPage() {
     const handleDuplicate = async (id: number) => {
         if (!organizationId) return;
         try {
-            const copy = await duplicateForm(id, organizationId);
-            setForms(prev => [copy, ...prev]);
+            await duplicateForm(id, organizationId);
+            await queryClient.invalidateQueries({
+                queryKey: formQueryKeys.pages(organizationId),
+            });
             toast({ title: 'Duplicated', description: toastMessages.duplicated('form') });
         } catch (error) {
             toast({ title: 'Error', description: toastMessages.failedToDuplicate('form'), variant: 'destructive' });
@@ -142,7 +162,9 @@ export function FormsPage() {
         if (!organizationId || !formToDelete) return false;
         try {
             await deleteForm(formToDelete.id, organizationId);
-            setForms(prev => prev.filter(f => f.id !== formToDelete.id));
+            await queryClient.invalidateQueries({
+                queryKey: formQueryKeys.pages(organizationId),
+            });
             setExpandedFormId(current => current === formToDelete.id ? null : current);
             setExpandedFormData(current => current?.id === formToDelete.id ? null : current);
             setFormToDelete(null);
@@ -196,23 +218,12 @@ export function FormsPage() {
         }
     };
 
-    const normalizedQuery = searchQuery.trim().toLowerCase();
-    const filteredForms = forms.filter(form =>
-        (statusFilter === 'all' || form.status === statusFilter) &&
-        (!normalizedQuery || form.name.toLowerCase().includes(normalizedQuery) || form.description?.toLowerCase().includes(normalizedQuery))
-    );
+    const normalizedQuery = searchQuery.trim();
     const hasQuery = Boolean(normalizedQuery || statusFilter !== 'all');
     const clearQuery = () => {
         setSearchQuery('');
         setStatusFilter('all');
     };
-    const stats = {
-        archived: forms.filter(form => form.status === 'archived').length,
-        total: forms.length,
-        draft: forms.filter(form => form.status === 'draft').length,
-        published: forms.filter(form => form.status === 'published').length,
-    };
-
     const statusSelect = (compact = false) => (
         <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className={compact ? 'h-11 w-full' : 'h-9 w-[9rem]'} aria-label="Filter forms by status">
@@ -274,8 +285,8 @@ export function FormsPage() {
                     {loading ? (
                         <div className="space-y-4 p-6">{[...Array(4)].map((_, index) => <Skeleton key={index} className="h-20 w-full" />)}</div>
                     ) : loadError ? (
-                        <ErrorState title="Forms unavailable" description={loadError} icon={FileText} onAction={() => void fetchForms()} className="p-12" />
-                    ) : filteredForms.length === 0 ? (
+                        <ErrorState title="Forms unavailable" description={loadError} icon={FileText} onAction={() => void formsQuery.refetch()} className="p-12" />
+                    ) : forms.length === 0 ? (
                             <EmptyState
                                 icon={FileText}
                                 kind={hasQuery ? 'results' : 'collection'}
@@ -287,7 +298,7 @@ export function FormsPage() {
                             />
                     ) : (
                         <div className="divide-y">
-                            {filteredForms.map((form) => {
+                            {forms.map((form) => {
                                 const visual = getContentStatusVisual(form.status);
                                 const StatusIcon = visual.icon;
                                 const isExpanded = expandedFormId === form.id;
@@ -390,6 +401,18 @@ export function FormsPage() {
                     )}
                 </CardContent>
             </Card>
+            {pagination.totalPages > 1 && (
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-sm text-muted-foreground">
+                        {pagination.total} form{pagination.total === 1 ? '' : 's'}
+                    </p>
+                    <div className="flex items-center justify-between gap-2 sm:justify-end">
+                        <Button variant="outline" size="sm" onClick={() => setPage(current => Math.max(1, current - 1))} disabled={formsQuery.isFetching || pagination.page <= 1}>Previous</Button>
+                        <span className="min-w-20 text-center text-sm text-muted-foreground">{pagination.page} of {pagination.totalPages}</span>
+                        <Button variant="outline" size="sm" onClick={() => setPage(current => Math.min(pagination.totalPages, current + 1))} disabled={formsQuery.isFetching || pagination.page >= pagination.totalPages}>Next</Button>
+                    </div>
+                </div>
+            )}
             <DeleteDialog
                 open={Boolean(formToDelete)}
                 onOpenChange={(open) => { if (!open) setFormToDelete(null); }}

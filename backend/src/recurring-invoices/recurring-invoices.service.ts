@@ -49,15 +49,30 @@ export class RecurringInvoicesService {
     const normalized = this.page(page);
     const status = filter.status === undefined || filter.status === 'all'
       ? undefined : this.status(filter.status);
+    const searchPattern = this.search(filter.search);
     const result = await this.recurringInvoices.findPage({
       organizationId,
       ...(status === undefined ? {} : { status }),
+      ...(searchPattern === undefined ? {} : { searchPattern }),
       pageSize: normalized.pageSize,
       offset: normalized.offset,
     });
     return {
       nodes: result.rows.map((row) => this.map(row)),
-      pageInfo: pageInfo(normalized.page, normalized.pageSize, result.total),
+      pageInfo: pageInfo(
+        normalized.page,
+        normalized.pageSize,
+        this.count(result.total, 'recurringInvoices.total'),
+      ),
+      stats: {
+        total: this.count(result.stats.total, 'recurringInvoices.stats.total'),
+        active: this.count(result.stats.active, 'recurringInvoices.stats.active'),
+        paused: this.count(result.stats.paused, 'recurringInvoices.stats.paused'),
+        completed: this.count(
+          result.stats.completed,
+          'recurringInvoices.stats.completed',
+        ),
+      },
     };
   }
 
@@ -451,6 +466,27 @@ export class RecurringInvoicesService {
       pageSize: input.pageSize,
       offset: (input.page - 1) * input.pageSize,
     };
+  }
+
+  private search(value?: string): string | undefined {
+    if (value === undefined) return undefined;
+    const normalized = value.trim();
+    if (normalized.length < 1 || normalized.length > 100) {
+      throw itemizeGraphqlError(
+        'search must be between 1 and 100 characters',
+        'BAD_USER_INPUT',
+        { field: 'search', reason: 'INVALID_RECURRING_SEARCH' },
+      );
+    }
+    return `%${normalized.replace(/[\\%_]/g, '\\$&')}%`;
+  }
+
+  private count(value: unknown, field: string): number {
+    const parsed = Number(value);
+    if (!Number.isSafeInteger(parsed) || parsed < 0 || parsed > 2_147_483_647) {
+      throw new Error(`Unsafe recurring invoice count at ${field}`);
+    }
+    return parsed;
   }
 
   private status(value: string): string {

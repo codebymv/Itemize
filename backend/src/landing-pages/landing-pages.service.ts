@@ -85,6 +85,7 @@ export class LandingPagesService {
         normalizedPage.pageSize,
         result.total,
       ),
+      stats: result.stats,
     };
   }
 

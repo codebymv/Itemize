@@ -24,6 +24,7 @@ import {
     duplicateFormViaGraphql,
     getFormSubmissionsViaGraphql,
     getFormViaGraphql,
+    getFormPageViaGraphql,
     getFormsViaGraphql,
     replaceFormFieldsViaGraphql,
     updateFormViaGraphql,
@@ -52,6 +53,17 @@ export interface FormCreateData {
 export const getForms = async (organizationId?: number, status?: string): Promise<FormsResponse> => {
     return getFormsViaGraphql(organizationId, status);
 };
+
+export const getFormPage = async (
+    params: {
+        status?: Form['status'] | 'all';
+        search?: string;
+        page?: number;
+        limit?: number;
+    } = {},
+    organizationId?: number,
+    signal?: AbortSignal,
+) => getFormPageViaGraphql(params, organizationId, signal);
 
 export const getForm = async (id: number, organizationId?: number): Promise<Form> => {
     return getFormViaGraphql(id, organizationId);

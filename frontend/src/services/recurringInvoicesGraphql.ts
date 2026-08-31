@@ -73,6 +73,26 @@ export const recurringInvoiceDetailFields = `
   items { productId name description quantity unitPrice taxRate }
 `;
 
+export type RecurringInvoiceStats = {
+  total: number;
+  active: number;
+  paused: number;
+  completed: number;
+};
+
+export type RecurringInvoiceListParams = {
+  status?: RecurringStatus | 'all';
+  search?: string;
+  page?: number;
+  limit?: number;
+};
+
+export type RecurringInvoiceListResponse = {
+  recurringInvoices: RecurringInvoice[];
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+  stats: RecurringInvoiceStats;
+};
+
 const mapItem = (item: GraphqlRecurringItem): RecurringInvoiceItem => ({
   product_id: item.productId,
   name: item.name,
@@ -142,6 +162,58 @@ const mapInput = (input: RecurringInvoiceWriteInput) => ({
   ...(input.payment_terms === undefined ? {} : { paymentTerms: input.payment_terms }),
 });
 
+export const getRecurringInvoicePageViaGraphql = async (
+  params: RecurringInvoiceListParams = {},
+  organizationId?: number,
+  signal?: AbortSignal,
+): Promise<RecurringInvoiceListResponse> => {
+  const status = params.status ?? 'all';
+  const normalizedSearch = params.search?.trim();
+  const page = params.page ?? 1;
+  const limit = params.limit ?? 20;
+  const data = await graphqlRequest<{
+    recurringInvoices: {
+      nodes: GraphqlRecurringInvoice[];
+      pageInfo: {
+        page: number;
+        pageSize: number;
+        total: number;
+        totalPages: number;
+      };
+      stats: RecurringInvoiceStats;
+    };
+  }, Record<string, unknown>>(
+    `query RecurringInvoicePage(
+      $filter: RecurringInvoiceFilterInput, $page: PageInput
+    ) {
+      recurringInvoices(filter: $filter, page: $page) {
+        nodes { ${coreFields} }
+        pageInfo { page pageSize total totalPages }
+        stats { total active paused completed }
+      }
+    }`,
+    {
+      filter: {
+        ...(status === 'all' ? {} : { status }),
+        ...(normalizedSearch ? { search: normalizedSearch } : {}),
+      },
+      page: { page, pageSize: limit },
+    },
+    organizationId,
+    signal,
+  );
+  return {
+    recurringInvoices: data.recurringInvoices.nodes.map(mapRecurringInvoice),
+    pagination: {
+      page: data.recurringInvoices.pageInfo.page,
+      limit: data.recurringInvoices.pageInfo.pageSize,
+      total: data.recurringInvoices.pageInfo.total,
+      totalPages: data.recurringInvoices.pageInfo.totalPages,
+    },
+    stats: data.recurringInvoices.stats,
+  };
+};
+
 export const getRecurringInvoicesViaGraphql = async (
   status: RecurringStatus | 'all',
   organizationId?: number,
@@ -151,29 +223,13 @@ export const getRecurringInvoicesViaGraphql = async (
   let page = 1;
   let totalPages = 1;
   do {
-    const data = await graphqlRequest<{
-      recurringInvoices: {
-        nodes: GraphqlRecurringInvoice[];
-        pageInfo: { totalPages: number };
-      };
-    }, Record<string, unknown>>(
-      `query RecurringInvoices(
-        $filter: RecurringInvoiceFilterInput, $page: PageInput
-      ) {
-        recurringInvoices(filter: $filter, page: $page) {
-          nodes { ${coreFields} }
-          pageInfo { totalPages }
-        }
-      }`,
-      {
-        filter: status === 'all' ? {} : { status },
-        page: { page, pageSize: 100 },
-      },
+    const data = await getRecurringInvoicePageViaGraphql(
+      { status, page, limit: 100 },
       organizationId,
       signal,
     );
-    rows.push(...data.recurringInvoices.nodes.map(mapRecurringInvoice));
-    totalPages = data.recurringInvoices.pageInfo.totalPages;
+    rows.push(...data.recurringInvoices);
+    totalPages = data.pagination.totalPages;
     page += 1;
   } while (page <= totalPages);
   return rows;

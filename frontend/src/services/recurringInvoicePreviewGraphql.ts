@@ -1,7 +1,7 @@
 import type { Business } from './invoicesApi';
 import type { RecurringInvoice } from './recurringInvoicesApi';
 import {
-  getInvoiceBusinessesViaGraphql,
+  getInvoiceBusinessPageViaGraphql,
   invoiceBusinessFields,
   mapBusiness,
   type GraphqlInvoiceBusiness,
@@ -44,12 +44,12 @@ const legacyBootstrap = async (
   const [recurringInvoice, previewInvoiceNumber, businesses] = await Promise.all([
     getRecurringInvoiceViaGraphql(recurringInvoiceId, organizationId, signal),
     getRecurringInvoiceNumberPreviewViaGraphql(organizationId, signal),
-    getInvoiceBusinessesViaGraphql(organizationId, signal),
+    getInvoiceBusinessPageViaGraphql(1, 100, organizationId, signal),
   ]);
   return {
     recurringInvoice,
     previewInvoiceNumber,
-    business: businesses[0] ?? null,
+    business: businesses.businesses[0] ?? null,
   };
 };
 

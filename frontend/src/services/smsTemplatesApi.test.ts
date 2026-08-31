@@ -37,7 +37,13 @@ const template = {
 describe('SMS-template permanent GraphQL transport', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(adapter.getSmsTemplatesViaGraphql).mockResolvedValue({ templates: [template], total: 1 });
+    vi.mocked(adapter.getSmsTemplatesViaGraphql).mockResolvedValue({
+      templates: [template],
+      total: 1,
+      pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+      stats: { total: 1, active: 1, inactive: 0, categories: 1 },
+      categories: [{ category: 'general', count: 1 }],
+    });
     vi.mocked(adapter.getSmsTemplateViaGraphql).mockResolvedValue(template);
     vi.mocked(adapter.createSmsTemplateViaGraphql).mockResolvedValue(template);
     vi.mocked(adapter.updateSmsTemplateViaGraphql).mockResolvedValue(template);

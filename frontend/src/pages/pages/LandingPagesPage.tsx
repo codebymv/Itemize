@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Layout, MoreHorizontal, Trash2, Copy, Eye, EyeOff, BarChart3, Pencil, Archive, ChevronDown, Maximize2, Loader2, PieChart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -40,24 +41,28 @@ import { getContentStatusVisual } from '@/pages/contentVisuals';
 import { ExpandedRowActionLabel, ExpandedRowActions } from '@/components/ui/expanded-row';
 import { LandingPagePreviewFrame } from '@/components/LandingPagePreviewFrame';
 import { PagePreviewDialog } from '@/components/PagePreviewDialog';
+import { landingPageQueryKeys } from '@/services/landingPageQueryKeys';
+import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
 
 type LandingPage = Page & {
     conversions: number;
 };
 
+const PAGE_SIZE = 20;
+
 export function LandingPagesPage() {
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const { toast } = useToast();
     // Onboarding
     const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('pages');
 
-    const [pages, setPages] = useState<LandingPage[]>([]);
-    const [loading, setLoading] = useState(true);
     const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
+    const [page, setPage] = useState(1);
     const [pageToDelete, setPageToDelete] = useState<LandingPage | null>(null);
-    const [loadError, setLoadError] = useState<string | null>(null);
     const [expandedPageId, setExpandedPageId] = useState<number | null>(null);
     const [expandedPageData, setExpandedPageData] = useState<LandingPage | null>(null);
     const [loadingExpandedId, setLoadingExpandedId] = useState<number | null>(null);
@@ -65,42 +70,53 @@ export function LandingPagesPage() {
     const previewRequestId = useRef(0);
 
     useEffect(() => {
-        if (orgLoading) {
-            setLoading(true);
-            return;
-        }
-
-        if (!organizationId) {
-            setLoading(false);
-        }
-    }, [organizationId, initError, orgLoading]);
-
-    const fetchPages = useCallback(async () => {
-        if (!organizationId) {
-            if (!orgLoading) {
-                setPages([]);
-                setLoading(false);
-            }
-            return;
-        }
-        setLoading(true);
-        setLoadError(null);
-        try {
-            const response = await getPages({}, organizationId);
-            setPages((response.pages || []).map(p => ({
-                ...p,
-                conversions: 0, // Would come from analytics
-            })));
-        } catch (error) {
-            setLoadError(toastMessages.failedToLoad('pages'));
-        } finally {
-            setLoading(false);
-        }
-    }, [organizationId, orgLoading]);
+        const timeout = window.setTimeout(() => setDebouncedSearch(searchQuery.trim()), 250);
+        return () => window.clearTimeout(timeout);
+    }, [searchQuery]);
 
     useEffect(() => {
-        fetchPages();
-    }, [fetchPages]);
+        setPage(1);
+        setExpandedPageId(null);
+        setExpandedPageData(null);
+    }, [debouncedSearch, statusFilter]);
+
+    const listParams = {
+        status: statusFilter,
+        search: debouncedSearch,
+        page,
+        limit: PAGE_SIZE,
+    };
+    const pagesQuery = useQuery({
+        queryKey: landingPageQueryKeys.page(organizationId, listParams),
+        queryFn: ({ signal }) => getPages({
+            status: statusFilter as Page['status'] | 'all',
+            search: debouncedSearch || undefined,
+            page,
+            limit: PAGE_SIZE,
+        }, organizationId!, signal),
+        enabled: Boolean(organizationId) && !initError,
+        staleTime: QUERY_STALE_TIME_MS,
+        retry: shouldRetryQuery,
+        placeholderData: keepPreviousData,
+    });
+    const pages: LandingPage[] = (pagesQuery.data?.pages ?? []).map((entry) => ({
+        ...entry,
+        conversions: 0,
+    }));
+    const pagination = pagesQuery.data?.pagination ?? {
+        page, limit: PAGE_SIZE, total: 0, totalPages: 0,
+    };
+    const stats = pagesQuery.data?.stats ?? {
+        total: 0, draft: 0, published: 0, archived: 0,
+    };
+    const loading = orgLoading || (Boolean(organizationId) && pagesQuery.isPending);
+    const loadError = pagesQuery.isError ? toastMessages.failedToLoad('pages') : null;
+
+    useEffect(() => {
+        if (!pagesQuery.data) return;
+        const lastAvailablePage = Math.max(1, pagination.totalPages);
+        if (page > lastAvailablePage) setPage(lastAvailablePage);
+    }, [page, pagesQuery.data, pagination.totalPages]);
 
     const handleCreatePage = async () => {
         if (!organizationId) return;
@@ -116,7 +132,9 @@ export function LandingPagesPage() {
         if (!organizationId) return;
         try {
             await updatePage(page.id, { status: newStatus }, organizationId);
-            setPages(prev => prev.map(p => p.id === page.id ? { ...p, status: newStatus } : p));
+            await queryClient.invalidateQueries({
+                queryKey: landingPageQueryKeys.pages(organizationId),
+            });
             setExpandedPageData(current => current?.id === page.id ? { ...current, status: newStatus } : current);
             setPreviewPage(current => current?.id === page.id ? { ...current, status: newStatus } : current);
             toast({ title: newStatus === 'published' ? 'Page published' : 'Page unpublished' });
@@ -128,11 +146,10 @@ export function LandingPagesPage() {
 const handleDuplicate = async (id: number) => {
         if (!organizationId) return;
         try {
-            const copy = await duplicatePage(id, organizationId);
-            setPages(prev => [{
-                ...copy,
-                conversions: 0,
-            } as LandingPage, ...prev]);
+            await duplicatePage(id, organizationId);
+            await queryClient.invalidateQueries({
+                queryKey: landingPageQueryKeys.pages(organizationId),
+            });
             toast({ title: 'Duplicated', description: toastMessages.duplicated('page') });
         } catch (error) {
             toast({ title: 'Error', description: toastMessages.failedToDuplicate('page'), variant: 'destructive' });
@@ -143,7 +160,9 @@ const handleDuplicate = async (id: number) => {
         if (!organizationId || !pageToDelete) return false;
         try {
             await deletePage(pageToDelete.id, organizationId);
-            setPages(prev => prev.filter(p => p.id !== pageToDelete.id));
+            await queryClient.invalidateQueries({
+                queryKey: landingPageQueryKeys.pages(organizationId),
+            });
             setExpandedPageId(current => current === pageToDelete.id ? null : current);
             setExpandedPageData(current => current?.id === pageToDelete.id ? null : current);
             setPageToDelete(null);
@@ -202,23 +221,12 @@ const handleDuplicate = async (id: number) => {
         }
     };
 
-    const normalizedQuery = searchQuery.trim().toLowerCase();
-    const filteredPages = pages.filter(page =>
-        (statusFilter === 'all' || page.status === statusFilter) &&
-        (!normalizedQuery || page.name.toLowerCase().includes(normalizedQuery) || page.description?.toLowerCase().includes(normalizedQuery) || page.slug.toLowerCase().includes(normalizedQuery))
-    );
+    const normalizedQuery = searchQuery.trim();
     const hasQuery = Boolean(normalizedQuery || statusFilter !== 'all');
     const clearQuery = () => {
         setSearchQuery('');
         setStatusFilter('all');
     };
-    const stats = {
-        archived: pages.filter(page => page.status === 'archived').length,
-        total: pages.length,
-        draft: pages.filter(page => page.status === 'draft').length,
-        published: pages.filter(page => page.status === 'published').length,
-    };
-
     const statusSelect = (compact = false) => (
         <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className={compact ? 'h-11 w-full' : 'h-9 w-[9rem]'} aria-label="Filter pages by status">
@@ -278,8 +286,8 @@ const handleDuplicate = async (id: number) => {
                     {loading ? (
                         <div className="space-y-4 p-6">{[...Array(4)].map((_, index) => <Skeleton key={index} className="h-20 w-full" />)}</div>
                     ) : loadError ? (
-                        <ErrorState title="Pages unavailable" description={loadError} icon={Layout} onAction={() => void fetchPages()} className="p-12" />
-                    ) : filteredPages.length === 0 ? (
+                        <ErrorState title="Pages unavailable" description={loadError} icon={Layout} onAction={() => void pagesQuery.refetch()} className="p-12" />
+                    ) : pages.length === 0 ? (
                         <EmptyState
                             icon={Layout}
                             kind={hasQuery ? 'results' : 'collection'}
@@ -291,7 +299,7 @@ const handleDuplicate = async (id: number) => {
                         />
                     ) : (
                         <div className="divide-y">
-                            {filteredPages.map((page) => {
+                            {pages.map((page) => {
                                 const visual = getContentStatusVisual(page.status);
                                 const StatusIcon = visual.icon;
                                 const isExpanded = expandedPageId === page.id;
@@ -402,6 +410,18 @@ const handleDuplicate = async (id: number) => {
                     )}
                 </CardContent>
             </Card>
+            {pagination.totalPages > 1 && (
+                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-sm text-muted-foreground">
+                        {pagination.total} page{pagination.total === 1 ? '' : 's'}
+                    </p>
+                    <div className="flex items-center justify-between gap-2 sm:justify-end">
+                        <Button variant="outline" size="sm" onClick={() => setPage(current => Math.max(1, current - 1))} disabled={pagesQuery.isFetching || pagination.page <= 1}>Previous</Button>
+                        <span className="min-w-20 text-center text-sm text-muted-foreground">{pagination.page} of {pagination.totalPages}</span>
+                        <Button variant="outline" size="sm" onClick={() => setPage(current => Math.min(pagination.totalPages, current + 1))} disabled={pagesQuery.isFetching || pagination.page >= pagination.totalPages}>Next</Button>
+                    </div>
+                </div>
+            )}
             <DeleteDialog
                 open={Boolean(pageToDelete)}
                 onOpenChange={(open) => { if (!open) setPageToDelete(null); }}

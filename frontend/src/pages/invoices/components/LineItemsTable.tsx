@@ -3,20 +3,13 @@
  * Manages product/service line items with quantity, price, and amounts
  */
 
-import React from 'react';
 import { ListChecks, Plus, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { ProductCatalogPicker } from './ProductCatalogPicker';
 
 export interface LineItem {
   id: string;
@@ -34,22 +27,23 @@ interface Product {
   description?: string;
   price: number;
   tax_rate?: number;
+  sku?: string;
 }
 
 interface LineItemsTableProps {
   lineItems: LineItem[];
-  products: Product[];
+  organizationId: number | null;
   currency: string;
   showTaxRate?: boolean;
   onAddLineItem: () => void;
   onRemoveLineItem: (itemId: string) => void;
   onUpdateLineItem: (itemId: string, updates: Partial<LineItem>) => void;
-  onProductSelect: (lineItemId: string, productIdStr: string) => void;
+  onProductSelect: (lineItemId: string, product: Product | null) => void;
 }
 
 export function LineItemsTable({
   lineItems,
-  products,
+  organizationId,
   currency,
   showTaxRate = false,
   onAddLineItem,
@@ -93,43 +87,20 @@ export function LineItemsTable({
               {/* Item Name & Description */}
               <div className={showTaxRate ? 'space-y-2 lg:col-span-4' : 'space-y-2 lg:col-span-5'}>
                 <Label className="text-xs text-muted-foreground lg:hidden">Item</Label>
-                {products.length > 0 ? (
-                  <Select
-                    value={item.product_id?.toString() || 'custom'}
-                    onValueChange={(v) => onProductSelect(item.id, v)}
-                  >
-                    <SelectTrigger className="h-9">
-                      <SelectValue placeholder="Select or type item" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="custom">Custom item</SelectItem>
-                      {products.map((product) => (
-                        <SelectItem key={product.id} value={product.id.toString()}>
-                          {product.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input
-                    value={item.name}
-                    onChange={(e) =>
-                      onUpdateLineItem(item.id, { name: e.target.value })
-                    }
-                    placeholder="Item name"
-                    className="h-9"
-                  />
-                )}
-                {item.product_id && (
-                  <Input
-                    value={item.name}
-                    onChange={(e) =>
-                      onUpdateLineItem(item.id, { name: e.target.value })
-                    }
-                    placeholder="Item name"
-                    className="h-8 text-sm"
-                  />
-                )}
+                <ProductCatalogPicker
+                  organizationId={organizationId}
+                  selectedProductId={item.product_id}
+                  selectedName={item.name}
+                  onSelect={(product) => onProductSelect(item.id, product)}
+                />
+                <Input
+                  value={item.name}
+                  onChange={(e) =>
+                    onUpdateLineItem(item.id, { name: e.target.value })
+                  }
+                  placeholder="Item name"
+                  className="h-9 text-sm"
+                />
                 <Input
                   value={item.description}
                   onChange={(e) =>

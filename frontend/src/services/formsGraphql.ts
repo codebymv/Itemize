@@ -83,6 +83,16 @@ const formsQuery = `
   }
 `;
 
+const formPageQuery = `
+  query FormPage($filter: FormFilterInput, $page: PageInput) {
+    formPage(filter: $filter, page: $page) {
+      nodes { ${formFields} }
+      pageInfo { page pageSize total totalPages }
+      stats { total draft published archived }
+    }
+  }
+`;
+
 const formQuery = `
   query FormRead($id: Int!) {
     form(id: $id) { ${formFields} fields { ${fieldFields} } }
@@ -270,6 +280,46 @@ export const getFormsViaGraphql = async (
     { status?: string }
   >(formsQuery, status ? { status } : {}, organizationId);
   return { forms: data.forms.map(mapForm) };
+};
+
+export const getFormPageViaGraphql = async (
+  params: {
+    status?: Form['status'] | 'all';
+    search?: string;
+    page?: number;
+    limit?: number;
+  } = {},
+  organizationId?: number,
+  signal?: AbortSignal,
+): Promise<{
+  forms: Form[];
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+  stats: { total: number; draft: number; published: number; archived: number };
+}> => {
+  const variables = {
+    filter: {
+      ...(params.status && params.status !== 'all' ? { status: params.status } : {}),
+      ...(params.search?.trim() ? { search: params.search.trim() } : {}),
+    },
+    page: { page: params.page ?? 1, pageSize: params.limit ?? 20 },
+  };
+  const data = await graphqlRequest<{
+    formPage: {
+      nodes: GraphqlForm[];
+      pageInfo: { page: number; pageSize: number; total: number; totalPages: number };
+      stats: { total: number; draft: number; published: number; archived: number };
+    };
+  }, typeof variables>(formPageQuery, variables, organizationId, signal);
+  return {
+    forms: data.formPage.nodes.map(mapForm),
+    pagination: {
+      page: data.formPage.pageInfo.page,
+      limit: data.formPage.pageInfo.pageSize,
+      total: data.formPage.pageInfo.total,
+      totalPages: data.formPage.pageInfo.totalPages,
+    },
+    stats: data.formPage.stats,
+  };
 };
 
 export const getFormViaGraphql = async (

@@ -5,7 +5,7 @@ import { GraphqlRequestError } from '@/services/graphqlClient';
 import {
   getPaymentSettings,
   updatePaymentSettings,
-  getBusinesses,
+  getBusinessPage,
   createBusiness,
   updateBusiness,
   deleteBusiness,
@@ -42,6 +42,8 @@ interface UsePaymentsTabReturn {
   taxRateInput: string;
   loadError: PaymentsLoadError;
   businessesLoadError: boolean;
+  hasMoreBusinesses: boolean;
+  loadingMoreBusinesses: boolean;
   
   // Dialog states
   businessDialogOpen: boolean;
@@ -53,6 +55,7 @@ interface UsePaymentsTabReturn {
   
   // Actions
   refetchData: () => Promise<void>;
+  loadMoreBusinesses: () => Promise<void>;
   handleSaveSettings: () => Promise<void>;
   updateField: <K extends keyof PaymentSettings>(field: K, value: PaymentSettings[K]) => void;
   setTaxRateInput: (value: string) => void;
@@ -97,6 +100,9 @@ export const usePaymentsTab = ({
   const [initialLoad, setInitialLoad] = useState(true);
   const [loadError, setLoadError] = useState<PaymentsLoadError>(null);
   const [businessesLoadError, setBusinessesLoadError] = useState(false);
+  const [businessPage, setBusinessPage] = useState(1);
+  const [businessTotalPages, setBusinessTotalPages] = useState(1);
+  const [loadingMoreBusinesses, setLoadingMoreBusinesses] = useState(false);
 
   // Dialog states
   const [businessDialogOpen, setBusinessDialogOpen] = useState(false);
@@ -144,7 +150,7 @@ export const usePaymentsTab = ({
       // payment settings from loading when their request fails independently.
       const [settingsResult, businessesResult] = await Promise.allSettled([
         getPaymentSettings(targetOrganizationId),
-        getBusinesses(targetOrganizationId),
+        getBusinessPage(1, 20, targetOrganizationId),
       ]);
 
       if (settingsResult.status === 'fulfilled') {
@@ -162,9 +168,13 @@ export const usePaymentsTab = ({
       }
 
       if (businessesResult.status === 'fulfilled') {
-        setBusinesses(businessesResult.value);
+        setBusinesses(businessesResult.value.businesses);
+        setBusinessPage(businessesResult.value.pagination.page);
+        setBusinessTotalPages(businessesResult.value.pagination.totalPages);
       } else {
         setBusinesses([]);
+        setBusinessPage(1);
+        setBusinessTotalPages(1);
         setBusinessesLoadError(true);
       }
     } finally {
@@ -172,6 +182,24 @@ export const usePaymentsTab = ({
       setInitialLoad(false);
     }
   }, [enabled, organizationId, organizationLoading, refreshOrganization]);
+
+  const loadMoreBusinesses = useCallback(async () => {
+    if (!organizationId || loadingMoreBusinesses || businessPage >= businessTotalPages) return;
+    setLoadingMoreBusinesses(true);
+    try {
+      const next = await getBusinessPage(businessPage + 1, 20, organizationId);
+      setBusinesses((current) => {
+        const existing = new Set(current.map((business) => business.id));
+        return [...current, ...next.businesses.filter((business) => !existing.has(business.id))];
+      });
+      setBusinessPage(next.pagination.page);
+      setBusinessTotalPages(next.pagination.totalPages);
+    } catch {
+      toast({ title: 'Error', description: 'Failed to load more business profiles', variant: 'destructive' });
+    } finally {
+      setLoadingMoreBusinesses(false);
+    }
+  }, [businessPage, businessTotalPages, loadingMoreBusinesses, organizationId, toast]);
 
   // Surface a failed organization bootstrap as its own recovery state. The
   // context already attempts to create or select a default organization.
@@ -377,6 +405,8 @@ export const usePaymentsTab = ({
     taxRateInput,
     loadError,
     businessesLoadError,
+    hasMoreBusinesses: businessPage < businessTotalPages,
+    loadingMoreBusinesses,
     
     // Dialog states
     businessDialogOpen,
@@ -388,6 +418,7 @@ export const usePaymentsTab = ({
     
     // Actions
     refetchData,
+    loadMoreBusinesses,
     handleSaveSettings,
     updateField,
     setTaxRateInput,

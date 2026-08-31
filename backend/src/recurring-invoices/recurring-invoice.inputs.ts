@@ -4,6 +4,9 @@ import { Field, InputType, Int } from '@nestjs/graphql';
 export class RecurringInvoiceFilterInput {
   @Field(() => String, { nullable: true })
   status?: string;
+
+  @Field(() => String, { nullable: true })
+  search?: string;
 }
 
 @InputType()

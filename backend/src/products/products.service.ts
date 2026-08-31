@@ -31,12 +31,16 @@ export class ProductsService {
   ): Promise<ProductPage> {
     const normalizedPage = this.page(page);
     const searchPattern = this.search(filter.search);
+    const productType = filter.productType === undefined
+      ? undefined
+      : this.productType(filter.productType);
     const result = await this.products.findPage({
       organizationId,
       ...(filter.isActive === undefined
         ? {}
         : { isActive: filter.isActive }),
       ...(searchPattern === undefined ? {} : { searchPattern }),
+      ...(productType === undefined ? {} : { productType }),
       pageSize: normalizedPage.pageSize,
       offset: normalizedPage.offset,
     });
@@ -45,8 +49,15 @@ export class ProductsService {
       pageInfo: pageInfo(
         normalizedPage.page,
         normalizedPage.pageSize,
-        result.total,
+        this.count(result.total, 'products.total'),
       ),
+      stats: {
+        total: this.count(result.stats.total, 'products.stats.total'),
+        active: this.count(result.stats.active, 'products.stats.active'),
+        inactive: this.count(result.stats.inactive, 'products.stats.inactive'),
+        oneTime: this.count(result.stats.one_time, 'products.stats.oneTime'),
+        recurring: this.count(result.stats.recurring, 'products.stats.recurring'),
+      },
     };
   }
 
@@ -202,6 +213,14 @@ export class ProductsService {
       );
     }
     return `%${normalized.replace(/[\\%_]/g, '\\$&')}%`;
+  }
+
+  private count(value: unknown, field: string): number {
+    const parsed = Number(value);
+    if (!Number.isSafeInteger(parsed) || parsed < 0 || parsed > 2_147_483_647) {
+      throw new Error(`Unsafe product count at ${field}`);
+    }
+    return parsed;
   }
 
   private id(value: number): void {

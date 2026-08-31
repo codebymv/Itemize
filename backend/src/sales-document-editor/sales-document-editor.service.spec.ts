@@ -31,6 +31,7 @@ describe('SalesDocumentEditorService', () => {
     products.list.mockResolvedValue({
       nodes: [{ id: 21 }],
       pageInfo: { page: 1, pageSize: 100, total: 1, totalPages: 1 },
+      stats: { total: 1, active: 1, inactive: 0, oneTime: 1, recurring: 0 },
     });
     businesses.list.mockResolvedValue({
       nodes: [{ id: 31 }],
@@ -42,7 +43,7 @@ describe('SalesDocumentEditorService', () => {
   });
 
   it('returns the complete invoice editor bootstrap in one service operation', async () => {
-    await expect(service.invoiceBootstrap(42, 41)).resolves.toMatchObject({
+    await expect(service.invoiceBootstrap(42, 41, true)).resolves.toMatchObject({
       contacts: [{ id: 11 }],
       products: [{ id: 21 }],
       businesses: [{ id: 31 }],
@@ -53,37 +54,39 @@ describe('SalesDocumentEditorService', () => {
     expect(invoices.get).toHaveBeenCalledWith(42, 41);
     expect(products.list).toHaveBeenCalledWith(
       42,
-      {},
+      { isActive: true },
       expect.objectContaining({ page: 1, pageSize: 100 }),
     );
   });
 
-  it('reads every product and business page without increasing client requests', async () => {
-    products.list
-      .mockResolvedValueOnce({
-        nodes: [{ id: 21 }],
-        pageInfo: { page: 1, pageSize: 100, total: 101, totalPages: 2 },
-      })
-      .mockResolvedValueOnce({
-        nodes: [{ id: 22 }],
-        pageInfo: { page: 2, pageSize: 100, total: 101, totalPages: 2 },
-      });
-    businesses.list
-      .mockResolvedValueOnce({
-        nodes: [{ id: 31 }],
-        pageInfo: { page: 1, pageSize: 100, total: 101, totalPages: 2 },
-      })
-      .mockResolvedValueOnce({
-        nodes: [{ id: 32 }],
-        pageInfo: { page: 2, pageSize: 100, total: 101, totalPages: 2 },
-      });
+  it('bounds compatibility product and business catalogs to one page', async () => {
+    products.list.mockResolvedValueOnce({
+      nodes: [{ id: 21 }],
+      pageInfo: { page: 1, pageSize: 100, total: 101, totalPages: 2 },
+      stats: { total: 101, active: 101, inactive: 0, oneTime: 101, recurring: 0 },
+    });
+    businesses.list.mockResolvedValueOnce({
+      nodes: [{ id: 31 }],
+      pageInfo: { page: 1, pageSize: 100, total: 101, totalPages: 2 },
+    });
 
-    const result = await service.invoiceBootstrap(42);
+    const result = await service.invoiceBootstrap(42, null, true);
 
-    expect(result.products).toEqual([{ id: 21 }, { id: 22 }]);
-    expect(result.businesses).toEqual([{ id: 31 }, { id: 32 }]);
+    expect(result.products).toEqual([{ id: 21 }]);
+    expect(result.businesses).toEqual([{ id: 31 }]);
     expect(result.invoice).toBeNull();
     expect(invoices.get).not.toHaveBeenCalled();
+    expect(products.list).toHaveBeenCalledTimes(1);
+    expect(businesses.list).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not query the legacy product catalog when the field is omitted', async () => {
+    const invoice = await service.invoiceBootstrap(42);
+    const estimate = await service.estimateBootstrap(42);
+
+    expect(invoice.products).toEqual([]);
+    expect(estimate.products).toEqual([]);
+    expect(products.list).not.toHaveBeenCalled();
   });
 
   it('reuses a listed initial contact and fetches only an unlisted one', async () => {

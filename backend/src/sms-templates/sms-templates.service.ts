@@ -18,7 +18,20 @@ export class SmsTemplatesService {
       ...(filter.search === undefined ? {} : { searchPattern: this.search(filter.search) }),
       pageSize: normalized.pageSize, offset: normalized.offset });
     const total = this.count(result.total, 'smsTemplates.total');
-    return { nodes: result.rows.map(this.map), pageInfo: pageInfo(normalized.page, normalized.pageSize, total) };
+    return {
+      nodes: result.rows.map(this.map),
+      pageInfo: pageInfo(normalized.page, normalized.pageSize, total),
+      stats: {
+        total: this.count(result.stats.total, 'smsTemplates.stats.total'),
+        active: this.count(result.stats.active, 'smsTemplates.stats.active'),
+        inactive: this.count(result.stats.inactive, 'smsTemplates.stats.inactive'),
+        categories: this.count(result.stats.categories, 'smsTemplates.stats.categories'),
+      },
+      categories: result.categories.map((row) => ({
+        category: row.category,
+        count: this.count(row.count, `smsTemplates.categories.${row.category}`),
+      })),
+    };
   }
 
   async detail(organizationId: number, id: number): Promise<SmsTemplate> {

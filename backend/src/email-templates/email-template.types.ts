@@ -89,21 +89,6 @@ export class EmailTemplatePreview {
 }
 
 @ObjectType()
-export class EmailTemplatePage {
-  @Field(() => [EmailTemplate])
-  nodes: EmailTemplate[];
-
-  @Field(() => PageInfo)
-  pageInfo: PageInfo;
-
-  @Field(() => EmailTemplateStats)
-  stats: EmailTemplateStats;
-
-  @Field(() => [EmailTemplateCategory])
-  categories: EmailTemplateCategory[];
-}
-
-@ObjectType()
 export class EmailTemplateStats {
   @Field(() => Int)
   total: number;
@@ -125,6 +110,21 @@ export class EmailTemplateCategory {
 
   @Field(() => Int)
   count: number;
+}
+
+@ObjectType()
+export class EmailTemplatePage {
+  @Field(() => [EmailTemplate])
+  nodes: EmailTemplate[];
+
+  @Field(() => PageInfo)
+  pageInfo: PageInfo;
+
+  @Field(() => EmailTemplateStats)
+  stats: EmailTemplateStats;
+
+  @Field(() => [EmailTemplateCategory])
+  categories: EmailTemplateCategory[];
 }
 
 @ObjectType()

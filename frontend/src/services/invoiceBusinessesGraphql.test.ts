@@ -3,6 +3,7 @@ import { fetchCsrfToken } from '@/lib/api';
 import {
   createInvoiceBusinessViaGraphql,
   deleteInvoiceBusinessViaGraphql,
+  getInvoiceBusinessPageViaGraphql,
   getInvoiceBusinessesViaGraphql,
   getInvoiceBusinessViaGraphql,
   removeInvoiceBusinessLogoViaGraphql,
@@ -57,7 +58,7 @@ describe('invoice business GraphQL consumer', () => {
           data: {
             invoiceBusinesses: {
               nodes: [business],
-              pageInfo: { hasNextPage: true },
+              pageInfo: { page: 1, pageSize: 100, total: 101, totalPages: 2 },
             },
           },
         }),
@@ -67,7 +68,7 @@ describe('invoice business GraphQL consumer', () => {
           data: {
             invoiceBusinesses: {
               nodes: [{ ...business, id: 9, name: 'Second' }],
-              pageInfo: { hasNextPage: false },
+              pageInfo: { page: 2, pageSize: 100, total: 101, totalPages: 2 },
             },
           },
         }),
@@ -95,6 +96,21 @@ describe('invoice business GraphQL consumer', () => {
     expect(bodies.slice(0, 2).map((body) => body.variables.page.page))
       .toEqual([1, 2]);
     expect(bodies[2].variables).toEqual({ id: 8 });
+  });
+
+  it('supports one bounded management page with cancellation', async () => {
+    const controller = new AbortController();
+    vi.mocked(fetch).mockResolvedValueOnce(response({ data: {
+      invoiceBusinesses: {
+        nodes: [business],
+        pageInfo: { page: 2, pageSize: 20, total: 21, totalPages: 2 },
+      },
+    } }));
+    await expect(getInvoiceBusinessPageViaGraphql(2, 20, 4, controller.signal)).resolves.toMatchObject({
+      businesses: [{ id: 8, name: 'Itemize Studio' }],
+      pagination: { page: 2, limit: 20, total: 21, totalPages: 2 },
+    });
+    expect((vi.mocked(fetch).mock.calls[0][1] as RequestInit).signal).toBe(controller.signal);
   });
 
   it('maps writable fields, excludes logo ownership, and verifies delete', async () => {

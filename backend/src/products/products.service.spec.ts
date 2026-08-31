@@ -36,11 +36,15 @@ describe('ProductsService', () => {
   });
 
   it('scopes, escapes, pages, and maps product reads', async () => {
-    repository.findPage.mockResolvedValue({ rows: [row()], total: 1 });
+    repository.findPage.mockResolvedValue({
+      rows: [row()],
+      total: '1',
+      stats: { total: '8', active: '6', inactive: '2', one_time: '5', recurring: '3' },
+    });
     await expect(
       service.list(
         4,
-        { isActive: true, search: ' 50%_off ' },
+        { isActive: true, productType: 'one_time', search: ' 50%_off ' },
         { page: 2, pageSize: 10 },
       ),
     ).resolves.toMatchObject({
@@ -51,14 +55,25 @@ describe('ProductsService', () => {
         taxRate: '8.25',
       }],
       pageInfo: { page: 2, pageSize: 10, total: 1 },
+      stats: { total: 8, active: 6, inactive: 2, oneTime: 5, recurring: 3 },
     });
     expect(repository.findPage).toHaveBeenCalledWith({
       organizationId: 4,
       isActive: true,
+      productType: 'one_time',
       searchPattern: '%50\\%\\_off%',
       pageSize: 10,
       offset: 10,
     });
+  });
+
+  it('rejects unsafe aggregate counts', async () => {
+    repository.findPage.mockResolvedValue({
+      rows: [],
+      total: '0',
+      stats: { total: '9007199254740992', active: '0', inactive: '0', one_time: '0', recurring: '0' },
+    });
+    await expect(service.list(4)).rejects.toThrow('Unsafe product count');
   });
 
   it('normalizes one-time creates and preserves decimal strings', async () => {

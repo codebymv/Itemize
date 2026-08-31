@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchCsrfToken } from '@/lib/api';
 import {
   createFormViaGraphql,
+  getFormPageViaGraphql,
   getFormSubmissionsViaGraphql,
   getFormViaGraphql,
   getFormsViaGraphql,
@@ -110,6 +111,34 @@ describe('forms GraphQL consumer', () => {
       credentials: 'include',
       headers: expect.objectContaining({ 'x-organization-id': '42' }),
     });
+  });
+
+  it('loads one cancellable server-filtered form page with global stats', async () => {
+    const controller = new AbortController();
+    vi.mocked(fetch).mockResolvedValueOnce(response({
+      data: {
+        formPage: {
+          nodes: [{ ...form, fields: undefined }],
+          pageInfo: { page: 2, pageSize: 20, total: 21, totalPages: 2 },
+          stats: { total: 30, draft: 12, published: 16, archived: 2 },
+        },
+      },
+    }));
+
+    await expect(getFormPageViaGraphql({
+      status: 'draft', search: ' registration ', page: 2, limit: 20,
+    }, 42, controller.signal)).resolves.toMatchObject({
+      forms: [{ id: 7, name: 'Registration' }],
+      pagination: { page: 2, limit: 20, total: 21, totalPages: 2 },
+      stats: { total: 30, draft: 12, published: 16, archived: 2 },
+    });
+    const request = JSON.parse(String((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body));
+    expect(request.variables).toEqual({
+      filter: { status: 'draft', search: 'registration' },
+      page: { page: 2, pageSize: 20 },
+    });
+    expect((vi.mocked(fetch).mock.calls[0][1] as RequestInit).signal)
+      .toBe(controller.signal);
   });
 
   it('maps create/update inputs and preserves explicit nullable clearing', async () => {

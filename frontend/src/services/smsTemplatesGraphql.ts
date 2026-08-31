@@ -14,26 +14,146 @@ const map = (value: GraphqlSmsTemplate): SmsTemplate => ({
   created_at: value.createdAt, updated_at: value.updatedAt,
 });
 
-export const getSmsTemplatesViaGraphql = async (
-  filters: { category?: string; is_active?: string; search?: string } = {}, organizationId?: number,
-  signal?: AbortSignal,
-): Promise<{ templates: SmsTemplate[]; total: number }> => {
-  const templates: SmsTemplate[] = []; let page = 1; let total = 0; let hasNextPage = true;
-  while (hasNextPage) {
-    const data = await graphqlRequest<
-      { smsTemplates: { nodes: GraphqlSmsTemplate[]; pageInfo: { total: number; hasNextPage: boolean } } },
-      { filter: { category?: string; isActive?: boolean; search?: string }; page: { page: number; pageSize: number } }
-    >(`query SmsTemplates($filter: SmsTemplateFilterInput, $page: PageInput) {
-      smsTemplates(filter: $filter, page: $page) { nodes { ${fields} } pageInfo { total hasNextPage } }
-    }`, { filter: {
-      ...(filters.category === undefined ? {} : { category: filters.category }),
-      ...(filters.is_active === undefined ? {} : { isActive: filters.is_active === 'true' }),
-      ...(filters.search === undefined ? {} : { search: filters.search }),
-    }, page: { page, pageSize: 100 } }, organizationId, signal);
-    templates.push(...data.smsTemplates.nodes.map(map)); total = data.smsTemplates.pageInfo.total;
-    hasNextPage = data.smsTemplates.pageInfo.hasNextPage; page += 1;
+export type SmsTemplateStats = {
+  total: number;
+  active: number;
+  inactive: number;
+  categories: number;
+};
+
+export type SmsTemplateCategory = { category: string; count: number };
+
+export type SmsTemplateListParams = {
+  category?: string;
+  is_active?: boolean | string;
+  search?: string;
+  page?: number;
+  limit?: number;
+};
+
+export type SmsTemplateListResponse = {
+  templates: SmsTemplate[];
+  total: number;
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+  stats: SmsTemplateStats;
+  categories: SmsTemplateCategory[];
+};
+
+type SmsTemplatePagePayload = {
+  nodes: GraphqlSmsTemplate[];
+  pageInfo: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+    hasNextPage: boolean;
+  };
+  stats: SmsTemplateStats;
+  categories: SmsTemplateCategory[];
+};
+
+type SmsTemplateListCapability = 'unknown' | 'aggregate' | 'legacy';
+let smsTemplateListCapability: SmsTemplateListCapability = 'unknown';
+
+const listQuery = `query SmsTemplates($filter: SmsTemplateFilterInput, $page: PageInput) {
+  smsTemplates(filter: $filter, page: $page) {
+    nodes { ${fields} }
+    pageInfo { page pageSize total totalPages hasNextPage }
+    stats { total active inactive categories }
+    categories { category count }
   }
-  return { templates, total };
+}`;
+
+const legacyListQuery = `query SmsTemplatesLegacy(
+  $filter: SmsTemplateFilterInput,
+  $page: PageInput,
+  $summaryPage: PageInput
+) {
+  filtered: smsTemplates(filter: $filter, page: $page) {
+    nodes { ${fields} }
+    pageInfo { page pageSize total totalPages hasNextPage }
+  }
+  all: smsTemplates(page: $summaryPage) { pageInfo { total } }
+  active: smsTemplates(filter: { isActive: true }, page: $summaryPage) { pageInfo { total } }
+  inactive: smsTemplates(filter: { isActive: false }, page: $summaryPage) { pageInfo { total } }
+  smsTemplateCategories { category count }
+}`;
+
+const missingListMetadata = (error: unknown): boolean => error instanceof Error
+  && error.message.includes('Cannot query field')
+  && (error.message.includes('stats') || error.message.includes('categories'));
+
+const responseFromPage = (page: SmsTemplatePagePayload): SmsTemplateListResponse => ({
+  templates: page.nodes.map(map),
+  total: page.pageInfo.total,
+  pagination: {
+    page: page.pageInfo.page,
+    limit: page.pageInfo.pageSize,
+    total: page.pageInfo.total,
+    totalPages: page.pageInfo.totalPages,
+  },
+  stats: page.stats,
+  categories: page.categories,
+});
+
+export const getSmsTemplatesViaGraphql = async (
+  params: SmsTemplateListParams = {}, organizationId?: number,
+  signal?: AbortSignal,
+): Promise<SmsTemplateListResponse> => {
+  const page = params.page ?? 1;
+  const limit = params.limit ?? 100;
+  const normalizedSearch = params.search?.trim();
+  const filter = {
+    ...(params.category === undefined ? {} : { category: params.category }),
+    ...(params.is_active === undefined ? {} : {
+      isActive: typeof params.is_active === 'string'
+        ? params.is_active === 'true'
+        : params.is_active,
+    }),
+    ...(normalizedSearch ? { search: normalizedSearch } : {}),
+  };
+  const variables = { filter, page: { page, pageSize: limit } };
+
+  if (smsTemplateListCapability !== 'legacy') {
+    try {
+      const data = await graphqlRequest<
+        { smsTemplates: SmsTemplatePagePayload },
+        typeof variables
+      >(listQuery, variables, organizationId, signal);
+      smsTemplateListCapability = 'aggregate';
+      return responseFromPage(data.smsTemplates);
+    } catch (error) {
+      if (smsTemplateListCapability !== 'unknown' || !missingListMetadata(error)) throw error;
+      smsTemplateListCapability = 'legacy';
+    }
+  }
+
+  const data = await graphqlRequest<{
+    filtered: Omit<SmsTemplatePagePayload, 'stats' | 'categories'>;
+    all: { pageInfo: { total: number } };
+    active: { pageInfo: { total: number } };
+    inactive: { pageInfo: { total: number } };
+    smsTemplateCategories: SmsTemplateCategory[];
+  }, typeof variables & { summaryPage: { page: number; pageSize: number } }>(
+    legacyListQuery,
+    { ...variables, summaryPage: { page: 1, pageSize: 1 } },
+    organizationId,
+    signal,
+  );
+  return responseFromPage({
+    ...data.filtered,
+    stats: {
+      total: data.all.pageInfo.total,
+      active: data.active.pageInfo.total,
+      inactive: data.inactive.pageInfo.total,
+      categories: data.smsTemplateCategories.length,
+    },
+    categories: data.smsTemplateCategories,
+  });
+};
+
+export const resetSmsTemplateListCapability = (): void => {
+  smsTemplateListCapability = 'unknown';
 };
 
 export const getSmsTemplateViaGraphql = async (id: number, organizationId?: number) => {

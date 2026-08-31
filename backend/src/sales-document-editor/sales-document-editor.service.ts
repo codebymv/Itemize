@@ -28,12 +28,15 @@ export class SalesDocumentEditorService {
   async invoiceBootstrap(
     organizationId: number,
     invoiceId?: number | null,
+    includeProducts = false,
   ): Promise<InvoiceEditorBootstrap> {
-    const [contactsPage, products, businesses, settings, invoice] =
+    const [contactsPage, productsPage, businessesPage, settings, invoice] =
       await Promise.all([
         this.contacts.list(organizationId),
-        this.allProducts(organizationId),
-        this.allBusinesses(organizationId),
+        includeProducts
+          ? this.products.list(organizationId, { isActive: true }, page(1, 100))
+          : Promise.resolve(null),
+        this.businesses.list(organizationId, page(1, 100)),
         this.settings.get(organizationId),
         invoiceId == null
           ? Promise.resolve(null)
@@ -42,8 +45,8 @@ export class SalesDocumentEditorService {
 
     return {
       contacts: contactsPage.nodes,
-      products,
-      businesses,
+      products: productsPage?.nodes ?? [],
+      businesses: businessesPage.nodes,
       settings,
       invoice,
     };
@@ -53,10 +56,13 @@ export class SalesDocumentEditorService {
     organizationId: number,
     estimateId?: number | null,
     initialContactId?: number | null,
+    includeProducts = false,
   ): Promise<EstimateEditorBootstrap> {
-    const [contactsPage, products, estimate] = await Promise.all([
+    const [contactsPage, productsPage, estimate] = await Promise.all([
       this.contacts.list(organizationId),
-      this.allProducts(organizationId),
+      includeProducts
+        ? this.products.list(organizationId, { isActive: true }, page(1, 100))
+        : Promise.resolve(null),
       estimateId == null
         ? Promise.resolve(null)
         : this.estimates.get(organizationId, estimateId),
@@ -70,42 +76,10 @@ export class SalesDocumentEditorService {
 
     return {
       contacts: contactsPage.nodes,
-      products,
+      products: productsPage?.nodes ?? [],
       estimate,
       initialContact,
     };
   }
 
-  private async allProducts(organizationId: number) {
-    const nodes = [];
-    let pageNumber = 1;
-    let totalPages = 1;
-    do {
-      const result = await this.products.list(
-        organizationId,
-        {},
-        page(pageNumber, 100),
-      );
-      nodes.push(...result.nodes);
-      totalPages = result.pageInfo.totalPages;
-      pageNumber += 1;
-    } while (pageNumber <= totalPages);
-    return nodes;
-  }
-
-  private async allBusinesses(organizationId: number) {
-    const nodes = [];
-    let pageNumber = 1;
-    let totalPages = 1;
-    do {
-      const result = await this.businesses.list(
-        organizationId,
-        page(pageNumber, 100),
-      );
-      nodes.push(...result.nodes);
-      totalPages = result.pageInfo.totalPages;
-      pageNumber += 1;
-    } while (pageNumber <= totalPages);
-    return nodes;
-  }
 }

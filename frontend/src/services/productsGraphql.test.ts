@@ -3,7 +3,9 @@ import { fetchCsrfToken } from '@/lib/api';
 import {
   createProductViaGraphql,
   deleteProductViaGraphql,
+  getProductPageViaGraphql,
   getProductsViaGraphql,
+  resetProductListCapability,
   updateProductViaGraphql,
 } from './productsGraphql';
 
@@ -40,6 +42,7 @@ const response = (payload: unknown): Response =>
 
 describe('product GraphQL consumer', () => {
   beforeEach(() => {
+    resetProductListCapability();
     vi.stubEnv('VITE_GRAPHQL_URL', 'https://graphql.test.itemize/graphql');
     vi.stubGlobal('fetch', vi.fn());
     vi.mocked(fetchCsrfToken).mockResolvedValue('product-csrf');
@@ -50,34 +53,25 @@ describe('product GraphQL consumer', () => {
     vi.unstubAllGlobals();
   });
 
-  it('pages reads and maps decimal strings into the legacy product shape', async () => {
-    vi.mocked(fetch)
-      .mockResolvedValueOnce(
-        response({
-          data: {
-            products: {
-              nodes: [product],
-              pageInfo: { hasNextPage: true },
-            },
-          },
-        }),
-      )
-      .mockResolvedValueOnce(
-        response({
-          data: {
-            products: {
-              nodes: [{ ...product, id: 10, name: 'Support' }],
-              pageInfo: { hasNextPage: false },
-            },
-          },
-        }),
-      );
-    const products = await getProductsViaGraphql(
-      { is_active: true, search: 'ret' },
-      4,
-    );
-    expect(products).toHaveLength(2);
-    expect(products[0]).toMatchObject({
+  it('loads one bounded product page with global catalog statistics', async () => {
+    const controller = new AbortController();
+    vi.mocked(fetch).mockResolvedValueOnce(response({ data: { products: {
+      nodes: [product],
+      pageInfo: { page: 2, pageSize: 20, total: 21, totalPages: 2, hasNextPage: false },
+      stats: { total: 40, active: 32, inactive: 8, oneTime: 25, recurring: 15 },
+    } } }));
+    const result = await getProductPageViaGraphql({
+      is_active: true,
+      product_type: 'recurring',
+      search: ' ret ',
+      page: 2,
+      limit: 20,
+    }, 4, controller.signal);
+    expect(result).toMatchObject({
+      pagination: { page: 2, limit: 20, total: 21, totalPages: 2 },
+      stats: { total: 40, active: 32, inactive: 8, oneTime: 25, recurring: 15 },
+    });
+    expect(result.products[0]).toMatchObject({
       id: 9,
       organization_id: 4,
       price: 1200.5,
@@ -85,14 +79,32 @@ describe('product GraphQL consumer', () => {
       billing_period: 'monthly',
       tax_rate: 8.25,
     });
-    const bodies = vi.mocked(fetch).mock.calls.map((call) =>
-      JSON.parse(String((call[1] as RequestInit).body)),
-    );
-    expect(bodies.map((body) => body.variables.page.page)).toEqual([1, 2]);
-    expect(bodies[0].variables.filter).toEqual({
+    expect(fetch).toHaveBeenCalledOnce();
+    const body = JSON.parse(String((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body));
+    expect(body.variables.page).toEqual({ page: 2, pageSize: 20 });
+    expect(body.variables.filter).toEqual({
       isActive: true,
+      productType: 'recurring',
       search: 'ret',
     });
+    expect((vi.mocked(fetch).mock.calls[0][1] as RequestInit).signal).toBe(controller.signal);
+  });
+
+  it('preserves the explicit all-products adapter for editor rollout compatibility', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(response({ data: { products: {
+        nodes: [product],
+        pageInfo: { page: 1, pageSize: 100, total: 101, totalPages: 2, hasNextPage: true },
+        stats: { total: 101, active: 101, inactive: 0, oneTime: 0, recurring: 101 },
+      } } }))
+      .mockResolvedValueOnce(response({ data: { products: {
+        nodes: [{ ...product, id: 10 }],
+        pageInfo: { page: 2, pageSize: 100, total: 101, totalPages: 2, hasNextPage: false },
+        stats: { total: 101, active: 101, inactive: 0, oneTime: 0, recurring: 101 },
+      } } }));
+    await expect(getProductsViaGraphql({}, 4)).resolves.toHaveLength(2);
+    const bodies = vi.mocked(fetch).mock.calls.map((call) => JSON.parse(String((call[1] as RequestInit).body)));
+    expect(bodies.map((body) => body.variables.page.page)).toEqual([1, 2]);
   });
 
   it('maps mutation casing, supplies recurring defaults, and verifies delete', async () => {

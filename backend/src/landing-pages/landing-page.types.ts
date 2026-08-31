@@ -54,9 +54,18 @@ export class LandingPage {
 }
 
 @ObjectType()
+export class LandingPageStats {
+  @Field(() => Int) total: number;
+  @Field(() => Int) draft: number;
+  @Field(() => Int) published: number;
+  @Field(() => Int) archived: number;
+}
+
+@ObjectType()
 export class LandingPagePage {
   @Field(() => [LandingPage]) nodes: LandingPage[];
   @Field(() => PageInfo) pageInfo: PageInfo;
+  @Field(() => LandingPageStats) stats: LandingPageStats;
 }
 
 @ObjectType()

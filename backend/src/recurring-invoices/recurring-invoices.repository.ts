@@ -141,8 +141,16 @@ export type ScheduledRecurringInvoiceGeneration = {
 export type RecurringInvoiceCriteria = {
   organizationId: number;
   status?: string;
+  searchPattern?: string;
   pageSize: number;
   offset: number;
+};
+
+export type RecurringInvoiceStatsRow = {
+  total: string;
+  active: string;
+  paused: string;
+  completed: string;
 };
 
 const selection = `
@@ -165,32 +173,68 @@ export class RecurringInvoicesRepository {
 
   async findPage(
     criteria: RecurringInvoiceCriteria,
-  ): Promise<{ rows: RecurringInvoiceRow[]; total: number }> {
+  ): Promise<{
+    rows: RecurringInvoiceRow[];
+    total: string;
+    stats: RecurringInvoiceStatsRow;
+  }> {
     const values: unknown[] = [criteria.organizationId];
     const clauses = ['r.organization_id = $1'];
     if (criteria.status !== undefined) {
       values.push(criteria.status);
       clauses.push(`r.status = $${values.length}`);
     }
+    if (criteria.searchPattern !== undefined) {
+      values.push(criteria.searchPattern);
+      clauses.push(`(
+        r.template_name ILIKE $${values.length} ESCAPE '\\'
+        OR r.customer_name ILIKE $${values.length} ESCAPE '\\'
+        OR r.customer_email ILIKE $${values.length} ESCAPE '\\'
+        OR c.first_name ILIKE $${values.length} ESCAPE '\\'
+        OR c.last_name ILIKE $${values.length} ESCAPE '\\'
+        OR c.email ILIKE $${values.length} ESCAPE '\\'
+      )`);
+    }
     const where = clauses.join(' AND ');
-    const count = await this.pool.query<{ total: string }>(
-      `SELECT COUNT(*) AS total FROM recurring_invoice_templates r WHERE ${where}`,
-      values,
-    );
-    values.push(criteria.pageSize, criteria.offset);
-    const rows = await this.pool.query<RecurringInvoiceRow>(
-      `SELECT ${selection}
-       FROM recurring_invoice_templates r
-       LEFT JOIN contacts c
-         ON c.id = r.contact_id AND c.organization_id = r.organization_id
-       LEFT JOIN invoices si
-         ON si.id = r.source_invoice_id AND si.organization_id = r.organization_id
-       WHERE ${where}
-       ORDER BY r.created_at DESC, r.id DESC
-       LIMIT $${values.length - 1} OFFSET $${values.length}`,
-      values,
-    );
-    return { rows: rows.rows, total: Number(count.rows[0].total) };
+    const rowValues = [...values, criteria.pageSize, criteria.offset];
+    const [count, rows, stats] = await Promise.all([
+      this.pool.query<{ total: string }>(
+        `SELECT COUNT(*) AS total
+         FROM recurring_invoice_templates r
+         LEFT JOIN contacts c
+           ON c.id = r.contact_id AND c.organization_id = r.organization_id
+         WHERE ${where}`,
+        values,
+      ),
+      this.pool.query<RecurringInvoiceRow>(
+        `SELECT ${selection}
+         FROM recurring_invoice_templates r
+         LEFT JOIN contacts c
+           ON c.id = r.contact_id AND c.organization_id = r.organization_id
+         LEFT JOIN invoices si
+           ON si.id = r.source_invoice_id AND si.organization_id = r.organization_id
+         WHERE ${where}
+         ORDER BY r.created_at DESC, r.id DESC
+         LIMIT $${rowValues.length - 1} OFFSET $${rowValues.length}`,
+        rowValues,
+      ),
+      this.pool.query<RecurringInvoiceStatsRow>(
+        `SELECT COUNT(*) AS total,
+                COUNT(*) FILTER (WHERE status = 'active') AS active,
+                COUNT(*) FILTER (WHERE status = 'paused') AS paused,
+                COUNT(*) FILTER (WHERE status = 'completed') AS completed
+         FROM recurring_invoice_templates
+         WHERE organization_id = $1`,
+        [criteria.organizationId],
+      ),
+    ]);
+    return {
+      rows: rows.rows,
+      total: count.rows[0]?.total ?? '0',
+      stats: stats.rows[0] ?? {
+        total: '0', active: '0', paused: '0', completed: '0',
+      },
+    };
   }
 
   async findById(

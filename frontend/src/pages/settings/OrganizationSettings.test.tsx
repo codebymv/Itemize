@@ -26,7 +26,8 @@ const mocks = vi.hoisted(() => ({
   getMembers: vi.fn(),
   getInvitations: vi.fn(),
   getActivity: vi.fn(),
-  getBusinesses: vi.fn(),
+  getBusiness: vi.fn(),
+  getBusinessPage: vi.fn(),
   invite: vi.fn(),
   resendInvitation: vi.fn(),
   revokeInvitation: vi.fn(),
@@ -77,7 +78,8 @@ vi.mock('@/services/contactsApi', () => ({
   updateOrganization: vi.fn(),
 }));
 vi.mock('@/services/invoicesApi', () => ({
-  getBusinesses: (...args: unknown[]) => mocks.getBusinesses(...args),
+  getBusiness: (...args: unknown[]) => mocks.getBusiness(...args),
+  getBusinessPage: (...args: unknown[]) => mocks.getBusinessPage(...args),
 }));
 
 describe('OrganizationSettings', () => {
@@ -125,16 +127,25 @@ describe('OrganizationSettings', () => {
     ]);
     mocks.getInvitations.mockResolvedValue([]);
     mocks.getActivity.mockResolvedValue([]);
-    mocks.getBusinesses.mockResolvedValue([
-      {
+    mocks.getBusinessPage.mockResolvedValue({
+      businesses: [{
         id: 12,
         organization_id: 7,
         name: 'Ada Consulting',
         is_active: true,
         created_at: '2026-08-24T00:00:00.000Z',
         updated_at: '2026-08-24T00:00:00.000Z',
-      },
-    ]);
+      }],
+      pagination: { page: 1, limit: 100, total: 1, totalPages: 1 },
+    });
+    mocks.getBusiness.mockResolvedValue({
+      id: 12,
+      organization_id: 7,
+      name: 'Ada Consulting',
+      is_active: true,
+      created_at: '2026-08-24T00:00:00.000Z',
+      updated_at: '2026-08-24T00:00:00.000Z',
+    });
   });
 
   it('presents organization identity, regional defaults, business identity, and members', async () => {

@@ -123,12 +123,30 @@ export class RecurringInvoice {
 }
 
 @ObjectType()
+export class RecurringInvoiceStats {
+  @Field(() => Int)
+  total: number;
+
+  @Field(() => Int)
+  active: number;
+
+  @Field(() => Int)
+  paused: number;
+
+  @Field(() => Int)
+  completed: number;
+}
+
+@ObjectType()
 export class RecurringInvoicePage {
   @Field(() => [RecurringInvoice])
   nodes: RecurringInvoice[];
 
   @Field(() => PageInfo)
   pageInfo: PageInfo;
+
+  @Field(() => RecurringInvoiceStats)
+  stats: RecurringInvoiceStats;
 }
 
 @ObjectType()

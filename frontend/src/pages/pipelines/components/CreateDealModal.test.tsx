@@ -1,6 +1,7 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CreateDealModal } from './CreateDealModal';
 
 const apiMocks = vi.hoisted(() => ({
@@ -17,13 +18,17 @@ vi.mock('@/services/contactsApi', () => ({
 }));
 
 describe('CreateDealModal', () => {
+  beforeAll(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
     apiMocks.getContacts.mockResolvedValue({
       contacts: [],
       pagination: {
         page: 1,
-        limit: 100,
+        limit: 25,
         total: 0,
         totalPages: 0,
         hasNext: false,
@@ -33,19 +38,22 @@ describe('CreateDealModal', () => {
   });
 
   it('renders the optional no-contact selection without an empty Radix value', () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
-      <CreateDealModal
-        pipelineId={1}
-        stages={[{
-          id: 'lead',
-          name: 'Lead',
-          color: '#3B82F6',
-          order: 0,
-        }]}
-        organizationId={1}
-        onClose={vi.fn()}
-        onCreated={vi.fn()}
-      />,
+      <QueryClientProvider client={queryClient}>
+        <CreateDealModal
+          pipelineId={1}
+          stages={[{
+            id: 'lead',
+            name: 'Lead',
+            color: '#3B82F6',
+            order: 0,
+          }]}
+          organizationId={1}
+          onClose={vi.fn()}
+          onCreated={vi.fn()}
+        />
+      </QueryClientProvider>,
     );
 
     expect(screen.getByRole('dialog', { name: 'Create New Deal' })).toBeInTheDocument();
@@ -53,6 +61,7 @@ describe('CreateDealModal', () => {
       'step',
       '0.01',
     );
-    expect(screen.getAllByText('No contact')).not.toHaveLength(0);
+    fireEvent.click(screen.getByText('Select a contact (optional)'));
+    expect(screen.getByText('No contact')).toBeInTheDocument();
   });
 });

@@ -2,13 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
 import { GraphQLError } from 'graphql';
 import { itemizeGraphqlError } from '../common/graphql-error';
+import { PageInput, pageInfo } from '../common/pagination';
 import {
   normalizeNotificationEmails,
   normalizeRedirectUrl,
   validateFormFields,
 } from './form.contract';
-import { CreateFormInput, FormFieldInput, UpdateFormInput } from './form.inputs';
-import { Form, FormField, FormSubmission, FormSubmissionPage } from './form.types';
+import { CreateFormInput, FormFieldInput, FormFilterInput, UpdateFormInput } from './form.inputs';
+import { Form, FormField, FormPage, FormSubmission, FormSubmissionPage } from './form.types';
 import {
   FormFieldRow,
   FormFieldValue,
@@ -31,6 +32,39 @@ export class FormsService {
     return (await this.forms.findAll(organizationId, normalizedStatus)).map(
       (value) => this.mapValue(value),
     );
+  }
+
+  async listPage(
+    organizationId: number,
+    filter: FormFilterInput = {},
+    page: PageInput = new PageInput(),
+  ): Promise<FormPage> {
+    const normalizedPage = this.page(page);
+    const status = !filter.status || filter.status === 'all'
+      ? undefined
+      : this.status(filter.status);
+    const search = filter.search === undefined
+      ? undefined
+      : this.text(filter.search, 'search', 100);
+    const searchPattern = search === undefined
+      ? undefined
+      : `%${search.replace(/[\\%_]/g, '\\$&')}%`;
+    const result = await this.forms.findPage({
+      organizationId,
+      ...(status === undefined ? {} : { status }),
+      ...(searchPattern === undefined ? {} : { searchPattern }),
+      pageSize: normalizedPage.pageSize,
+      offset: normalizedPage.offset,
+    });
+    return {
+      nodes: result.rows.map((form) => this.mapValue({ form, fields: [] })),
+      pageInfo: pageInfo(
+        normalizedPage.page,
+        normalizedPage.pageSize,
+        result.total,
+      ),
+      stats: result.stats,
+    };
   }
 
   async get(organizationId: number, formId: number): Promise<Form> {
@@ -342,6 +376,22 @@ export class FormsService {
   private positiveId(value: number): number {
     this.id(value, 'fields');
     return value;
+  }
+
+  private page(input: PageInput) {
+    if (
+      !Number.isInteger(input.page) || input.page < 1
+      || !Number.isInteger(input.pageSize) || input.pageSize < 1 || input.pageSize > 100
+    ) {
+      throw itemizeGraphqlError('Invalid page input', 'BAD_USER_INPUT', {
+        field: 'page', reason: 'INVALID_PAGE',
+      });
+    }
+    return {
+      page: input.page,
+      pageSize: input.pageSize,
+      offset: (input.page - 1) * input.pageSize,
+    };
   }
 
   private text(value: string, field: string, max: number): string {

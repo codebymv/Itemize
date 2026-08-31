@@ -126,7 +126,6 @@ export function EstimateEditorPage() {
     const [saving, setSaving] = useState(false);
     const { organizationId, error: organizationError } = useOrganization();
     const [contacts, setContacts] = useState<Contact[]>([]);
-    const [products, setProducts] = useState<Product[]>([]);
     const initializedBootstrapRef = useRef<string | null>(null);
 
     // Estimate state
@@ -252,7 +251,6 @@ export function EstimateEditorPage() {
             : data.contacts;
         setInitialized(false);
         setContacts(contactList);
-        setProducts(data.products);
 
         if (data.estimate) {
             const estimate = data.estimate;
@@ -322,21 +320,18 @@ export function EstimateEditorPage() {
     };
 
     // Handle product selection for line item
-    const handleProductSelect = (lineItemId: string, productIdStr: string) => {
-        if (productIdStr === 'custom') {
+    const handleProductSelect = (lineItemId: string, product: Product | null) => {
+        if (!product) {
             updateLineItem(lineItemId, { product_id: undefined });
             return;
         }
-        const product = products.find(p => p.id === parseInt(productIdStr));
-        if (product) {
-            updateLineItem(lineItemId, {
-                product_id: product.id,
-                name: product.name,
-                description: product.description || '',
-                unit_price: product.price,
-                tax_rate: product.tax_rate || 0,
-            });
-        }
+        updateLineItem(lineItemId, {
+            product_id: product.id,
+            name: product.name,
+            description: product.description || '',
+            unit_price: product.price,
+            tax_rate: product.tax_rate || 0,
+        });
     };
 
     // Line item management
@@ -697,7 +692,7 @@ export function EstimateEditorPage() {
 
                 <LineItemsTable
                     lineItems={lineItems}
-                    products={products}
+                    organizationId={organizationId}
                     currency={currency}
                     showTaxRate
                     onAddLineItem={addLineItem}
