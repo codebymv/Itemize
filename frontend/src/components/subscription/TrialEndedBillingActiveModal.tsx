@@ -44,7 +44,7 @@ export function TrialEndedBillingActiveModal({ open, onClose, billing }: TrialEn
 
           <Button
             onClick={() => { onClose(); navigate('/dashboard'); }}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+            className="w-full bg-blue-600 interaction-button--primary text-white"
           >
             Got it
             <ArrowRight className="h-4 w-4 ml-2" />

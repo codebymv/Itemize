@@ -6,6 +6,7 @@ import {
   bulkUpdateContactsViaGraphql,
   createContactViaGraphql,
   deleteContactViaGraphql,
+  getContactDetailBootstrapViaGraphql,
   getContactViaGraphql,
   getContactActivitiesViaGraphql,
   getContactContentViaGraphql,
@@ -346,6 +347,58 @@ describe('contact GraphQL consumer', () => {
     const [, init] = vi.mocked(fetch).mock.calls[0];
     expect(JSON.parse(String(init?.body)).variables).toEqual({ contactId: 11 });
     expect(init?.headers).toMatchObject({ 'x-organization-id': '42' });
+  });
+
+  it('loads the contact detail lifecycle through one cancellable operation', async () => {
+    vi.mocked(fetch).mockResolvedValue(response({
+      data: {
+        contact: graphqlContact,
+        contactActivities: {
+          nodes: [graphqlActivity],
+          pageInfo: { page: 1, pageSize: 50, total: 1, totalPages: 1 },
+        },
+        contactContent: {
+          lists: {
+            nodes: [{
+              id: 3,
+              title: 'Priority',
+              category: null,
+              createdAt: '2026-01-03T00:00:00.000Z',
+            }],
+            total: 1,
+            hasMore: false,
+          },
+          notes: { nodes: [], total: 0, hasMore: false },
+          whiteboards: { nodes: [], total: 0, hasMore: false },
+          wireframes: { nodes: [], total: 0, hasMore: false },
+        },
+      },
+    }));
+    const controller = new AbortController();
+
+    await expect(getContactDetailBootstrapViaGraphql(
+      11,
+      42,
+      controller.signal,
+    )).resolves.toMatchObject({
+      contact: { id: 11, first_name: 'Ada' },
+      activities: [{ id: 91, type: 'note' }],
+      relatedContent: {
+        lists: [{ id: 3, title: 'Priority', category: '' }],
+      },
+    });
+
+    expect(fetch).toHaveBeenCalledOnce();
+    const [, init] = vi.mocked(fetch).mock.calls[0];
+    const body = JSON.parse(String(init?.body));
+    expect(body.query).toContain('query ContactDetailBootstrap(');
+    expect(body.query).toContain('contactActivities(contactId: $contactId');
+    expect(body.query).toContain('contactContent(contactId: $contactId)');
+    expect(body.variables).toEqual({
+      contactId: 11,
+      activityPage: { page: 1, pageSize: 50 },
+    });
+    expect(init?.signal).toBe(controller.signal);
   });
 
   it('fails closed instead of silently truncating contact content', async () => {

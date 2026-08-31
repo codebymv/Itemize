@@ -64,7 +64,7 @@ export const PaymentSettingsForm: React.FC<PaymentSettingsFormProps> = ({
         <CardHeader>
           <SettingsSectionTitle icon={FileText}>Invoice Settings</SettingsSectionTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent surface="inset" className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div className="grid gap-2">
               <Label htmlFor="invoice-prefix">Invoice Prefix</Label>
@@ -134,7 +134,7 @@ export const PaymentSettingsForm: React.FC<PaymentSettingsFormProps> = ({
         <CardHeader>
           <SettingsSectionTitle icon={Percent}>Tax Settings</SettingsSectionTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent surface="inset">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="default-tax-rate">Default Tax Rate (%)</Label>
@@ -176,7 +176,7 @@ export const PaymentSettingsForm: React.FC<PaymentSettingsFormProps> = ({
         <CardHeader>
           <SettingsSectionTitle icon={CreditCard}>Online Payments</SettingsSectionTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent surface="inset">
           <div className="rounded-lg border">
             <IntegrationStatusRow
               name="Stripe"

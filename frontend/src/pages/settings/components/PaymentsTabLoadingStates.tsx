@@ -17,7 +17,7 @@ export function PaymentsTabLoadingSkeleton() {
             <Skeleton className="h-5 w-32" />
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent surface="inset" className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {[0, 1, 2].map((index) => (
               <div key={index} className="space-y-2">
@@ -42,7 +42,7 @@ export function PaymentsTabLoadingSkeleton() {
             <Skeleton className="h-5 w-24" />
           </div>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
+        <CardContent surface="inset" className="grid gap-4 sm:grid-cols-2">
           {[0, 1].map((index) => (
             <div key={index} className="space-y-2">
               <Skeleton className="h-4 w-28" />
@@ -59,7 +59,7 @@ export function PaymentsTabLoadingSkeleton() {
             <Skeleton className="h-5 w-32" />
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent surface="inset">
           <div className="flex items-center gap-3 rounded-lg border p-4">
             <Skeleton className="h-10 w-10 rounded-lg" />
             <div className="flex-1 space-y-2">
@@ -78,7 +78,7 @@ export function PaymentsTabLoadingSkeleton() {
             <Skeleton className="h-5 w-32" />
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent surface="inset">
           <div className="space-y-3">
             {[0, 1].map((index) => (
               <div key={index} className="flex items-center gap-3 rounded-lg border p-3">

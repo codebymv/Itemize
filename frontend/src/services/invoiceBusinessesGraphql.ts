@@ -1,7 +1,7 @@
 import type { Business } from './invoicesApi';
 import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
 
-type GraphqlInvoiceBusiness = {
+export type GraphqlInvoiceBusiness = {
   id: number;
   organizationId: number;
   name: string;
@@ -16,12 +16,12 @@ type GraphqlInvoiceBusiness = {
   updatedAt: string;
 };
 
-const fields = `
+export const invoiceBusinessFields = `
   id organizationId name email phone address taxId logoUrl isActive
   lastUsedAt createdAt updatedAt
 `;
 
-const mapBusiness = (business: GraphqlInvoiceBusiness): Business => ({
+export const mapBusiness = (business: GraphqlInvoiceBusiness): Business => ({
   id: business.id,
   organization_id: business.organizationId,
   name: business.name,
@@ -68,6 +68,7 @@ const mapUpdateInput = (business: Partial<Business>) => ({
 
 export const getInvoiceBusinessesViaGraphql = async (
   organizationId?: number,
+  signal?: AbortSignal,
 ): Promise<Business[]> => {
   const businesses: Business[] = [];
   let page = 1;
@@ -84,12 +85,13 @@ export const getInvoiceBusinessesViaGraphql = async (
     >(
       `query InvoiceBusinesses($page: PageInput) {
         invoiceBusinesses(page: $page) {
-          nodes { ${fields} }
+          nodes { ${invoiceBusinessFields} }
           pageInfo { hasNextPage }
         }
       }`,
       { page: { page, pageSize: 100 } },
       organizationId,
+      signal,
     );
     businesses.push(...data.invoiceBusinesses.nodes.map(mapBusiness));
     hasNextPage = data.invoiceBusinesses.pageInfo.hasNextPage;
@@ -107,7 +109,7 @@ export const getInvoiceBusinessViaGraphql = async (
     { id: number }
   >(
     `query InvoiceBusiness($id: Int!) {
-      invoiceBusiness(id: $id) { ${fields} }
+      invoiceBusiness(id: $id) { ${invoiceBusinessFields} }
     }`,
     { id },
     organizationId,
@@ -124,7 +126,7 @@ export const createInvoiceBusinessViaGraphql = async (
     { input: ReturnType<typeof mapCreateInput> }
   >(
     `mutation CreateInvoiceBusiness($input: CreateInvoiceBusinessInput!) {
-      createInvoiceBusiness(input: $input) { ${fields} }
+      createInvoiceBusiness(input: $input) { ${invoiceBusinessFields} }
     }`,
     { input: mapCreateInput(business) },
     organizationId,
@@ -145,7 +147,7 @@ export const updateInvoiceBusinessViaGraphql = async (
       $id: Int!,
       $input: UpdateInvoiceBusinessInput!
     ) {
-      updateInvoiceBusiness(id: $id, input: $input) { ${fields} }
+      updateInvoiceBusiness(id: $id, input: $input) { ${invoiceBusinessFields} }
     }`,
     { id, input: mapUpdateInput(business) },
     organizationId,

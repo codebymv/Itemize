@@ -55,7 +55,8 @@ title-cases the raw string rather than rendering blank.
 Reach for `lib/badge-utils` only when all you have is a raw status string and no
 declared registry. Status color is deliberately **not** a `Badge` variant.
 
-Primary actions are `bg-blue-600 hover:bg-blue-700 text-white`. The app accent --
+Primary actions use the default `Button` variant; non-Button primitives use
+`bg-blue-600 interaction-button--primary text-white`. The app accent --
 page icons, active icon tabs, section card titles -- is `--icon-accent`
 (`blue-600` light, `blue-400` dark).
 
@@ -100,7 +101,7 @@ Used for main actions and CTAs.
 ```tsx
 import { Button } from '@/components/ui/button'
 
-<Button className="bg-blue-600 text-white hover:bg-blue-700">
+<Button>
   Save Changes
 </Button>
 ```
@@ -123,6 +124,39 @@ Used for delete/destroy actions.
 </Button>
 ```
 
+### Control primitives
+
+Controls communicate role before color or iconography. The default `Button` is
+reserved for the one primary action in a surface. Use `outline`, `secondary`, or
+`ghost` for supporting actions, `destructive` for a destructive confirmation,
+and `destructiveGhost` for a destructive menu or low-emphasis action. A mode
+switch such as Desktop/Mobile uses `variant="toggle"` with `aria-pressed`; it is
+not a pair of competing primary buttons.
+
+Control height is determined by context, not by page-local classes:
+
+| Context | Primitive size | Height |
+| --- | --- | --- |
+| Forms, dialogs, page actions, app shell | default | 44px |
+| Dense toolbars and menu triggers | toolbar | 36px |
+| Embedded editors and small mode switches | compact | 32px |
+
+Default `Input` and `SelectTrigger` controls are 44px tall and use 16px text so
+mobile browsers do not zoom when a field receives focus. Use
+`controlSize="compact"` only inside a genuinely dense editor or toolbar. Do not
+override one field's height or font size locally to make a layout fit.
+
+Selects and dropdown menus render on `popover`, with `border` and
+`popover-foreground` tokens. They must not borrow sidebar tokens: an overlay is
+a floating application surface in both themes. Destructive menu items use
+`variant="destructive"`; never reproduce red hover/focus classes on a page.
+
+Search uses `SearchField` for its input, icon, loading state, clear behavior,
+accessible label, and Escape-to-clear behavior. In the typed app shell,
+`HeaderSearch` progressively renders the full field, a labeled Search button,
+then an icon only when the available container width truly requires it. Icon-only
+search always retains a tooltip and accessible name.
+
 ### Tabs
 
 Use `TabsList` and `TabsTrigger` for content/status switching. For labeled icon navigation, use `IconTabsList` and `IconTabsTrigger`; they mirror the sidebar with a transparent parent, `sidebar-accent` hover/selected rows, no inset shadow, and accent-colored icons on hover and selection. For route navigation outside the sidebar, use `NavigationRow` so active routes, focus rings, hover surfaces, and icon colors follow that same contract. Do not recreate those states in individual pages.
@@ -141,6 +175,54 @@ Use `AppHeaderIconButton` for unlabeled icon actions in the authenticated top ba
 | Canvas/editor tool | 32px square | Neutral hover with an explicit active state |
 
 Do not shrink one app-chrome action independently or copy these hover classes into a page. If two controls occupy the same header role, they use the same primitive.
+
+### Hover, focus, and touch
+
+Hover confirms an affordance; it never introduces a required action or changes
+layout. Shared interaction classes in `index.css` apply hover feedback only when
+the device reports both hover support and a fine pointer.
+
+| Role | Shared treatment | Rule |
+| --- | --- | --- |
+| Button | `Button` variant | Affect only the button surface; semantic destructive styling stays red |
+| Field | `interaction-field` through input/select/textarea primitives | Strengthen the border without changing field layout |
+| Navigation | `NavigationRow`, `IconTabsTrigger`, sidebar primitives | Quiet sidebar-accent fill and blue icon; mirror it on keyboard focus |
+| Selectable row | `interaction-row` | Neutral muted fill; static rows do not hover |
+| Fully clickable card | `<Card interactive>` | Subtle accent border and elevation; static cards do not hover |
+| Contextual action | `interaction-reveal` inside `.group` | Visible on touch; reveal on fine-pointer hover, focus-within, or open state |
+
+Do not use hover-only information, app-content scale/lift effects, or
+`transition-all`. Motion that communicates dragging, editor manipulation, or a
+public marketing interaction is a separate role. Every hoverable application
+action must also have an operable focus state, and its hit target must not move.
+
+### Touch throughput
+
+Mobile support means completing the same core story efficiently, not merely
+showing the desktop controls at a narrower width.
+
+- Give every task action a 44 by 44 pixel physical hit area at phone widths and
+  on coarse pointers. A checkbox, radio, switch, close icon, carousel indicator,
+  or visually compact toolbar control may look smaller inside that area.
+- Use `touch-action: manipulation` for taps. A horizontal rail or board owns
+  horizontal panning and contains its horizontal overscroll; the page retains
+  vertical scrolling everywhere else.
+- Provide immediate pressed feedback on touch. Hover remains fine-pointer only
+  and can never be required to discover an action.
+- A drag interaction uses separate mouse and touch sensors. Touch drag starts
+  only after a short hold with movement tolerance so an ordinary vertical swipe
+  still scrolls. Keyboard reordering remains available.
+- Every business-state drag operation also has an explicit action. For example,
+  deals expose **Move to** in their action menu; users never need to discover or
+  execute drag to complete the workflow.
+- Keep frequent mobile commands in the sticky typed shell. Put lower-frequency
+  commands in its labeled overflow rather than creating a second sticky action
+  bar or relying on an offscreen desktop control.
+- Inputs use 16px text, dialogs keep Close and commit actions reachable, and
+  menus keep each item at least 44px tall. Do not disable browser zoom.
+- Verify core stories at 320, 390, and 430 CSS pixels. Audit target size,
+  accessible name, scroll ownership, pressed state, and a non-gesture fallback
+  together; passing responsive layout alone is insufficient.
 
 ### Progress
 
@@ -171,10 +253,83 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 #### Interactive Card (Click Action)
 ```tsx
-<Card className="cursor-pointer hover:shadow-md transition-all" onClick={handleClick}>
+<Card interactive onClick={handleClick}>
   {/* card content */}
 </Card>
 ```
+
+#### Framed Section
+
+Use `FramedSection` when one page-level region contains several pieces of like
+content. It establishes the standard contrast hierarchy:
+
+1. app shell (`background`)
+2. named section frame (`card`)
+3. inset child surfaces (`background-alt`)
+
+```tsx
+import { PieChart } from 'lucide-react'
+import { FramedSection } from '@/components/ui/framed-section'
+
+<FramedSection title="Overview" icon={PieChart}>
+  <ResponsiveCardRail label="Invoice status summary" className="mb-0">
+    <StatCard title="Draft" value={4} icon={FileText} />
+  </ResponsiveCardRail>
+</FramedSection>
+```
+
+When the frame directly owns content instead of a collection of inset cards,
+use its inset body. This is the standard for forms, settings, tables, charts,
+and previews on detail and editor pages:
+
+```tsx
+<FramedSection title="Campaign setup" icon={Settings2} contentSurface="inset">
+  <CampaignFields />
+</FramedSection>
+```
+
+Existing composed cards use the same primitive through
+`<CardContent surface="inset">`. Do not recreate it with `bg-muted`, opacity,
+or page-specific theme classes. A section must have exactly one source of
+inset contrast: either its direct content surface or its inset child cards,
+never both.
+
+Use a semantic title such as **Overview**, **Performance**, or **Recipient
+status** and a theme-aligned icon. Page-level frames use an `h2`; nested frames
+use `headingLevel={3}`. Keep descriptions out unless they change how the user
+interprets or acts on the whole section.
+
+Do not frame a lone control, every list row, an unframed editor canvas, or a
+standalone identity/action card. Stop at two container layers: frame plus
+inset content. The primitive is hierarchy, not decoration.
+
+### Chart view controls
+
+Charts with multiple comparable series use legend-style toggles as the direct
+visibility control. Promote them into the framing card header when the whole
+card can also fit its title, size controls, and route action. Keep at least one
+series enabled and remove disabled series from the rendered marks, tooltip,
+and accessible summary together. Active toggles use the corresponding series
+color for their border, tint, and text; inactive toggles visibly recede. Do not
+rely on a generic accent background as the only indication of visibility.
+
+Use discrete **Compact**, **Standard**, and **Expanded** chart sizes instead of
+an arbitrary zoom slider. Place Canvas-style minus/plus height controls in the
+framing card header, never inside the chart surface. The minimum-size minus
+control is disabled by default. Chart size is presentation; it must not change
+the data period, aggregation, or surrounding detail content. Respond to the
+chart surface's container width: collapse series controls into one labeled
+`Series` menu when the direct toggles no longer fit.
+
+Persist chart choices per user within an organization. Series visibility may
+be shared by instances of the same chart, but save size separately by context
+when dashboard and detail surfaces have different space responsibilities.
+
+Only set `interactive` when the whole card performs one action. Static cards do
+not gain elevation just because they contain a button. When a clickable card
+contains nested actions, those actions remain permanently discoverable on
+touch and become visible on fine-pointer hover or keyboard focus through
+`interaction-reveal`.
 
 #### Module Card (with accent)
 ```tsx
@@ -324,6 +479,7 @@ The shell header identifies the current section or task. It is not a toolbar.
 - Raw tabs, result counts, destructive commands, and arbitrary multi-button clusters are forbidden in the shell. A persistent editor mode may use the typed `modeNavigation` slot, which preserves labels whenever they fit and compacts before status or commit actions yield space. `modeNavigation` must never repeat sibling destinations already represented in the sidebar or a section-navigation column.
 - When a page's labeled section navigation column is hidden, `compactNavigation` may replace the static shell identity with one icon-bearing destination selector until the same breakpoint. It must show the complete active label on one row, use the same icons and labels as the navigation column, and disappear when that column appears.
 - Search, filters, one secondary action, and, when applicable, one primary action use the named `headerTools` slots. Pages may not inject an untyped toolbar or declare a second mobile copy of those commands.
+- When exactly one secondary action is present and no primary action is declared, `ResponsiveHeaderTools` promotes it into the primary slot and applies the accented primary treatment. A page must not leave its sole actionable destination visually subordinate to filters or passive context. Multi-action secondary groups remain secondary and follow the normal overflow rules.
 - A shell-level refresh command uses `HeaderRefreshAction` in the appropriate named action slot. Its text label follows the shell container query and yields to the accessible 44 by 44 pixel icon control when space is constrained.
 - Route-level administration sections use the same `compactNavigation` contract as Settings: one icon-bearing selector with the complete active label until the labeled navigation column appears.
 - Administration content modes such as Users and Email Logs remain page-surface tabs, but their active mode must be URL-addressable so reload, deep links, and browser history preserve it.
@@ -397,10 +553,15 @@ holds both to their primitives.
 
 #### Stat summaries
 
-Wrap `StatCard`s in `ResponsiveCardRail`: one markup, a snap-scrolling rail with
-dot indicators on mobile and a grid on desktop. Cards use `surface="inset"` so a
-summary reads as recessed against the page surface. A lone odd trailing card is
-centered automatically -- do not hand-tune it.
+Wrap a page-level stat summary in `FramedSection`, then place the `StatCard`s in
+`ResponsiveCardRail`: one markup, a snap-scrolling rail with dot indicators on
+mobile and a grid on desktop. Cards use `surface="inset"` so the summary reads as
+recessed against its named section frame. Set the rail margin to `mb-0` inside a
+frame. A lone odd trailing card is centered automatically -- do not hand-tune
+it.
+
+When a summary already belongs to an enclosing framed component, only use the
+rail and inset cards. Do not create a second frame.
 
 #### Detail and editor pages
 
@@ -429,6 +590,36 @@ Every routed entity page renders `EntityDetailHeader`:
 `WorkflowBuilderPage` is a deliberate exception: it is a full-bleed builder on
 `frame="flush"` with viewport-height math and no identity block, closer to the
 canvas pages than to a detail page.
+
+### General State Pattern
+
+Every routed page uses the same state precedence. Resolve the highest state in
+this table before rendering a lower one; a zero-length fallback must never hide
+an unresolved request, access restriction, or failure.
+
+| State | Required treatment |
+| --- | --- |
+| Initial loading | Keep the typed shell and identity when they are known. Use `PageLoading` for a route-sized unknown, `LoadingState kind="section"` for an isolated source, or a shape-preserving skeleton group with one named busy region. |
+| Background refresh | Keep trustworthy content visible. Mark the owning region and refresh action busy; spin the refresh icon and prevent duplicate requests. Never replace the page with initial loading. |
+| Empty collection | Render `EmptyState kind="collection"` only after a successful request. Offer one creation action when creation is allowed. |
+| Filtered empty | Render `EmptyState kind="results"` and recover by clearing the active query. Do not offer creation as the primary recovery. |
+| Partial failure | Preserve trustworthy content and place `FailureNotice` at the affected scope. |
+| Blocking failure | Render retryable `ErrorState` at the smallest truthful scope. Organization failure takes precedence over page data failure. |
+| Mutation in progress | Keep context visible, change the owning action to the active verb, set `aria-busy`, and disable duplicate submission. Other unrelated controls remain available. |
+| Mutation success | Use a toast for a completed explicit action and `SaveStatus` for autosave. Use a persistent success panel only when the workflow has reached a terminal state. |
+| Dirty or stale | Use `useDirtyState` with the unsaved-changes guard. Communicate dirty, saving, saved, and failed autosave through `SaveStatus`; do not encode the state through a disabled button alone. |
+| Permission, plan, or domain restriction | Keep the page identity and explain why the capability is unavailable. Use the relevant upgrade, sign-in, or navigation action; this is not a retryable source failure. |
+| Terminal public state | Completed, expired, declined, unavailable, and invalid-link outcomes use the service's authored public treatment and one valid next step. |
+
+`LoadingState` owns one polite status announcement. A spinner nested inside a
+busy button or state region is decorative; it must not create a second live
+announcement. Visible loading copy is a short verb phrase such as “Loading
+contacts” and never implementation language.
+
+Header actions pass `busy` whenever their mutation flag is active. This produces
+the same disabled, `aria-busy`, and compact mobile behavior from one declaration.
+`HeaderRefreshAction` supplies this automatically and changes its accessible
+label to “Refreshing” while work is in progress.
 
 ### Empty State Pattern
 
@@ -526,7 +717,7 @@ Primary actions inside a page or mobile command bar use consistent styling and a
 
 ```tsx
 <Button
-  className="h-11 bg-blue-600 text-white hover:bg-blue-700"
+  className="h-11"
   onClick={handleClick}
 >
   <Icon className="h-4 w-4 mr-2" />
@@ -565,10 +756,15 @@ const status = defineStatus('Active', 'blue', Play)
 ### Loading Pattern
 
 ```tsx
+import { LoadingState } from '@/components/LoadingState'
 import { PageLoading } from '@/components/ui/page-loading'
 
-<PageLoading />
+<PageLoading message="Loading campaign" />
+<LoadingState kind="section" message="Loading activity" />
 ```
+
+Use these only for initial source acquisition. A background refresh preserves
+the current content and exposes busy state on its owning region and action.
 
 ---
 
@@ -576,7 +772,7 @@ import { PageLoading } from '@/components/ui/page-loading'
 
 ### Color Usage Rules
 
-1. **Primary actions** → Always use `bg-blue-600 hover:bg-blue-700`
+1. **Primary actions** → Use the default `Button`; non-Button controls add `interaction-button--primary`
 2. **Itemize-owned active/draft states** → Use blue
 3. **Successful outcomes** → Use green
 4. **Parked/transitional states** → Use orange
@@ -687,6 +883,115 @@ All text uses Raleway (primary) display font:
 
 ---
 
+## Personalized overview signals
+
+Dashboard overviews use one framed source of truth rather than separate fixed
+summary and operations card walls.
+
+- Render pinned signals as one compact, bordered matrix inside an inset
+  `FramedSection`; the cells are related content, not independent cards.
+- Use iconography and the catalog module label to communicate source. Reserve
+  green, orange, and red for semantic state or severity, never sidebar identity.
+- Keep unresolved required-attention signals visible even when they are not
+  pinned. Do not duplicate one when it is already pinned.
+- Scope saved pin order to both the organization and user, sanitize persisted
+  identifiers, and enforce the shared one-to-eight signal limit.
+- Every signal is a complete, keyboard-accessible deep link to its owning
+  workflow. Keep drag ordering and unpinning on the rendered signal itself;
+  the add dialog only owns discovery through the shared `SearchField`,
+  `Select`, `Button`, tooltip, badge, and empty-state primitives.
+- Keep discovery rows to the signal title, owning module, and Pin action. Do not
+  repeat catalog descriptions when the title and module already establish the
+  choice. Search only the information presented in those rows.
+- Present signal discovery as one responsive picker: an anchored, height-bounded
+  popover on desktop and a bottom sheet below 768 pixels. Search and module
+  filtering stay fixed above the independently scrolling result list. Keep the
+  picker open for consecutive pins and close it when the eighth slot is filled.
+- Show unused capacity as minimal dashed open-slot controls directly beneath
+  the pinned matrix. Number each slot against the shared maximum and route it
+  to the same add dialog; do not restore a separate pinned-count heading row.
+- Give drag handles keyboard sensors and a dedicated touch-safe target. Keep
+  management controls separate from the signal's navigation target and never
+  allow the last pinned signal to be removed.
+- At narrow widths, stack all signals in order. Do not put overview truth in a
+  carousel or hide it behind horizontal scrolling.
+
+The initial storage adapter is device-local. Keep its public hook contract
+storage-agnostic so it can move to a user-preference API without changing the
+overview component.
+
+---
+
+## Modal anatomy
+
+Use `ModalContent`, `ModalHeader`, `ModalBody`, and `ModalFooter` for task and
+detail dialogs. This anatomy is a behavioral contract, not optional styling.
+
+- The shell is bounded to the viewport and never owns task scrolling.
+- The header and footer remain visible; only `ModalBody` scrolls.
+- Every modal has a concise sentence-case title and a description in the
+  accessibility tree. Use `descriptionVisuallyHidden` when visible supporting
+  copy would merely repeat context already present in the interface.
+- The header reserves the automatic close-button lane. Put header actions in
+  the `actions` slot instead of absolutely positioning controls near Close.
+- Use one primary footer action. Put Cancel or a secondary action before it.
+  A footer may be omitted only for preview, search, or immediate-selection
+  experiences where choosing content completes the interaction.
+- Use the blue theme variant for the header's semantic icon. Status and
+  destructive colors belong to content or explicit confirmation actions.
+- Use `ModalSection` only when the body contains multiple named conceptual
+  groups. Do not add cards around individual fields.
+- Use `DeleteDialog` for destructive confirmation and `AlertDialog` for a
+  decision that must block the underlying workflow.
+
+The base `DialogContent` remains viewport-bounded as a safety fallback for
+legacy and specialized studio dialogs. New task dialogs must use the modal
+anatomy rather than relying on whole-shell scrolling.
+
+---
+
+## Data fetching
+
+Treat fetching as part of the application design system. A stable interface
+must also have stable request ownership, freshness, and failure behavior.
+
+- Give every route one critical read model when its fields share the same
+  organization, filters, freshness window, and error boundary. GraphQL already
+  provides the endpoint; compose one named route operation instead of issuing a
+  request per card. Dashboard uses `DashboardSnapshot` as this pattern.
+- Keep independently mutated, paginated, live, or deliberately lazy content in
+  separate queries. Aggregation is a lifecycle boundary, not a goal of putting
+  every possible field into one payload.
+- Hydrate viewer and onboarding state when the authentication boundary changes,
+  not on every pathname. Organization-scoped bootstrap state changes only when
+  the selected organization changes.
+- Scope query keys by organization and every server-side filter. Fresh data may
+  be reused on remount; never force `refetchOnMount: 'always'` globally.
+- Pass React Query's `AbortSignal` through the transport. Search, filter, period,
+  and organization changes must cancel obsolete reads so late responses cannot
+  replace current truth.
+- Retry only transient reads. Do not retry permanent 4xx responses. Treat 429
+  as manual-retry-only until the transport preserves and schedules against the
+  server's `Retry-After` value. Mutations do not retry by default because sends,
+  charges, and other business actions are not assumed idempotent; opt in only
+  with a server-enforced idempotency key.
+- Pause polling while the document is hidden and avoid overlapping a polling
+  loop with an active realtime subscription. Realtime events should update or
+  narrowly invalidate the owning cache rather than refresh the whole route.
+- After a mutation, patch trustworthy returned data into its cache and
+  invalidate only derived snapshots. Avoid page-wide refetch sequences.
+- Compatibility fallbacks must remember a negotiated capability. Do not repeat
+  a ladder of intentionally failing schema requests on every list refresh.
+
+Cold-route request budgets are measured by ownership: shell bootstrap, the
+route's critical operation, and explicitly documented secondary reads. A new
+card does not receive a new request merely because it is visually separate.
+
+See [the measured fetching audit](./fetching-audit.md) for the current request
+budgets, observed route counts, and prioritized migration queue.
+
+---
+
 ## Migration Guide
 
 When updating existing components to use the design system:
@@ -694,10 +999,12 @@ When updating existing components to use the design system:
 1. Declare each status once with `defineStatus`; delete inline color classes
 2. Render index pages through `PageLayout` (header, mobile bar, and frame)
 3. Render routed entity pages through `EntityDetailHeader`
-4. Put stat summaries in `ResponsiveCardRail` so they become a swipe rail on mobile
+4. Put page-level stat summaries in `FramedSection` + `ResponsiveCardRail`; use only the rail when an enclosing frame already exists
 5. Use `EmptyState` / `ErrorState` inside the layout body
 6. Use `DeleteDialog` for destructive confirmation rather than a bespoke dialog
 7. Give configurable embedded services a routed editor with Settings / Appearance / Install modes and the shared `LiveServicePreview`
+8. Structure task dialogs with the shared modal anatomy; keep scrolling in `ModalBody`
+9. Consolidate same-lifecycle route reads, use organization-scoped query keys, and pass cancellation through the transport
 
 Example migration:
 

@@ -29,7 +29,7 @@ export function WorkflowTemplateCard({
   const ActiveIcon = activeVisual.icon
 
   return (
-    <Card className="bg-muted/10 hover:shadow-md transition-shadow">
+    <Card className="bg-muted/10">
       <CardHeader>
         <div className="flex items-start justify-between">
           <div>
@@ -98,7 +98,7 @@ export function WorkflowTemplateCard({
             )
           ) : (
             onActivate && (
-              <Button size="sm" className="flex-1 bg-blue-600 hover:bg-blue-700" onClick={onActivate}>
+              <Button size="sm" className="flex-1 bg-blue-600 interaction-button--primary" onClick={onActivate}>
                 <Play className="h-4 w-4 mr-1" />
                 Activate
               </Button>

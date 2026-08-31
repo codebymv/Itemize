@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Eye, Send, FileSignature, CheckCircle, AlertCircle, ChevronDown, MoreVertical, Trash2 } from 'lucide-react';
+import { Plus, Eye, Send, FileSignature, CheckCircle, AlertCircle, ChevronDown, MoreVertical, Trash2, PieChart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -11,6 +11,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { StatCard } from '@/components/StatCard';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
+import { FramedSection } from '@/components/ui/framed-section';
 import { ListRowSkeleton } from '@/components/ui/loading-skeletons';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { ExpandedRowActionLabel, ExpandedRowActions } from '@/components/ui/expanded-row';
@@ -191,10 +192,11 @@ export default function SignatureTemplatesPage() {
       }}
     >
           {!loadError && (
+            <FramedSection title="Overview" icon={PieChart} className="mb-6">
             <ResponsiveCardRail
               label="Template readiness summary"
               desktopColumns="md:grid-cols-3"
-              className="responsive-stat-summary"
+              className="responsive-stat-summary mb-0"
             >
               <StatCard
                 title="Templates"
@@ -224,6 +226,7 @@ export default function SignatureTemplatesPage() {
                 isLoading={loading}
               />
             </ResponsiveCardRail>
+            </FramedSection>
           )}
           <Card>
             <CardContent className="p-0">
@@ -261,7 +264,7 @@ export default function SignatureTemplatesPage() {
                     return (
                       <div key={template.id}>
                         <div
-                          className="p-4 hover:bg-muted/50 transition-colors cursor-pointer group"
+                          className="p-4 interaction-row cursor-pointer group"
                           onClick={(e) => void handleToggleExpand(template.id, e)}
                         >
                           <div className="flex items-center justify-between">
@@ -341,7 +344,7 @@ export default function SignatureTemplatesPage() {
                               </Button>
                               <Button
                                 size="sm"
-                                className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
+                                className="bg-blue-600 interaction-button--primary text-white text-xs sm:text-sm"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   if (template.is_ready) handleUseTemplate(template.id);
@@ -361,7 +364,7 @@ export default function SignatureTemplatesPage() {
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive focus:text-destructive text-xs sm:text-sm"
+                                className="text-destructive border-destructive/30 interaction-button--destructive-ghost focus:text-destructive text-xs sm:text-sm"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setDeleteTemplateId(template.id);

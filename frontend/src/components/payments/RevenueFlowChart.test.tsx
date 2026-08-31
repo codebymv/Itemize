@@ -1,7 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { RevenueFlow } from '@/services/invoicePaymentsApi';
-import { RevenueFlowChart } from './RevenueFlowChart';
+import { RevenueFlowChart, RevenueFlowSeriesControls } from './RevenueFlowChart';
 
 vi.mock('recharts', async () => {
   const React = await import('react');
@@ -68,7 +68,15 @@ const flow: RevenueFlow = {
 
 describe('RevenueFlowChart', () => {
   it('renders an accessible detailed flow and payment-method breakdown', () => {
-    const { container } = render(<RevenueFlowChart data={flow} />);
+    const { container } = render(
+      <RevenueFlowChart
+        data={flow}
+        context="payments"
+        size="standard"
+        visibleSeries={['bookedSales', 'netReceived', 'refunds']}
+        onVisibleSeriesChange={vi.fn()}
+      />,
+    );
 
     expect(screen.getByRole('img', { name: /revenue flow in usd/i })).toBeInTheDocument();
     expect(screen.getByText('Payment methods')).toBeInTheDocument();
@@ -82,15 +90,84 @@ describe('RevenueFlowChart', () => {
     expect(container.querySelector('[data-chart-kind="line"][data-chart-series="netReceived"]')).toBeInTheDocument();
   });
 
-  it('omits the method breakdown in compact mode', () => {
-    render(<RevenueFlowChart data={flow} compact />);
+  it('keeps dashboard context independent from the selected chart height', () => {
+    const { container } = render(
+      <RevenueFlowChart
+        data={flow}
+        context="dashboard"
+        size="expanded"
+        visibleSeries={['bookedSales', 'netReceived', 'refunds']}
+        onVisibleSeriesChange={vi.fn()}
+      />,
+    );
 
     expect(screen.getByRole('img', { name: /revenue flow in usd/i })).toBeInTheDocument();
     expect(screen.queryByText('Payment methods')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-chart="chart-revenue-flow-USD-dashboard-expanded"]')).toHaveClass('h-[360px]');
+  });
+
+  it('renders and announces only the enabled series', () => {
+    const { container } = render(
+      <RevenueFlowChart
+        data={flow}
+        context="dashboard"
+        size="compact"
+        visibleSeries={['netReceived']}
+        onVisibleSeriesChange={vi.fn()}
+      />,
+    );
+
+    expect(container.querySelector('[data-chart-series="bookedSales"]')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-chart-series="refundImpact"]')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-chart-series="netReceived"]')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /net received/i })).not.toHaveAccessibleName(/booked sales|refunds/i);
+    expect(screen.getByRole('button', { name: 'Revenue series, 1 of 3 visible' })).toBeInTheDocument();
+  });
+
+  it('keeps only the compact series menu in the chart surface', () => {
+    render(
+      <RevenueFlowChart
+        data={flow}
+        context="dashboard"
+        size="compact"
+        visibleSeries={['bookedSales', 'netReceived', 'refunds']}
+        onVisibleSeriesChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Revenue series, 3 of 3 visible' })).toHaveTextContent('Series 3/3');
+    expect(screen.queryByRole('group', { name: 'Revenue flow series' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /chart size/i })).not.toBeInTheDocument();
+    expect(screen.queryByText('Compact')).not.toBeInTheDocument();
+  });
+
+  it('lets the promoted direct controls change visible series', () => {
+    const onVisibleSeriesChange = vi.fn();
+    render(
+      <RevenueFlowSeriesControls
+        visibleSeries={['bookedSales', 'netReceived', 'refunds']}
+        onVisibleSeriesChange={onVisibleSeriesChange}
+        variant="direct"
+      />,
+    );
+
+    const refunds = screen.getByRole('button', { name: 'Hide Refunds' });
+    expect(refunds).toHaveAttribute('data-state', 'on');
+    expect(refunds).toHaveClass('data-[state=on]:border-red-500');
+    fireEvent.click(refunds);
+    expect(onVisibleSeriesChange).toHaveBeenCalledWith(['bookedSales', 'netReceived']);
   });
 
   it('renders an empty state when the period has no revenue', () => {
-    render(<RevenueFlowChart data={{ ...flow, currencies: [] }} />);
+    render(
+      <RevenueFlowChart
+        data={{ ...flow, currencies: [] }}
+        context="payments"
+        size="standard"
+        visibleSeries={['bookedSales', 'netReceived', 'refunds']}
+        onVisibleSeriesChange={vi.fn()}
+      />,
+    );
 
     expect(screen.getByText('No booked or received revenue in this period')).toBeInTheDocument();
   });

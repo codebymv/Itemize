@@ -106,7 +106,7 @@ export function UpgradePrompt({
           <div className="flex items-center gap-2">
             <button
               onClick={() => startCheckout(suggestedPlan, 'monthly')}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary-hover transition-colors"
+              className="interaction-button--primary inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-primary-foreground"
             >
               Upgrade Now
               <ArrowRight className="w-4 h-4" />
@@ -114,7 +114,8 @@ export function UpgradePrompt({
             {dismissible && (
               <button
                 onClick={onDismiss}
-                className="p-2 text-muted-foreground hover:text-foreground transition-colors"
+                className="interaction-control rounded-md p-2 text-muted-foreground"
+                aria-label="Dismiss upgrade prompt"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -151,7 +152,8 @@ export function UpgradePrompt({
         {dismissible && (
           <button
             onClick={onDismiss}
-            className="absolute top-4 right-4 p-1 text-muted-foreground hover:text-foreground transition-colors"
+            className="interaction-control absolute right-4 top-4 rounded-md p-1 text-muted-foreground"
+            aria-label="Dismiss upgrade prompt"
           >
             <X className="w-4 h-4" />
           </button>
@@ -185,14 +187,14 @@ export function UpgradePrompt({
         <div className="flex items-center gap-3">
           <button
             onClick={() => startCheckout(suggestedPlan, 'monthly')}
-            className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-md hover:bg-primary-hover transition-colors"
+            className="interaction-button--primary inline-flex flex-1 items-center justify-center gap-2 rounded-md bg-primary px-4 py-2.5 text-primary-foreground"
           >
             <Sparkles className="w-4 h-4" />
             Upgrade to {suggestedPlanName}
           </button>
           <button
             onClick={() => startCheckout(suggestedPlan, 'yearly')}
-            className="px-4 py-2.5 text-sm font-medium border border-border rounded-md hover:bg-muted transition-colors"
+            className="interaction-button--neutral rounded-md border border-border px-4 py-2.5 text-sm font-medium"
           >
             Save with yearly
           </button>

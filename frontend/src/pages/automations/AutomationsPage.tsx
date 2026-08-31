@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Plus, Zap, Play, Pause, MoreHorizontal, Copy, Trash2,
-  Mail, Tag, Clock, Users, TrendingUp, CheckCircle, XCircle,
+  Mail, Tag, Clock, Users, TrendingUp, CheckCircle, XCircle, PieChart,
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatCard } from '@/components/StatCard';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
+import { FramedSection } from '@/components/ui/framed-section';
 import {
   HeaderAction,
   HeaderCombinedQuery,
@@ -340,11 +341,12 @@ export function AutomationsPage() {
       />
 
         {/* Stats cards */}
-      <ResponsiveCardRail
-        label="Automation summary"
-        desktopColumns="md:grid-cols-2 lg:grid-cols-5"
-        className="responsive-stat-summary"
-      >
+      <FramedSection title="Overview" icon={PieChart} className="mb-6">
+        <ResponsiveCardRail
+          label="Automation summary"
+          desktopColumns="md:grid-cols-2 lg:grid-cols-5"
+          className="responsive-stat-summary mb-0"
+        >
             <StatCard
               title="Failed runs"
               badgeText="Failed"
@@ -390,7 +392,8 @@ export function AutomationsPage() {
               colorTheme="green"
               isLoading={loading}
             />
-      </ResponsiveCardRail>
+        </ResponsiveCardRail>
+      </FramedSection>
 
       {/* Workflows list */}
       <Card>
@@ -428,7 +431,7 @@ export function AutomationsPage() {
                 const TriggerIcon = TRIGGER_TYPE_ICONS[workflow.trigger_type] ?? Zap;
                 const working = workingWorkflowId === workflow.id;
                 return (
-                <div key={workflow.id} className="flex items-center gap-2 px-3 transition-colors hover:bg-muted/50 sm:px-4">
+                <div key={workflow.id} className="flex items-center gap-2 px-3 interaction-row sm:px-4">
                   <button
                     type="button"
                     className="flex min-w-0 flex-1 items-center gap-3 py-4 text-left sm:gap-4"
@@ -461,7 +464,7 @@ export function AutomationsPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => navigate(`/automations/${workflow.id}`)} className="group/menu">
-                            <Zap className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                            <Zap className="h-4 w-4 mr-2" />
                             Edit Workflow
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => void handleToggleWorkflow(workflow)}>
@@ -469,7 +472,7 @@ export function AutomationsPage() {
                             {workflow.is_active ? 'Deactivate automation' : 'Activate automation'}
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleDuplicateWorkflow(workflow)} className="group/menu">
-                            <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                            <Copy className="h-4 w-4 mr-2" />
                             Duplicate
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />

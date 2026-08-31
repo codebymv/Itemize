@@ -6,11 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
     Dialog,
-    DialogContent,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
 } from '@/components/ui/dialog';
+import { ModalBody, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/modal';
 import {
     Select,
     SelectContent,
@@ -116,16 +113,15 @@ export function CreateCalendarModal({
 
     return (
         <Dialog open onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        <CalendarDays className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                        Create calendar
-                    </DialogTitle>
-                </DialogHeader>
+            <ModalContent size="md">
+                <ModalHeader
+                    icon={CalendarDays}
+                    title="Create calendar"
+                    description="Set the details and booking rules for this calendar."
+                />
 
-                <form onSubmit={handleSubmit}>
-                    <div className="space-y-4 py-4">
+                <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+                    <ModalBody className="space-y-4">
                         {/* Name */}
                         <div className="space-y-2">
                             <Label htmlFor="name">Calendar name</Label>
@@ -263,23 +259,23 @@ export function CreateCalendarModal({
                                 ))}
                             </div>
                         </div>
-                    </div>
+                    </ModalBody>
 
-                    <DialogFooter>
+                    <ModalFooter>
                         <Button type="button" variant="outline" onClick={onClose}>
                             Cancel
                         </Button>
                         <Button
                             type="submit"
                             disabled={loading}
-                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                            className="bg-blue-600 interaction-button--primary text-white"
                             aria-label={loading ? 'Creating calendar...' : 'Create calendar'}
                         >
                             {loading ? 'Creating...' : 'Create calendar'}
                         </Button>
-                    </DialogFooter>
+                    </ModalFooter>
                 </form>
-            </DialogContent>
+            </ModalContent>
         </Dialog>
     );
 }

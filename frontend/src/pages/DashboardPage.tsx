@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthState } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { StatCard } from '@/components/StatCard';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { HeaderAction, HeaderFilters } from '@/components/layout/DesktopHeaderTools';
@@ -20,16 +19,12 @@ import {
     Sparkles,
     LucideIcon,
     Clock,
-    AlertCircle,
-    CalendarDays,
     Target,
     Workflow,
     BarChart3,
-    PieChart,
     LayoutDashboard,
     Activity,
     Mail,
-    BriefcaseBusiness,
     Dumbbell,
 } from 'lucide-react';
 import { useDashboardData } from './dashboard/hooks/useDashboardData';
@@ -41,15 +36,17 @@ import { PipelineDealAgeCard } from './dashboard/components/PipelineDealAgeCard'
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { ActivityTimeline, getLatestActivityGroupLabel } from '@/components/activity-timeline';
 import { transformApiActivityToDesignSystem } from '@/design-system/utils/transform-api-activity';
-import { RevenueFlowChart } from '@/components/payments/RevenueFlowChart';
+import { RevenueFlowChart, RevenueFlowSeriesControls } from '@/components/payments/RevenueFlowChart';
+import { RevenueFlowSizeControls } from '@/components/payments/RevenueFlowSizeControls';
 import { useOrganization } from '@/hooks/useOrganization';
-import { InvoicesWidget, SignaturesWidget, WorkspaceWidget, ContactsWidget } from '@/design-system/widgets';
 import { GetStartedCard } from '@/components/GetStartedCard';
 import { ErrorState } from '@/components/ErrorState';
 import { FailureNotice } from '@/components/FailureNotice';
 import { OrganizationErrorState } from '@/components/OrganizationErrorState';
-import { getInvoiceStatusVisual } from './invoices/constants/invoiceConstants';
-import { getSignatureStatusVisual } from './signatures/constants/signatureConstants';
+import { DashboardOverview } from './dashboard/components/DashboardOverview';
+import { useDashboardSignalPins } from './dashboard/hooks/useDashboardSignalPins';
+import { buildDashboardSignals } from './dashboard/signals/dashboardSignalCatalog';
+import { useRevenueFlowPreferences } from '@/hooks/useRevenueFlowPreferences';
 
 interface QuickAction {
     title: string;
@@ -58,9 +55,6 @@ interface QuickAction {
 }
 
 const DASHBOARD_PERIODS: PeriodOption[] = ['7days', '30days', '90days'];
-const DASHBOARD_COLLAPSED_KEY = 'itemize_dashboard_collapsed';
-const DEFAULT_COLLAPSED_WIDGETS = ['invoices', 'signatures', 'workspace', 'contacts'];
-
 const DASHBOARD_CARD_ACTION_CLASS = ['shrink-0 whitespace-nowrap text-xs font-light', 'text-blue-600 hover:bg-blue-50/50 hover:text-blue-700', 'dark:text-blue-400 dark:hover:bg-blue-900/20 dark:hover:text-blue-300'].join(' ');
 
 export function DashboardPage() {
@@ -69,51 +63,6 @@ export function DashboardPage() {
     // Pro tip dismiss state
     const [proTipDismissed, setProTipDismissed] = useState(false);
 
-    // Collapsible widget state (persisted to localStorage)
-    const [collapsedWidgets, setCollapsedWidgets] = useState<Set<string>>(() => {
-        if (typeof window === 'undefined') return new Set();
-        try {
-            const raw = window.localStorage.getItem(DASHBOARD_COLLAPSED_KEY);
-            if (raw) {
-                const arr = JSON.parse(raw);
-                return Array.isArray(arr) ? new Set(arr) : new Set(DEFAULT_COLLAPSED_WIDGETS);
-            }
-        } catch {
-            // ignore
-        }
-        return new Set(DEFAULT_COLLAPSED_WIDGETS);
-    });
-
-    // Responsive detection
-    const [isMobile, setIsMobile] = useState(false);
-
-    // Initialize mobile detection
-    useEffect(() => {
-        const checkMobile = () => setIsMobile(window.innerWidth < 768);
-        checkMobile();
-        window.addEventListener('resize', checkMobile);
-        return () => window.removeEventListener('resize', checkMobile);
-    }, []);
-
-    // Helper functions
-    const isWidgetCollapsed = (widgetId: string) => collapsedWidgets.has(widgetId);
-
-    const toggleWidgetCollapse = (widgetId: string) => {
-        setCollapsedWidgets((prev) => {
-            const newSet = new Set(prev);
-            if (newSet.has(widgetId)) {
-                newSet.delete(widgetId);
-            } else {
-                newSet.add(widgetId);
-            }
-            try {
-                window.localStorage.setItem(DASHBOARD_COLLAPSED_KEY, JSON.stringify([...newSet]));
-            } catch {
-                // ignore
-            }
-            return newSet;
-        });
-    };
     const navigate = useNavigate();
     const { organizationId, error: organizationError } = useOrganization();
 
@@ -143,6 +92,51 @@ export function DashboardPage() {
     const recentActivities = analytics?.recentActivity?.map(transformApiActivityToDesignSystem) ?? [];
     const latestActivityGroupLabel = getLatestActivityGroupLabel(recentActivities);
 
+    const dashboardSignals = useMemo(() => buildDashboardSignals({
+        analytics,
+        conversions: conversionData,
+        communications: commStats,
+        pipelineDealAge,
+        revenue: revenueData,
+        loading: {
+            analytics: isLoading,
+            conversions: conversionLoading,
+            communications: commLoading,
+            pipelineDealAge: isLoadingPipelineDealAge,
+            revenue: revenueLoading,
+        },
+        errors: {
+            conversions: Boolean(conversionsError),
+            communications: Boolean(communicationsError),
+            pipelineDealAge: Boolean(pipelineDealAgeError),
+            revenue: Boolean(revenueError),
+        },
+    }), [
+        analytics,
+        commLoading,
+        commStats,
+        communicationsError,
+        conversionData,
+        conversionLoading,
+        conversionsError,
+        isLoading,
+        isLoadingPipelineDealAge,
+        pipelineDealAge,
+        pipelineDealAgeError,
+        revenueData,
+        revenueError,
+        revenueLoading,
+    ]);
+    const { pinnedSignalIds, savePinnedSignalIds } = useDashboardSignalPins({
+        organizationId,
+        userId: currentUser?.uid,
+    });
+    const revenueFlowPreferences = useRevenueFlowPreferences({
+        organizationId,
+        userId: currentUser?.uid,
+        context: 'dashboard',
+    });
+
     const firstName = currentUser?.name?.split(' ')[0] || 'there';
 
     const quickActions: QuickAction[] = [
@@ -170,8 +164,8 @@ export function DashboardPage() {
 
     const periodSelect = (compact = false) => (
         <Select value={period} onValueChange={(value) => setPeriod(value as PeriodOption)}>
-            <SelectTrigger aria-label="Performance period" className={compact ? 'h-11 w-full bg-muted/20' : 'h-11 w-[180px] bg-muted/20'}>
-                {compact ? <SelectValue placeholder="Select period" /> : <span className="truncate">Performance · {periodLabels[period].replace('Last ', '')}</span>}
+            <SelectTrigger aria-label="Performance period" className={compact ? 'h-11 w-full bg-muted/20' : 'h-11 w-[140px] bg-muted/20'}>
+                {compact ? <SelectValue placeholder="Select period" /> : <span className="whitespace-nowrap">{periodLabels[period]}</span>}
             </SelectTrigger>
             <SelectContent>
                 {DASHBOARD_PERIODS.map((value) => (
@@ -228,7 +222,7 @@ export function DashboardPage() {
                 <h2 className="mb-2 text-2xl font-light tracking-tight min-[1000px]:mb-0">
                     Welcome back, <span className="font-medium">{firstName}</span>
                 </h2>
-                <p className="text-muted-foreground min-[1000px]:shrink-0 min-[1000px]:text-right">Here's an overview of your performance</p>
+                <p className="text-muted-foreground min-[1000px]:shrink-0 min-[1000px]:text-right">Here's a look at your performance</p>
             </div>
 
             <GetStartedCard />
@@ -242,249 +236,38 @@ export function DashboardPage() {
                 />
             ) : null}
 
-            {/* Overview */}
-            <Card className="mb-8" data-dashboard-section="overview">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base">
-                        <PieChart className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                        Overview
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    {/* CRM Stats: swipeable rail on mobile, grid on desktop */}
-                    <ResponsiveCardRail label="CRM overview" desktopColumns="md:grid-cols-2 xl:grid-cols-4" className="dashboard-stat-summary mb-4">
-                        <StatCard
-                            surface="inset"
-                            title="Total Contacts"
-                            badgeText="Total Contacts"
-                            value={analytics?.contacts?.total ?? 0}
-                            icon={Users}
-                            description={`${analytics?.contacts?.newThisMonth ?? 0} added this month`}
-                            colorTheme="blue"
-                            isLoading={isLoading}
-                        />
-                        <StatCard
-                            surface="inset"
-                            title="Open Deals"
-                            badgeText="Open Deals"
-                            value={analytics?.deals?.open ?? 0}
-                            icon={TrendingUp}
-                            description={`${analytics?.deals?.total ?? 0} total · all pipelines`}
-                            colorTheme="orange"
-                            isLoading={isLoading}
-                        />
-                        <StatCard
-                            surface="inset"
-                            title="Upcoming Bookings"
-                            badgeText="Upcoming"
-                            value={analytics?.bookings?.upcomingThisWeek ?? 0}
-                            icon={CalendarDays}
-                            description={`${analytics?.bookings?.upcomingToday ?? 0} today`}
-                            colorTheme="orange"
-                            isLoading={isLoading}
-                        />
-                        <StatCard surface="inset" title="Pipelines" badgeText="Pipelines" value={analytics?.pipelines?.total ?? 0} icon={Workflow} description="Configured" colorTheme="blue" isLoading={isLoading} />
-                    </ResponsiveCardRail>
-
-                    {/* Secondary Stats: swipeable rail on mobile, grid on desktop */}
-                    <ResponsiveCardRail label="Activity overview" desktopColumns="md:grid-cols-2 xl:grid-cols-3" className="dashboard-stat-summary mb-0">
-                        <StatCard
-                            surface="inset"
-                            title="Tasks Overdue"
-                            badgeText="Overdue"
-                            value={analytics?.tasks?.overdue ?? 0}
-                            icon={AlertCircle}
-                            description={`${analytics?.tasks?.pending ?? 0} pending`}
-                            colorTheme="red"
-                            isLoading={isLoading}
-                        />
-                        <StatCard
-                            surface="inset"
-                            title="Active Contacts"
-                            badgeText="Active"
-                            value={analytics?.contacts?.active ?? 0}
-                            icon={Users}
-                            description={`${analytics?.contacts?.newThisMonth ?? 0} new this month`}
-                            colorTheme="blue"
-                            isLoading={isLoading}
-                        />
-                        <StatCard surface="inset" title="Deals Won" badgeText="Won" value={analytics?.deals?.won ?? 0} icon={CheckSquare} description={`${analytics?.deals?.lost ?? 0} lost`} colorTheme="green" isLoading={isLoading} />
-                    </ResponsiveCardRail>
-                </CardContent>
-            </Card>
-
-            {/* Operations */}
-            <Card className="mb-8" data-dashboard-section="operations">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base">
-                        <BriefcaseBusiness className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                        Operations
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    {/* Module summaries: swipeable rail on mobile, grid on desktop */}
-                    <ResponsiveCardRail label="Module summaries" desktopColumns="md:grid-cols-2 xl:grid-cols-4" mobileCardClassName="flex-[0_0_88%]" className="dashboard-module-summaries mb-0">
-                        <InvoicesWidget
-                            primaryStat={analytics?.invoiceMetrics?.pending ?? 0}
-                            primaryStatColor="text-blue-600 dark:text-blue-400"
-                            secondaryStats={[
-                                {
-                                    label: 'Overdue',
-                                    value: analytics?.invoiceMetrics?.overdue ?? 0,
-                                    color: getInvoiceStatusVisual('overdue').iconClass,
-                                },
-                                {
-                                    label: 'Paid This Month',
-                                    value: `$${(analytics?.invoiceMetrics?.paidThisMonth ?? 0).toLocaleString()}`,
-                                    color: 'text-green-600 dark:text-green-400',
-                                },
-                            ]}
-                            recentItems={
-                                analytics?.invoiceMetrics?.recentInvoices?.map((inv) => {
-                                    const visual = getInvoiceStatusVisual(inv.status);
-                                    return {
-                                        id: inv.id,
-                                        title: inv.number,
-                                        subtitle: `$${inv.amount.toLocaleString()}`,
-                                        status: {
-                                            label: visual.label,
-                                            color: visual.iconClass,
-                                        },
-                                    };
-                                }) ?? []
-                            }
-                            action={{
-                                label: 'View Invoices',
-                                compactLabel: 'View',
-                                onClick: () => navigate('/invoices'),
-                            }}
-                            loading={isLoading}
-                            compact={isMobile}
-                            isCollapsed={isWidgetCollapsed('invoices')}
-                            onToggleCollapse={() => toggleWidgetCollapse('invoices')}
-                        />
-                        <SignaturesWidget
-                            primaryStat={analytics?.signatureMetrics?.awaiting ?? 0}
-                            primaryStatColor={getSignatureStatusVisual('in_progress').iconClass}
-                            secondaryStats={[
-                                {
-                                    label: 'Signed This Week',
-                                    value: analytics?.signatureMetrics?.signedThisWeek ?? 0,
-                                    color: 'text-green-600 dark:text-green-400',
-                                },
-                                {
-                                    label: 'Total Documents',
-                                    value: analytics?.signatureMetrics?.total ?? 0,
-                                    color: 'text-blue-600 dark:text-blue-400',
-                                },
-                            ]}
-                            recentItems={
-                                analytics?.signatureMetrics?.recentDocuments?.map((sig) => {
-                                    const normalizedStatus = sig.status === 'signed' ? 'completed' : sig.status;
-                                    const visual = getSignatureStatusVisual(normalizedStatus);
-                                    return {
-                                        id: sig.id,
-                                        title: sig.title,
-                                        status: {
-                                            label: sig.status === 'signed' ? 'Signed' : visual.label,
-                                            color: visual.iconClass,
-                                        },
-                                    };
-                                }) ?? []
-                            }
-                            action={{
-                                label: 'View Documents',
-                                compactLabel: 'View',
-                                onClick: () => navigate('/documents'),
-                            }}
-                            loading={isLoading}
-                            compact={isMobile}
-                            isCollapsed={isWidgetCollapsed('signatures')}
-                            onToggleCollapse={() => toggleWidgetCollapse('signatures')}
-                        />
-                        <WorkspaceWidget
-                            primaryStat={analytics?.workspaceMetrics?.activeItems ?? 0}
-                            primaryStatLabel="Active Items"
-                            primaryStatColor="text-blue-600 dark:text-blue-400"
-                            secondaryStats={[
-                                {
-                                    label: 'Lists',
-                                    value: analytics?.workspaceMetrics?.lists ?? 0,
-                                    color: 'text-blue-600 dark:text-blue-400',
-                                },
-                                {
-                                    label: 'Notes',
-                                    value: analytics?.workspaceMetrics?.notes ?? 0,
-                                    color: 'text-blue-600 dark:text-blue-400',
-                                },
-                            ]}
-                            recentItems={
-                                analytics?.workspaceMetrics?.recentItems?.map((item) => ({
-                                    id: `${item.type}:${item.date}:${item.title}`,
-                                    title: item.title,
-                                    status: undefined,
-                                })) ?? []
-                            }
-                            action={{
-                                label: 'Open Workspace',
-                                compactLabel: 'View',
-                                onClick: () => navigate('/canvas'),
-                            }}
-                            loading={isLoading}
-                            compact={isMobile}
-                            isCollapsed={isWidgetCollapsed('workspace')}
-                            onToggleCollapse={() => toggleWidgetCollapse('workspace')}
-                        />
-                        <ContactsWidget
-                            primaryStat={analytics?.contacts?.newThisWeek ?? 0}
-                            primaryStatLabel="This Week"
-                            primaryStatColor="text-blue-600 dark:text-blue-400"
-                            secondaryStats={[
-                                {
-                                    label: 'Total',
-                                    value: analytics?.contacts?.total ?? 0,
-                                    color: 'text-muted-foreground',
-                                },
-                                {
-                                    label: 'This Month',
-                                    value: analytics?.contacts?.newThisMonth ?? 0,
-                                    color: 'text-green-600 dark:text-green-400',
-                                },
-                            ]}
-                            recentItems={
-                                analytics?.contacts?.recentContacts?.map((contact) => ({
-                                    id: contact.id,
-                                    title: contact.name,
-                                    subtitle: contact.email,
-                                })) ?? []
-                            }
-                            action={{
-                                label: 'View Contacts',
-                                compactLabel: 'View',
-                                onClick: () => navigate('/contacts'),
-                            }}
-                            loading={isLoading}
-                            compact={isMobile}
-                            isCollapsed={isWidgetCollapsed('contacts')}
-                            onToggleCollapse={() => toggleWidgetCollapse('contacts')}
-                        />
-                    </ResponsiveCardRail>
-                </CardContent>
-            </Card>
+            <DashboardOverview
+                signals={dashboardSignals}
+                pinnedSignalIds={pinnedSignalIds}
+                onSavePinnedSignalIds={savePinnedSignalIds}
+                onNavigate={navigate}
+            />
 
             {/* Revenue flow */}
-            <Card className="mb-8">
-                <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
+            <Card className="revenue-flow-card mb-8">
+                <CardHeader className="revenue-flow-card-header flex flex-row items-center justify-between gap-3 space-y-0">
                     <CardTitle className="text-base flex items-center gap-2">
                         <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                         Revenue flow
                     </CardTitle>
-                    <Button size="sm" variant="ghost" onClick={() => navigate('/invoices/payments')} className={DASHBOARD_CARD_ACTION_CLASS} aria-label="View payment revenue flow details">
-                        View payments
-                        <ArrowRight className="ml-1 h-3 w-3" />
-                    </Button>
+                    <RevenueFlowSeriesControls
+                        visibleSeries={revenueFlowPreferences.visibleSeries}
+                        onVisibleSeriesChange={revenueFlowPreferences.setVisibleSeries}
+                        variant="direct"
+                        className="revenue-flow-series-header min-w-0 shrink-0"
+                    />
+                    <div className="flex shrink-0 items-center gap-2">
+                        <RevenueFlowSizeControls
+                            size={revenueFlowPreferences.size}
+                            onSizeChange={revenueFlowPreferences.setSize}
+                        />
+                        <Button size="sm" variant="ghost" onClick={() => navigate('/invoices/payments')} className={DASHBOARD_CARD_ACTION_CLASS} aria-label="View payment revenue flow details">
+                            <span className="revenue-flow-view-label">View details</span>
+                            <ArrowRight className="h-3 w-3" />
+                        </Button>
+                    </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent surface="inset" className="p-0">
                     {revenueError && !revenueData ? (
                         <ErrorState
                             kind="inline"
@@ -497,7 +280,14 @@ export function DashboardPage() {
                             {revenueError ? (
                                 <FailureNotice title="Revenue data may be out of date" onRetry={refetchAll} />
                             ) : null}
-                            <RevenueFlowChart data={revenueData} isLoading={revenueLoading} compact />
+                            <RevenueFlowChart
+                                data={revenueData}
+                                isLoading={revenueLoading}
+                                context="dashboard"
+                                size={revenueFlowPreferences.size}
+                                visibleSeries={revenueFlowPreferences.visibleSeries}
+                                onVisibleSeriesChange={revenueFlowPreferences.setVisibleSeries}
+                            />
                         </div>
                     )}
                 </CardContent>
@@ -596,7 +386,7 @@ export function DashboardPage() {
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent surface="inset" className="p-0">
                     <ActivityTimeline
                         activities={recentActivities}
                         isLoading={isLoading}
@@ -721,7 +511,7 @@ export function DashboardPage() {
                 <h2 className="text-lg font-medium mb-4">Quick Actions</h2>
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                     {quickActions.map((action) => (
-                        <Card surface="inset" key={action.title} className="group transition-all hover:border-blue-200 hover:shadow-md focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 dark:hover:border-blue-800">
+                        <Card surface="inset" interactive key={action.title} className="group">
                             <button type="button" className="w-full rounded-lg text-left focus-visible:outline-none" onClick={action.action} aria-label={action.title}>
                                 <CardHeader className="pb-3">
                                     <div className="flex items-center justify-between">
@@ -733,7 +523,7 @@ export function DashboardPage() {
                                                 <CardTitle className="text-sm">{action.title}</CardTitle>
                                             </div>
                                         </div>
-                                        <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                                        <ArrowRight className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-blue-600 group-focus-within:text-blue-600 dark:group-hover:text-blue-400 dark:group-focus-within:text-blue-400" />
                                     </div>
                                 </CardHeader>
                             </button>

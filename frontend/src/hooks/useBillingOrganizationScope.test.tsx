@@ -2,7 +2,8 @@ import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { getBillingStatus, getUsageStats } from '@/services/billingApi';
+import { getUsageStats } from '@/services/billingApi';
+import { getOrganizationBootstrapViaGraphql } from '@/services/organizationBootstrapGraphql';
 import { useBillingStatus } from './useBillingStatus';
 import { useUsageStats } from './useUsageStats';
 
@@ -13,8 +14,12 @@ vi.mock('@/contexts/organization-context', () => ({
 }));
 
 vi.mock('@/services/billingApi', () => ({
-  getBillingStatus: vi.fn(),
   getUsageStats: vi.fn(),
+}));
+
+vi.mock('@/services/organizationBootstrapGraphql', () => ({
+  organizationBootstrapQueryKey: (organizationId: number | null) => ['organization-bootstrap', organizationId],
+  getOrganizationBootstrapViaGraphql: vi.fn(),
 }));
 
 describe('billing query organization scope', () => {
@@ -26,9 +31,10 @@ describe('billing query organization scope', () => {
     queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
-    vi.mocked(getBillingStatus).mockImplementation(async () => ({
-      success: true,
-      data: { plan: mocks.organizationId === 1 ? 'starter' : 'free' } as never,
+    vi.mocked(getOrganizationBootstrapViaGraphql).mockImplementation(async () => ({
+      billingStatus: { plan: mocks.organizationId === 1 ? 'starter' : 'free' } as never,
+      onboardingProgress: {},
+      getStartedProgress: { dismissed: false, completedCount: 0, totalCount: 0, steps: [] },
     }));
     vi.mocked(getUsageStats).mockImplementation(async () => ({
       success: true,
@@ -54,7 +60,7 @@ describe('billing query organization scope', () => {
 
     await waitFor(() => expect(result.current.status.data?.plan).toBe('free'));
     await waitFor(() => expect(result.current.usage.data?.resources.contacts).toBe(2));
-    expect(getBillingStatus).toHaveBeenCalledTimes(2);
+    expect(getOrganizationBootstrapViaGraphql).toHaveBeenCalledTimes(2);
     expect(getUsageStats).toHaveBeenCalledTimes(2);
   });
 
@@ -63,6 +69,6 @@ describe('billing query organization scope', () => {
     const { result } = renderHook(() => useBillingStatus(), { wrapper });
 
     expect(result.current.fetchStatus).toBe('idle');
-    expect(getBillingStatus).not.toHaveBeenCalled();
+    expect(getOrganizationBootstrapViaGraphql).not.toHaveBeenCalled();
   });
 });

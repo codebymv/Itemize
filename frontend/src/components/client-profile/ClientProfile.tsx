@@ -83,7 +83,7 @@ export function ClientProfile({
 
               <div className="flex flex-wrap gap-3 text-sm">
                 {client.contact.email && (
-                  <a href={`mailto:${client.contact.email}`} className="text-blue-600 hover:underline flex items-center gap-1">
+                  <a href={`mailto:${client.contact.email}`} className="touch-target-mobile flex touch-manipulation items-center gap-1 text-blue-600 hover:underline">
                     <Mail className="h-4 w-4" />
                     {client.contact.email}
                   </a>
@@ -121,7 +121,7 @@ export function ClientProfile({
           {/* Quick Actions */}
           <div className="flex gap-2 mt-4 flex-wrap">
             {onCreateInvoice && (
-              <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
+              <Button size="sm" className="bg-blue-600 interaction-button--primary text-white">
                 <FileText className="h-4 w-4 mr-2" />
                 Send Invoice
               </Button>
@@ -198,7 +198,7 @@ export function ClientProfile({
                 Tasks
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent surface="inset">
               {client.tasks.length === 0 ? (
                 <EmptyState icon={CheckCircle2} kind="inline" title="No tasks yet" />
               ) : (

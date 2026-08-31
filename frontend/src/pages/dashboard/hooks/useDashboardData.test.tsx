@@ -2,27 +2,19 @@ import type { ReactNode } from 'react';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import * as analyticsApi from '@/services/analyticsApi';
-import * as paymentsApi from '@/services/invoicePaymentsApi';
+import type { DashboardAnalytics } from '@/services/analyticsApi';
+import * as dashboardGraphql from '@/services/analyticsGraphql';
 import {
   hasMeaningfulDashboardActivity,
   useDashboardData,
 } from './useDashboardData';
 
-vi.mock('@/services/analyticsApi', async (importOriginal) => ({
-  ...await importOriginal<typeof import('@/services/analyticsApi')>(),
-  getDashboardAnalytics: vi.fn(),
-  getConversionRates: vi.fn(),
-  getCommunicationStats: vi.fn(),
-  getPipelineDealAge: vi.fn(),
+vi.mock('@/services/analyticsGraphql', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/services/analyticsGraphql')>(),
+  getDashboardSnapshotViaGraphql: vi.fn(),
 }));
 
-vi.mock('@/services/invoicePaymentsApi', async (importOriginal) => ({
-  ...await importOriginal<typeof import('@/services/invoicePaymentsApi')>(),
-  getRevenueFlow: vi.fn(),
-}));
-
-const emptyAnalytics: analyticsApi.DashboardAnalytics = {
+const emptyAnalytics: DashboardAnalytics = {
   contacts: {
     total: 0,
     active: 0,
@@ -47,12 +39,20 @@ const emptyAnalytics: analyticsApi.DashboardAnalytics = {
   workspaceMetrics: { activeItems: 0, lists: 0, notes: 0, recentItems: [] },
 };
 
+const snapshot = {
+  analytics: emptyAnalytics,
+  conversions: { period: '30days' },
+  communications: { period: '30days' },
+  pipelineDealAge: { pipeline: null },
+  revenue: { period: '30days' },
+} as dashboardGraphql.DashboardSnapshot;
+
 describe('useDashboardData', () => {
   let queryClient: QueryClient;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(paymentsApi.getRevenueFlow).mockResolvedValue({} as paymentsApi.RevenueFlow);
+    vi.mocked(dashboardGraphql.getDashboardSnapshotViaGraphql).mockResolvedValue(snapshot);
     queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false, gcTime: 0 } },
     });
@@ -70,71 +70,44 @@ describe('useDashboardData', () => {
     })).toBe(true);
   });
 
-  it('defers CRM reports but still loads first-class revenue for an empty workspace', async () => {
-    vi.mocked(analyticsApi.getDashboardAnalytics).mockResolvedValue(emptyAnalytics);
-    queryClient.setQueryData(['conversion-rates', '30days', 7], { period: '30days' });
-
+  it('loads the complete route read model with one request', async () => {
     const { result } = renderHook(
       () => useDashboardData({ organizationId: 7 }),
       { wrapper },
     );
 
     await waitFor(() => expect(result.current.analytics).toEqual(emptyAnalytics));
-    expect(result.current.conversions).toBeUndefined();
-    expect(analyticsApi.getDashboardAnalytics).toHaveBeenCalledWith(7);
-    expect(analyticsApi.getConversionRates).not.toHaveBeenCalled();
-    expect(analyticsApi.getCommunicationStats).not.toHaveBeenCalled();
-    expect(analyticsApi.getPipelineDealAge).not.toHaveBeenCalled();
-    expect(paymentsApi.getRevenueFlow).toHaveBeenCalledWith(7, '30days');
+    expect(result.current.revenue).toBe(snapshot.revenue);
+    expect(result.current.conversions).toBe(snapshot.conversions);
+    expect(dashboardGraphql.getDashboardSnapshotViaGraphql).toHaveBeenCalledTimes(1);
+    expect(dashboardGraphql.getDashboardSnapshotViaGraphql).toHaveBeenCalledWith(
+      '30days',
+      7,
+      expect.any(AbortSignal),
+    );
   });
 
-  it('loads secondary reports after the workspace has activity', async () => {
-    vi.mocked(analyticsApi.getDashboardAnalytics).mockResolvedValue({
-      ...emptyAnalytics,
-      contacts: { ...emptyAnalytics.contacts, total: 1 },
-    });
-    vi.mocked(analyticsApi.getConversionRates).mockResolvedValue({} as analyticsApi.ConversionRates);
-    vi.mocked(analyticsApi.getCommunicationStats).mockResolvedValue({} as analyticsApi.CommunicationStats);
-    vi.mocked(analyticsApi.getPipelineDealAge).mockResolvedValue({} as analyticsApi.PipelineDealAge);
-    vi.mocked(paymentsApi.getRevenueFlow).mockResolvedValue({} as paymentsApi.RevenueFlow);
+  it('uses the selected performance period as part of the snapshot key', async () => {
+    const { rerender } = renderHook(
+      ({ period }: { period: dashboardGraphql.DashboardPeriod }) => (
+        useDashboardData({ organizationId: 7, period })
+      ),
+      { initialProps: { period: '7days' as dashboardGraphql.DashboardPeriod }, wrapper },
+    );
 
-    renderHook(() => useDashboardData({ organizationId: 7 }), { wrapper });
+    await waitFor(() => expect(
+      dashboardGraphql.getDashboardSnapshotViaGraphql,
+    ).toHaveBeenCalledWith('7days', 7, expect.any(AbortSignal)));
 
-    await waitFor(() => expect(analyticsApi.getConversionRates).toHaveBeenCalled());
-    expect(analyticsApi.getConversionRates).toHaveBeenCalledWith('30days', 7);
-    expect(analyticsApi.getCommunicationStats).toHaveBeenCalledWith('30days', 7);
-    expect(analyticsApi.getPipelineDealAge).toHaveBeenCalledWith(undefined, 7);
-    expect(paymentsApi.getRevenueFlow).toHaveBeenCalledWith(7, '30days');
+    rerender({ period: '90days' });
+    await waitFor(() => expect(
+      dashboardGraphql.getDashboardSnapshotViaGraphql,
+    ).toHaveBeenCalledWith('90days', 7, expect.any(AbortSignal)));
+    expect(dashboardGraphql.getDashboardSnapshotViaGraphql).toHaveBeenCalledTimes(2);
   });
 
-  it('does not substitute 30-day revenue when the dashboard uses 7 days', async () => {
-    vi.mocked(analyticsApi.getDashboardAnalytics).mockResolvedValue({
-      ...emptyAnalytics,
-      contacts: { ...emptyAnalytics.contacts, total: 1 },
-    });
-    vi.mocked(analyticsApi.getConversionRates).mockResolvedValue({} as analyticsApi.ConversionRates);
-    vi.mocked(analyticsApi.getCommunicationStats).mockResolvedValue({} as analyticsApi.CommunicationStats);
-    vi.mocked(analyticsApi.getPipelineDealAge).mockResolvedValue({} as analyticsApi.PipelineDealAge);
-    vi.mocked(paymentsApi.getRevenueFlow).mockResolvedValue({} as paymentsApi.RevenueFlow);
-
-    renderHook(() => useDashboardData({ organizationId: 7, period: '7days' }), { wrapper });
-
-    await waitFor(() => expect(paymentsApi.getRevenueFlow).toHaveBeenCalledWith(7, '7days'));
-  });
-
-  it('uses the selected 90-day performance period consistently', async () => {
-    vi.mocked(analyticsApi.getDashboardAnalytics).mockResolvedValue({
-      ...emptyAnalytics,
-      contacts: { ...emptyAnalytics.contacts, total: 1 },
-    });
-    vi.mocked(analyticsApi.getConversionRates).mockResolvedValue({} as analyticsApi.ConversionRates);
-    vi.mocked(analyticsApi.getCommunicationStats).mockResolvedValue({} as analyticsApi.CommunicationStats);
-    vi.mocked(analyticsApi.getPipelineDealAge).mockResolvedValue({} as analyticsApi.PipelineDealAge);
-
-    renderHook(() => useDashboardData({ organizationId: 7, period: '90days' }), { wrapper });
-
-    await waitFor(() => expect(analyticsApi.getConversionRates).toHaveBeenCalledWith('90days', 7));
-    expect(analyticsApi.getCommunicationStats).toHaveBeenCalledWith('90days', 7);
-    expect(paymentsApi.getRevenueFlow).toHaveBeenCalledWith(7, '90days');
+  it('does not fetch before organization scope is available', () => {
+    renderHook(() => useDashboardData({}), { wrapper });
+    expect(dashboardGraphql.getDashboardSnapshotViaGraphql).not.toHaveBeenCalled();
   });
 });

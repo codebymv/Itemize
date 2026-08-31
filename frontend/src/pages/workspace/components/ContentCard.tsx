@@ -74,9 +74,19 @@ export function ContentCard({ content, onClick, onDelete, formatRelativeTime }: 
   const color = content.color_value || '#3B82F6';
 
   return (
-    <Card 
-      className="cursor-pointer hover:shadow-md transition-all hover:border-blue-300 dark:hover:border-blue-700 group"
+    <Card
+      interactive
+      className="group"
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onClick();
+        }
+      }}
     >
       <CardContent className="p-4">
         <div className="flex items-start justify-between mb-3">
@@ -96,7 +106,7 @@ export function ContentCard({ content, onClick, onDelete, formatRelativeTime }: 
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="interaction-reveal h-8 w-8 p-0"
               >
                 <MoreVertical className="h-4 w-4" />
               </Button>
@@ -106,7 +116,7 @@ export function ContentCard({ content, onClick, onDelete, formatRelativeTime }: 
                 e.stopPropagation();
                 onClick();
               }} className="group/menu">
-                <ExternalLink className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                <ExternalLink className="h-4 w-4 mr-2" />
                 Open
               </DropdownMenuItem>
               {content.is_public && (
@@ -117,7 +127,7 @@ export function ContentCard({ content, onClick, onDelete, formatRelativeTime }: 
                   const shareUrl = `${baseUrl}/shared/${content.type}/${content.share_token}`;
                   navigator.clipboard.writeText(shareUrl);
                 }} className="group/menu">
-                  <Share2 className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                  <Share2 className="h-4 w-4 mr-2" />
                   Copy Link
                 </DropdownMenuItem>
               )}

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { useParams } from 'react-router-dom';
+import { LoadingState } from '@/components/LoadingState';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -134,7 +135,8 @@ export default function SignPage() {
   const [selectedFont, setSelectedFont] = useState(SIGNATURE_FONTS[0].value);
   const [uploadValue, setUploadValue] = useState<string | null>(null);
   const [terminalState, setTerminalState] = useState<'signed' | 'declined' | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [pendingAction, setPendingAction] = useState<'sign' | 'decline' | null>(null);
+  const submitting = pendingAction !== null;
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Array<HTMLDivElement | null>>([]);
@@ -242,7 +244,7 @@ export default function SignPage() {
         toast({ title: 'Please complete all required fields', variant: 'destructive' });
         return;
       }
-      setSubmitting(true);
+      setPendingAction('sign');
       await submitPublicSignature(token, {
         fields: fields.map((field) => ({
           id: field.id,
@@ -258,21 +260,21 @@ export default function SignPage() {
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to submit signature', variant: 'destructive' });
     } finally {
-      setSubmitting(false);
+      setPendingAction(null);
     }
   };
 
   const handleDecline = async () => {
     if (!token || submitting) return;
     try {
-      setSubmitting(true);
+      setPendingAction('decline');
       await declinePublicSignature(token, 'Recipient declined');
       setTerminalState('declined');
       toast({ title: 'Signature declined' });
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to decline', variant: 'destructive' });
     } finally {
-      setSubmitting(false);
+      setPendingAction(null);
     }
   };
 
@@ -281,7 +283,7 @@ export default function SignPage() {
       <BrandedPublicPage>
         <BrandedPublicContainer>
           <BrandedPublicCard contentClassName="p-6 text-sm text-muted-foreground">
-            Loading signature request...
+            <LoadingState kind="inline" message="Loading signature request" />
           </BrandedPublicCard>
         </BrandedPublicContainer>
       </BrandedPublicPage>
@@ -478,11 +480,11 @@ export default function SignPage() {
           </div>
 
           <div className="flex gap-2">
-            <Button onClick={handleSubmit} disabled={!consent || submitting}>
-              {submitting ? 'Submitting…' : 'Complete Signing'}
+            <Button onClick={handleSubmit} disabled={!consent || submitting} aria-busy={pendingAction === 'sign' ? 'true' : undefined}>
+              {pendingAction === 'sign' ? 'Completing…' : 'Complete Signing'}
             </Button>
-            <Button variant="outline" onClick={handleDecline} disabled={submitting}>
-              Decline
+            <Button variant="outline" onClick={handleDecline} disabled={submitting} aria-busy={pendingAction === 'decline' ? 'true' : undefined}>
+              {pendingAction === 'decline' ? 'Declining…' : 'Decline'}
             </Button>
           </div>
         </CardContent>

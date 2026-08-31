@@ -46,6 +46,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useOrganization } from '@/hooks/useOrganization';
 import { getApiUrl } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { visibleRefetchInterval } from '@/lib/queryPolicy';
 import {
   AppNotification,
   getNotifications,
@@ -266,7 +267,7 @@ function NotificationPanel({
                     type="button"
                     onClick={() => onRead(notification)}
                     className={cn(
-                      'group flex w-full gap-3 border-b px-4 py-3 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600',
+                      'interaction-row group flex w-full gap-3 border-b px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600',
                       !notification.readAt && 'bg-blue-600/[0.06]',
                     )}
                   >
@@ -331,7 +332,8 @@ export function NotificationCenter() {
       ? page.pageInfo.endCursor
       : undefined,
     enabled: organizationId !== null,
-    refetchInterval: 60_000,
+    refetchInterval: () => visibleRefetchInterval(60_000),
+    refetchIntervalInBackground: false,
   });
 
   const notifications = useMemo(() => {

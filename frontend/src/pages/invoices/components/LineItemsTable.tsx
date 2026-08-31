@@ -75,7 +75,7 @@ export function LineItemsTable({
           <Badge variant="secondary">{lineItems.length}</Badge>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent surface="inset">
         {/* Table Header */}
         <div className="hidden grid-cols-12 gap-3 border-b pb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground lg:grid">
           <div className={showTaxRate ? 'col-span-4' : 'col-span-5'}>Items</div>

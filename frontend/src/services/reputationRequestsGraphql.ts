@@ -85,6 +85,7 @@ const deliveryKey = (prefix: string): string =>
 export const getReviewRequestsViaGraphql = async (
   params: { status?: ReviewRequest['status'] | 'all'; page?: number; limit?: number } = {},
   organizationId?: number,
+  signal?: AbortSignal,
 ): Promise<{ requests: ReviewRequest[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> => {
   const variables = {
     filter: params.status === undefined ? {} : { status: params.status },
@@ -100,7 +101,7 @@ export const getReviewRequestsViaGraphql = async (
       nodes { ${fields} }
       pageInfo { page pageSize total totalPages }
     }
-  }`, variables, organizationId);
+  }`, variables, organizationId, signal);
   const info = data.reputationRequests.pageInfo;
   return {
     requests: data.reputationRequests.nodes.map(mapRequest),

@@ -1,6 +1,10 @@
 import type { Deal, JsonRecord, Pipeline, PipelineStage } from '@/types';
 import type { CreatePipelineData } from './pipelinesApi';
-import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
+import {
+  GraphqlRequestError,
+  graphqlMutationRequest,
+  graphqlRequest,
+} from './graphqlClient';
 
 type GraphqlStage = {
   id: string;
@@ -49,6 +53,11 @@ type GraphqlPipeline = {
   createdAt: string;
   updatedAt: string;
 };
+
+export interface PipelineWorkspace {
+  pipelines: Pipeline[];
+  selectedPipeline: (Pipeline & { deals: Deal[] }) | null;
+}
 
 const pipelineFields = `
   id
@@ -101,6 +110,18 @@ const pipelineQuery = `
     pipeline(id: $id) {
       ${pipelineFields}
       deals { ${dealFields} }
+    }
+  }
+`;
+
+const pipelineWorkspaceQuery = `
+  query PipelineWorkspace($selectedPipelineId: Int) {
+    pipelineWorkspace(selectedPipelineId: $selectedPipelineId) {
+      pipelines { ${pipelineFields} }
+      selectedPipeline {
+        ${pipelineFields}
+        deals { ${dealFields} }
+      }
     }
   }
 `;
@@ -204,24 +225,107 @@ const mapPipelineInput = (data: Partial<CreatePipelineData>) => ({
 
 export const getPipelinesViaGraphql = async (
   organizationId?: number,
+  signal?: AbortSignal,
 ): Promise<Pipeline[]> => {
   const data = await graphqlRequest<
     { pipelines: GraphqlPipeline[] },
     Record<string, never>
-  >(pipelinesQuery, {}, organizationId);
+  >(pipelinesQuery, {}, organizationId, signal);
   return data.pipelines.map(mapPipeline);
 };
 
 export const getPipelineViaGraphql = async (
   id: number,
   organizationId?: number,
+  signal?: AbortSignal,
 ): Promise<Pipeline & { deals: Deal[] }> => {
   const data = await graphqlRequest<
     { pipeline: GraphqlPipeline },
     { id: number }
-  >(pipelineQuery, { id }, organizationId);
+  >(pipelineQuery, { id }, organizationId, signal);
   const pipeline = mapPipeline(data.pipeline);
   return { ...pipeline, deals: pipeline.deals ?? [] };
+};
+
+let pipelineWorkspaceCapability: 'unknown' | 'aggregate' | 'separate' = 'unknown';
+
+const isPipelineWorkspaceUnsupported = (error: unknown): boolean => (
+  error instanceof GraphqlRequestError
+  && (
+    error.status === 400
+    || error.code === 'GRAPHQL_VALIDATION_FAILED'
+    || /cannot query field|unknown field/i.test(error.message)
+  )
+);
+
+const getSeparatePipelineWorkspace = async (
+  selectedPipelineId: number | null | undefined,
+  organizationId?: number,
+  signal?: AbortSignal,
+): Promise<PipelineWorkspace> => {
+  const pipelines = await getPipelinesViaGraphql(organizationId, signal);
+  const selectedSummary = (
+    selectedPipelineId === null || selectedPipelineId === undefined
+      ? null
+      : pipelines.find((pipeline) => pipeline.id === selectedPipelineId)
+  ) ?? pipelines.find((pipeline) => pipeline.is_default) ?? pipelines[0] ?? null;
+
+  return {
+    pipelines,
+    selectedPipeline: selectedSummary
+      ? await getPipelineViaGraphql(selectedSummary.id, organizationId, signal)
+      : null,
+  };
+};
+
+/** Test-only reset for the process-local schema capability memory. */
+export const resetPipelineWorkspaceCapability = () => {
+  pipelineWorkspaceCapability = 'unknown';
+};
+
+export const getPipelineWorkspaceViaGraphql = async (
+  selectedPipelineId: number | null | undefined,
+  organizationId?: number,
+  signal?: AbortSignal,
+): Promise<PipelineWorkspace> => {
+  if (pipelineWorkspaceCapability === 'separate') {
+    return getSeparatePipelineWorkspace(selectedPipelineId, organizationId, signal);
+  }
+
+  try {
+    const data = await graphqlRequest<
+      {
+        pipelineWorkspace: {
+          pipelines: GraphqlPipeline[];
+          selectedPipeline: GraphqlPipeline | null;
+        };
+      },
+      { selectedPipelineId?: number }
+    >(
+      pipelineWorkspaceQuery,
+      {
+        ...(selectedPipelineId === null || selectedPipelineId === undefined
+          ? {}
+          : { selectedPipelineId }),
+      },
+      organizationId,
+      signal,
+    );
+    pipelineWorkspaceCapability = 'aggregate';
+    const selectedPipeline = data.pipelineWorkspace.selectedPipeline
+      ? mapPipeline(data.pipelineWorkspace.selectedPipeline)
+      : null;
+    return {
+      pipelines: data.pipelineWorkspace.pipelines.map(mapPipeline),
+      selectedPipeline: selectedPipeline
+        ? { ...selectedPipeline, deals: selectedPipeline.deals ?? [] }
+        : null,
+    };
+  } catch (error) {
+    if (!isPipelineWorkspaceUnsupported(error)) throw error;
+    pipelineWorkspaceCapability = 'separate';
+    return getSeparatePipelineWorkspace(selectedPipelineId, organizationId, signal);
+  }
 };
 
 export const createPipelineViaGraphql = async (

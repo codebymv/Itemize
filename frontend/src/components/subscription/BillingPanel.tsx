@@ -129,7 +129,7 @@ export function BillingPanel() {
                         <CardHeader className="pb-2">
                             <Skeleton className="h-4 w-24" />
                         </CardHeader>
-                        <CardContent>
+                        <CardContent surface="inset">
                             <Skeleton className="h-8 w-32 mb-4" />
                             <Skeleton className="h-4 w-48 mb-2" />
                             <Skeleton className="h-10 w-full" />
@@ -139,7 +139,7 @@ export function BillingPanel() {
                         <CardHeader className="pb-2">
                             <Skeleton className="h-4 w-24" />
                         </CardHeader>
-                        <CardContent className="space-y-4">
+                        <CardContent surface="inset" className="space-y-4">
                             <Skeleton className="h-3 w-full" />
                             <Skeleton className="h-3 w-full" />
                             <Skeleton className="h-3 w-full" />
@@ -202,9 +202,8 @@ export function BillingPanel() {
                         Your payment failed. Please update your payment method to continue using premium features.
                     </p>
                     <Button 
-                        variant="outline" 
                         size="sm" 
-                        className="mt-2 border-red-300 text-red-700 hover:bg-red-100"
+                        className="mt-2"
                         onClick={handlePortal}
                         disabled={processing}
                     >
@@ -222,7 +221,7 @@ export function BillingPanel() {
                             Current Plan
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent surface="inset" className="space-y-4">
                         <div className="flex items-center gap-3">
                             <div className={`p-2 rounded-lg ${meta.bgColor}`}>
                                 <Icon className="icon-accent h-5 w-5" />
@@ -293,7 +292,7 @@ export function BillingPanel() {
                             Monthly Usage
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent surface="inset" className="space-y-4">
                         {/* Emails */}
                         <UsageRow
                             icon={Mail}
@@ -338,7 +337,7 @@ export function BillingPanel() {
                             Resource Counts
                         </CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent surface="inset">
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <ResourceCount
                                 icon={Users}

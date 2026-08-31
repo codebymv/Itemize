@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { CheckCircle2, Clock3, Loader2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock3, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button, type ButtonProps } from '@/components/ui/button';
 import {
@@ -16,7 +16,7 @@ import {
 import { defineStatus, type StatusVisual } from '@/lib/statusVisuals';
 import { cn } from '@/lib/utils';
 
-export type IntegrationStatus = 'connected' | 'disconnected' | 'inactive' | 'soon' | 'available';
+export type IntegrationStatus = 'connected' | 'disconnected' | 'inactive' | 'soon' | 'available' | 'unavailable';
 
 const INTEGRATION_STATUS_VISUALS: Record<IntegrationStatus, StatusVisual> = {
   connected: defineStatus('Connected', 'blue', CheckCircle2),
@@ -24,6 +24,7 @@ const INTEGRATION_STATUS_VISUALS: Record<IntegrationStatus, StatusVisual> = {
   inactive: defineStatus('Inactive', 'orange', Clock3),
   soon: defineStatus('Soon', 'gray', Clock3),
   available: defineStatus('Available', 'blue', CheckCircle2),
+  unavailable: defineStatus('Unavailable', 'red', AlertCircle),
 };
 
 interface IntegrationStatusRowProps {
@@ -105,7 +106,7 @@ export function IntegrationStatusRow({
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  className="bg-destructive text-destructive-foreground interaction-button--destructive"
                   onClick={onDisconnect}
                 >
                   {disconnectLabel}
@@ -119,7 +120,7 @@ export function IntegrationStatusRow({
           <Button
             size="sm"
             variant={primaryVariant ?? (primaryIsConnection ? 'default' : 'outline')}
-            className={cn(primaryIsConnection && 'bg-blue-600 text-white hover:bg-blue-700')}
+            className={cn(primaryIsConnection && 'bg-blue-600 text-white interaction-button--primary')}
             onClick={onPrimary}
             disabled={status === 'soon' || busy || !onPrimary}
           >

@@ -713,7 +713,7 @@ export function WorkflowBuilderPage() {
         <li key={step.value}>
           <button
             type="button"
-            className="group/menu-button flex h-11 w-full items-center gap-2 overflow-hidden rounded-md px-2 text-left text-sm font-raleway text-sidebar-foreground outline-none ring-sidebar-ring transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent lg:h-9"
+            className="group/menu-button interaction-navigation flex h-11 w-full items-center gap-2 overflow-hidden rounded-md px-2 text-left text-sm font-raleway text-sidebar-foreground outline-none ring-sidebar-ring focus-visible:ring-2 active:bg-sidebar-accent lg:h-9"
             onClick={() => handleAddStep(step.value)}
           >
             <step.icon className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover/menu-button:text-blue-600 dark:group-hover/menu-button:text-blue-400" />
@@ -799,6 +799,7 @@ export function WorkflowBuilderPage() {
               icon={isActive ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
               onClick={handleToggleActive}
               disabled={saving}
+              busy={saving}
             />
           </div>
         ) : undefined,
@@ -808,6 +809,7 @@ export function WorkflowBuilderPage() {
             icon={<Save className="h-4 w-4" />}
             onClick={() => void handleSave()}
             disabled={saving || !isDirty}
+            busy={saving}
           />
         ),
       }}

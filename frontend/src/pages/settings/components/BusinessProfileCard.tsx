@@ -33,7 +33,7 @@ export const BusinessProfileCard: React.FC<BusinessProfileCardProps> = ({
         <CardHeader>
           <SettingsSectionTitle icon={Building}>Business Profiles</SettingsSectionTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent surface="inset">
           <div className="space-y-2">
             {[1, 2, 3].map((i) => (
               <div key={i} className="h-20 bg-muted/50 rounded animate-pulse" />
@@ -54,14 +54,14 @@ export const BusinessProfileCard: React.FC<BusinessProfileCardProps> = ({
           <Button
             size="sm"
             onClick={onAddBusiness}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-blue-600 interaction-button--primary text-white"
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Business
           </Button>
         )}
       </CardHeader>
-      <CardContent>
+      <CardContent surface="inset">
         {loadError ? (
           <ErrorState
             kind="inline"
@@ -83,7 +83,7 @@ export const BusinessProfileCard: React.FC<BusinessProfileCardProps> = ({
             {businesses.map(business => (
               <div
                 key={business.id}
-                className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4 p-4 border rounded-lg interaction-row"
               >
                 <div className="flex-shrink-0">
                   {business.logo_url ? (

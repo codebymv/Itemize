@@ -12,7 +12,7 @@ type GraphqlHistory = {
   calculatedAt: string; contactsAdded: number; contactsRemoved: number; createdAt: string;
 };
 
-type GraphqlSegment = {
+export type GraphqlSegment = {
   id: number; organizationId: number; name: string; description: string | null;
   color: string; icon: string; filterType: 'and' | 'or'; filters: SegmentFilter[];
   segmentType: 'dynamic' | 'static'; staticContactIds: number[]; contactCount: number;
@@ -27,7 +27,7 @@ type GraphqlContact = {
   assignedTo: number | null; customFields: JsonRecord; createdAt: string; updatedAt: string;
 };
 
-const fields = `
+export const segmentFields = `
   id organizationId name description color icon filterType filters segmentType staticContactIds
   contactCount lastCalculatedAt isActive usedInCampaigns usedInAutomations createdById createdByName
   createdAt updatedAt
@@ -52,7 +52,7 @@ const mapInput = (segment: Partial<Segment>) => ({
   ...(segment.is_active === undefined ? {} : { isActive: segment.is_active }),
 });
 
-const mapSegment = (segment: GraphqlSegment): Segment => ({
+export const mapSegment = (segment: GraphqlSegment): Segment => ({
   id: segment.id,
   organization_id: segment.organizationId,
   name: segment.name,
@@ -83,6 +83,7 @@ const mapSegment = (segment: GraphqlSegment): Segment => ({
 export const getSegmentsViaGraphql = async (
   params: { is_active?: boolean; search?: string } = {},
   organizationId?: number,
+  signal?: AbortSignal,
 ): Promise<Segment[]> => {
   type SegmentPageData = { segments: {
     nodes: GraphqlSegment[];
@@ -97,14 +98,14 @@ export const getSegmentsViaGraphql = async (
   };
   const query = `query Segments($filter: SegmentListFilterInput, $page: PageInput) {
     segments(filter: $filter, page: $page) {
-      nodes { ${fields} }
+      nodes { ${segmentFields} }
       pageInfo { page totalPages }
     }
   }`;
   const first = await graphqlRequest<
     SegmentPageData,
     { filter: { isActive?: boolean; search?: string }; page: { page: number; pageSize: number } }
-  >(query, variables, organizationId);
+  >(query, variables, organizationId, signal);
   const pages = await Promise.all(
     Array.from(
       { length: Math.max(0, first.segments.pageInfo.totalPages - 1) },
@@ -112,6 +113,7 @@ export const getSegmentsViaGraphql = async (
         query,
         { ...variables, page: { ...variables.page, page: index + 2 } },
         organizationId,
+        signal,
       ),
     ),
   );
@@ -121,7 +123,7 @@ export const getSegmentsViaGraphql = async (
 export const getSegmentViaGraphql = async (id: number, organizationId?: number): Promise<Segment> => {
   const data = await graphqlRequest<{ segment: GraphqlSegment }, { id: number }>(
     `query Segment($id: Int!) { segment(id: $id) {
-      ${fields}
+      ${segmentFields}
       history { id segmentId organizationId contactCount calculatedAt contactsAdded contactsRemoved createdAt }
     } }`,
     { id }, organizationId,
@@ -135,7 +137,7 @@ export const createSegmentViaGraphql = async (
   const data = await graphqlMutationRequest<
     { createSegment: GraphqlSegment }, { input: ReturnType<typeof mapInput> }
   >(`mutation CreateSegment($input: CreateSegmentInput!) {
-      createSegment(input: $input) { ${fields} }
+      createSegment(input: $input) { ${segmentFields} }
     }`, { input: mapInput(segment) }, organizationId);
   return mapSegment(data.createSegment);
 };
@@ -146,7 +148,7 @@ export const updateSegmentViaGraphql = async (
   const data = await graphqlMutationRequest<
     { updateSegment: GraphqlSegment }, { id: number; input: ReturnType<typeof mapInput> }
   >(`mutation UpdateSegment($id: Int!, $input: UpdateSegmentInput!) {
-      updateSegment(id: $id, input: $input) { ${fields} }
+      updateSegment(id: $id, input: $input) { ${segmentFields} }
     }`, { id, input: mapInput(segment) }, organizationId);
   return mapSegment(data.updateSegment);
 };
@@ -167,7 +169,7 @@ export const recalculateSegmentViaGraphql = async (
   const data = await graphqlMutationRequest<
     { recalculateSegment: GraphqlSegment }, { id: number }
   >(`mutation RecalculateSegment($id: Int!) {
-      recalculateSegment(id: $id) { ${fields} }
+      recalculateSegment(id: $id) { ${segmentFields} }
     }`, { id }, organizationId);
   return mapSegment(data.recalculateSegment);
 };
@@ -217,7 +219,33 @@ export const getSegmentContactsViaGraphql = async (
   };
 };
 
-export const getSegmentFilterOptionsViaGraphql = async (organizationId?: number): Promise<FilterOptions> => {
+export type GraphqlSegmentFilterOptions = {
+  fields: Array<{
+    id: string;
+    label: string;
+    type: FilterOptions['fields'][number]['type'];
+    operators: string[];
+    options: string[] | null;
+  }>;
+  tags: FilterOptions['tags'];
+  users: FilterOptions['users'];
+  pipelines: FilterOptions['pipelines'];
+};
+
+export const mapSegmentFilterOptions = (
+  options: GraphqlSegmentFilterOptions,
+): FilterOptions => ({
+  ...options,
+  fields: options.fields.map(({ options: fieldOptions, ...field }) => ({
+    ...field,
+    ...(fieldOptions === null ? {} : { options: fieldOptions }),
+  })),
+});
+
+export const getSegmentFilterOptionsViaGraphql = async (
+  organizationId?: number,
+  signal?: AbortSignal,
+): Promise<FilterOptions> => {
   const data = await graphqlRequest<{ segmentFilterOptions: {
     fields: Array<{ id: string; label: string; type: FilterOptions['fields'][number]['type']; operators: string[]; options: string[] | null }>;
     tags: FilterOptions['tags']; users: FilterOptions['users']; pipelines: FilterOptions['pipelines'];
@@ -228,11 +256,6 @@ export const getSegmentFilterOptionsViaGraphql = async (organizationId?: number)
       users { id name }
       pipelines { id name stages { id name color } }
     }
-  }`, {}, organizationId);
-  return {
-    ...data.segmentFilterOptions,
-    fields: data.segmentFilterOptions.fields.map(({ options, ...field }) => ({
-      ...field, ...(options === null ? {} : { options }),
-    })),
-  };
+  }`, {}, organizationId, signal);
+  return mapSegmentFilterOptions(data.segmentFilterOptions);
 };

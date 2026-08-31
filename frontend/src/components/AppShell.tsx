@@ -231,7 +231,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                                 <DropdownMenuTrigger asChild>
                                     <Button
                                       variant="ghost"
-                                      className="relative h-11 w-11 rounded-full bg-blue-600 p-0 hover:bg-blue-700"
+                                      className="relative h-11 w-11 rounded-full bg-blue-600 p-0 interaction-button--primary"
                                       aria-label={`Account menu for ${currentUser.name || currentUser.email}`}
                                     >
                                         <span className="text-sm font-medium text-white">
@@ -317,7 +317,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                                                             >
                                                                 <CollapsibleTrigger asChild>
                                                                     <div className="flex items-center flex-1">
-                                                                        <ShieldCheck className={cn("mr-2 h-4 w-4 transition-colors", isOnAdminRoute ? "text-blue-600 dark:text-blue-400" : "group-hover/item:text-blue-600 dark:group-hover/item:text-blue-400")} />
+                                                                        <ShieldCheck className={cn("mr-2 h-4 w-4 transition-colors", isOnAdminRoute ? "text-blue-600 dark:text-blue-400" : "group-hover/item:text-blue-600 group-focus/item:text-blue-600 dark:group-hover/item:text-blue-400 dark:group-focus/item:text-blue-400")} />
                                                                         <span className="flex-1">Admin Dashboard</span>
                                                                         <ChevronRight className="h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 text-gray-600 dark:text-gray-400" />
                                                                     </div>

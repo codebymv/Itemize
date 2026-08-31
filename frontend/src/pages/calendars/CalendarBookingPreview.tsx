@@ -69,7 +69,7 @@ function DeviceControls({ device, onChange }: { device: PreviewDevice; onChange:
           type="button"
           variant={device === value ? 'default' : 'ghost'}
           size="sm"
-          className={cn('h-8 gap-2 px-2.5', device === value && 'bg-blue-600 text-white hover:bg-blue-700')}
+          className={cn('h-8 gap-2 px-2.5', device === value && 'bg-blue-600 text-white interaction-button--primary')}
           onClick={() => onChange(value)}
           aria-label={`${label} calendar preview`}
           aria-pressed={device === value}
@@ -185,7 +185,7 @@ export function CalendarBookingPreview({
                         size="sm"
                         className={cn(
                           'border-slate-200 bg-white text-slate-700 hover:bg-slate-50',
-                          selectedTime === time && 'bg-blue-600 text-white hover:bg-blue-700',
+                          selectedTime === time && 'bg-blue-600 text-white interaction-button--primary',
                         )}
                         onClick={() => setSelectedTime(time)}
                       >

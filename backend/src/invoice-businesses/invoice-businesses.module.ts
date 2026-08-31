@@ -9,5 +9,6 @@ import { InvoiceBusinessesService } from './invoice-businesses.service';
     InvoiceBusinessesService,
     InvoiceBusinessesResolver,
   ],
+  exports: [InvoiceBusinessesService],
 })
 export class InvoiceBusinessesModule {}

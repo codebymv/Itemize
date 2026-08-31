@@ -25,7 +25,12 @@ import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { Pipeline, Deal } from '@/types';
-import { getPipelines, getPipeline, moveDealToStage } from '@/services/pipelinesApi';
+import {
+  getPipeline,
+  getPipelineWorkspace,
+  moveDealToStage,
+  type PipelineWorkspace,
+} from '@/services/pipelinesApi';
 import { useOrganization } from '@/hooks/useOrganization';
 import { KanbanBoard } from './components/KanbanBoard';
 import { CreateDealModal } from './components/CreateDealModal';
@@ -46,6 +51,7 @@ const getApiStatus = (error: unknown): number | undefined =>
   (error as { response?: { status?: number } })?.response?.status;
 
 type PipelineWithDeals = Pipeline & { deals: Deal[] };
+const EMPTY_PIPELINES: Pipeline[] = [];
 
 export function PipelinesPage() {
   const { toast } = useToast();
@@ -71,40 +77,28 @@ export function PipelinesPage() {
   const [stackedPipelineIds, setStackedPipelineIds] = useState<number[]>([]);
   const [stackedPipelinesHydratedFor, setStackedPipelinesHydratedFor] = useState<number | null>(null);
 
-  const pipelinesQueryKey = useMemo(
-    () => ['pipelines', organizationId] as const,
-    [organizationId],
+  const pipelineWorkspaceQueryKey = useMemo(
+    () => ['pipeline-workspace', organizationId, selectedPipelineId] as const,
+    [organizationId, selectedPipelineId],
   );
   const {
-    data: pipelines = [],
-    error: pipelinesError,
-    isPending: isPipelinesPending,
-    refetch: refetchPipelines,
+    data: pipelineWorkspace,
+    error: pipelineWorkspaceError,
+    isPending: isPipelineWorkspacePending,
+    refetch: refetchPipelineWorkspace,
   } = useQuery({
-    queryKey: pipelinesQueryKey,
-    queryFn: () => getPipelines(organizationId!),
+    queryKey: pipelineWorkspaceQueryKey,
+    queryFn: ({ signal }) => getPipelineWorkspace(
+      selectedPipelineId,
+      organizationId!,
+      signal,
+    ),
     enabled: !!organizationId && !orgLoading,
   });
 
-  const defaultPipelineId = pipelines.find((pipeline) => pipeline.is_default)?.id ?? pipelines[0]?.id ?? null;
-  const activePipelineId = selectedPipelineId !== null
-    && pipelines.some((pipeline) => pipeline.id === selectedPipelineId)
-    ? selectedPipelineId
-    : defaultPipelineId;
-  const pipelineQueryKey = useMemo(
-    () => ['pipeline', organizationId, activePipelineId] as const,
-    [activePipelineId, organizationId],
-  );
-  const {
-    data: currentPipeline = null,
-    error: pipelineError,
-    isPending: isPipelinePending,
-    refetch: refetchPipeline,
-  } = useQuery<PipelineWithDeals>({
-    queryKey: pipelineQueryKey,
-    queryFn: () => getPipeline(activePipelineId!, organizationId!),
-    enabled: !!organizationId && activePipelineId !== null && !orgLoading,
-  });
+  const pipelines = pipelineWorkspace?.pipelines ?? EMPTY_PIPELINES;
+  const currentPipeline = pipelineWorkspace?.selectedPipeline ?? null;
+  const activePipelineId = currentPipeline?.id ?? null;
 
   const stackedPipelineQueries = useQueries({
     queries: stackedPipelineIds.map((pipelineId) => ({
@@ -120,8 +114,7 @@ export function PipelinesPage() {
   });
 
   const loading = orgLoading
-    || (!!organizationId && isPipelinesPending)
-    || (activePipelineId !== null && isPipelinePending);
+    || (!!organizationId && isPipelineWorkspacePending);
 
   useEffect(() => {
     if (!organizationId) return;
@@ -153,34 +146,56 @@ export function PipelinesPage() {
   }, [organizationId, stackedPipelineIds, stackedPipelinesHydratedFor]);
 
   useEffect(() => {
-    if (isPipelinesPending) return;
+    if (isPipelineWorkspacePending) return;
     setStackedPipelineIds((currentIds) => currentIds.filter((pipelineId) => (
       pipelineId !== activePipelineId
       && pipelines.some((pipeline) => pipeline.id === pipelineId)
     )));
-  }, [activePipelineId, isPipelinesPending, pipelines]);
+  }, [activePipelineId, isPipelineWorkspacePending, pipelines]);
 
   // Handle deal stage change (drag and drop)
   const handleDealMove = async (pipelineId: number, dealId: number, newStageId: string) => {
     if (!organizationId) return;
 
+    const isPrimaryPipeline = currentPipeline?.id === pipelineId;
     const targetPipelineQueryKey = ['pipeline', organizationId, pipelineId] as const;
-    const previousPipeline = queryClient.getQueryData<PipelineWithDeals>(targetPipelineQueryKey);
-    queryClient.setQueryData<PipelineWithDeals>(targetPipelineQueryKey, (pipeline) => {
-      if (!pipeline) return pipeline;
-      return {
-        ...pipeline,
-        deals: pipeline.deals.map((deal) => (
-          deal.id === dealId ? { ...deal, stage_id: newStageId } : deal
-        )),
-      };
-    });
+    const previousPipeline = isPrimaryPipeline
+      ? queryClient.getQueryData<PipelineWorkspace>(pipelineWorkspaceQueryKey)
+      : queryClient.getQueryData<PipelineWithDeals>(targetPipelineQueryKey);
+    if (isPrimaryPipeline) {
+      queryClient.setQueryData<PipelineWorkspace>(pipelineWorkspaceQueryKey, (workspace) => {
+        if (!workspace?.selectedPipeline) return workspace;
+        return {
+          ...workspace,
+          selectedPipeline: {
+            ...workspace.selectedPipeline,
+            deals: workspace.selectedPipeline.deals.map((deal) => (
+              deal.id === dealId ? { ...deal, stage_id: newStageId } : deal
+            )),
+          },
+        };
+      });
+    } else {
+      queryClient.setQueryData<PipelineWithDeals>(targetPipelineQueryKey, (pipeline) => {
+        if (!pipeline) return pipeline;
+        return {
+          ...pipeline,
+          deals: pipeline.deals.map((deal) => (
+            deal.id === dealId ? { ...deal, stage_id: newStageId } : deal
+          )),
+        };
+      });
+    }
 
     try {
       await moveDealToStage(dealId, newStageId, organizationId);
     } catch (error) {
       if (previousPipeline) {
-        queryClient.setQueryData(targetPipelineQueryKey, previousPipeline);
+        if (isPrimaryPipeline) {
+          queryClient.setQueryData(pipelineWorkspaceQueryKey, previousPipeline);
+        } else {
+          queryClient.setQueryData(targetPipelineQueryKey, previousPipeline);
+        }
       }
       console.error('Error moving deal:', error);
       toast({
@@ -199,7 +214,9 @@ export function PipelinesPage() {
     setInitialStageId(undefined);
     if (createdInPipelineId && organizationId) {
       void queryClient.invalidateQueries({
-        queryKey: ['pipeline', organizationId, createdInPipelineId],
+        queryKey: createdInPipelineId === currentPipeline?.id
+          ? pipelineWorkspaceQueryKey
+          : ['pipeline', organizationId, createdInPipelineId],
       });
     }
     toast({
@@ -212,17 +229,17 @@ export function PipelinesPage() {
   const handlePipelineCreated = (pipeline: Pipeline) => {
     setShowCreatePipelineModal(false);
     setEditingPipeline(null);
-    queryClient.setQueryData<Pipeline[]>(pipelinesQueryKey, (currentPipelines = []) => [
-      ...currentPipelines.filter((currentPipeline) => currentPipeline.id !== pipeline.id),
-      pipeline,
-    ]);
     if (createPipelineAsStacked && activePipelineId !== null) {
       setStackedPipelineIds((currentIds) => [...new Set([...currentIds, pipeline.id])]);
     } else {
       setSelectedPipelineId(pipeline.id);
     }
     setCreatePipelineAsStacked(false);
-    void queryClient.invalidateQueries({ queryKey: pipelinesQueryKey });
+    if (organizationId) {
+      void queryClient.invalidateQueries({
+        queryKey: ['pipeline-workspace', organizationId],
+      });
+    }
     toast({
       title: 'Created',
       description: 'Pipeline created successfully',
@@ -232,24 +249,26 @@ export function PipelinesPage() {
   const handlePipelineUpdated = (pipeline: Pipeline) => {
     setShowCreatePipelineModal(false);
     setEditingPipeline(null);
-    queryClient.setQueryData<Pipeline[]>(pipelinesQueryKey, (currentPipelines = []) => (
-      currentPipelines.map((currentPipeline) => {
-        if (currentPipeline.id === pipeline.id) return { ...currentPipeline, ...pipeline };
-        return pipeline.is_default
-          ? { ...currentPipeline, is_default: false }
-          : currentPipeline;
-      })
-    ));
     if (organizationId) {
-      queryClient.setQueryData<PipelineWithDeals>(
-        ['pipeline', organizationId, pipeline.id],
-        (currentPipeline) => currentPipeline
-          ? { ...currentPipeline, ...pipeline, deals: currentPipeline.deals }
-          : currentPipeline,
+      queryClient.setQueriesData<PipelineWorkspace>(
+        { queryKey: ['pipeline-workspace', organizationId] },
+        (workspace) => workspace ? {
+          pipelines: workspace.pipelines.map((currentPipeline) => {
+            if (currentPipeline.id === pipeline.id) return { ...currentPipeline, ...pipeline };
+            return pipeline.is_default
+              ? { ...currentPipeline, is_default: false }
+              : currentPipeline;
+          }),
+          selectedPipeline: workspace.selectedPipeline?.id === pipeline.id
+            ? { ...workspace.selectedPipeline, ...pipeline, deals: workspace.selectedPipeline.deals }
+            : workspace.selectedPipeline,
+        } : workspace,
       );
       void queryClient.invalidateQueries({ queryKey: ['pipeline', organizationId, pipeline.id] });
+      void queryClient.invalidateQueries({
+        queryKey: ['pipeline-workspace', organizationId],
+      });
     }
-    void queryClient.invalidateQueries({ queryKey: pipelinesQueryKey });
     toast({
       title: 'Updated',
       description: 'Pipeline updated successfully',
@@ -266,7 +285,9 @@ export function PipelinesPage() {
   const refreshPipeline = (pipelineId: number) => {
     if (!organizationId) return;
     void queryClient.invalidateQueries({
-      queryKey: ['pipeline', organizationId, pipelineId],
+      queryKey: pipelineId === currentPipeline?.id
+        ? pipelineWorkspaceQueryKey
+        : ['pipeline', organizationId, pipelineId],
     });
   };
 
@@ -368,7 +389,7 @@ export function PipelinesPage() {
           }}
           className="group/menu"
         >
-          <Plus className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+          <Plus className="mr-2 h-4 w-4" />
           New Pipeline
         </DropdownMenuItem>
         <DropdownMenuItem
@@ -524,21 +545,13 @@ export function PipelinesPage() {
               ))}
             </div>
           </div>
-        ) : pipelinesError ? (
+        ) : pipelineWorkspaceError ? (
           <ErrorState
             kind="page"
             icon={Kanban}
             title="Unable to load pipelines"
             description="We couldn't load your pipelines. Try again."
-            onRetry={() => void refetchPipelines()}
-          />
-        ) : pipelineError ? (
-          <ErrorState
-            kind="page"
-            icon={Kanban}
-            title="Unable to load this pipeline"
-            description="We couldn't load the selected pipeline. Try again."
-            onRetry={() => void refetchPipeline()}
+            onRetry={() => void refetchPipelineWorkspace()}
           />
         ) : pipelines.length === 0 ? (
           <EmptyState

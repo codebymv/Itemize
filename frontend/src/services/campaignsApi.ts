@@ -285,9 +285,12 @@ export const getCampaignRecipients = async (
         page?: number;
         limit?: number;
     } = {},
-    organizationId?: number
+    organizationId?: number,
+    signal?: AbortSignal,
 ): Promise<{ recipients: CampaignRecipient[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> => {
-    return getCampaignRecipientsViaGraphql(campaignId, params, organizationId);
+    return signal
+        ? getCampaignRecipientsViaGraphql(campaignId, params, organizationId, signal)
+        : getCampaignRecipientsViaGraphql(campaignId, params, organizationId);
 };
 
 /**

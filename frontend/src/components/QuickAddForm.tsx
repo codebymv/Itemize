@@ -34,7 +34,7 @@ const QuickAddForm: React.FC<QuickAddFormProps> = ({ onCreateList }) => {
             <Button 
               type="submit" 
               disabled={!title.trim()}
-              className="bg-blue-600 hover:bg-blue-700 sm:w-auto w-full"
+              className="bg-blue-600 interaction-button--primary sm:w-auto w-full"
             >
               <Plus className="h-4 w-4 mr-2" />
               Create

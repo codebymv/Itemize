@@ -32,11 +32,8 @@ import {
 } from "lucide-react";
 import {
   Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
 } from "./ui/dialog";
+import { ModalBody, ModalContent, ModalFooter, ModalHeader } from "./ui/modal";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -459,18 +456,11 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
         }
       }}
     >
-      <DialogContent
-        className={`max-h-[calc(100vh-2rem)] overflow-y-auto ${
-          creationStep === "source" && supportsPresets
-            ? "sm:max-w-[640px]"
-            : "sm:max-w-[425px]"
-        }`}
-      >
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {!preparedVaultSecurity &&
-              creationStep === "details" &&
-              supportsPresets && (
+      <ModalContent size={creationStep === "source" && supportsPresets ? "lg" : "md"}>
+        <ModalHeader
+          icon={preparedVaultSecurity ? ShieldCheck : Icon}
+          leading={
+            !preparedVaultSecurity && creationStep === "details" && supportsPresets ? (
                 <button
                   type="button"
                   onClick={returnToSourceChoice}
@@ -479,36 +469,27 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
                 >
                   <ArrowLeft className="h-4 w-4" aria-hidden="true" />
                 </button>
-              )}
-            {preparedVaultSecurity ? (
-              <ShieldCheck className="h-5 w-5 text-blue-600" />
-            ) : (
-              <Icon className="h-5 w-5 text-blue-600" />
-            )}
-            {preparedVaultSecurity
+            ) : null
+          }
+          title={preparedVaultSecurity
               ? "Save recovery key"
               : `Add ${config.label}`}
-          </DialogTitle>
-          {preparedVaultSecurity && (
-            <DialogDescription>
-              Save this key. It is the only way to recover the vault.
-            </DialogDescription>
-          )}
-          {!preparedVaultSecurity && (
-            <DialogDescription>
-              {creationStep === "source" && supportsPresets
+          description={
+            preparedVaultSecurity
+              ? "Save this key. It is the only way to recover the vault."
+              : creationStep === "source" && supportsPresets
                 ? `Start with an empty ${config.label.toLowerCase()} or use a curated preset.`
                 : selectedPreset
                   ? `Using the ${selectedPreset.name} preset. You can edit the details before creating it.`
                   : itemType === "vault"
                     ? "Name the vault and set its security before creating it."
-                    : `Choose the details for the new ${config.label.toLowerCase()}.`}
-            </DialogDescription>
-          )}
-        </DialogHeader>
+                    : `Choose the details for the new ${config.label.toLowerCase()}.`
+          }
+        />
 
         {preparedVaultSecurity ? (
-          <div className="space-y-5">
+          <>
+          <ModalBody className="space-y-5">
             <div className="space-y-2">
               <Label htmlFor="vaultRecoveryKey">Recovery key</Label>
               <div className="flex gap-2">
@@ -552,7 +533,8 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
 
             {error && <p className="text-sm text-red-500">{error}</p>}
 
-            <div className="flex justify-end gap-2">
+          </ModalBody>
+            <ModalFooter>
               <Button
                 type="button"
                 variant="outline"
@@ -565,18 +547,18 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
                 type="button"
                 disabled={!recoverySaved || isLoading}
                 onClick={() => void finishVaultCreation()}
-                className="bg-blue-600 text-white hover:bg-blue-700"
+                className="bg-blue-600 text-white interaction-button--primary"
               >
                 {isLoading ? "Creating Vault..." : "Create Vault"}
               </Button>
-            </div>
-          </div>
+            </ModalFooter>
+          </>
         ) : creationStep === "source" && supportsPresets ? (
-          <div className="space-y-5">
+          <ModalBody className="space-y-5">
             <button
               type="button"
               onClick={openBlankDetails}
-              className="group flex w-full items-center gap-3 rounded-lg border border-border bg-background p-3 text-left transition-colors hover:border-blue-300 hover:bg-blue-50/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:hover:border-blue-700 dark:hover:bg-blue-950/20"
+              className="interaction-card group flex w-full items-center gap-3 rounded-lg border border-border bg-background p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
             >
               <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600 dark:bg-blue-950/50">
                 <Plus className="h-5 w-5" aria-hidden="true" />
@@ -585,7 +567,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
                 Start from scratch
               </span>
               <ChevronRight
-                className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-blue-600 dark:group-hover:text-blue-400"
+                className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-blue-600 group-focus-visible:text-blue-600 dark:group-hover:text-blue-400 dark:group-focus-visible:text-blue-400"
                 aria-hidden="true"
               />
             </button>
@@ -608,7 +590,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
                       key={preset.id}
                       type="button"
                       onClick={() => openPresetDetails(preset)}
-                      className="group flex min-h-16 items-center gap-3 rounded-lg border border-border bg-card p-3 text-left transition-colors hover:border-blue-300 hover:bg-blue-50/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 dark:hover:border-blue-700 dark:hover:bg-blue-950/20"
+                      className="interaction-card group flex min-h-16 items-center gap-3 rounded-lg border border-border bg-card p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
                     >
                       <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-600 dark:bg-blue-950/50">
                         <PresetIcon
@@ -624,13 +606,14 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
                 })}
               </div>
             </section>
-          </div>
+          </ModalBody>
         ) : (
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(handleSubmit)}
-              className="space-y-4"
+              className="flex min-h-0 flex-1 flex-col"
             >
+              <ModalBody className="space-y-4">
               <FormField
                 control={form.control}
                 name="title"
@@ -1039,7 +1022,8 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
                 <p className="text-red-500 text-sm font-raleway">{error}</p>
               )}
 
-              <div className="flex justify-end space-x-2">
+              </ModalBody>
+              <ModalFooter>
                 <Button
                   type="button"
                   variant="outline"
@@ -1051,7 +1035,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
                 <Button
                   type="submit"
                   disabled={!title.trim() || isLoading}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-raleway"
+                  className="bg-blue-600 interaction-button--primary text-white font-raleway"
                 >
                   {isLoading
                     ? itemType === "vault"
@@ -1061,11 +1045,11 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
                       ? "Continue"
                       : `${UI_LABELS.create} ${config.label}`}
                 </Button>
-              </div>
+              </ModalFooter>
             </form>
           </Form>
         )}
-      </DialogContent>
+      </ModalContent>
     </Dialog>
   );
 };

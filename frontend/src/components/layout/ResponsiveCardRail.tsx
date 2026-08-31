@@ -104,7 +104,7 @@ export function ResponsiveCardRail({
         ref={railRef}
         aria-label={label}
         className={cn(
-          'responsive-card-rail -mx-3 flex snap-x snap-mandatory scroll-px-3 gap-4 overflow-x-auto overscroll-x-contain px-3 pb-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:-mx-6 sm:scroll-px-6 sm:px-6 md:mx-0 md:grid md:overflow-visible md:px-0 md:pb-0 md:snap-none',
+          'responsive-card-rail -mx-3 flex touch-pan-x touch-pan-y snap-x snap-mandatory scroll-px-3 gap-4 overflow-x-auto overscroll-x-contain px-3 pb-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:-mx-6 sm:scroll-px-6 sm:px-6 md:mx-0 md:grid md:touch-auto md:overflow-visible md:px-0 md:pb-0 md:snap-none',
           desktopColumns,
         )}
         role="region"
@@ -137,7 +137,7 @@ export function ResponsiveCardRail({
               type="button"
               aria-current={activeIndex === index ? 'true' : undefined}
               aria-label={`Show card ${index + 1} of ${itemCount}`}
-              className="group flex h-8 w-8 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="group flex h-11 w-11 touch-manipulation items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               onClick={() => scrollToItem(index)}
             >
               <span

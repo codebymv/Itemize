@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { CalendarCheck2, CalendarDays, Clock3, Loader2, Mail, MapPin, Phone, UserRound } from 'lucide-react';
 import { useParams } from 'react-router-dom';
+import { LoadingState } from '@/components/LoadingState';
 import {
   BrandedPublicCard,
   BrandedPublicContainer,
@@ -182,9 +183,7 @@ export default function PublicBookingPage() {
   if (loading) {
     return (
       <BrandedPublicPage>
-        <div className="grid min-h-[calc(100vh-4rem)] place-items-center">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" aria-label="Loading booking page" />
-        </div>
+        <LoadingState kind="page" message="Loading booking page" className="min-h-[calc(100vh-4rem)]" />
       </BrandedPublicPage>
     );
   }
@@ -250,14 +249,15 @@ export default function PublicBookingPage() {
                   <AlertDialogFooter>
                     <AlertDialogCancel>Keep booking</AlertDialogCancel>
                     <AlertDialogAction
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      className="bg-destructive text-destructive-foreground interaction-button--destructive"
                       disabled={cancelling}
+                      aria-busy={cancelling ? 'true' : undefined}
                       onClick={event => {
                         event.preventDefault();
                         void cancelBooking();
                       }}
                     >
-                      {cancelling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      {cancelling && <Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />}
                       Cancel booking
                     </AlertDialogAction>
                   </AlertDialogFooter>
@@ -306,9 +306,11 @@ export default function PublicBookingPage() {
               <section aria-live="polite">
                 <h2 className="text-sm font-medium">Available times</h2>
                 {slotsLoading ? (
-                  <div className="mt-3 flex min-h-20 items-center justify-center rounded-lg border border-dashed">
-                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-label="Loading available times" />
-                  </div>
+                  <LoadingState
+                    kind="inline"
+                    message="Loading available times"
+                    className="mt-3 rounded-lg border border-dashed"
+                  />
                 ) : slotError ? (
                   <Alert variant="destructive" className="mt-3"><AlertDescription>{slotError}</AlertDescription></Alert>
                 ) : slots.length === 0 ? (
@@ -322,7 +324,7 @@ export default function PublicBookingPage() {
                           key={slot.start_time}
                           type="button"
                           variant={selected ? 'default' : 'outline'}
-                          className={cn(selected && 'bg-blue-600 text-white hover:bg-blue-700')}
+                          className={cn(selected && 'bg-blue-600 text-white interaction-button--primary')}
                           aria-pressed={selected}
                           onClick={() => setSelectedSlot(slot)}
                         >
@@ -361,8 +363,8 @@ export default function PublicBookingPage() {
                     </div>
                   </div>
                   {error ? <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert> : null}
-                  <Button type="submit" className="w-full bg-blue-600 text-white hover:bg-blue-700 sm:w-auto" disabled={submitting}>
-                    {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  <Button type="submit" className="w-full bg-blue-600 text-white interaction-button--primary sm:w-auto" disabled={submitting} aria-busy={submitting ? 'true' : undefined}>
+                    {submitting && <Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />}
                     Confirm booking
                   </Button>
                 </section>

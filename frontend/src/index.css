@@ -1,6 +1,304 @@
 @tailwind base;
 @tailwind components;
+
+/*
+ * Application interaction states
+ *
+ * Hover is an enhancement for precise pointers, never the only way to expose
+ * an action. Focus remains visible for keyboard users and touch layouts keep
+ * contextual actions present without relying on a sticky simulated hover.
+ */
+.interaction-button--primary,
+.interaction-button--destructive,
+.interaction-button--destructive-ghost,
+.interaction-button--neutral,
+.interaction-button--link,
+.interaction-row,
+.interaction-card,
+.interaction-control,
+.interaction-navigation,
+.interaction-field {
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+}
+
+.interaction-button--primary,
+.interaction-button--destructive,
+.interaction-button--destructive-ghost,
+.interaction-button--neutral,
+.interaction-button--link,
+.interaction-row,
+.interaction-control,
+.interaction-navigation,
+.interaction-field {
+  transition-property: color, background-color, border-color, text-decoration-color;
+}
+
+.interaction-card {
+  transition-property: background-color, border-color, box-shadow;
+}
+
+.interaction-row:focus-visible,
+.interaction-row:focus-within,
+.interaction-card:focus-visible,
+.interaction-card:focus-within,
+.interaction-control:focus-visible,
+.interaction-navigation:focus-visible,
+.interaction-field:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px hsl(var(--ring)), 0 0 0 4px hsl(var(--background));
+}
+
+/* Contextual controls are visible by default, including on coarse pointers. */
+.interaction-reveal {
+  opacity: 1;
+  transition: opacity 150ms ease-out;
+}
+
+.dropdown-menu-item > svg {
+  transition: color 150ms ease-out;
+}
+
+.navigation-row-icon {
+  transition: color 150ms ease-out;
+}
+
+.interaction-navigation:focus-visible > .navigation-row-icon {
+  color: rgb(37 99 235);
+}
+
+.dark .interaction-navigation:focus-visible > .navigation-row-icon {
+  color: rgb(96 165 250);
+}
+
+.toast-action--default {
+  transition: color 150ms ease-out, background-color 150ms ease-out, border-color 150ms ease-out;
+}
+
+.dropdown-menu-item:focus:not([data-variant='destructive']) > svg {
+  color: rgb(37 99 235);
+}
+
+.dark .dropdown-menu-item:focus:not([data-variant='destructive']) > svg {
+  color: rgb(96 165 250);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .interaction-button--neutral:hover,
+  .interaction-control:hover {
+    background-color: hsl(var(--accent));
+    color: hsl(var(--accent-foreground));
+  }
+
+  .interaction-navigation:hover {
+    background-color: hsl(var(--sidebar-accent));
+    color: hsl(var(--sidebar-accent-foreground));
+  }
+
+  .interaction-navigation:hover > .navigation-row-icon {
+    color: rgb(37 99 235);
+  }
+
+  .dark .interaction-navigation:hover > .navigation-row-icon {
+    color: rgb(96 165 250);
+  }
+
+  .interaction-field:hover {
+    border-color: hsl(var(--primary) / 0.45);
+  }
+
+  /* Semantic actions win when a selected/outlined control also carries a
+     neutral Button variant. */
+  .interaction-button--primary:hover {
+    background-color: hsl(var(--primary-hover));
+  }
+
+  .interaction-button--destructive:hover {
+    background-color: hsl(var(--destructive) / 0.9);
+  }
+
+  .interaction-button--destructive-ghost:hover {
+    background-color: hsl(var(--destructive) / 0.1);
+    color: hsl(var(--destructive));
+  }
+
+  .dropdown-menu-item:hover:not([data-variant='destructive']) > svg {
+    color: rgb(37 99 235);
+  }
+
+  .dark .dropdown-menu-item:hover:not([data-variant='destructive']) > svg {
+    color: rgb(96 165 250);
+  }
+
+  .toast-action--default:hover {
+    background-color: hsl(var(--secondary));
+  }
+
+  .destructive .toast-action--default:hover {
+    border-color: hsl(var(--destructive) / 0.3);
+    background-color: hsl(var(--destructive));
+    color: hsl(var(--destructive-foreground));
+  }
+
+  .destructive .interaction-button--primary:hover {
+    background-color: hsl(var(--destructive) / 0.9);
+  }
+
+  .interaction-button--link:hover {
+    text-decoration-line: underline;
+  }
+
+  .interaction-row:hover {
+    background-color: hsl(var(--muted) / 0.5);
+  }
+
+  .interaction-row[aria-pressed="true"]:hover,
+  .interaction-row[aria-checked="true"]:hover,
+  .interaction-row[aria-selected="true"]:hover {
+    background-color: hsl(var(--primary) / 0.1);
+  }
+
+  .interaction-card:hover {
+    border-color: hsl(var(--primary) / 0.35);
+    box-shadow: 0 4px 8px -2px rgb(15 23 42 / 0.12);
+  }
+
+  .group .interaction-reveal {
+    opacity: 0;
+  }
+
+  .group\/menu-item .interaction-reveal {
+    opacity: 0;
+  }
+
+  .group:hover .interaction-reveal,
+  .group:focus-within .interaction-reveal,
+  .interaction-reveal:focus-visible,
+  .interaction-reveal[data-state="open"] {
+    opacity: 1;
+  }
+
+  .group\/menu-item:hover .interaction-reveal,
+  .group\/menu-item:focus-within .interaction-reveal {
+    opacity: 1;
+  }
+}
+
+@media (hover: none), (pointer: coarse), (max-width: 767px) {
+  /* Preserve compact visual density on precise pointers, but never make a
+     phone-sized viewport depend on a sub-44px target. */
+  .interaction-button--primary,
+  .interaction-button--destructive,
+  .interaction-button--destructive-ghost,
+  .interaction-button--neutral,
+  .interaction-button--link,
+  .interaction-control[role='tab'],
+  .touch-target-mobile {
+    min-height: 2.75rem;
+    min-width: 2.75rem;
+  }
+
+  .dropdown-menu-item {
+    min-height: 2.75rem !important;
+  }
+
+  /* Touch needs immediate confirmation because it has no hover preview. */
+  .interaction-button--neutral:active,
+  .interaction-control:active {
+    background-color: hsl(var(--accent));
+    color: hsl(var(--accent-foreground));
+  }
+
+  .interaction-navigation:active {
+    background-color: hsl(var(--sidebar-accent));
+    color: hsl(var(--sidebar-accent-foreground));
+  }
+
+  .interaction-button--primary:active {
+    background-color: hsl(var(--primary-hover));
+  }
+
+  .interaction-button--destructive:active {
+    background-color: hsl(var(--destructive) / 0.9);
+  }
+
+  .interaction-button--destructive-ghost:active {
+    background-color: hsl(var(--destructive) / 0.1);
+    color: hsl(var(--destructive));
+  }
+
+  .interaction-row:active {
+    background-color: hsl(var(--muted) / 0.5);
+  }
+
+  .interaction-card:active {
+    border-color: hsl(var(--primary) / 0.35);
+  }
+}
+
+/* Keep one-off authored utilities available as an explicit override. */
 @tailwind utilities;
+
+/* Let the dashboard overview compress attention into its heading only when the
+   framed section itself has enough room. This avoids viewport/sidebar guesses. */
+.dashboard-overview-frame {
+  container-name: dashboard-overview;
+  container-type: inline-size;
+}
+
+.dashboard-overview-attention-summary {
+  display: none;
+}
+
+@container dashboard-overview (min-width: 46rem) {
+  .dashboard-overview-attention-summary {
+    display: flex;
+  }
+
+  .dashboard-overview-attention-body {
+    display: none;
+  }
+}
+
+/* Revenue Flow promotes its series controls into the framing header only when
+   the whole card can hold title, series, size controls, and route action. */
+.revenue-flow-card {
+  container-name: revenue-flow-card;
+  container-type: inline-size;
+}
+
+.revenue-flow-card-header {
+  container-name: revenue-flow-card-header;
+  container-type: inline-size;
+}
+
+.revenue-flow-view-label {
+  display: none;
+}
+
+@container revenue-flow-card-header (min-width: 28rem) {
+  .revenue-flow-view-label {
+    display: inline;
+  }
+}
+
+.revenue-flow-series-header {
+  display: none;
+}
+
+.revenue-flow-series-compact {
+  display: flex;
+}
+
+@container revenue-flow-card (min-width: 44rem) {
+  .revenue-flow-series-header {
+    display: flex;
+  }
+
+  .revenue-flow-series-compact {
+    display: none;
+  }
+}
 
 /* Expanded-record actions respond to the row width left by the app shell. */
 .expanded-row-actions {
@@ -166,6 +464,7 @@
 .desktop-header-tools__secondary,
 .desktop-header-tools__primary,
 .desktop-header-search__compact,
+.desktop-header-search__label,
 .desktop-header-filters__compact {
   display: flex;
   min-width: 0;
@@ -241,6 +540,7 @@
 
 .desktop-header-tools__combined-query,
 .desktop-header-search__full,
+.desktop-header-search__label,
 .desktop-header-filters__full,
 .desktop-header-action-label {
   display: none;
@@ -284,6 +584,20 @@
   min-width: 2.75rem;
 }
 
+/* A lone secondary command is the page's de facto primary action. Shared
+   HeaderAction instances inherit primary styling; this fallback also covers
+   typed shell slots that still render a plain Button. */
+.header-action-promoted-primary > button {
+  border-color: hsl(var(--primary));
+  background-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.header-action-promoted-primary > button:hover {
+  background-color: hsl(var(--primary) / 0.9);
+  color: hsl(var(--primary-foreground));
+}
+
 .header-query-popover [role='combobox'] {
   width: 100%;
   min-height: 2.75rem;
@@ -295,6 +609,16 @@
   }
 }
 
+@container desktop-header-tools (min-width: 360px) {
+  .desktop-header-search__label {
+    display: flex;
+  }
+
+  .desktop-header-search__compact {
+    display: none;
+  }
+}
+
 @container desktop-header-tools (min-width: 520px) {
   .desktop-header-search__full,
   .desktop-header-tools__secondary .desktop-header-action-label {
@@ -302,6 +626,10 @@
   }
 
   .desktop-header-search__compact {
+    display: none;
+  }
+
+  .desktop-header-search__label {
     display: none;
   }
 }
@@ -377,6 +705,10 @@
   }
 
   .desktop-header-tools__lane:has(.desktop-header-filters__full--roomy) .desktop-header-search__compact {
+    display: none;
+  }
+
+  .desktop-header-tools__lane:has(.desktop-header-filters__full--roomy) .desktop-header-search__label {
     display: flex;
   }
 }

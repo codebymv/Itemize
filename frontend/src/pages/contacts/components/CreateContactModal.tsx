@@ -5,12 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
 } from '@/components/ui/dialog';
+import { ModalBody, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/modal';
 import {
   Select,
   SelectContent,
@@ -84,19 +80,16 @@ export function CreateContactModal({
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5 text-blue-600" />
-            Add New Contact
-          </DialogTitle>
-          <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>
-            Create a new contact in your CRM
-          </DialogDescription>
-        </DialogHeader>
+      <ModalContent size="md">
+        <ModalHeader
+          icon={UserPlus}
+          title="Add contact"
+          description="Create a contact in your CRM."
+        />
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="grid gap-4 py-4">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="flex min-h-0 flex-1 flex-col">
+            <ModalBody className="grid gap-4">
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -252,23 +245,24 @@ export function CreateContactModal({
               />
             </div>
 
-            <DialogFooter>
+            </ModalBody>
+            <ModalFooter>
               <Button type="button" variant="outline" onClick={onClose} style={{ fontFamily: '"Raleway", sans-serif' }} aria-label="Cancel">
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={loading}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-blue-600 interaction-button--primary text-white"
                 style={{ fontFamily: '"Raleway", sans-serif' }}
                 aria-label={loading ? 'Creating contact' : 'Create contact'}
               >
                 {loading ? 'Creating...' : 'Create Contact'}
               </Button>
-            </DialogFooter>
+            </ModalFooter>
           </form>
         </Form>
-      </DialogContent>
+      </ModalContent>
     </Dialog>
   );
 }

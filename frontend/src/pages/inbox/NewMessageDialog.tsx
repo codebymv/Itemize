@@ -255,7 +255,7 @@ export function NewMessageDialog({
 
         <DialogFooter className="border-t px-6 py-4">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={sending}>Cancel</Button>
-          <Button type="button" onClick={() => void handleSend()} disabled={!canSend || sending} className="bg-blue-600 text-white hover:bg-blue-700">
+          <Button type="button" onClick={() => void handleSend()} disabled={!canSend || sending} className="bg-blue-600 text-white interaction-button--primary">
             {sending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
             Send
           </Button>

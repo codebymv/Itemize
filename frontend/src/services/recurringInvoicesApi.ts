@@ -86,15 +86,21 @@ export interface RecurringInvoiceHistoryEntry {
 export const getRecurringInvoices = async (
   status: RecurringStatus | 'all' = 'all',
   organizationId?: number,
+  signal?: AbortSignal,
 ): Promise<RecurringInvoice[]> => {
-  return getRecurringInvoicesViaGraphql(status, organizationId);
+  return signal === undefined
+    ? getRecurringInvoicesViaGraphql(status, organizationId)
+    : getRecurringInvoicesViaGraphql(status, organizationId, signal);
 };
 
 export const getRecurringInvoice = async (
   id: number,
   organizationId?: number,
+  signal?: AbortSignal,
 ): Promise<RecurringInvoice> => {
-  return getRecurringInvoiceViaGraphql(id, organizationId);
+  return signal === undefined
+    ? getRecurringInvoiceViaGraphql(id, organizationId)
+    : getRecurringInvoiceViaGraphql(id, organizationId, signal);
 };
 
 export const createRecurringInvoice = async (
@@ -127,15 +133,15 @@ export const deleteRecurringInvoice = async (
 export const pauseRecurringInvoice = async (
   id: number,
   organizationId?: number,
-): Promise<void> => {
-  await pauseRecurringInvoiceViaGraphql(id, organizationId);
+): Promise<RecurringInvoice> => {
+  return pauseRecurringInvoiceViaGraphql(id, organizationId);
 };
 
 export const resumeRecurringInvoice = async (
   id: number,
   organizationId?: number,
-): Promise<void> => {
-  await resumeRecurringInvoiceViaGraphql(id, organizationId);
+): Promise<RecurringInvoice> => {
+  return resumeRecurringInvoiceViaGraphql(id, organizationId);
 };
 
 export const getRecurringInvoiceHistory = async (
@@ -148,12 +154,20 @@ export const getRecurringInvoiceHistory = async (
 export const generateRecurringInvoiceNow = async (
   id: number,
   organizationId?: number,
-): Promise<{ invoice_number: string }> => {
+): Promise<{
+  invoice_number: string;
+  next_run_date: string | null;
+  template_status: RecurringStatus;
+  replayed: boolean;
+}> => {
   return generateRecurringInvoiceNowViaGraphql(id, organizationId);
 };
 
 export const getRecurringInvoiceNumberPreview = async (
   organizationId?: number,
+  signal?: AbortSignal,
 ): Promise<string> => {
-  return getRecurringInvoiceNumberPreviewViaGraphql(organizationId);
+  return signal === undefined
+    ? getRecurringInvoiceNumberPreviewViaGraphql(organizationId)
+    : getRecurringInvoiceNumberPreviewViaGraphql(organizationId, signal);
 };

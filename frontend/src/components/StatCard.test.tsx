@@ -34,4 +34,18 @@ describe('StatCard', () => {
 
     expect(container.firstElementChild).toHaveAttribute('data-card-surface', 'frame');
   });
+
+  it('makes raw numeric values responsive without losing their exact accessible value', () => {
+    const { container } = render(
+      <StatCard
+        title="Contacts"
+        badgeText="Total Contacts"
+        value={11_543}
+        icon={Circle}
+      />,
+    );
+
+    expect(container.querySelector('[data-stat-card-value]')).toHaveClass('tabular-nums');
+    expect(screen.getByLabelText('11,543')).toHaveAttribute('data-responsive-value-mode', 'full');
+  });
 });

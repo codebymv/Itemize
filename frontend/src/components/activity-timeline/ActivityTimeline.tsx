@@ -82,11 +82,18 @@ function ActivityItem({
   return (
     <Card
       surface="inset"
-      className={cn(
-        'p-4 transition-all',
-        onSelect && 'cursor-pointer hover:shadow-md'
-      )}
+      interactive={Boolean(onSelect)}
+      className="p-4"
+      role={onSelect ? 'button' : undefined}
+      tabIndex={onSelect ? 0 : undefined}
       onClick={() => onSelect?.(activity)}
+      onKeyDown={(event) => {
+        if (!onSelect || event.target !== event.currentTarget) return
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          onSelect(activity)
+        }
+      }}
     >
       <div className="flex gap-4">
         <div className={cn('flex-shrink-0', typeColor)}>

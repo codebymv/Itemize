@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Filter, MoreHorizontal, Pencil, Plus, RefreshCw, Trash2, Users } from 'lucide-react';
+import { Filter, MoreHorizontal, Pencil, Plus, RefreshCw, Trash2, Users, PieChart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { HeaderAction, HeaderCombinedQuery, HeaderFilters, HeaderSearch } from '@/components/layout/DesktopHeaderTools';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
+import { FramedSection } from '@/components/ui/framed-section';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { StatCard } from '@/components/StatCard';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
@@ -120,12 +121,14 @@ export function SegmentsPage() {
         primaryAction: <HeaderAction label="New segment" icon={<Plus className="h-4 w-4" />} onClick={() => navigate('/segments/new')} />,
       }}
     >
-      {!loadError && <ResponsiveCardRail label="Segment summary" desktopColumns="md:grid-cols-2 lg:grid-cols-4" className="responsive-stat-summary">
+      {!loadError && <FramedSection title="Overview" icon={PieChart} className="mb-6">
+        <ResponsiveCardRail label="Segment summary" desktopColumns="md:grid-cols-2 lg:grid-cols-4" className="responsive-stat-summary mb-0">
         <StatCard title="Total segments" badgeText="Total" value={stats.total} icon={Filter} description={`${stats.total} configured`} colorTheme="blue" isLoading={loading} />
         <StatCard title="Dynamic segments" badgeText="Dynamic" value={stats.dynamic} icon={RefreshCw} description="Rule-based audiences" colorTheme="blue" isLoading={loading} />
         <StatCard title="Static segments" badgeText="Static" value={stats.staticCount} icon={Users} description="Saved contact groups" colorTheme="blue" isLoading={loading} />
         <StatCard title="Segment contacts" badgeText="Contacts" value={stats.contacts} icon={Users} description="Across all segments" colorTheme="blue" isLoading={loading} />
-      </ResponsiveCardRail>}
+        </ResponsiveCardRail>
+      </FramedSection>}
 
       <Card><CardContent className="p-0">
         {loading ? <div className="space-y-4 p-6">{Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-20 w-full" />)}</div>
@@ -139,7 +142,7 @@ export function SegmentsPage() {
               role="button"
               tabIndex={0}
               aria-label={`Edit ${segment.name}`}
-              className="group flex cursor-pointer items-center gap-3 px-3 py-4 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-4"
+              className="group flex cursor-pointer items-center gap-3 px-3 py-4 interaction-row focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-4"
               onClick={() => navigate(`/segments/${segment.id}`)}
               onKeyDown={event => {
                 if (event.key === 'Enter' || event.key === ' ') {
@@ -150,7 +153,7 @@ export function SegmentsPage() {
             >
               <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full', visual.iconBackgroundClass)}><TypeIcon className={cn('h-5 w-5', visual.iconClass)} /></div>
               <div className="min-w-0 flex-1"><div className="flex min-w-0 items-center gap-2"><h3 className="truncate text-sm font-medium md:text-base">{segment.name}</h3><Badge className={cn('shrink-0 text-xs', visual.badgeClass)}>{visual.label}</Badge></div>{segment.description && <p className="mt-1 truncate text-sm text-muted-foreground">{segment.description}</p>}<div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground"><span>{segment.segment_type === 'dynamic' ? 'Dynamic' : 'Static'}</span><span>{segment.contact_count} contact{segment.contact_count === 1 ? '' : 's'}</span>{segment.used_in_campaigns > 0 && <span>{segment.used_in_campaigns} campaign{segment.used_in_campaigns === 1 ? '' : 's'}</span>}{segment.used_in_automations > 0 && <span>{segment.used_in_automations} automation{segment.used_in_automations === 1 ? '' : 's'}</span>}</div></div>
-              <DropdownMenu><DropdownMenuTrigger asChild onClick={event => event.stopPropagation()}><Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" disabled={workingId === segment.id} aria-label={`More actions for ${segment.name}`}><MoreHorizontal className={cn('h-4 w-4', workingId === segment.id && 'animate-pulse')} /></Button></DropdownMenuTrigger><DropdownMenuContent align="end" onClick={event => event.stopPropagation()}><DropdownMenuItem onClick={() => navigate(`/segments/${segment.id}`)} className="group/menu"><Pencil className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Edit segment</DropdownMenuItem>{segment.segment_type === 'dynamic' && <DropdownMenuItem onClick={() => void handleRecalculate(segment)}><RefreshCw className="mr-2 h-4 w-4" />Recalculate</DropdownMenuItem>}<DropdownMenuSeparator /><DropdownMenuItem onClick={() => setSegmentToDelete(segment)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem></DropdownMenuContent></DropdownMenu>
+              <DropdownMenu><DropdownMenuTrigger asChild onClick={event => event.stopPropagation()}><Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" disabled={workingId === segment.id} aria-label={`More actions for ${segment.name}`}><MoreHorizontal className={cn('h-4 w-4', workingId === segment.id && 'animate-pulse')} /></Button></DropdownMenuTrigger><DropdownMenuContent align="end" onClick={event => event.stopPropagation()}><DropdownMenuItem onClick={() => navigate(`/segments/${segment.id}`)} className="group/menu"><Pencil className="mr-2 h-4 w-4" />Edit segment</DropdownMenuItem>{segment.segment_type === 'dynamic' && <DropdownMenuItem onClick={() => void handleRecalculate(segment)}><RefreshCw className="mr-2 h-4 w-4" />Recalculate</DropdownMenuItem>}<DropdownMenuSeparator /><DropdownMenuItem onClick={() => setSegmentToDelete(segment)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem></DropdownMenuContent></DropdownMenu>
             </div>;
           })}</div>}
       </CardContent></Card>

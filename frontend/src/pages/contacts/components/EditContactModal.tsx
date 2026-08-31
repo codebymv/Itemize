@@ -5,12 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
 } from '@/components/ui/dialog';
+import { ModalBody, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/modal';
 import {
   Select,
   SelectContent,
@@ -104,19 +100,15 @@ export function EditContactModal({
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <UserPen className="h-5 w-5 text-blue-600" />
-            Edit Contact
-          </DialogTitle>
-          <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>
-            Update contact information
-          </DialogDescription>
-        </DialogHeader>
+      <ModalContent size="lg">
+        <ModalHeader
+          icon={UserPen}
+          title="Edit contact"
+          description="Update contact information."
+        />
 
-        <form onSubmit={handleSubmit}>
-          <div className="grid gap-4 py-4">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <ModalBody className="grid gap-4">
             {/* Basic Info */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -232,23 +224,23 @@ export function EditContactModal({
                 />
               </div>
             </div>
-          </div>
+          </ModalBody>
 
-          <DialogFooter>
+          <ModalFooter>
             <Button type="button" variant="outline" onClick={onClose} style={{ fontFamily: '"Raleway", sans-serif' }} aria-label="Cancel">
               Cancel
             </Button>
             <Button 
               type="submit" 
               disabled={loading}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-blue-600 interaction-button--primary text-white"
               style={{ fontFamily: '"Raleway", sans-serif' }}
             >
               {loading ? 'Saving...' : 'Save Changes'}
             </Button>
-          </DialogFooter>
+          </ModalFooter>
         </form>
-      </DialogContent>
+      </ModalContent>
     </Dialog>
   );
 }

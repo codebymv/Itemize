@@ -71,7 +71,7 @@ export function TemplateSelectorDialog({
             onEdit={onEditTemplate}
             renderPreview={template => <EmailPreview subject={template.subject} bodyHtml={template.bodyHtml} className="h-full" />}
             footerAction={(
-                <Button type="button" className="bg-blue-600 text-white hover:bg-blue-700" onClick={onComposeEmail}>
+                <Button type="button" className="bg-blue-600 text-white interaction-button--primary" onClick={onComposeEmail}>
                     <Mail className="h-4 w-4" />
                     Compose from scratch
                 </Button>

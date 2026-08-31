@@ -40,8 +40,11 @@ export function SaveStatus({ state, onRetry, className }: SaveStatusProps) {
   return (
     <div
       className={cn('flex min-w-0 items-center gap-1.5 text-xs', content.className, className)}
+      data-save-state={state}
       role={state === 'error' ? 'alert' : 'status'}
-      aria-live="polite"
+      aria-live={state === 'error' ? 'assertive' : 'polite'}
+      aria-atomic="true"
+      aria-busy={state === 'saving' ? 'true' : undefined}
     >
       {content.icon}
       <span className="truncate">{content.label}</span>

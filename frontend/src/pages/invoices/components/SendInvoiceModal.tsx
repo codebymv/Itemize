@@ -273,7 +273,7 @@ export function SendInvoiceModal({
                                 <div className="mt-4 border rounded-lg">
                                     <button
                                         onClick={() => setShowInvoicePreview(!showInvoicePreview)}
-                                        className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors rounded-lg"
+                                        className="w-full flex items-center justify-between p-3 interaction-row rounded-lg"
                                         type="button"
                                     >
                                         <div className="flex items-center gap-2">
@@ -359,7 +359,7 @@ export function SendInvoiceModal({
                         <Button
                             onClick={handleSend}
                             disabled={sending || !customerEmail}
-                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                            className="bg-blue-600 interaction-button--primary text-white"
                             style={{ fontFamily: '"Raleway", sans-serif' }}
                         >
                             <Send className="h-4 w-4 mr-2" />

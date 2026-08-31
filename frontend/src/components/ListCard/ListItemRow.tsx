@@ -92,7 +92,7 @@ const ListItemRow: React.FC<ListItemRowProps> = ({
           <div 
             {...attributes}
             {...listeners}
-            className="opacity-60 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity cursor-grab active:cursor-grabbing mr-2 p-1"
+            className="interaction-reveal touch-target-mobile mr-2 flex cursor-grab touch-pan-y items-center justify-center active:cursor-grabbing"
             data-sortable-handle
             aria-label={`Reorder ${item.text}`}
           >
@@ -118,7 +118,7 @@ const ListItemRow: React.FC<ListItemRowProps> = ({
               {item.text}
             </span>
           </button>
-          <div className="flex opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity">
+          <div className="interaction-reveal flex">
             <Button
               size="sm"
               variant="ghost"

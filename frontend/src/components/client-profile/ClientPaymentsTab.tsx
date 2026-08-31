@@ -1,7 +1,9 @@
 import React from 'react'
-import { DollarSign, Calendar, CheckCircle2 } from 'lucide-react'
+import { DollarSign, Calendar, CheckCircle2, PieChart } from 'lucide-react'
 import { StatCard } from '@/components/StatCard'
+import { ResponsiveMoneyValue } from '@/components/ui/responsive-value'
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail'
+import { FramedSection } from '@/components/ui/framed-section'
 import { EmptyState } from '@/components/EmptyState'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { ClientPayment } from '../../design-system/types/client.types'
@@ -16,15 +18,16 @@ export function ClientPaymentsTab({ payments }: ClientPaymentsTabProps) {
 
   return (
     <div className="space-y-6">
-      <ResponsiveCardRail
-        label="Client payment summary"
-        desktopColumns="md:grid-cols-3"
-        className="responsive-stat-summary mb-0"
-      >
+      <FramedSection title="Overview" icon={PieChart}>
+        <ResponsiveCardRail
+          label="Client payment summary"
+          desktopColumns="md:grid-cols-3"
+          className="responsive-stat-summary mb-0"
+        >
         <StatCard
           title="Total Paid"
           badgeText="Total Paid"
-          value={`$${totalPayments.toLocaleString()}`}
+          value={<ResponsiveMoneyValue amount={totalPayments} currency="USD" locale="en-US" />}
           icon={DollarSign}
           colorTheme="green"
         />
@@ -42,13 +45,14 @@ export function ClientPaymentsTab({ payments }: ClientPaymentsTabProps) {
           icon={Calendar}
           colorTheme="gray"
         />
-      </ResponsiveCardRail>
+        </ResponsiveCardRail>
+      </FramedSection>
 
       <Card className="bg-muted/10">
         <CardHeader>
           <CardTitle className="text-base">Payment History</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent surface="inset">
           {payments.length === 0 ? (
             <EmptyState icon={DollarSign} kind="inline" title="No payments yet" />
           ) : (

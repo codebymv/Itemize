@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
@@ -138,12 +139,15 @@ export function PageVersionHistory({ pageId, pageName, open, onOpenChange, onPre
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="max-w-4xl h-[80vh] p-0 flex flex-col">
-                <DialogHeader className="px-6 py-4 border-b">
+                <DialogHeader className="border-b px-6 py-4 pr-12">
                     <div className="flex items-center justify-between">
                         <DialogTitle className="flex items-center gap-2">
                             <HistoryIcon className="h-5 w-5 text-blue-600" />
                             Version History - {pageName}
                         </DialogTitle>
+                        <DialogDescription className="sr-only">
+                            Browse, save, preview, and restore versions of {pageName}.
+                        </DialogDescription>
                         <Button onClick={handleCreateVersion} disabled={loading || !organizationId} size="sm">
                             <Clock className="h-4 w-4 mr-2" />
                             Save New Version
@@ -169,7 +173,7 @@ export function PageVersionHistory({ pageId, pageName, open, onOpenChange, onPre
                             icon={HistoryIcon}
                             kind="inline"
                             title="No versions yet"
-                            action={<Button type="button" className="h-11 bg-blue-600 text-white hover:bg-blue-700" onClick={handleCreateVersion} disabled={!organizationId}>Create version</Button>}
+                            action={<Button type="button" className="h-11 bg-blue-600 text-white interaction-button--primary" onClick={handleCreateVersion} disabled={!organizationId}>Create version</Button>}
                             className="min-h-40"
                         />
                     ) : (
@@ -180,7 +184,7 @@ export function PageVersionHistory({ pageId, pageName, open, onOpenChange, onPre
                                     className={`flex items-center gap-4 p-4 rounded-lg border ${
                                         currentVersionId === version.id
                                             ? 'border-primary/30 bg-accent'
-                                            : 'bg-card hover:bg-muted/50'
+                                            : 'interaction-row bg-card'
                                     }`}
                                 >
                                     <div className="flex-1 min-w-0">

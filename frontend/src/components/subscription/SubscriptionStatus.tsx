@@ -138,7 +138,7 @@ export function SubscriptionStatus() {
 
       {isPaidPlan && subscription?.status !== "canceled" && (
         <Button
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+          className="w-full bg-blue-600 interaction-button--primary text-white"
           onClick={handleManageSubscription}
           disabled={isOpeningPortal}
           aria-busy={isOpeningPortal}

@@ -16,7 +16,7 @@ describe('PricingCards', () => {
     const yearly = screen.getByRole('tab', { name: /Yearly/ });
 
     expect(monthly).toHaveAttribute('data-state', 'active');
-    expect(yearly).toHaveClass('hover:bg-accent');
+    expect(yearly).toHaveClass('interaction-control');
     fireEvent.mouseDown(yearly, { button: 0, ctrlKey: false });
     expect(onBillingPeriodChange).toHaveBeenCalledWith('yearly');
   });

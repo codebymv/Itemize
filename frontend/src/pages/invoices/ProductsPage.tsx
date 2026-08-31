@@ -7,6 +7,7 @@ import {
     Trash2,
     Pencil,
     Tag,
+    PieChart,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,12 +21,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
     Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
 } from '@/components/ui/dialog';
+import { ModalBody, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/modal';
 import {
     Select,
     SelectContent,
@@ -53,6 +50,7 @@ import { ErrorState } from '@/components/ErrorState';
 import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { StatCard } from '@/components/StatCard';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
+import { FramedSection } from '@/components/ui/framed-section';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
@@ -322,11 +320,12 @@ export function ProductsPage() {
             }}
         >
             {!loadError && (
-            <ResponsiveCardRail
-                label="Product catalog summary"
-                desktopColumns="md:grid-cols-4"
-                className="responsive-stat-summary"
-            >
+            <FramedSection title="Overview" icon={PieChart} className="mb-6">
+              <ResponsiveCardRail
+                  label="Product catalog summary"
+                  desktopColumns="md:grid-cols-4"
+                  className="responsive-stat-summary mb-0"
+              >
                 <StatCard
                     title="Available products"
                     badgeText="Available"
@@ -363,7 +362,8 @@ export function ProductsPage() {
                     colorTheme={getProductStatusVisual(false).theme}
                     isLoading={loading}
                 />
-            </ResponsiveCardRail>
+              </ResponsiveCardRail>
+            </FramedSection>
             )}
 
             <Card>
@@ -397,7 +397,7 @@ export function ProductsPage() {
                                 const statusVisual = getProductStatusVisual(product.is_active);
 
                                 return (
-                                <div key={product.id} className="group p-4 transition-colors hover:bg-muted/50">
+                                <div key={product.id} className="group p-4 interaction-row">
                                     <div className="flex items-center justify-between gap-2">
                                         <div className="flex min-w-0 flex-1 items-center gap-2">
                                             <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full md:h-10 md:w-10 ${statusVisual.iconBackgroundClass}`}>
@@ -439,7 +439,7 @@ export function ProductsPage() {
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
                                                     <DropdownMenuItem onClick={() => openEditDialog(product)} className="group/menu">
-                                                        <Pencil className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Edit
+                                                        <Pencil className="mr-2 h-4 w-4" />Edit
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
                                                     <DropdownMenuItem
@@ -488,20 +488,15 @@ export function ProductsPage() {
             </Card>
 
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-[500px]">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <Package className="h-5 w-5 text-blue-600" />
-                            {editingProduct ? 'Edit Product' : 'Add Product'}
-                        </DialogTitle>
-                        <DialogDescription>
-                            {editingProduct 
+                <ModalContent size="md">
+                    <ModalHeader
+                        icon={Package}
+                        title={editingProduct ? 'Edit product' : 'Add product'}
+                        description={editingProduct
                                 ? 'Update your product or service details'
-                                : 'Add a new product or service to your catalog'
-                            }
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
+                                : 'Add a new product or service to your catalog'}
+                    />
+                    <ModalBody className="grid gap-4">
                         <div className="space-y-2">
                             <Label>Name *</Label>
                             <Input
@@ -608,20 +603,20 @@ export function ProductsPage() {
                                 helpLabel="About product availability"
                             />
                         </div>
-                    </div>
-                    <DialogFooter>
+                    </ModalBody>
+                    <ModalFooter>
                         <Button variant="outline" onClick={() => setDialogOpen(false)}>
                             Cancel
                         </Button>
                         <Button
                             onClick={handleSave}
                             disabled={saving || !formData.name}
-                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                            className="bg-blue-600 interaction-button--primary text-white"
                         >
                             {saving ? 'Saving...' : editingProduct ? 'Save Changes' : 'Create Product'}
                         </Button>
-                    </DialogFooter>
-                </DialogContent>
+                    </ModalFooter>
+                </ModalContent>
             </Dialog>
         <DeleteDialog
             open={Boolean(productToDelete)}

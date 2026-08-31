@@ -11,7 +11,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { bulkUpdateContacts } from '@/services/contactsApi';
 import { useToast } from '@/hooks/use-toast';
@@ -156,15 +155,17 @@ export function BulkTagModal({
                     {tags.length > 0 && (
                         <div className="flex flex-wrap gap-2">
                             {tags.map((tag) => (
-                                <Badge
+                                <Button
                                     key={tag}
                                     variant="secondary"
-                                    className="px-2 py-1 cursor-pointer hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                                    size="sm"
+                                    className="interaction-button--destructive-ghost h-auto rounded-full px-2 py-1 text-xs"
                                     onClick={() => handleRemoveTag(tag)}
+                                    aria-label={`Remove ${tag} tag`}
                                 >
                                     {tag}
                                     <span className="ml-1 text-xs">×</span>
-                                </Badge>
+                                </Button>
                             ))}
                         </div>
                     )}
@@ -177,7 +178,7 @@ export function BulkTagModal({
                     <Button
                         onClick={handleSubmit}
                         disabled={tags.length === 0 || isSubmitting}
-                        className={mode === 'add' ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'bg-orange-600 hover:bg-orange-700 text-white'}
+                        className="bg-blue-600 interaction-button--primary text-white"
                         style={{ fontFamily: '"Raleway", sans-serif' }}
                         aria-label={isSubmitting ? 'Updating tags...' : `${mode === 'add' ? 'Add' : 'Remove'} tags`}
                     >

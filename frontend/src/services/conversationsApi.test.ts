@@ -5,6 +5,7 @@ import {
     getConversation,
     getConversations,
     markConversationRead,
+    resetConversationCapabilities,
     sendMessage,
     updateConversation,
 } from './conversationsApi';
@@ -31,7 +32,10 @@ const conversation = {
 };
 
 describe('conversations GraphQL adapter', () => {
-    beforeEach(() => vi.clearAllMocks());
+    beforeEach(() => {
+        vi.clearAllMocks();
+        resetConversationCapabilities();
+    });
 
     it('maps the GraphQL page into the retained service response', async () => {
         vi.mocked(graphqlRequest).mockResolvedValue({
@@ -88,6 +92,26 @@ describe('conversations GraphQL adapter', () => {
         });
         expect(graphqlRequest).toHaveBeenCalledTimes(2);
         expect(vi.mocked(graphqlRequest).mock.calls[1][0]).not.toContain('socialConversationId');
+    });
+
+    it('remembers the successful Inbox list shape instead of probing on every read', async () => {
+        vi.mocked(graphqlRequest)
+            .mockRejectedValueOnce(new Error('Cannot query field "socialConversationId" on type "Conversation".'))
+            .mockResolvedValue({
+                conversations: {
+                    conversations: [conversation],
+                    page: 1,
+                    limit: 50,
+                    total: 1,
+                    totalPages: 1,
+                },
+            });
+
+        await getConversations({ organization_id: 42 });
+        await getConversations({ organization_id: 42 });
+
+        expect(graphqlRequest).toHaveBeenCalledTimes(3);
+        expect(vi.mocked(graphqlRequest).mock.calls[2][0]).not.toContain('socialConversationId');
     });
 
     it('keeps channel filtering usable while the API argument rolls out', async () => {

@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Mail,
   Phone,
@@ -47,14 +48,13 @@ import {
 } from '@/components/layout/DesktopHeaderTools';
 import { ShellBackButton } from '@/components/layout/ShellBackButton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Contact, ContactActivity } from '@/types';
+import { Contact } from '@/types';
 import {
-  getContact,
   deleteContact,
-  getContactActivities,
   addContactActivity,
-  getContactContent,
+  getContactDetailBootstrap,
 } from '@/services/contactsApi';
+import type { ContactDetailBootstrap } from '@/services/contactsGraphql';
 import { ActivityTimeline } from './components/ActivityTimeline';
 import { EditContactModal } from './components/EditContactModal';
 import { ComposeEmailModal } from './components/ComposeEmailModal';
@@ -121,24 +121,51 @@ export function ContactDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-
-  const [contact, setContact] = useState<Contact | null>(null);
-  const [activities, setActivities] = useState<ContactActivity[]>([]);
-  const [relatedContent, setRelatedContent] = useState<{
-    lists: RelatedContactItem[];
-    notes: RelatedContactItem[];
-    whiteboards: RelatedContactItem[];
-    wireframes: RelatedContactItem[];
-  }>({ lists: [], notes: [], whiteboards: [], wireframes: [] });
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const { organizationId, error: organizationError } = useOrganization();
+  const queryClient = useQueryClient();
+  const {
+    organizationId,
+    isLoading: organizationLoading,
+    error: organizationError,
+  } = useOrganization();
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [newNote, setNewNote] = useState('');
 
   const [addingNote, setAddingNote] = useState(false);
   const [showEmailModal, setShowEmailModal] = useState(false);
+  const parsedContactId = id ? Number(id) : Number.NaN;
+  const contactId = Number.isSafeInteger(parsedContactId) && parsedContactId > 0
+    ? parsedContactId
+    : null;
+  const contactDetailQueryKey = [
+    'contact-detail',
+    organizationId,
+    contactId,
+  ] as const;
+  const contactDetailQuery = useQuery({
+    queryKey: contactDetailQueryKey,
+    queryFn: ({ signal }) => getContactDetailBootstrap(
+      contactId as number,
+      organizationId as number,
+      signal,
+    ),
+    enabled: Boolean(organizationId && contactId),
+    refetchOnWindowFocus: false,
+  });
+  const contact = contactDetailQuery.data?.contact ?? null;
+  const activities = contactDetailQuery.data?.activities ?? [];
+  const relatedContent = contactDetailQuery.data?.relatedContent ?? {
+    lists: [],
+    notes: [],
+    whiteboards: [],
+    wireframes: [],
+  };
+  const hasInvalidContactId = contactId === null;
+  const loading = organizationLoading
+    || (!hasInvalidContactId && Boolean(organizationId) && contactDetailQuery.isPending);
+  const loadError = hasInvalidContactId || contactDetailQuery.isError
+    ? toastMessages.failedToLoad('contact')
+    : null;
 
   // Helper function for contact name (used in header)
   const getContactDisplayName = (c: Contact | null) => {
@@ -157,40 +184,6 @@ export function ContactDetailPage() {
     navigate(`/estimates/new?${params.toString()}`);
   };
 
-  useEffect(() => {
-    if (!organizationId) {
-      setLoading(false);
-    }
-  }, [organizationId]);
-
-  // Fetch contact data
-  const fetchContact = useCallback(async () => {
-    if (!id || !organizationId) return;
-
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const [contactData, activitiesData, contentData] = await Promise.all([
-        getContact(parseInt(id), organizationId),
-        getContactActivities(parseInt(id), { limit: 50 }, organizationId),
-        getContactContent(parseInt(id), organizationId),
-      ]);
-
-      setContact(contactData);
-      setActivities(activitiesData);
-      setRelatedContent(contentData);
-    } catch (error) {
-      console.error('Error fetching contact:', error);
-      setLoadError(toastMessages.failedToLoad('contact'));
-    } finally {
-      setLoading(false);
-    }
-  }, [id, organizationId]);
-
-  useEffect(() => {
-    fetchContact();
-  }, [fetchContact]);
-
   // Handle delete
   const handleDelete = async () => {
     if (!contact || !organizationId) return;
@@ -201,6 +194,8 @@ export function ContactDetailPage() {
         title: 'Deleted',
         description: toastMessages.deleted('contact'),
       });
+      queryClient.removeQueries({ queryKey: contactDetailQueryKey });
+      void queryClient.invalidateQueries({ queryKey: ['contacts', organizationId] });
       navigate('/contacts');
     } catch (error) {
       console.error('Error deleting contact:', error);
@@ -218,7 +213,7 @@ export function ContactDetailPage() {
 
     setAddingNote(true);
     try {
-      await addContactActivity(
+      const addedActivity = await addContactActivity(
         contact.id,
         {
           type: 'note',
@@ -229,9 +224,14 @@ export function ContactDetailPage() {
       );
 
       setNewNote('');
-      // Refresh activities
-      const activitiesData = await getContactActivities(contact.id, { limit: 50 }, organizationId);
-      setActivities(activitiesData);
+      queryClient.setQueryData<ContactDetailBootstrap>(contactDetailQueryKey, (current) => (
+        current
+          ? {
+              ...current,
+              activities: [addedActivity, ...current.activities].slice(0, 50),
+            }
+          : current
+      ));
 
       toast({
         title: 'Note Added',
@@ -250,19 +250,16 @@ export function ContactDetailPage() {
   };
 
   // Handle email sent
-  const handleEmailSent = async () => {
-    if (!contact || !organizationId) return;
-    try {
-      const activitiesData = await getContactActivities(contact.id, { limit: 50 }, organizationId);
-      setActivities(activitiesData);
-    } catch (error) {
-      console.error('Error refreshing activities:', error);
-    }
+  const handleEmailSent = () => {
+    void queryClient.invalidateQueries({ queryKey: contactDetailQueryKey });
   };
 
   // Contact updated callback
   const handleContactUpdated = (updatedContact: Contact) => {
-    setContact(updatedContact);
+    queryClient.setQueryData<ContactDetailBootstrap>(contactDetailQueryKey, (current) => (
+      current ? { ...current, contact: updatedContact } : current
+    ));
+    void queryClient.invalidateQueries({ queryKey: ['contacts', organizationId] });
     setShowEditModal(false);
     toast({
       title: 'Updated',
@@ -327,7 +324,7 @@ export function ContactDetailPage() {
       </Tooltip>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => setShowEditModal(true)} className="group/menu">
-          <Edit className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+          <Edit className="mr-2 h-4 w-4" />
           Edit Contact
         </DropdownMenuItem>
         <DropdownMenuSeparator />
@@ -382,7 +379,7 @@ export function ContactDetailPage() {
           kind="page"
           title="Contact unavailable"
           description={loadError || 'This contact is no longer available.'}
-          onAction={() => void fetchContact()}
+          onAction={() => void contactDetailQuery.refetch()}
         />
       </PageLayout>
     );
@@ -447,13 +444,13 @@ export function ContactDetailPage() {
                 Contact Information
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent surface="inset" className="space-y-4">
               {contact.email && (
                 <div className="flex items-center gap-3">
                   <Mail className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                   <a
                     href={`mailto:${contact.email}`}
-                    className="text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                    className="touch-target-mobile inline-flex touch-manipulation items-center text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
                   >
                     {contact.email}
                   </a>
@@ -464,7 +461,7 @@ export function ContactDetailPage() {
                   <Phone className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                   <a
                     href={`tel:${contact.phone}`}
-                    className="text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                    className="touch-target-mobile inline-flex touch-manipulation items-center text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
                   >
                     {contact.phone}
                   </a>
@@ -503,7 +500,7 @@ export function ContactDetailPage() {
                 Quick Actions
               </CardTitle>
             </CardHeader>
-            <CardContent className="grid gap-2 lg:grid-cols-2">
+            <CardContent surface="inset" className="grid gap-2 lg:grid-cols-2">
               <Button
                 size="sm"
                 className="min-w-0 justify-start overflow-hidden px-2 text-xs"
@@ -591,7 +588,7 @@ export function ContactDetailPage() {
               <CardHeader>
                 <CardTitle className="text-base">Custom Fields</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent surface="inset" className="space-y-3">
                 {Object.entries(contact.custom_fields).map(([key, value]) => (
                   <div key={key}>
                     <p className="text-sm text-muted-foreground">{key}</p>
@@ -608,7 +605,7 @@ export function ContactDetailPage() {
               <CardHeader>
                 <CardTitle className="text-base">Assigned To</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent surface="inset">
                 <div className="flex items-center gap-3">
                   <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-sm font-medium">
                     {contact.assigned_to_name[0].toUpperCase()}
@@ -632,7 +629,7 @@ export function ContactDetailPage() {
               <Badge variant="secondary">{activities.length}</Badge>
             </div>
           </CardHeader>
-          <CardContent className="flex min-h-0 flex-1 flex-col">
+          <CardContent surface="inset" className="flex min-h-0 flex-1 flex-col">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
               <Textarea
                 placeholder="Add a note..."
@@ -676,7 +673,7 @@ export function ContactDetailPage() {
               </Badge>
             </div>
           </CardHeader>
-          <CardContent className="min-h-0 flex-1">
+          <CardContent surface="inset" className="min-h-0 flex-1">
             <div
               className="h-full overflow-y-auto overscroll-contain pr-2"
               role="region"

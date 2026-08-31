@@ -296,7 +296,7 @@ export function WorkflowEnrollmentsDialog({ open, onOpenChange, organizationId, 
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Keep running</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            <AlertDialogAction className="bg-destructive text-destructive-foreground interaction-button--destructive"
               onClick={() => void cancelSelectedEnrollment()}>
               Cancel run
             </AlertDialogAction>

@@ -5,25 +5,33 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex touch-manipulation items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary-hover",
+        default: "interaction-button--primary bg-primary text-primary-foreground",
         destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+          "interaction-button--destructive bg-destructive text-destructive-foreground",
+        destructiveGhost:
+          "interaction-button--destructive-ghost text-destructive",
         outline:
-          "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+          "interaction-button--neutral border border-input bg-background",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
+          "interaction-button--neutral bg-secondary text-secondary-foreground",
+        ghost: "interaction-button--neutral",
+        link: "interaction-button--link text-primary underline-offset-4",
+        toggle:
+          "interaction-button--neutral border border-transparent bg-transparent aria-pressed:border-primary/50 aria-pressed:bg-primary/10 aria-pressed:text-primary data-[state=on]:border-primary/50 data-[state=on]:bg-primary/10 data-[state=on]:text-primary",
       },
       size: {
         default: "h-11 px-4 py-2",
+        compact: "h-8 rounded-md px-2 text-xs",
+        toolbar: "h-9 rounded-md px-3",
         sm: "h-10 rounded-md px-3",
         lg: "h-12 rounded-md px-8",
         icon: "h-11 w-11",
+        iconCompact: "h-8 w-8",
+        iconToolbar: "h-9 w-9",
       },
     },
     defaultVariants: {

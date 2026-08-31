@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthState } from '@/contexts/AuthContext';
 import { Activity, BarChart3, Mail, Zap } from 'lucide-react';
-import { Spinner } from '@/components/ui/Spinner';
+import { LoadingState } from '@/components/LoadingState';
 import { PageLayout } from '@/components/layout/PageLayout';
 import type { DesktopHeaderToolsProps } from '@/components/layout/DesktopHeaderTools';
 import {
@@ -44,9 +44,7 @@ export function AdminPage() {
                 nav={<AdminNav />}
                 navigationBreakpoint="wide"
             >
-                <div className="flex items-center justify-center h-96">
-                    <Spinner size="lg" variant="muted" />
-                </div>
+                <LoadingState kind="section" message="Loading administration" className="h-96" />
             </PageLayout>
         );
     }

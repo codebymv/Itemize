@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, FileText, MoreHorizontal, Trash2, Copy, Eye, EyeOff, BarChart3, Pencil, Archive, ChevronDown, Maximize2, Loader2 } from 'lucide-react';
+import { Plus, FileText, MoreHorizontal, Trash2, Copy, Eye, EyeOff, BarChart3, Pencil, Archive, ChevronDown, Maximize2, Loader2, PieChart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -30,6 +30,7 @@ import { useOrganization } from '@/hooks/useOrganization';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { HeaderAction, HeaderCombinedQuery, HeaderFilters, HeaderSearch } from '@/components/layout/DesktopHeaderTools';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
+import { FramedSection } from '@/components/ui/framed-section';
 import { StatCard } from '@/components/StatCard';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
@@ -258,12 +259,14 @@ export function FormsPage() {
                 />
             )}
             {!loadError && (
-                <ResponsiveCardRail label="Form status summary" desktopColumns="md:grid-cols-2 lg:grid-cols-4" className="responsive-stat-summary">
-                    <StatCard title="Archived forms" badgeText="Archived" value={stats.archived} icon={Archive} description={`${stats.archived} unavailable`} colorTheme="red" isLoading={loading} />
-                    <StatCard title="Total forms" badgeText="Total" value={stats.total} icon={FileText} description={`${stats.total} configured`} colorTheme="blue" isLoading={loading} />
-                    <StatCard title="Draft forms" badgeText="Draft" value={stats.draft} icon={Pencil} description={`${stats.draft} being prepared`} colorTheme="blue" isLoading={loading} />
-                    <StatCard title="Published forms" badgeText="Published" value={stats.published} icon={Eye} description={`${stats.published} live`} colorTheme="green" isLoading={loading} />
-                </ResponsiveCardRail>
+                <FramedSection title="Overview" icon={PieChart} className="mb-6">
+                    <ResponsiveCardRail label="Form status summary" desktopColumns="md:grid-cols-2 lg:grid-cols-4" className="responsive-stat-summary mb-0">
+                        <StatCard title="Archived forms" badgeText="Archived" value={stats.archived} icon={Archive} description={`${stats.archived} unavailable`} colorTheme="red" isLoading={loading} />
+                        <StatCard title="Total forms" badgeText="Total" value={stats.total} icon={FileText} description={`${stats.total} configured`} colorTheme="blue" isLoading={loading} />
+                        <StatCard title="Draft forms" badgeText="Draft" value={stats.draft} icon={Pencil} description={`${stats.draft} being prepared`} colorTheme="blue" isLoading={loading} />
+                        <StatCard title="Published forms" badgeText="Published" value={stats.published} icon={Eye} description={`${stats.published} live`} colorTheme="green" isLoading={loading} />
+                    </ResponsiveCardRail>
+                </FramedSection>
             )}
 
             <Card>
@@ -291,7 +294,7 @@ export function FormsPage() {
                                 const previewData = isExpanded && expandedFormData?.id === form.id ? expandedFormData : null;
                                 return (
                                     <div key={form.id}>
-                                        <div role="button" tabIndex={0} aria-expanded={isExpanded} aria-controls={`form-preview-${form.id}`} aria-label={`${isExpanded ? 'Collapse' : 'Preview'} ${form.name}`} className="group flex cursor-pointer items-center gap-3 px-3 py-4 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-4" onClick={() => void toggleExpanded(form)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); void toggleExpanded(form); } }}>
+                                        <div role="button" tabIndex={0} aria-expanded={isExpanded} aria-controls={`form-preview-${form.id}`} aria-label={`${isExpanded ? 'Collapse' : 'Preview'} ${form.name}`} className="group flex cursor-pointer items-center gap-3 px-3 py-4 interaction-row focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-4" onClick={() => void toggleExpanded(form)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); void toggleExpanded(form); } }}>
                                             <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full', visual.iconBackgroundClass)}>
                                                 <StatusIcon className={cn('h-5 w-5', visual.iconClass)} aria-hidden="true" />
                                             </div>
@@ -320,25 +323,25 @@ export function FormsPage() {
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                                                         <DropdownMenuItem onClick={() => navigate(`/forms/${form.id}`)} className="group/menu">
-                                                            <Pencil className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Edit
+                                                            <Pencil className="h-4 w-4 mr-2" />Edit
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem onClick={() => void openFullPreview(form)} className="group/menu">
-                                                            <Maximize2 className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Full preview
+                                                            <Maximize2 className="h-4 w-4 mr-2" />Full preview
                                                         </DropdownMenuItem>
                                                         {form.status === 'published' ? (
                                                             <DropdownMenuItem onClick={() => handleToggleStatus(form, 'draft')} className="group/menu">
-                                                                <EyeOff className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Unpublish
+                                                                <EyeOff className="h-4 w-4 mr-2" />Unpublish
                                                             </DropdownMenuItem>
                                                         ) : (
                                                             <DropdownMenuItem onClick={() => handleToggleStatus(form, 'published')} className="group/menu">
-                                                                <Eye className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Publish
+                                                                <Eye className="h-4 w-4 mr-2" />Publish
                                                             </DropdownMenuItem>
                                                         )}
                                                         {form.status === 'published' && <DropdownMenuItem onClick={() => copyFormLink(form.public_id || form.slug)} className="group/menu">
-                                                            <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Copy Link
+                                                            <Copy className="h-4 w-4 mr-2" />Copy Link
                                                         </DropdownMenuItem>}
                                                         <DropdownMenuItem onClick={() => handleDuplicate(form.id)} className="group/menu">
-                                                            <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Duplicate
+                                                            <Copy className="h-4 w-4 mr-2" />Duplicate
                                                         </DropdownMenuItem>
                                                         <DropdownMenuSeparator />
                                                         <DropdownMenuItem onClick={() => setFormToDelete(form)} className="text-destructive focus:text-destructive">
@@ -354,20 +357,20 @@ export function FormsPage() {
                                                     <Button variant="outline" size="sm" onClick={() => navigate(`/forms/${form.id}`)}>
                                                         <Pencil className="h-4 w-4" /><ExpandedRowActionLabel full="Edit form" compact="Edit" />
                                                     </Button>
-                                                    <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700" disabled={!previewData} onClick={() => previewData && setPreviewForm(previewData)}>
+                                                    <Button size="sm" className="bg-blue-600 text-white interaction-button--primary" disabled={!previewData} onClick={() => previewData && setPreviewForm(previewData)}>
                                                         <Maximize2 className="h-4 w-4" /><ExpandedRowActionLabel full="Full preview" compact="Preview" />
                                                     </Button>
-                                                    <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => handleToggleStatus(form, form.status === 'published' ? 'draft' : 'published')}>
+                                                    <Button size="sm" className="bg-blue-600 text-white interaction-button--primary" onClick={() => handleToggleStatus(form, form.status === 'published' ? 'draft' : 'published')}>
                                                         {form.status === 'published' ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                                         <ExpandedRowActionLabel full={form.status === 'published' ? 'Unpublish form' : 'Publish form'} compact={form.status === 'published' ? 'Unpublish' : 'Publish'} />
                                                     </Button>
-                                                    {form.status === 'published' && <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => copyFormLink(form.public_id || form.slug)}>
+                                                    {form.status === 'published' && <Button size="sm" className="bg-blue-600 text-white interaction-button--primary" onClick={() => copyFormLink(form.public_id || form.slug)}>
                                                         <Copy className="h-4 w-4" /><ExpandedRowActionLabel full="Copy public link" compact="Copy" />
                                                     </Button>}
-                                                    <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => handleDuplicate(form.id)}>
+                                                    <Button size="sm" className="bg-blue-600 text-white interaction-button--primary" onClick={() => handleDuplicate(form.id)}>
                                                         <Copy className="h-4 w-4" /><ExpandedRowActionLabel full="Duplicate form" compact="Duplicate" />
                                                     </Button>
-                                                    <Button size="sm" variant="outline" className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setFormToDelete(form)}>
+                                                    <Button size="sm" variant="outline" className="border-destructive/30 text-destructive interaction-button--destructive-ghost" onClick={() => setFormToDelete(form)}>
                                                         <Trash2 className="h-4 w-4" /><ExpandedRowActionLabel full="Delete form" compact="Delete" />
                                                     </Button>
                                                 </ExpandedRowActions>

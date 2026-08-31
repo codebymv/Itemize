@@ -6,6 +6,7 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -110,6 +111,9 @@ export function PagePreviewDialog({
               <DialogTitle className="truncate text-lg font-semibold">
                 {page.name}
               </DialogTitle>
+              <DialogDescription className="sr-only">
+                Preview this page at desktop, tablet, and mobile widths.
+              </DialogDescription>
               <Badge variant="outline" className="shrink-0 text-xs">
                 {versionId ? 'Version preview' : page.status === 'published' ? 'Live preview' : 'Draft preview'}
               </Badge>

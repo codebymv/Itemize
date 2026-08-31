@@ -1,86 +1,90 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { logger } from '@/lib/logger';
+import { useCallback, useMemo } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
 import {
-  fetchCanvasLists,
-  getNotes,
-  getVaults,
-  getWhiteboards,
-  getWireframes,
-} from '@/services/api';
+  getWorkspaceContentSnapshotViaGraphql,
+  type WorkspaceContentSnapshot,
+} from '@/services/workspaceContentSnapshotGraphql';
 import type { List, Note, Vault, Whiteboard, Wireframe } from '@/types';
 
-const rowsFrom = <T,>(response: unknown, key: string): T[] => {
-  if (Array.isArray(response)) return response as T[];
-  if (response && typeof response === 'object') {
-    const rows = (response as Record<string, unknown>)[key];
-    if (Array.isArray(rows)) return rows as T[];
-  }
-  return [];
-};
+const EMPTY_LISTS: List[] = [];
+const EMPTY_NOTES: Note[] = [];
+const EMPTY_WHITEBOARDS: Whiteboard[] = [];
+const EMPTY_WIREFRAMES: Wireframe[] = [];
+const EMPTY_VAULTS: Vault[] = [];
 
-export function useWorkspaceContent(token?: string | null) {
-  const [lists, setLists] = useState<List[]>([]);
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [whiteboards, setWhiteboards] = useState<Whiteboard[]>([]);
-  const [wireframes, setWireframes] = useState<Wireframe[]>([]);
-  const [vaults, setVaults] = useState<Vault[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const requestSequence = useRef(0);
-  const hasLoadedSnapshot = useRef(false);
+type WorkspaceRowsKey =
+  | 'lists'
+  | 'notes'
+  | 'whiteboards'
+  | 'wireframes'
+  | 'vaults';
+
+export function useWorkspaceContent(scopeKey?: string | null) {
+  const queryClient = useQueryClient();
+  const queryKey = useMemo(
+    () => ['workspace-content-snapshot', scopeKey ?? 'authenticated'] as const,
+    [scopeKey],
+  );
+  const snapshotQuery = useQuery({
+    queryKey,
+    queryFn: ({ signal }) => getWorkspaceContentSnapshotViaGraphql(signal),
+    staleTime: QUERY_STALE_TIME_MS,
+    retry: shouldRetryQuery,
+  });
+  const snapshot = snapshotQuery.data;
+
+  const updateRows = useCallback(<K extends WorkspaceRowsKey,>(
+    field: K,
+    action: SetStateAction<WorkspaceContentSnapshot[K]>,
+  ) => {
+    queryClient.setQueryData<WorkspaceContentSnapshot>(queryKey, current => {
+      if (!current) return current;
+      const next = typeof action === 'function'
+        ? (action as (value: WorkspaceContentSnapshot[K]) => WorkspaceContentSnapshot[K])(
+          current[field],
+        )
+        : action;
+      return { ...current, [field]: next };
+    });
+  }, [queryClient, queryKey]);
+
+  const setLists: Dispatch<SetStateAction<List[]>> = useCallback(
+    action => updateRows('lists', action),
+    [updateRows],
+  );
+  const setNotes: Dispatch<SetStateAction<Note[]>> = useCallback(
+    action => updateRows('notes', action),
+    [updateRows],
+  );
+  const setWhiteboards: Dispatch<SetStateAction<Whiteboard[]>> = useCallback(
+    action => updateRows('whiteboards', action),
+    [updateRows],
+  );
+  const setWireframes: Dispatch<SetStateAction<Wireframe[]>> = useCallback(
+    action => updateRows('wireframes', action),
+    [updateRows],
+  );
+  const setVaults: Dispatch<SetStateAction<Vault[]>> = useCallback(
+    action => updateRows('vaults', action),
+    [updateRows],
+  );
 
   const refresh = useCallback(async (): Promise<boolean> => {
-    const requestId = ++requestSequence.current;
-    const isInitialLoad = !hasLoadedSnapshot.current;
-    if (isInitialLoad) setLoading(true);
-    else setRefreshing(true);
-    setError(null);
-
-    try {
-      const [listsResponse, notesResponse, whiteboardsResponse, wireframesResponse, vaultsResponse] = await Promise.all([
-        fetchCanvasLists(token ?? undefined),
-        getNotes(token ?? undefined),
-        getWhiteboards(token ?? undefined),
-        getWireframes(token ?? undefined),
-        getVaults(token ?? undefined),
-      ]);
-
-      if (requestId !== requestSequence.current) return false;
-
-      // Commit one complete snapshot so a partial provider failure never looks
-      // like the user deleted one class of workspace content.
-      setLists(rowsFrom<List>(listsResponse, 'lists'));
-      setNotes(rowsFrom<Note>(notesResponse, 'notes'));
-      setWhiteboards(rowsFrom<Whiteboard>(whiteboardsResponse, 'whiteboards'));
-      setWireframes(rowsFrom<Wireframe>(wireframesResponse, 'wireframes'));
-      setVaults(rowsFrom<Vault>(vaultsResponse, 'vaults'));
-      hasLoadedSnapshot.current = true;
-      return true;
-    } catch (loadError) {
-      logger.error('Failed to load workspace content:', loadError);
-      if (requestId === requestSequence.current) {
-        setError('We could not load your workspace content. Your existing items have not been changed.');
-      }
-      return false;
-    } finally {
-      if (requestId === requestSequence.current) {
-        if (isInitialLoad) setLoading(false);
-        else setRefreshing(false);
-      }
-    }
-  }, [token]);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    const result = await snapshotQuery.refetch();
+    return !result.error;
+  }, [snapshotQuery]);
+  const loading = snapshotQuery.isPending;
+  const refreshing = snapshotQuery.isFetching && !snapshotQuery.isPending;
 
   return {
-    lists,
-    notes,
-    whiteboards,
-    wireframes,
-    vaults,
+    lists: snapshot?.lists ?? EMPTY_LISTS,
+    notes: snapshot?.notes ?? EMPTY_NOTES,
+    whiteboards: snapshot?.whiteboards ?? EMPTY_WHITEBOARDS,
+    wireframes: snapshot?.wireframes ?? EMPTY_WIREFRAMES,
+    vaults: snapshot?.vaults ?? EMPTY_VAULTS,
+    pages: snapshot?.pages,
     setLists,
     setNotes,
     setWhiteboards,
@@ -90,7 +94,9 @@ export function useWorkspaceContent(token?: string | null) {
     isLoading: loading,
     refreshing,
     isRefreshing: refreshing,
-    error,
+    error: snapshotQuery.error && !snapshot
+      ? 'We could not load your workspace content. Your existing items have not been changed.'
+      : null,
     refresh,
   };
 }

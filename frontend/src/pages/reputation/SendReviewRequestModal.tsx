@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -292,6 +293,9 @@ export function SendReviewRequestModal({
             <Send className="h-5 w-5 text-blue-600" />
             Send Review Request
           </DialogTitle>
+          <DialogDescription>
+            Send one request or reach multiple contacts in a single batch.
+          </DialogDescription>
         </DialogHeader>
 
         <Tabs value={mode} onValueChange={(v) => setMode(v as 'single' | 'bulk')} className="flex-1 flex flex-col overflow-hidden">
@@ -360,13 +364,15 @@ export function SendReviewRequestModal({
                     ) : (
                       <div className="p-2">
                         {contacts.map((contact) => (
-                          <div
+                          <button
+                            type="button"
                             key={contact.id}
                             onClick={() => handleSelectContact(contact)}
-                            className={`p-2 rounded cursor-pointer flex items-center justify-between ${
+                            aria-pressed={selectedContact?.id === contact.id}
+                            className={`interaction-row flex w-full items-center justify-between rounded p-2 text-left ${
                               selectedContact?.id === contact.id 
                                 ? 'bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800' 
-                                : 'hover:bg-muted'
+                                : ''
                             }`}
                           >
                             <div>
@@ -378,7 +384,7 @@ export function SendReviewRequestModal({
                             {selectedContact?.id === contact.id && (
                               <Badge variant="secondary">Selected</Badge>
                             )}
-                          </div>
+                          </button>
                         ))}
                       </div>
                     )}
@@ -532,13 +538,22 @@ export function SendReviewRequestModal({
                           <div
                             key={contact.id}
                             onClick={() => handleToggleBulkContact(contact.id)}
-                            className={`p-2 rounded cursor-pointer flex items-center gap-3 ${
+                            onKeyDown={(event) => {
+                              if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault();
+                                handleToggleBulkContact(contact.id);
+                              }
+                            }}
+                            role="checkbox"
+                            aria-checked={isSelected}
+                            tabIndex={0}
+                            className={`interaction-row flex cursor-pointer items-center gap-3 rounded p-2 ${
                               isSelected 
                                 ? 'bg-blue-50 dark:bg-blue-950' 
-                                : 'hover:bg-muted'
+                                : ''
                             }`}
                           >
-                            <Checkbox checked={isSelected} />
+                            <Checkbox checked={isSelected} tabIndex={-1} aria-hidden="true" />
                             <div className="flex-1">
                               <p className="font-medium text-sm">{getContactDisplayName(contact)}</p>
                               <p className="text-xs text-muted-foreground">
@@ -627,7 +642,7 @@ export function SendReviewRequestModal({
               <Button
                 type="submit"
                 disabled={loading}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-blue-600 interaction-button--primary text-white"
               >
                 {loading ? 'Sending...' : mode === 'single' ? 'Send Request' : `Send ${bulkForm.selectedContactIds.length} Request${bulkForm.selectedContactIds.length !== 1 ? 's' : ''}`}
               </Button>

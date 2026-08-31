@@ -1,4 +1,4 @@
-import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
+import { GraphqlRequestError, graphqlMutationRequest, graphqlRequest } from './graphqlClient';
 import type { ReputationSettings, ReviewPlatform, ReviewWidget } from './reputationApi';
 
 type GraphqlPlatform = {
@@ -9,7 +9,7 @@ type GraphqlPlatform = {
   isConnected: boolean; createdAt: string; updatedAt: string;
 };
 
-type GraphqlWidget = {
+export type GraphqlWidget = {
   id: number; organizationId: number; widgetKey: string; name: string;
   widgetType: ReviewWidget['widget_type']; theme: ReviewWidget['theme'];
   primaryColor: string; backgroundColor: string; textColor: string; borderRadius: number;
@@ -31,7 +31,7 @@ type GraphqlSettings = {
 
 const platformFields = `id organizationId platform platformName placeId pageId businessUrl reviewUrl
   totalReviews averageRating lastSyncedAt isActive isConnected createdAt updatedAt`;
-const widgetFields = `id organizationId widgetKey name widgetType theme primaryColor backgroundColor
+export const widgetFields = `id organizationId widgetKey name widgetType theme primaryColor backgroundColor
   textColor borderRadius showRatingStars showReviewerPhoto showReviewDate showPlatformIcon minRating
   platforms maxReviews hideNoTextReviews autoRefresh refreshIntervalHours isActive createdAt updatedAt`;
 const settingsFields = `id organizationId autoRequestEnabled autoRequestDelayDays autoRequestChannel
@@ -52,7 +52,7 @@ const mapPlatform = (row: GraphqlPlatform): ReviewPlatform => ({
   created_at: row.createdAt, updated_at: row.updatedAt,
 });
 
-const mapWidget = (row: GraphqlWidget): ReviewWidget => ({
+export const mapWidget = (row: GraphqlWidget): ReviewWidget => ({
   id: row.id, organization_id: row.organizationId, widget_key: row.widgetKey, name: row.name,
   widget_type: row.widgetType, theme: row.theme, primary_color: row.primaryColor,
   background_color: row.backgroundColor, text_color: row.textColor,
@@ -84,9 +84,38 @@ const mapSettings = (row: GraphqlSettings): ReputationSettings => ({
   ...(row.updatedAt === null ? {} : { updated_at: row.updatedAt }),
 });
 
-export const getPlatformsViaGraphql = async (organizationId?: number): Promise<ReviewPlatform[]> => {
+export type ReputationConfigurationBootstrap = {
+  platforms: ReviewPlatform[];
+  settings: ReputationSettings;
+};
+
+type BootstrapCapability = 'unknown' | 'aggregate' | 'separate';
+let bootstrapCapability: BootstrapCapability = 'unknown';
+type WidgetDetailCapability = 'unknown' | 'detail' | 'list';
+let widgetDetailCapability: WidgetDetailCapability = 'unknown';
+
+export const resetReputationConfigurationBootstrapCapability = (): void => {
+  bootstrapCapability = 'unknown';
+};
+
+export const resetReputationWidgetDetailCapability = (): void => {
+  widgetDetailCapability = 'unknown';
+};
+
+const isMissingBootstrap = (error: unknown): boolean =>
+  error instanceof GraphqlRequestError
+  && /Cannot query field "reputationConfigurationBootstrap"/.test(error.message);
+
+const isMissingWidgetDetail = (error: unknown): boolean =>
+  error instanceof GraphqlRequestError
+  && /Cannot query field "reputationWidget"/.test(error.message);
+
+export const getPlatformsViaGraphql = async (
+  organizationId?: number,
+  signal?: AbortSignal,
+): Promise<ReviewPlatform[]> => {
   const data = await graphqlRequest<{ reputationPlatforms: GraphqlPlatform[] }, Record<string, never>>(
-    `query ReputationPlatforms { reputationPlatforms { ${platformFields} } }`, {}, organizationId,
+    `query ReputationPlatforms { reputationPlatforms { ${platformFields} } }`, {}, organizationId, signal,
   );
   return data.reputationPlatforms.map(mapPlatform);
 };
@@ -121,11 +150,43 @@ export const deletePlatformViaGraphql = async (
   return { success: true };
 };
 
-export const getWidgetsViaGraphql = async (organizationId?: number): Promise<ReviewWidget[]> => {
+export const getWidgetsViaGraphql = async (
+  organizationId?: number,
+  signal?: AbortSignal,
+): Promise<ReviewWidget[]> => {
   const data = await graphqlRequest<{ reputationWidgets: GraphqlWidget[] }, Record<string, never>>(
-    `query ReputationWidgets { reputationWidgets { ${widgetFields} } }`, {}, organizationId,
+    `query ReputationWidgets { reputationWidgets { ${widgetFields} } }`, {}, organizationId, signal,
   );
   return data.reputationWidgets.map(mapWidget);
+};
+
+export const getWidgetViaGraphql = async (
+  id: number,
+  organizationId?: number,
+  signal?: AbortSignal,
+): Promise<ReviewWidget> => {
+  if (widgetDetailCapability === 'list') {
+    const widget = (await getWidgetsViaGraphql(organizationId, signal))
+      .find(item => item.id === id);
+    if (!widget) throw new GraphqlRequestError('Widget not found.', 404, 'NOT_FOUND');
+    return widget;
+  }
+
+  try {
+    const data = await graphqlRequest<{ reputationWidget: GraphqlWidget }, { id: number }>(
+      `query ReputationWidget($id:Int!){ reputationWidget(id:$id){ ${widgetFields} } }`,
+      { id }, organizationId, signal,
+    );
+    widgetDetailCapability = 'detail';
+    return mapWidget(data.reputationWidget);
+  } catch (error) {
+    if (!isMissingWidgetDetail(error)) throw error;
+    widgetDetailCapability = 'list';
+    const widget = (await getWidgetsViaGraphql(organizationId, signal))
+      .find(item => item.id === id);
+    if (!widget) throw new GraphqlRequestError('Widget not found.', 404, 'NOT_FOUND');
+    return widget;
+  }
 };
 
 const widgetInput = (widget: Partial<ReviewWidget>) => ({
@@ -185,12 +246,12 @@ export const deleteWidgetViaGraphql = async (
 };
 
 export const getWidgetEmbedCodeViaGraphql = async (
-  id: number, organizationId?: number,
+  id: number, organizationId?: number, signal?: AbortSignal,
 ): Promise<{ embed_code: string; widget_key: string }> => {
   const data = await graphqlRequest<
     { reputationWidgetEmbedCode: { embedCode: string; widgetKey: string } }, { id: number }
   >('query ReputationWidgetEmbedCode($id:Int!){ reputationWidgetEmbedCode(id:$id){ embedCode widgetKey } }',
-    { id }, organizationId);
+    { id }, organizationId, signal);
   return {
     embed_code: data.reputationWidgetEmbedCode.embedCode,
     widget_key: data.reputationWidgetEmbedCode.widgetKey,
@@ -199,11 +260,60 @@ export const getWidgetEmbedCodeViaGraphql = async (
 
 export const getReputationSettingsViaGraphql = async (
   organizationId?: number,
+  signal?: AbortSignal,
 ): Promise<ReputationSettings> => {
   const data = await graphqlRequest<{ reputationSettings: GraphqlSettings }, Record<string, never>>(
-    `query ReputationSettings { reputationSettings { ${settingsFields} } }`, {}, organizationId,
+    `query ReputationSettings { reputationSettings { ${settingsFields} } }`, {}, organizationId, signal,
   );
   return mapSettings(data.reputationSettings);
+};
+
+const getSeparateBootstrap = async (
+  organizationId: number,
+  signal?: AbortSignal,
+): Promise<ReputationConfigurationBootstrap> => {
+  const [platforms, settings] = await Promise.all([
+    getPlatformsViaGraphql(organizationId, signal),
+    getReputationSettingsViaGraphql(organizationId, signal),
+  ]);
+  return { platforms, settings };
+};
+
+export const getReputationConfigurationBootstrapViaGraphql = async (
+  organizationId: number,
+  signal?: AbortSignal,
+): Promise<ReputationConfigurationBootstrap> => {
+  if (bootstrapCapability === 'separate') {
+    return getSeparateBootstrap(organizationId, signal);
+  }
+
+  try {
+    const data = await graphqlRequest<{
+      reputationConfigurationBootstrap: {
+        platforms: GraphqlPlatform[];
+        settings: GraphqlSettings;
+      };
+    }, Record<string, never>>(
+      `query ReputationConfigurationBootstrap {
+        reputationConfigurationBootstrap {
+          platforms { ${platformFields} }
+          settings { ${settingsFields} }
+        }
+      }`,
+      {},
+      organizationId,
+      signal,
+    );
+    bootstrapCapability = 'aggregate';
+    return {
+      platforms: data.reputationConfigurationBootstrap.platforms.map(mapPlatform),
+      settings: mapSettings(data.reputationConfigurationBootstrap.settings),
+    };
+  } catch (error) {
+    if (!isMissingBootstrap(error)) throw error;
+    bootstrapCapability = 'separate';
+    return getSeparateBootstrap(organizationId, signal);
+  }
 };
 
 const settingsInput = (settings: Partial<ReputationSettings>) => ({

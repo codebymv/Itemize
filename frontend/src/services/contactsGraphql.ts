@@ -17,7 +17,7 @@ import {
   graphqlRequest,
 } from './graphqlClient';
 
-type GraphqlContact = {
+export type GraphqlContact = {
   id: number;
   organizationId: number;
   firstName: string | null;
@@ -72,7 +72,7 @@ type GraphqlContactContentCollection = {
   hasMore: boolean;
 };
 
-const contactFields = `
+export const contactFields = `
   id
   organizationId
   firstName
@@ -190,10 +190,26 @@ const contactContentQuery = `
   }
 `;
 
+const contactDetailBootstrapQuery = `
+  query ContactDetailBootstrap($contactId: Int!, $activityPage: PageInput!) {
+    contact(id: $contactId) { ${contactFields} }
+    contactActivities(contactId: $contactId, page: $activityPage) {
+      nodes { ${contactActivityFields} }
+      pageInfo { page pageSize total totalPages }
+    }
+    contactContent(contactId: $contactId) {
+      lists { nodes { id title category createdAt } total hasMore }
+      notes { nodes { id title category createdAt } total hasMore }
+      whiteboards { nodes { id title category createdAt } total hasMore }
+      wireframes { nodes { id title category createdAt } total hasMore }
+    }
+  }
+`;
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === 'object' && !Array.isArray(value);
 
-const mapContact = (contact: GraphqlContact): Contact => ({
+export const mapContact = (contact: GraphqlContact): Contact => ({
   id: contact.id,
   organization_id: contact.organizationId,
   first_name: contact.firstName ?? undefined,
@@ -227,6 +243,82 @@ const mapContactActivity = (activity: GraphqlContactActivity): ContactActivity =
   metadata: (isRecord(activity.metadata) ? activity.metadata : {}) as JsonRecord,
   created_at: activity.createdAt,
 });
+
+const mapContactContent = (collections: {
+  lists: GraphqlContactContentCollection;
+  notes: GraphqlContactContentCollection;
+  whiteboards: GraphqlContactContentCollection;
+  wireframes: GraphqlContactContentCollection;
+}): ContactContentResponse => {
+  if (
+    collections.lists.hasMore
+    || collections.notes.hasMore
+    || collections.whiteboards.hasMore
+    || collections.wireframes.hasMore
+  ) {
+    throw new GraphqlRequestError(
+      'Contact content exceeds the bounded GraphQL preview',
+      200,
+      'CONTENT_PAGE_REQUIRED',
+    );
+  }
+  const map = (collection: GraphqlContactContentCollection) =>
+    collection.nodes.map((item) => ({
+      id: item.id,
+      title: item.title,
+      category: item.category ?? '',
+      created_at: item.createdAt,
+    }));
+  return {
+    lists: map(collections.lists),
+    notes: map(collections.notes),
+    whiteboards: map(collections.whiteboards),
+    wireframes: map(collections.wireframes),
+  };
+};
+
+export type ContactDetailBootstrap = {
+  contact: Contact;
+  activities: ContactActivity[];
+  relatedContent: ContactContentResponse;
+};
+
+export const getContactDetailBootstrapViaGraphql = async (
+  contactId: number,
+  organizationId: number,
+  signal?: AbortSignal,
+): Promise<ContactDetailBootstrap> => {
+  const variables = {
+    contactId,
+    activityPage: { page: 1, pageSize: 50 },
+  };
+  const data = await graphqlRequest<{
+    contact: GraphqlContact | null;
+    contactActivities: {
+      nodes: GraphqlContactActivity[];
+      pageInfo: GraphqlPageInfo;
+    };
+    contactContent: {
+      lists: GraphqlContactContentCollection;
+      notes: GraphqlContactContentCollection;
+      whiteboards: GraphqlContactContentCollection;
+      wireframes: GraphqlContactContentCollection;
+    };
+  }, typeof variables>(
+    contactDetailBootstrapQuery,
+    variables,
+    organizationId,
+    signal,
+  );
+  if (!data.contact) {
+    throw new GraphqlRequestError('Contact not found', 200, 'NOT_FOUND');
+  }
+  return {
+    contact: mapContact(data.contact),
+    activities: data.contactActivities.nodes.map(mapContactActivity),
+    relatedContent: mapContactContent(data.contactContent),
+  };
+};
 
 const has = (value: object, key: string): boolean =>
   Object.prototype.hasOwnProperty.call(value, key);
@@ -262,6 +354,7 @@ const sortFields: Record<NonNullable<ContactsQueryParams['sort_by']>, string> = 
 export const getContactsViaGraphql = async (
   params: ContactsQueryParams = {},
   organizationId?: number,
+  signal?: AbortSignal,
 ): Promise<ContactsResponse> => {
   const filter = {
     ...(params.search ? { search: params.search } : {}),
@@ -288,6 +381,7 @@ export const getContactsViaGraphql = async (
     contactsQuery,
     variables,
     organizationId ?? params.organization_id,
+    signal,
   );
 
   return {
@@ -304,12 +398,14 @@ export const getContactsViaGraphql = async (
 export const getContactViaGraphql = async (
   id: number,
   organizationId?: number,
+  signal?: AbortSignal,
 ): Promise<Contact> => {
   const variables = { id };
   const data = await graphqlRequest<{ contact: GraphqlContact | null }, typeof variables>(
     contactQuery,
     variables,
     organizationId,
+    signal,
   );
   if (!data.contact) {
     throw new GraphqlRequestError('Contact not found', 200, 'NOT_FOUND');
@@ -461,30 +557,5 @@ export const getContactContentViaGraphql = async (
       wireframes: GraphqlContactContentCollection;
     };
   }, typeof variables>(contactContentQuery, variables, organizationId);
-  const collections = data.contactContent;
-  if (
-    collections.lists.hasMore
-    || collections.notes.hasMore
-    || collections.whiteboards.hasMore
-    || collections.wireframes.hasMore
-  ) {
-    throw new GraphqlRequestError(
-      'Contact content exceeds the bounded GraphQL preview',
-      200,
-      'CONTENT_PAGE_REQUIRED',
-    );
-  }
-  const map = (collection: GraphqlContactContentCollection) =>
-    collection.nodes.map((item) => ({
-      id: item.id,
-      title: item.title,
-      category: item.category ?? '',
-      created_at: item.createdAt,
-    }));
-  return {
-    lists: map(collections.lists),
-    notes: map(collections.notes),
-    whiteboards: map(collections.whiteboards),
-    wireframes: map(collections.wireframes),
-  };
+  return mapContactContent(data.contactContent);
 };

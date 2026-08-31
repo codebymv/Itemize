@@ -18,6 +18,7 @@ import {
     CreditCard,
     Wallet,
     Link,
+    PieChart,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -74,7 +75,9 @@ import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { StatCard } from '@/components/StatCard';
+import { ResponsiveMoneyValue } from '@/components/ui/responsive-value';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
+import { FramedSection } from '@/components/ui/framed-section';
 import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
@@ -715,15 +718,17 @@ export function InvoicesPage() {
             />
 
             {/* Summary Cards */}
-            {!loadError ? <ResponsiveCardRail
-                label="Invoice status summary"
-                desktopColumns="md:grid-cols-4"
-                className="responsive-stat-summary"
-            >
+            {!loadError ? (
+              <FramedSection title="Overview" icon={PieChart} className="mb-6">
+                <ResponsiveCardRail
+                    label="Invoice status summary"
+                    desktopColumns="md:grid-cols-4"
+                    className="responsive-stat-summary mb-0"
+                >
                 <StatCard
                     title="Overdue"
                     badgeText="Overdue"
-                    value={formatCurrency(stats.overdue)}
+                    value={<ResponsiveMoneyValue amount={stats.overdue} currency="USD" locale="en-US" />}
                     icon={getInvoiceStatusVisual('overdue').icon}
                     description={`${stats.overdueCount} invoice${stats.overdueCount !== 1 ? 's' : ''}`}
                     colorTheme={getInvoiceStatusVisual('overdue').theme}
@@ -732,7 +737,7 @@ export function InvoicesPage() {
                 <StatCard
                     title="Draft"
                     badgeText="Draft"
-                    value={formatCurrency(stats.draft)}
+                    value={<ResponsiveMoneyValue amount={stats.draft} currency="USD" locale="en-US" />}
                     icon={getInvoiceStatusVisual('draft').icon}
                     description={`${stats.draftCount} invoice${stats.draftCount !== 1 ? 's' : ''}`}
                     colorTheme={getInvoiceStatusVisual('draft').theme}
@@ -741,7 +746,7 @@ export function InvoicesPage() {
                 <StatCard
                     title="Due within 30 days"
                     badgeText="Due within 30 days"
-                    value={formatCurrency(stats.dueWithin30)}
+                    value={<ResponsiveMoneyValue amount={stats.dueWithin30} currency="USD" locale="en-US" />}
                     icon={Calendar}
                     description={`${stats.dueWithin30Count} invoice${stats.dueWithin30Count !== 1 ? 's' : ''}`}
                     colorTheme="orange"
@@ -750,13 +755,15 @@ export function InvoicesPage() {
                 <StatCard
                     title="Paid"
                     badgeText="Paid (Total)"
-                    value={formatCurrency(stats.paid)}
+                    value={<ResponsiveMoneyValue amount={stats.paid} currency="USD" locale="en-US" />}
                     icon={getInvoiceStatusVisual('paid').icon}
                     description={`${stats.paidCount} invoice${stats.paidCount !== 1 ? 's' : ''}`}
                     colorTheme={getInvoiceStatusVisual('paid').theme}
                     isLoading={loading}
                 />
-            </ResponsiveCardRail> : null}
+                </ResponsiveCardRail>
+              </FramedSection>
+            ) : null}
 
             {/* Invoice List */}
             <Card>
@@ -799,7 +806,7 @@ export function InvoicesPage() {
                                     <div key={invoice.id}>
                                         {/* Invoice Row - Aligned with VaultCard Pattern */}
                                         <div
-                                            className="p-4 hover:bg-muted/50 transition-colors cursor-pointer group"
+                                            className="p-4 interaction-row cursor-pointer group"
                                             onClick={(e) => handleToggleExpand(invoice.id, e)}
                                         >
                                             {/* Header Row: Icon + Invoice # on left, Amount + Chevron + Menu on right */}
@@ -853,16 +860,16 @@ export function InvoicesPage() {
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                                                             <DropdownMenuItem onClick={() => navigate(`/invoices/${invoice.id}`)} className="group/menu">
-                                                                <Pencil className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Edit
+                                                                <Pencil className="h-4 w-4 mr-2" />Edit
                                                             </DropdownMenuItem>
                                                             {invoice.status === 'draft' && (
                                                                 <DropdownMenuItem onClick={() => handleOpenSendModal(invoice, false)} className="group/menu">
-                                                                    <Send className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Send
+                                                                    <Send className="h-4 w-4 mr-2" />Send
                                                                 </DropdownMenuItem>
                                                             )}
                                                             {['sent', 'viewed', 'partial', 'overdue'].includes(invoice.status) && (
                                                                 <DropdownMenuItem onClick={() => handleOpenSendModal(invoice, true)} className="group/menu">
-                                                                    <RefreshCw className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Resend
+                                                                    <RefreshCw className="h-4 w-4 mr-2" />Resend
                                                                 </DropdownMenuItem>
                                                             )}
                                                             <DropdownMenuItem
@@ -872,17 +879,17 @@ export function InvoicesPage() {
                                                             >
                                                                 {downloadingInvoiceId === invoice.id
                                                                     ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                                                    : <Download className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />}
+                                                                    : <Download className="h-4 w-4 mr-2" />}
                                                                 Download PDF
                                                             </DropdownMenuItem>
                                                             {invoice.amount_due > 0 && !['cancelled', 'refunded', 'paid'].includes(invoice.status) && (
                                                                 <>
                                                                     <DropdownMenuSeparator />
                                                                     <DropdownMenuItem onClick={(e) => handleOpenPaymentModal(invoice, e)} className="group/menu">
-                                                                        <Wallet className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Record Payment
+                                                                        <Wallet className="h-4 w-4 mr-2" />Record Payment
                                                                     </DropdownMenuItem>
                                                                     <DropdownMenuItem onClick={(e) => handleCreatePaymentLink(invoice, e)} className="group/menu">
-                                                                        <CreditCard className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Create Payment Link
+                                                                        <CreditCard className="h-4 w-4 mr-2" />Create Payment Link
                                                                     </DropdownMenuItem>
                                                                 </>
                                                             )}
@@ -890,7 +897,7 @@ export function InvoicesPage() {
                                                                 && !invoice.is_recurring_source
                                                                 && !invoice.recurring_template_id && (
                                                                 <DropdownMenuItem onClick={(e) => handleOpenRecurringModal(invoice, e)} className="group/menu">
-                                                                    <Repeat className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Make Recurring
+                                                                    <Repeat className="h-4 w-4 mr-2" />Make Recurring
                                                                 </DropdownMenuItem>
                                                             )}
                                                             <DropdownMenuSeparator />
@@ -996,7 +1003,7 @@ export function InvoicesPage() {
                                                     {invoice.status === 'draft' && (
                                                         <Button
                                                             size="sm"
-                                                            className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
+                                                            className="bg-blue-600 interaction-button--primary text-white text-xs sm:text-sm"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 handleOpenSendModal(invoice, false);
@@ -1009,7 +1016,7 @@ export function InvoicesPage() {
                                                     {['sent', 'viewed', 'partial', 'overdue'].includes(invoice.status) && (
                                                         <Button
                                                             size="sm"
-                                                            className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
+                                                            className="bg-blue-600 interaction-button--primary text-white text-xs sm:text-sm"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 handleOpenSendModal(invoice, true);
@@ -1023,7 +1030,7 @@ export function InvoicesPage() {
                                                         size="sm"
                                                         onClick={(e) => handleDownloadPdf(invoice, e)}
                                                         disabled={downloadingInvoiceId !== null}
-                                                        className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
+                                                        className="bg-blue-600 interaction-button--primary text-white text-xs sm:text-sm"
                                                     >
                                                         {downloadingInvoiceId === invoice.id
                                                             ? <Loader2 className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2 animate-spin" />
@@ -1035,7 +1042,7 @@ export function InvoicesPage() {
                                                             <Button
                                                                 size="sm"
                                                                 onClick={(e) => handleOpenPaymentModal(invoice, e)}
-                                                                className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
+                                                                className="bg-blue-600 interaction-button--primary text-white text-xs sm:text-sm"
                                                             >
                                                                 <Wallet className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2" />
                                                                 <ExpandedRowActionLabel full="Record Payment" compact="Record" />
@@ -1043,7 +1050,7 @@ export function InvoicesPage() {
                                                             <Button
                                                                 size="sm"
                                                                 onClick={(e) => handleCreatePaymentLink(invoice, e)}
-                                                                className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
+                                                                className="bg-blue-600 interaction-button--primary text-white text-xs sm:text-sm"
                                                             >
                                                                 <CreditCard className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2" />
                                                                 <ExpandedRowActionLabel full="Payment Link" compact="Link" />
@@ -1056,7 +1063,7 @@ export function InvoicesPage() {
                                                         <Button
                                                             size="sm"
                                                             onClick={(e) => handleOpenRecurringModal(invoice, e)}
-                                                            className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
+                                                            className="bg-blue-600 interaction-button--primary text-white text-xs sm:text-sm"
                                                         >
                                                             <Repeat className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2" />
                                                             <ExpandedRowActionLabel full="Make Recurring" compact="Recur" />
@@ -1065,7 +1072,7 @@ export function InvoicesPage() {
                                                     <Button
                                                         size="sm"
                                                         variant="outline"
-                                                        className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive focus:text-destructive text-xs sm:text-sm"
+                                                        className="text-destructive border-destructive/30 interaction-button--destructive-ghost focus:text-destructive text-xs sm:text-sm"
                                                         onClick={(e) => handleDeleteClick(invoice, e)}
                                                     >
                                                         <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />

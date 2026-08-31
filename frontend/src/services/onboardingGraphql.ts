@@ -4,7 +4,7 @@ import type {
 } from './onboardingService';
 import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
 
-type GraphqlOnboardingFeatureProgress = {
+export type GraphqlOnboardingFeatureProgress = {
   featureKey: string;
   seen: boolean;
   timestamp: string | null;
@@ -13,44 +13,44 @@ type GraphqlOnboardingFeatureProgress = {
   stepCompleted: number | null;
 };
 
-const progressFields =
+export const onboardingProgressFields =
   'featureKey seen timestamp version dismissed stepCompleted';
 
 const progressQuery = `
   query OnboardingProgress {
-    onboardingProgress { ${progressFields} }
+    onboardingProgress { ${onboardingProgressFields} }
   }
 `;
 
 const featureQuery = `
   query OnboardingFeatureProgress($featureKey: String!) {
-    onboardingFeatureProgress(featureKey: $featureKey) { ${progressFields} }
+    onboardingFeatureProgress(featureKey: $featureKey) { ${onboardingProgressFields} }
   }
 `;
 
 const markSeenMutation = `
   mutation MarkOnboardingSeen($input: MarkOnboardingSeenInput!) {
-    markOnboardingSeen(input: $input) { ${progressFields} }
+    markOnboardingSeen(input: $input) { ${onboardingProgressFields} }
   }
 `;
 
 const dismissMutation = `
   mutation DismissOnboarding($featureKey: String!) {
-    dismissOnboarding(featureKey: $featureKey) { ${progressFields} }
+    dismissOnboarding(featureKey: $featureKey) { ${onboardingProgressFields} }
   }
 `;
 
 const completeStepMutation = `
   mutation CompleteOnboardingStep($featureKey: String!, $step: Int!) {
     completeOnboardingStep(featureKey: $featureKey, step: $step) {
-      ${progressFields}
+      ${onboardingProgressFields}
     }
   }
 `;
 
 const resetMutation = `
   mutation ResetOnboarding($featureKey: String) {
-    resetOnboarding(featureKey: $featureKey) { ${progressFields} }
+    resetOnboarding(featureKey: $featureKey) { ${onboardingProgressFields} }
   }
 `;
 
@@ -66,7 +66,7 @@ const mapFeature = (
     : { step_completed: feature.stepCompleted }),
 });
 
-const mapProgress = (
+export const mapOnboardingProgress = (
   entries: GraphqlOnboardingFeatureProgress[],
 ): OnboardingProgress =>
   Object.fromEntries(
@@ -79,7 +79,7 @@ export const getOnboardingProgressViaGraphql =
       { onboardingProgress: GraphqlOnboardingFeatureProgress[] },
       Record<string, never>
     >(progressQuery, {});
-    return mapProgress(data.onboardingProgress);
+    return mapOnboardingProgress(data.onboardingProgress);
   };
 
 export const getOnboardingFeatureProgressViaGraphql = async (
@@ -100,7 +100,7 @@ export const markOnboardingSeenViaGraphql = async (
     { markOnboardingSeen: GraphqlOnboardingFeatureProgress[] },
     { input: { featureKey: string; version: string } }
   >(markSeenMutation, { input: { featureKey, version } });
-  return mapProgress(data.markOnboardingSeen);
+  return mapOnboardingProgress(data.markOnboardingSeen);
 };
 
 export const dismissOnboardingViaGraphql = async (
@@ -110,7 +110,7 @@ export const dismissOnboardingViaGraphql = async (
     { dismissOnboarding: GraphqlOnboardingFeatureProgress[] },
     { featureKey: string }
   >(dismissMutation, { featureKey });
-  return mapProgress(data.dismissOnboarding);
+  return mapOnboardingProgress(data.dismissOnboarding);
 };
 
 export const completeOnboardingStepViaGraphql = async (
@@ -121,7 +121,7 @@ export const completeOnboardingStepViaGraphql = async (
     { completeOnboardingStep: GraphqlOnboardingFeatureProgress[] },
     { featureKey: string; step: number }
   >(completeStepMutation, { featureKey, step });
-  return mapProgress(data.completeOnboardingStep);
+  return mapOnboardingProgress(data.completeOnboardingStep);
 };
 
 export const resetOnboardingViaGraphql = async (
@@ -131,5 +131,5 @@ export const resetOnboardingViaGraphql = async (
     { resetOnboarding: GraphqlOnboardingFeatureProgress[] },
     { featureKey: string | null }
   >(resetMutation, { featureKey: featureKey ?? null });
-  return mapProgress(data.resetOnboarding);
+  return mapOnboardingProgress(data.resetOnboarding);
 };

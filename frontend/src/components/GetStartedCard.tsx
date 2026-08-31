@@ -16,10 +16,13 @@ import { useStatStyles } from '@/hooks/useStatStyles';
 import { cn } from '@/lib/utils';
 import {
   dismissGetStartedViaGraphql,
-  getStartedProgressQueryKey,
-  getStartedProgressViaGraphql,
   type GetStartedStep,
 } from '@/services/getStartedGraphql';
+import {
+  getOrganizationBootstrapViaGraphql,
+  organizationBootstrapQueryKey,
+  type OrganizationBootstrap,
+} from '@/services/organizationBootstrapGraphql';
 import { useOrganization } from '@/hooks/useOrganization';
 
 const STEP_COPY: Record<string, { label: string; description: string }> = {
@@ -65,20 +68,26 @@ export function GetStartedCard() {
   const navigate = useNavigate();
   const { organizationId } = useOrganization();
   const queryClient = useQueryClient();
-  const queryKey = getStartedProgressQueryKey(organizationId);
+  const queryKey = organizationBootstrapQueryKey(organizationId);
   const { iconBgClass, iconClass } = useStatStyles('blue');
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading } = useQuery<OrganizationBootstrap, Error, OrganizationBootstrap['getStartedProgress']>({
     queryKey,
-    queryFn: getStartedProgressViaGraphql,
+    queryFn: ({ signal }) => getOrganizationBootstrapViaGraphql(
+      organizationId as number,
+      signal,
+    ),
     enabled: !!organizationId,
-    staleTime: 30_000,
+    staleTime: 5 * 60 * 1000,
+    select: (bootstrap) => bootstrap.getStartedProgress,
   });
 
   const dismiss = useMutation({
     mutationFn: dismissGetStartedViaGraphql,
     onSuccess: (progress) => {
-      queryClient.setQueryData(queryKey, progress);
+      queryClient.setQueryData<OrganizationBootstrap>(queryKey, (current) => (
+        current ? { ...current, getStartedProgress: progress } : current
+      ));
     },
   });
 

@@ -11,6 +11,7 @@ import {
   Send,
   Trash2,
   XCircle,
+  PieChart,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -50,6 +51,7 @@ import {
 } from '@/components/layout/DesktopHeaderTools';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
+import { FramedSection } from '@/components/ui/framed-section';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { OrganizationErrorState } from '@/components/OrganizationErrorState';
@@ -200,7 +202,7 @@ export function CampaignsPage() {
 
   const statusSelect = (compact = false) => (
     <Select value={statusFilter} onValueChange={setStatusFilter}>
-      <SelectTrigger className={compact ? 'h-11 w-full' : 'h-11 w-[140px] bg-muted/20'}>
+      <SelectTrigger aria-label="Campaign status" className={compact ? 'w-full' : 'w-[140px] bg-muted/20'}>
         <SelectValue placeholder="Status" />
       </SelectTrigger>
       <SelectContent>
@@ -344,13 +346,15 @@ export function CampaignsPage() {
       <OnboardingModal isOpen={onboarding.showModal} onClose={onboarding.handleClose} onComplete={onboarding.handleComplete} onDismiss={onboarding.handleDismiss} content={ONBOARDING_CONTENT.campaigns} />
 
       {!loadError && (
-        <ResponsiveCardRail label="Campaign status summary" desktopColumns="md:grid-cols-2 lg:grid-cols-5" className="responsive-stat-summary">
-          <StatCard title="Campaigns needing attention" badgeText="Not completed" value={stats.failed} icon={XCircle} description={`${stats.failed} failed or cancelled`} colorTheme="red" isLoading={loading} />
-          <StatCard title="Total campaigns" badgeText="Total" value={stats.total} icon={Megaphone} description={`${stats.total} configured`} colorTheme="blue" isLoading={loading} />
-          <StatCard title="Draft campaigns" badgeText="Draft" value={stats.draft} icon={CAMPAIGN_SUMMARY_VISUALS.draft.icon} description="Being prepared" colorTheme={CAMPAIGN_SUMMARY_VISUALS.draft.theme} isLoading={loading} />
-          <StatCard title="Campaigns in progress" badgeText="In progress" value={stats.inProgress} icon={CAMPAIGN_SUMMARY_VISUALS.inProgress.icon} description="Scheduled, sending, or paused" colorTheme={CAMPAIGN_SUMMARY_VISUALS.inProgress.theme} isLoading={loading} />
-          <StatCard title="Delivered campaigns" badgeText="Delivered" value={stats.delivered} icon={CAMPAIGN_SUMMARY_VISUALS.delivered.icon} description="Successfully sent" colorTheme={CAMPAIGN_SUMMARY_VISUALS.delivered.theme} isLoading={loading} />
-        </ResponsiveCardRail>
+        <FramedSection title="Overview" icon={PieChart} className="mb-6">
+          <ResponsiveCardRail label="Campaign status summary" desktopColumns="md:grid-cols-2 lg:grid-cols-5" className="responsive-stat-summary mb-0">
+            <StatCard title="Campaigns needing attention" badgeText="Not completed" value={stats.failed} icon={XCircle} description={`${stats.failed} failed or cancelled`} colorTheme="red" isLoading={loading} />
+            <StatCard title="Total campaigns" badgeText="Total" value={stats.total} icon={Megaphone} description={`${stats.total} configured`} colorTheme="blue" isLoading={loading} />
+            <StatCard title="Draft campaigns" badgeText="Draft" value={stats.draft} icon={CAMPAIGN_SUMMARY_VISUALS.draft.icon} description="Being prepared" colorTheme={CAMPAIGN_SUMMARY_VISUALS.draft.theme} isLoading={loading} />
+            <StatCard title="Campaigns in progress" badgeText="In progress" value={stats.inProgress} icon={CAMPAIGN_SUMMARY_VISUALS.inProgress.icon} description="Scheduled, sending, or paused" colorTheme={CAMPAIGN_SUMMARY_VISUALS.inProgress.theme} isLoading={loading} />
+            <StatCard title="Delivered campaigns" badgeText="Delivered" value={stats.delivered} icon={CAMPAIGN_SUMMARY_VISUALS.delivered.icon} description="Successfully sent" colorTheme={CAMPAIGN_SUMMARY_VISUALS.delivered.theme} isLoading={loading} />
+          </ResponsiveCardRail>
+        </FramedSection>
       )}
 
       <Card>
@@ -383,7 +387,7 @@ export function CampaignsPage() {
                     role="link"
                     tabIndex={0}
                     aria-label={`${campaign.status === 'draft' || campaign.status === 'scheduled' ? 'Edit' : 'View'} ${campaign.name}`}
-                    className="group flex cursor-pointer items-center gap-3 px-3 py-4 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-4"
+                    className="group flex cursor-pointer items-center gap-3 px-3 py-4 interaction-row focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-4"
                     onClick={() => navigate(`/campaigns/${campaign.id}`)}
                     onKeyDown={event => {
                       if (event.key === 'Enter' || event.key === ' ') {
@@ -411,35 +415,35 @@ export function CampaignsPage() {
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={event => event.stopPropagation()}>
-                        <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" disabled={working} aria-label={`More actions for ${campaign.name}`}>
+                        <Button variant="ghost" size="iconToolbar" className="shrink-0" disabled={working} aria-label={`More actions for ${campaign.name}`}>
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" onClick={event => event.stopPropagation()}>
                         <DropdownMenuItem onClick={() => navigate(`/campaigns/${campaign.id}`)} className="group/menu">
                           {campaign.status === 'draft' || campaign.status === 'scheduled' ? (
-                            <Pencil className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                            <Pencil className="mr-2 h-4 w-4" />
                           ) : (
-                            <Eye className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                            <Eye className="mr-2 h-4 w-4" />
                           )}
                           {campaign.status === 'draft' || campaign.status === 'scheduled' ? 'Edit campaign' : 'View campaign'}
                         </DropdownMenuItem>
                         {(campaign.status === 'draft' || campaign.status === 'scheduled') && (
                           <DropdownMenuItem onClick={() => void requestSend(campaign)} className="group/menu">
-                            <Send className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Send now
+                            <Send className="mr-2 h-4 w-4" />Send now
                           </DropdownMenuItem>
                         )}
                         {campaign.status === 'sending' && (
                           <DropdownMenuItem onClick={() => void handlePause(campaign)}><Pause className="mr-2 h-4 w-4" />Pause delivery</DropdownMenuItem>
                         )}
                         {campaign.status === 'paused' && (
-                          <DropdownMenuItem onClick={() => void handleResume(campaign)} className="group/menu"><Play className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Resume delivery</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => void handleResume(campaign)} className="group/menu"><Play className="mr-2 h-4 w-4" />Resume delivery</DropdownMenuItem>
                         )}
-                        <DropdownMenuItem onClick={() => void handleDuplicate(campaign)} className="group/menu"><Copy className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Duplicate</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => void handleDuplicate(campaign)} className="group/menu"><Copy className="mr-2 h-4 w-4" />Duplicate</DropdownMenuItem>
                         {campaign.status !== 'sending' && (
                           <>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => setCampaignToDelete(campaign)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
+                            <DropdownMenuItem variant="destructive" onClick={() => setCampaignToDelete(campaign)}><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem>
                           </>
                         )}
                       </DropdownMenuContent>
@@ -474,7 +478,6 @@ export function CampaignsPage() {
                 event.preventDefault();
                 void confirmSend();
               }}
-              className="bg-blue-600 text-white hover:bg-blue-700"
             >
               Send campaign
             </AlertDialogAction>

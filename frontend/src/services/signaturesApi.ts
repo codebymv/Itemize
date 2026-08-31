@@ -131,27 +131,38 @@ export interface SignatureDocumentDetails {
   }>;
 }
 
-export const createSignatureDocument = async (payload: Partial<SignatureDocument>) => {
-  return createSignatureDocumentViaGraphql(payload);
+export const createSignatureDocument = async (payload: Partial<SignatureDocument>, organizationId?: number) => {
+  return organizationId === undefined
+    ? createSignatureDocumentViaGraphql(payload)
+    : createSignatureDocumentViaGraphql(payload, organizationId);
 };
 
-export const updateSignatureDocument = async (id: number, payload: Partial<SignatureDocument> & { recipients?: SignatureRecipient[]; fields?: SignatureField[] }) => {
-  return updateSignatureDocumentViaGraphql(id, payload);
+export const updateSignatureDocument = async (id: number, payload: Partial<SignatureDocument> & { recipients?: SignatureRecipient[]; fields?: SignatureField[] }, organizationId?: number) => {
+  return organizationId === undefined
+    ? updateSignatureDocumentViaGraphql(id, payload)
+    : updateSignatureDocumentViaGraphql(id, payload, organizationId);
 };
 
-export const uploadSignatureDocument = async (documentId: number, file: File) => {
+export const uploadSignatureDocument = async (documentId: number, file: File, organizationId?: number) => {
   const formData = new FormData();
   formData.append('document_id', String(documentId));
   formData.append('file', file);
 
   const response = await api.post('/api/signatures/documents/upload', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
+    headers: {
+      'Content-Type': 'multipart/form-data',
+      ...(organizationId === undefined
+        ? {}
+        : { 'x-organization-id': String(organizationId) }),
+    }
   });
   return unwrapResponse<SignatureDocument>(response.data);
 };
 
-export const deleteSignatureDocumentFile = async (id: number) => {
-  return removeSignatureDocumentFileViaGraphql(id);
+export const deleteSignatureDocumentFile = async (id: number, organizationId?: number) => {
+  return organizationId === undefined
+    ? removeSignatureDocumentFileViaGraphql(id)
+    : removeSignatureDocumentFileViaGraphql(id, organizationId);
 };
 
 export const listSignatureDocuments = async (params: { status?: SignatureStatus; page?: number; limit?: number } = {}) => {
@@ -163,28 +174,40 @@ export const getSignatures = async (params: { status?: SignatureStatus; page?: n
   return { documents: result.items, pagination: result.pagination };
 };
 
-export const getSignatureDocument = async (id: number) => {
-  return getSignatureDocumentViaGraphql(id);
+export const getSignatureDocument = async (id: number, organizationId?: number, signal?: AbortSignal) => {
+  return organizationId === undefined && signal === undefined
+    ? getSignatureDocumentViaGraphql(id)
+    : getSignatureDocumentViaGraphql(id, organizationId, signal);
 };
 
-export const sendSignatureDocument = async (id: number) => {
-  return sendSignatureDocumentViaGraphql(id);
+export const sendSignatureDocument = async (id: number, organizationId?: number) => {
+  return organizationId === undefined
+    ? sendSignatureDocumentViaGraphql(id)
+    : sendSignatureDocumentViaGraphql(id, organizationId);
 };
 
-export const cancelSignatureDocument = async (id: number) => {
-  return cancelSignatureDocumentViaGraphql(id);
+export const cancelSignatureDocument = async (id: number, organizationId?: number) => {
+  return organizationId === undefined
+    ? cancelSignatureDocumentViaGraphql(id)
+    : cancelSignatureDocumentViaGraphql(id, organizationId);
 };
 
-export const deleteSignatureDocument = async (id: number) => {
-  return deleteSignatureDocumentViaGraphql(id);
+export const deleteSignatureDocument = async (id: number, organizationId?: number) => {
+  return organizationId === undefined
+    ? deleteSignatureDocumentViaGraphql(id)
+    : deleteSignatureDocumentViaGraphql(id, organizationId);
 };
 
-export const remindSignatureDocument = async (id: number) => {
-  return remindSignatureDocumentViaGraphql(id);
+export const remindSignatureDocument = async (id: number, organizationId?: number) => {
+  return organizationId === undefined
+    ? remindSignatureDocumentViaGraphql(id)
+    : remindSignatureDocumentViaGraphql(id, organizationId);
 };
 
-export const retrySignatureDocument = async (id: number) => {
-  return retrySignatureDocumentViaGraphql(id);
+export const retrySignatureDocument = async (id: number, organizationId?: number) => {
+  return organizationId === undefined
+    ? retrySignatureDocumentViaGraphql(id)
+    : retrySignatureDocumentViaGraphql(id, organizationId);
 };
 
 export const downloadSignedDocument = (id: number) => {
@@ -275,24 +298,34 @@ export interface SignatureTemplateField {
   locked?: boolean;
 }
 
-export const createSignatureTemplate = async (payload: Partial<SignatureTemplate>) => {
-  return createSignatureTemplateViaGraphql(payload);
+export const createSignatureTemplate = async (payload: Partial<SignatureTemplate>, organizationId?: number) => {
+  return organizationId === undefined
+    ? createSignatureTemplateViaGraphql(payload)
+    : createSignatureTemplateViaGraphql(payload, organizationId);
 };
 
 export const updateSignatureTemplate = async (
   id: number,
-  payload: Partial<SignatureTemplate> & { roles?: SignatureTemplateRole[]; fields?: SignatureTemplateField[] }
+  payload: Partial<SignatureTemplate> & { roles?: SignatureTemplateRole[]; fields?: SignatureTemplateField[] },
+  organizationId?: number,
 ) => {
-  return updateSignatureTemplateViaGraphql(id, payload);
+  return organizationId === undefined
+    ? updateSignatureTemplateViaGraphql(id, payload)
+    : updateSignatureTemplateViaGraphql(id, payload, organizationId);
 };
 
-export const uploadSignatureTemplate = async (templateId: number, file: File) => {
+export const uploadSignatureTemplate = async (templateId: number, file: File, organizationId?: number) => {
   const formData = new FormData();
   formData.append('template_id', String(templateId));
   formData.append('file', file);
 
   const response = await api.post('/api/signatures/templates/upload', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
+    headers: {
+      'Content-Type': 'multipart/form-data',
+      ...(organizationId === undefined
+        ? {}
+        : { 'x-organization-id': String(organizationId) }),
+    }
   });
   return unwrapResponse<SignatureTemplate>(response.data);
 };
@@ -301,8 +334,10 @@ export const listSignatureTemplates = async () => {
   return listSignatureTemplatesViaGraphql();
 };
 
-export const getSignatureTemplate = async (id: number) => {
-  return getSignatureTemplateViaGraphql(id);
+export const getSignatureTemplate = async (id: number, organizationId?: number, signal?: AbortSignal) => {
+  return organizationId === undefined && signal === undefined
+    ? getSignatureTemplateViaGraphql(id)
+    : getSignatureTemplateViaGraphql(id, organizationId, signal);
 };
 
 export const instantiateSignatureTemplate = async (id: number, payload: ApiPayload) => {

@@ -165,7 +165,7 @@ export function TrialStatusCard({ className }: TrialStatusCardProps) {
           disabled={isRedirecting}
           className={cn(
             'w-full sm:w-auto px-6 py-3 rounded-lg font-semibold text-white',
-            'bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600',
+            'bg-blue-600 interaction-button--primary dark:bg-blue-500 dark:hover:bg-blue-600',
             'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
             'transition-colors duration-200',
             'disabled:opacity-50 disabled:cursor-not-allowed',

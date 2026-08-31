@@ -62,7 +62,7 @@ export function EmailContentEditor({ value, onChange, disabled = false, header }
               {variables.map(variable => <DropdownMenuItem key={variable.value} onSelect={() => insertVariable(variable.value)} className="flex items-center justify-between gap-4"><span>{variable.label}</span><span className="font-mono text-xs text-muted-foreground">{`{{${variable.value}}}`}</span></DropdownMenuItem>)}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Tooltip><TooltipTrigger asChild><button type="button" aria-label="About recipient variables" className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"><Info className="h-4 w-4" /></button></TooltipTrigger><TooltipContent>Inserts into the field you last selected.</TooltipContent></Tooltip>
+          <Tooltip><TooltipTrigger asChild><button type="button" aria-label="About recipient variables" className="interaction-control flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground"><Info className="h-4 w-4" /></button></TooltipTrigger><TooltipContent>Inserts into the field you last selected.</TooltipContent></Tooltip>
         </div>
       </div>
 

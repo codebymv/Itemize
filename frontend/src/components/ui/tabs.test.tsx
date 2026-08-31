@@ -14,17 +14,14 @@ describe('tab interaction contracts', () => {
     );
 
     const unreadTab = screen.getByRole('tab', { name: 'Unread' });
-    expect(unreadTab).toHaveClass('hover:bg-accent', 'hover:text-accent-foreground');
+    expect(unreadTab).toHaveClass('interaction-control');
     expect(unreadTab).not.toHaveClass('hover:bg-blue-50', 'dark:hover:bg-blue-900/40');
 
     const activeTab = screen.getByRole('tab', { name: 'All' });
     expect(activeTab).toHaveClass(
       'data-[state=active]:bg-background',
-      'data-[state=active]:hover:bg-background',
       'data-[state=active]:text-blue-600',
-      'data-[state=active]:hover:text-blue-600',
       'dark:data-[state=active]:text-blue-400',
-      'dark:data-[state=active]:hover:text-blue-400',
     );
   });
 
@@ -40,8 +37,7 @@ describe('tab interaction contracts', () => {
 
     const activityTab = screen.getByRole('tab', { name: 'Activity' });
     expect(activityTab).toHaveClass(
-      'hover:bg-sidebar-accent',
-      'hover:text-sidebar-accent-foreground',
+      'interaction-navigation',
       'data-[state=active]:text-sidebar-accent-foreground',
       'dark:data-[state=active]:text-sidebar-accent-foreground',
     );

@@ -7,7 +7,7 @@ import {
   PipelineStageInput,
   UpdatePipelineInput,
 } from './pipeline.inputs';
-import { Pipeline, PipelineDeal } from './pipeline.types';
+import { Pipeline, PipelineDeal, PipelineWorkspace } from './pipeline.types';
 import {
   CreatePipelineValues,
   PipelineDealRow,
@@ -42,6 +42,33 @@ export class PipelinesService {
         throw itemizeGraphqlError('Pipeline not found', 'NOT_FOUND');
       }
       return this.mapPipeline(result.pipeline, result.deals);
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  async workspace(
+    organizationId: number,
+    selectedPipelineId?: number | null,
+  ): Promise<PipelineWorkspace> {
+    if (selectedPipelineId !== null && selectedPipelineId !== undefined) {
+      this.id(selectedPipelineId);
+    }
+
+    try {
+      const pipelines = await this.list(organizationId);
+      const selectedSummary = (
+        selectedPipelineId === null || selectedPipelineId === undefined
+          ? null
+          : pipelines.find((pipeline) => pipeline.id === selectedPipelineId)
+      ) ?? pipelines.find((pipeline) => pipeline.isDefault) ?? pipelines[0] ?? null;
+
+      return {
+        pipelines,
+        selectedPipeline: selectedSummary
+          ? await this.get(organizationId, selectedSummary.id)
+          : null,
+      };
     } catch (error) {
       this.rethrow(error);
     }

@@ -86,16 +86,24 @@ describe('recurring invoice API transport', () => {
     vi.mocked(resumeRecurringInvoiceViaGraphql).mockResolvedValue(recurring);
     vi.mocked(generateRecurringInvoiceNowViaGraphql).mockResolvedValue({
       invoice_number: 'INV-00010',
+      next_run_date: '2026-08-20',
+      template_status: 'active',
+      replayed: false,
     });
 
     await expect(createRecurringInvoice(createInput, 4)).resolves.toEqual(recurring);
     await expect(updateRecurringInvoice(8, { notes: 'Updated' }, 4))
       .resolves.toEqual(recurring);
     await expect(deleteRecurringInvoice(8, 4)).resolves.toEqual({ success: true });
-    await expect(pauseRecurringInvoice(8, 4)).resolves.toBeUndefined();
-    await expect(resumeRecurringInvoice(8, 4)).resolves.toBeUndefined();
+    await expect(pauseRecurringInvoice(8, 4)).resolves.toMatchObject({ status: 'paused' });
+    await expect(resumeRecurringInvoice(8, 4)).resolves.toEqual(recurring);
     await expect(generateRecurringInvoiceNow(8, 4))
-      .resolves.toEqual({ invoice_number: 'INV-00010' });
+      .resolves.toEqual({
+        invoice_number: 'INV-00010',
+        next_run_date: '2026-08-20',
+        template_status: 'active',
+        replayed: false,
+      });
 
     expect(createRecurringInvoiceViaGraphql).toHaveBeenCalledWith(createInput, 4);
     expect(updateRecurringInvoiceViaGraphql)

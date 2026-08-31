@@ -5,5 +5,6 @@ import { EmailTemplatesService } from './email-templates.service';
 
 @Module({
   providers: [EmailTemplatesRepository, EmailTemplatesService, EmailTemplatesResolver],
+  exports: [EmailTemplatesService],
 })
 export class EmailTemplatesModule {}

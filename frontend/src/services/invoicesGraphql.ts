@@ -24,7 +24,7 @@ type GraphqlInvoiceItem = {
   productName: string | null;
 };
 
-type GraphqlInvoice = {
+export type GraphqlInvoice = {
   id: number;
   organizationId: number;
   invoiceNumber: string;
@@ -109,7 +109,7 @@ const coreFields = `
   isRecurringSource recurringTemplateId recurringSourceTemplateId
 `;
 
-const detailFields = `
+export const invoiceDetailFields = `
   ${coreFields}
   items {
     id invoiceId productId name description quantity unitPrice taxRate
@@ -121,7 +121,7 @@ const detailFields = `
   business { id name email phone address taxId logoUrl }
 `;
 
-const legacyDetailFields = `
+export const legacyInvoiceDetailFields = `
   ${legacyCoreFields}
   items {
     id invoiceId productId name description quantity unitPrice taxRate
@@ -153,17 +153,17 @@ const legacyInvoicesQuery = `
 
 const invoiceQuery = `
   query Invoice($id: Int!) {
-    invoice(id: $id) { ${detailFields} }
+    invoice(id: $id) { ${invoiceDetailFields} }
   }
 `;
 
 const legacyInvoiceQuery = `
   query Invoice($id: Int!) {
-    invoice(id: $id) { ${legacyDetailFields} }
+    invoice(id: $id) { ${legacyInvoiceDetailFields} }
   }
 `;
 
-const isRecurringRelationshipSchemaMismatch = (error: unknown): boolean => {
+export const isRecurringRelationshipSchemaMismatch = (error: unknown): boolean => {
   if (!(error instanceof Error)) return false;
   return error.message.includes('Cannot query field') && (
     error.message.includes('isRecurringSource')
@@ -194,7 +194,7 @@ const mapItem = (item: GraphqlInvoiceItem): InvoiceItem => ({
   ...optional<InvoiceItem, 'product_name'>('product_name', item.productName),
 });
 
-const mapInvoice = (invoice: GraphqlInvoice): Invoice => ({
+export const mapInvoice = (invoice: GraphqlInvoice): Invoice => ({
   id: invoice.id,
   organization_id: invoice.organizationId,
   invoice_number: invoice.invoiceNumber,
@@ -444,13 +444,16 @@ export const getInvoicesViaGraphql = async (
 export const getInvoiceViaGraphql = async (
   id: number,
   organizationId?: number,
+  signal?: AbortSignal,
 ): Promise<Invoice> => {
   const requestInvoice = (document: string) => graphqlRequest<
     { invoice: GraphqlInvoice },
     { id: number }
   >(
     document,
-    { id }, organizationId,
+    { id },
+    organizationId,
+    signal,
   );
   let data: { invoice: GraphqlInvoice };
   try {
@@ -471,7 +474,7 @@ export const createInvoiceViaGraphql = async (
     { input: ReturnType<typeof mapMutationInput> }
   >(
     `mutation CreateInvoice($input: CreateInvoiceInput!) {
-      createInvoice(input: $input) { ${legacyDetailFields} }
+      createInvoice(input: $input) { ${legacyInvoiceDetailFields} }
     }`,
     { input: mapMutationInput(invoice) },
     organizationId,
@@ -489,7 +492,7 @@ export const updateInvoiceViaGraphql = async (
     { id: number; input: ReturnType<typeof mapMutationInput> }
   >(
     `mutation UpdateInvoice($id: Int!, $input: UpdateInvoiceInput!) {
-      updateInvoice(id: $id, input: $input) { ${legacyDetailFields} }
+      updateInvoice(id: $id, input: $input) { ${legacyInvoiceDetailFields} }
     }`,
     { id, input: mapMutationInput(invoice) },
     organizationId,

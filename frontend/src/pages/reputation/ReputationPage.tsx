@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { ExternalLink, FileText, Loader2, MessageSquare, MoreHorizontal, Send, Star, ThumbsDown, ThumbsUp } from 'lucide-react';
+import { ExternalLink, FileText, Loader2, MessageSquare, MoreHorizontal, Send, Star, ThumbsDown, ThumbsUp, PieChart } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog } from '@/components/ui/dialog';
+import { ModalBody, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/modal';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -15,6 +17,7 @@ import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { HeaderAction, HeaderFilters, HeaderSearch } from '@/components/layout/DesktopHeaderTools';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
+import { FramedSection } from '@/components/ui/framed-section';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { StatCard } from '@/components/StatCard';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
@@ -22,7 +25,10 @@ import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { getReputationAnalytics, getReviews, updateReview, type ReputationAnalytics, type Review } from '@/services/reputationApi';
+import { updateReview, type Review } from '@/services/reputationApi';
+import { getReputationAnalyticsViaGraphql } from '@/services/reputationAnalyticsGraphql';
+import { getReviewsViaGraphql } from '@/services/reputationReviewsGraphql';
+import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
 import { ReputationPlatformMark } from './components/ReputationPlatformMark';
 import { getReputationPlatformLabel, getReviewSentimentVisual, getReviewStatusVisual } from './constants/reputationVisuals';
 
@@ -31,39 +37,38 @@ const RATING_OPTIONS = [5, 4, 3, 2, 1] as const;
 export function ReputationPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('reputation');
-  const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [analytics, setAnalytics] = useState<ReputationAnalytics | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
+  const { organizationId, isLoading: organizationLoading, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
   const [searchQuery, setSearchQuery] = useState('');
   const [ratingFilter, setRatingFilter] = useState('all');
   const [responseReview, setResponseReview] = useState<Review | null>(null);
   const [responseText, setResponseText] = useState('');
   const [responding, setResponding] = useState(false);
 
-  useEffect(() => { if (initError) setLoading(false); }, [initError]);
-
-  const fetchData = useCallback(async () => {
-    if (!organizationId) return;
-    setLoading(true);
-    setLoadError(false);
-    try {
-      const [reviewsResult, analyticsResult] = await Promise.all([
-        getReviews({ rating: ratingFilter === 'all' ? undefined : Number(ratingFilter) }, organizationId),
-        getReputationAnalytics(30, organizationId),
-      ]);
-      setReviews(reviewsResult.reviews ?? []);
-      setAnalytics(analyticsResult);
-    } catch {
-      setLoadError(true);
-    } finally {
-      setLoading(false);
-    }
-  }, [organizationId, ratingFilter]);
-
-  useEffect(() => { void fetchData(); }, [fetchData]);
+  const reviewsQueryKey = ['reputation-reviews', organizationId, ratingFilter] as const;
+  const reviewsQuery = useQuery({
+    queryKey: reviewsQueryKey,
+    queryFn: ({ signal }) => getReviewsViaGraphql({
+      rating: ratingFilter === 'all' ? undefined : Number(ratingFilter),
+    }, organizationId as number, signal),
+    enabled: organizationId !== null,
+    staleTime: QUERY_STALE_TIME_MS,
+    retry: shouldRetryQuery,
+  });
+  const analyticsQuery = useQuery({
+    queryKey: ['reputation-analytics', organizationId, 30],
+    queryFn: ({ signal }) => getReputationAnalyticsViaGraphql(30, organizationId as number, signal),
+    enabled: organizationId !== null,
+    staleTime: QUERY_STALE_TIME_MS,
+    retry: shouldRetryQuery,
+  });
+  const reviews = useMemo(() => reviewsQuery.data?.reviews ?? [], [reviewsQuery.data]);
+  const analytics = analyticsQuery.data;
+  const loading = organizationLoading || reviewsQuery.isPending;
+  const loadError = Boolean(reviewsQuery.error && !reviewsQuery.data);
+  const analyticsLoading = organizationLoading || analyticsQuery.isPending;
+  const analyticsLoadError = Boolean(analyticsQuery.error && !analyticsQuery.data);
 
   const filteredReviews = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -82,7 +87,13 @@ export function ReputationPage() {
     setResponding(true);
     try {
       const updated = await updateReview(responseReview.id, { status: 'responded', response_text: responseText.trim() }, organizationId);
-      setReviews(current => current.map(review => review.id === updated.id ? updated : review));
+      queryClient.setQueriesData<{ reviews: Review[]; pagination: { page: number; limit: number; total: number; totalPages: number } }>(
+        { queryKey: ['reputation-reviews', organizationId] },
+        current => current ? {
+          ...current,
+          reviews: current.reviews.map(review => review.id === updated.id ? updated : review),
+        } : current,
+      );
       setResponseReview(null);
       toast({ title: 'Response saved' });
     } catch {
@@ -127,13 +138,24 @@ export function ReputationPage() {
     >
       <OnboardingModal isOpen={showOnboarding} onClose={closeOnboarding} onComplete={completeOnboarding} onDismiss={dismissOnboarding} content={ONBOARDING_CONTENT.reputation} />
 
-      {!loadError ? <ResponsiveCardRail label="Reputation summary" desktopColumns="md:grid-cols-5" className="responsive-stat-summary">
-        <StatCard title="Total reviews" badgeText="Total" value={totalReviews} icon={FileText} description="Across all sources" colorTheme="blue" isLoading={loading} />
-        <StatCard title="Average rating" badgeText="Average" value={Number(totals?.average_rating ?? 0).toFixed(1)} icon={Star} description="Out of 5" colorTheme="blue" isLoading={loading} />
-        <StatCard title="Positive reviews" badgeText="Positive" value={totals?.positive_reviews ?? 0} icon={ThumbsUp} description={`${positivePercent}% of reviews`} colorTheme="green" isLoading={loading} />
-        <StatCard title="Neutral reviews" badgeText="Neutral" value={neutralReviews} icon={MessageSquare} description="Neutral sentiment" colorTheme="gray" isLoading={loading} />
-        <StatCard title="Negative reviews" badgeText="Negative" value={totals?.negative_reviews ?? 0} icon={ThumbsDown} description="Needs attention" colorTheme="red" isLoading={loading} />
-      </ResponsiveCardRail> : null}
+      <FramedSection title="Overview" icon={PieChart} className="mb-6">
+        {analyticsLoadError ? (
+          <ErrorState
+            kind="section"
+            icon={PieChart}
+            title="Unable to load reputation overview"
+            onRetry={() => void analyticsQuery.refetch()}
+          />
+        ) : (
+        <ResponsiveCardRail label="Reputation summary" desktopColumns="md:grid-cols-5" className="responsive-stat-summary mb-0">
+          <StatCard title="Total reviews" badgeText="Total" value={totalReviews} icon={FileText} description="Across all sources" colorTheme="blue" isLoading={analyticsLoading} />
+          <StatCard title="Average rating" badgeText="Average" value={Number(totals?.average_rating ?? 0).toFixed(1)} icon={Star} description="Out of 5" colorTheme="blue" isLoading={analyticsLoading} />
+          <StatCard title="Positive reviews" badgeText="Positive" value={totals?.positive_reviews ?? 0} icon={ThumbsUp} description={`${positivePercent}% of reviews`} colorTheme="green" isLoading={analyticsLoading} />
+          <StatCard title="Neutral reviews" badgeText="Neutral" value={neutralReviews} icon={MessageSquare} description="Neutral sentiment" colorTheme="gray" isLoading={analyticsLoading} />
+          <StatCard title="Negative reviews" badgeText="Negative" value={totals?.negative_reviews ?? 0} icon={ThumbsDown} description="Needs attention" colorTheme="red" isLoading={analyticsLoading} />
+        </ResponsiveCardRail>
+        )}
+      </FramedSection>
 
       <Card>
         <CardContent className="p-0">
@@ -145,7 +167,7 @@ export function ReputationPage() {
               icon={Star}
               title="Unable to load reviews"
               description="We couldn't load your reviews. Try again."
-              onRetry={() => void fetchData()}
+              onRetry={() => void reviewsQuery.refetch()}
             />
           ) : filteredReviews.length === 0 ? (
             <EmptyState
@@ -201,14 +223,20 @@ export function ReputationPage() {
       </Card>
 
       <Dialog open={Boolean(responseReview)} onOpenChange={open => { if (!open && !responding) setResponseReview(null); }}>
-        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg">
-          <DialogHeader><DialogTitle>Respond to {responseReview?.reviewer_name || 'review'}</DialogTitle></DialogHeader>
-          <Textarea aria-label="Review response" value={responseText} onChange={event => setResponseText(event.target.value)} placeholder="Write a public response..." className="min-h-36" />
-          <DialogFooter>
+        <ModalContent size="md">
+          <ModalHeader
+            icon={MessageSquare}
+            title={`Respond to ${responseReview?.reviewer_name || 'review'}`}
+            description="Write the public response that will appear with this review."
+          />
+          <ModalBody>
+            <Textarea aria-label="Review response" value={responseText} onChange={event => setResponseText(event.target.value)} placeholder="Write a public response..." className="min-h-36" />
+          </ModalBody>
+          <ModalFooter>
             <Button variant="outline" onClick={() => setResponseReview(null)} disabled={responding}>Cancel</Button>
             <Button onClick={() => void saveResponse()} disabled={responding || !responseText.trim()}>{responding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MessageSquare className="mr-2 h-4 w-4" />}Save response</Button>
-          </DialogFooter>
-        </DialogContent>
+          </ModalFooter>
+        </ModalContent>
       </Dialog>
     </PageLayout>
   );

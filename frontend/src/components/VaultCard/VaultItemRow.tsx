@@ -118,13 +118,13 @@ export const VaultItemRow: React.FC<VaultItemRowProps> = ({
 
   return (
     <div className={cn(
-      "group flex items-start gap-2 p-2 rounded-lg hover:bg-muted/50 transition-colors",
+      "group interaction-row flex items-start gap-2 rounded-lg p-2",
       isDragging && "opacity-50 bg-muted/50"
     )}>
       {/* Drag handle */}
       <div
         {...dragHandleProps}
-        className="cursor-grab active:cursor-grabbing p-1 opacity-60 sm:opacity-0 sm:group-hover:opacity-50 sm:group-focus-within:opacity-100 hover:opacity-100 transition-opacity"
+        className="interaction-reveal touch-target-mobile flex cursor-grab touch-pan-y items-center justify-center active:cursor-grabbing"
         aria-label={`Reorder ${item.label}`}
       >
         <GripVertical className="h-4 w-4 text-muted-foreground" />
@@ -170,7 +170,7 @@ export const VaultItemRow: React.FC<VaultItemRowProps> = ({
       </div>
       
       {/* Actions */}
-      <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 transition-opacity">
+      <div className="interaction-reveal flex items-center gap-1">
         <Button
           size="sm"
           variant="ghost"

@@ -101,8 +101,8 @@ export default function PublicEstimatePage() {
     return (
       <BrandedPublicPage>
         <div className="grid min-h-[calc(100vh-4rem)] place-items-center p-6">
-          <div className="flex items-center gap-3 text-muted-foreground" role="status">
-            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+          <div className="flex items-center gap-3 text-muted-foreground" role="status" aria-label="Loading estimate" aria-live="polite" aria-busy="true">
+            <Loader2 aria-hidden="true" className="h-5 w-5 animate-spin text-primary" />
             Loading estimate…
           </div>
         </div>
@@ -196,7 +196,7 @@ export default function PublicEstimatePage() {
                 <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{data.business.name}</h1>
                 {data.business.email && (
                   <a
-                    className="mt-2 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary"
+                    className="touch-target-mobile mt-2 inline-flex touch-manipulation items-center gap-1.5 text-sm text-muted-foreground hover:text-primary"
                     href={`mailto:${data.business.email}`}
                   >
                     <Mail className="h-4 w-4" />{data.business.email}
@@ -330,11 +330,11 @@ export default function PublicEstimatePage() {
                 </p>
               </div>
               <div className="flex flex-col-reverse gap-3 sm:shrink-0 sm:flex-row">
-                <Button variant="outline" onClick={() => setConfirming('decline')} disabled={!!pending}>
-                  {pending === 'decline' && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Decline
+                <Button variant="outline" onClick={() => setConfirming('decline')} disabled={!!pending} aria-busy={pending === 'decline' ? 'true' : undefined}>
+                  {pending === 'decline' && <Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />}Decline
                 </Button>
-                <Button onClick={() => setConfirming('accept')} disabled={!!pending}>
-                  {pending === 'accept' && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Accept estimate
+                <Button onClick={() => setConfirming('accept')} disabled={!!pending} aria-busy={pending === 'accept' ? 'true' : undefined}>
+                  {pending === 'accept' && <Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />}Accept estimate
                 </Button>
               </div>
             </CardContent>
@@ -361,7 +361,7 @@ export default function PublicEstimatePage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className={confirming === 'decline'
-                ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                ? 'bg-destructive text-destructive-foreground interaction-button--destructive'
                 : undefined}
               onClick={() => confirming && void respond(confirming)}
             >

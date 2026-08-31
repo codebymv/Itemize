@@ -1,41 +1,31 @@
 /**
- * useBillingStatus Hook
- * 
- * React Query hook for fetching billing status data.
- * Provides caching, automatic refetching, and error handling.
+ * Billing selector over the shared selected-organization bootstrap.
  */
 
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { useOrganizationContext } from '@/contexts/organization-context';
-import { getBillingStatus, type BillingStatus } from '@/services/billingApi';
+import type { BillingStatus } from '@/services/billingApi';
+import {
+  getOrganizationBootstrapViaGraphql,
+  organizationBootstrapQueryKey,
+  type OrganizationBootstrap,
+} from '@/services/organizationBootstrapGraphql';
 
 /**
- * Fetch billing status with React Query
- * 
- * Features:
- * - 5-minute stale time for caching
- * - Automatic refetch on window focus
- * - Error handling with typed errors
- * - Loading states
+ * Every consumer observes the same organization-scoped request as onboarding
+ * and get-started while retaining the established billing hook contract.
  */
 export function useBillingStatus(): UseQueryResult<BillingStatus, Error> {
   const { organizationId } = useOrganizationContext();
 
-  return useQuery({
-    queryKey: ['billing', 'status', organizationId],
-    queryFn: async () => {
-      const result = await getBillingStatus();
-      
-      if (!result.success || !result.data) {
-        throw new Error(result.error || 'Failed to fetch billing status');
-      }
-      
-      return result.data;
-    },
+  return useQuery<OrganizationBootstrap, Error, BillingStatus>({
+    queryKey: organizationBootstrapQueryKey(organizationId),
+    queryFn: ({ signal }) => getOrganizationBootstrapViaGraphql(
+      organizationId as number,
+      signal,
+    ),
     enabled: organizationId !== null,
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchOnWindowFocus: true,
-    retry: 3, // Retry failed requests up to 3 times
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
+    staleTime: 5 * 60 * 1000,
+    select: (bootstrap) => bootstrap.billingStatus,
   });
 }

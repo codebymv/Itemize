@@ -10,7 +10,7 @@ export function ManageAccountCard() {
       <CardHeader>
         <SettingsSectionTitle icon={UserCog}>Manage account</SettingsSectionTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent surface="inset">
         <div className="grid gap-5 md:grid-cols-2 md:gap-0">
           <div className="md:pr-6">
             <AccountDataExportAction />

@@ -1,9 +1,10 @@
 import {
   Children,
+  createContext,
   Fragment,
   isValidElement,
   useState,
-  type ChangeEvent,
+  useContext,
   type ReactNode,
 } from 'react';
 import type { LucideIcon } from 'lucide-react';
@@ -17,9 +18,9 @@ import {
 } from 'lucide-react';
 import { AppHeaderIconButton } from '@/components/ui/app-header-icon-button';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { NavigationRow } from '@/components/ui/navigation-row';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { SearchField } from '@/components/ui/search-field';
 import { IconTabsList, IconTabsTrigger, Tabs } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
@@ -37,6 +38,8 @@ export interface DesktopHeaderToolsProps {
 }
 
 export type ResponsiveHeaderToolsProps = DesktopHeaderToolsProps;
+
+const PromotedHeaderActionContext = createContext(false);
 
 interface HeaderSearchProps {
   value: string;
@@ -76,6 +79,7 @@ interface HeaderActionProps {
   onClick: () => void;
   icon: ReactNode;
   disabled?: boolean;
+  busy?: boolean;
   prominence?: 'primary' | 'secondary';
 }
 
@@ -105,6 +109,12 @@ function HeaderToolsLane({
   secondaryAction,
   primaryAction,
 }: DesktopHeaderToolsProps) {
+  const promoteSecondary = Boolean(
+    secondaryAction && !primaryAction && countMobileActions(secondaryAction) === 1,
+  );
+  const effectiveSecondaryAction = promoteSecondary ? null : secondaryAction;
+  const effectivePrimaryAction = primaryAction ?? (promoteSecondary ? secondaryAction : null);
+
   return (
     <div className="desktop-header-tools__lane">
       {modeNavigation ? (
@@ -116,11 +126,18 @@ function HeaderToolsLane({
       {search ? <div className="desktop-header-tools__search">{search}</div> : null}
       {filters ? <div className="desktop-header-tools__filters">{filters}</div> : null}
       {status ? <div className="desktop-header-tools__status flex shrink-0">{status}</div> : null}
-      {secondaryAction ? (
-        <div className="desktop-header-tools__secondary">{secondaryAction}</div>
+      {effectiveSecondaryAction ? (
+        <div className="desktop-header-tools__secondary">{effectiveSecondaryAction}</div>
       ) : null}
-      {primaryAction ? (
-        <div className="desktop-header-tools__primary">{primaryAction}</div>
+      {effectivePrimaryAction ? (
+        <div
+          className={cn('desktop-header-tools__primary', promoteSecondary && 'header-action-promoted-primary')}
+          data-promoted-primary={promoteSecondary ? '' : undefined}
+        >
+          <PromotedHeaderActionContext.Provider value={promoteSecondary}>
+            {effectivePrimaryAction}
+          </PromotedHeaderActionContext.Provider>
+        </div>
       ) : null}
     </div>
   );
@@ -174,21 +191,26 @@ function MobileHeaderTools({
   secondaryAction,
   primaryAction,
 }: ResponsiveHeaderToolsProps) {
+  const promoteSecondary = Boolean(
+    secondaryAction && !primaryAction && countMobileActions(secondaryAction) === 1,
+  );
+  const effectiveSecondaryAction = promoteSecondary ? null : secondaryAction;
+  const effectivePrimaryAction = primaryAction ?? (promoteSecondary ? secondaryAction : null);
   const preferredQuery = combinedQuery ?? search ?? filters;
   const extraQuery = combinedQuery ? null : search && filters ? filters : null;
   const visibleContext = modeNavigation ?? preferredQuery;
   const overflowQuery = modeNavigation ? preferredQuery : extraQuery;
   const hasVisibleContext = Boolean(visibleContext);
-  const secondaryActionCount = countMobileActions(secondaryAction);
-  const overflowSecondary = secondaryAction && primaryAction && secondaryActionCount > 1
-    ? secondaryAction
+  const secondaryActionCount = countMobileActions(effectiveSecondaryAction);
+  const overflowSecondary = effectiveSecondaryAction && effectivePrimaryAction && secondaryActionCount > 1
+    ? effectiveSecondaryAction
     : null;
-  const showSecondaryDirectly = Boolean(secondaryAction && !overflowSecondary);
+  const showSecondaryDirectly = Boolean(effectiveSecondaryAction && !overflowSecondary);
   // Entity state already hands off to the detail header on compact layouts.
   // Keep it in the sticky row only when it is the sole page-level context;
   // otherwise action space and an intact page title take priority.
   const showStatusDirectly = Boolean(
-    status && !primaryAction && !secondaryAction && !hasVisibleContext,
+    status && !effectivePrimaryAction && !effectiveSecondaryAction && !hasVisibleContext,
   );
   const hasOverflow = Boolean(overflowQuery || overflowSecondary);
 
@@ -197,7 +219,7 @@ function MobileHeaderTools({
       {visibleContext ? <div className="mobile-header-tools__context">{visibleContext}</div> : null}
       {showStatusDirectly ? <div className="mobile-header-tools__status">{status}</div> : null}
       {showSecondaryDirectly ? (
-        <div className="mobile-header-tools__secondary">{secondaryAction}</div>
+        <div className="mobile-header-tools__secondary">{effectiveSecondaryAction}</div>
       ) : null}
       {hasOverflow ? (
         <MobileHeaderOverflow>
@@ -207,7 +229,16 @@ function MobileHeaderTools({
           ) : null}
         </MobileHeaderOverflow>
       ) : null}
-      {primaryAction ? <div className="mobile-header-tools__primary">{primaryAction}</div> : null}
+      {effectivePrimaryAction ? (
+        <div
+          className={cn('mobile-header-tools__primary', promoteSecondary && 'header-action-promoted-primary')}
+          data-promoted-primary={promoteSecondary ? '' : undefined}
+        >
+          <PromotedHeaderActionContext.Provider value={promoteSecondary}>
+            {effectivePrimaryAction}
+          </PromotedHeaderActionContext.Provider>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -327,13 +358,12 @@ export function HeaderSearch({
         !compact && width === 'wide' && 'desktop-header-search__wide',
       )}
     >
-      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-      <Input
-        aria-label={label}
+      <SearchField
+        label={label}
         placeholder={placeholder}
         value={value}
-        onChange={(event: ChangeEvent<HTMLInputElement>) => onChange(event.target.value)}
-        className="h-11 bg-muted/20 pl-10 font-raleway focus:bg-background"
+        onValueChange={onChange}
+        className="bg-muted/20 font-raleway focus:bg-background"
       />
     </div>
   );
@@ -341,6 +371,19 @@ export function HeaderSearch({
   return (
     <>
       <div className="desktop-header-search__full">{input()}</div>
+      <div className="desktop-header-search__label">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button type="button" variant="outline" className="h-11 min-w-11 px-3" aria-label={label}>
+              <Search aria-hidden="true" className="h-4 w-4" />
+              <span>Search</span>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-72">
+            {input(true)}
+          </PopoverContent>
+        </Popover>
+      </div>
       <div className="desktop-header-search__compact">
         <Popover>
           <Tooltip>
@@ -455,14 +498,12 @@ export function HeaderCombinedQuery({
         <TooltipContent>{label}</TooltipContent>
       </Tooltip>
       <PopoverContent align="end" className="header-query-popover w-72 space-y-2">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            aria-label={label}
+        <div>
+          <SearchField
+            label={label}
             placeholder={placeholder}
             value={value}
-            onChange={(event) => onChange(event.target.value)}
-            className="h-11 pl-10"
+            onValueChange={onChange}
           />
         </div>
         {children}
@@ -479,9 +520,9 @@ export function HeaderRefreshAction({
 }: HeaderRefreshActionProps) {
   return (
     <HeaderAction
-      label={label}
+      label={refreshing ? 'Refreshing' : label}
       onClick={onClick}
-      disabled={refreshing}
+      busy={refreshing}
       prominence={prominence}
       icon={(
         <RefreshCw
@@ -498,20 +539,25 @@ export function HeaderAction({
   onClick,
   icon,
   disabled = false,
+  busy = false,
   prominence = 'primary',
 }: HeaderActionProps) {
+  const promoted = useContext(PromotedHeaderActionContext);
+  const effectiveProminence = promoted ? 'primary' : prominence;
+
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <Button
           type="button"
           aria-label={label}
-          disabled={disabled}
+          aria-busy={busy ? 'true' : undefined}
+          data-busy={busy ? '' : undefined}
+          disabled={disabled || busy}
           onClick={onClick}
-          variant={prominence === 'primary' ? 'default' : 'outline'}
+          variant={effectiveProminence === 'primary' ? 'default' : 'outline'}
           className={cn(
-            'h-11 min-w-11 gap-2 px-3 font-light',
-            prominence === 'primary' && 'bg-blue-600 text-white hover:bg-blue-700',
+            'h-11 min-w-11 gap-2 px-3',
           )}
         >
           {icon}

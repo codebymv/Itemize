@@ -23,7 +23,7 @@ export function LiveServicePreview({
         <SectionCardTitle icon={Eye}>{title}</SectionCardTitle>
         {controls ? <div className="min-w-0 shrink-0">{controls}</div> : null}
       </CardHeader>
-      <CardContent className={contentClassName}>{children}</CardContent>
+      <CardContent surface="inset" className={cn('p-0', contentClassName)}>{children}</CardContent>
     </Card>
   );
 }

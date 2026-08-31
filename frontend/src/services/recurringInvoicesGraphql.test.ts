@@ -169,6 +169,7 @@ describe('recurring invoice GraphQL adapter', () => {
       expect.stringContaining('previewRecurringInvoiceNumber'),
       {},
       4,
+      undefined,
     );
     expect(graphqlMutationRequest).toHaveBeenCalledWith(
       expect.stringContaining('createRecurringInvoiceFromInvoice'),
@@ -197,7 +198,12 @@ describe('recurring invoice GraphQL adapter', () => {
     });
     await expect(generateRecurringInvoiceNowViaGraphql(
       8, 4, 'recurring-generation-request-1',
-    )).resolves.toEqual({ invoice_number: 'INV-00051' });
+    )).resolves.toEqual({
+      invoice_number: 'INV-00051',
+      next_run_date: '2026-08-20',
+      template_status: 'active',
+      replayed: false,
+    });
     expect(graphqlMutationRequest).toHaveBeenCalledWith(
       expect.stringContaining('generateRecurringInvoiceNow'),
       {

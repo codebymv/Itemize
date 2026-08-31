@@ -333,7 +333,7 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
             onClick={() => editor.chain().focus().toggleBulletList().run()}
             className={cn(
               "h-8 w-8 p-0",
-              editor.isActive('bulletList') ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''
+              editor.isActive('bulletList') ? 'bg-blue-600 interaction-button--primary text-white' : ''
             )}
             style={!editor.isActive('bulletList') ? {
               backgroundColor: 'transparent',
@@ -359,7 +359,7 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
             onClick={() => editor.chain().focus().toggleOrderedList().run()}
             className={cn(
               "h-8 w-8 p-0",
-              editor.isActive('orderedList') ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''
+              editor.isActive('orderedList') ? 'bg-blue-600 interaction-button--primary text-white' : ''
             )}
             style={!editor.isActive('orderedList') ? {
               backgroundColor: 'transparent',
@@ -385,7 +385,7 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
             onClick={() => editor.chain().focus().toggleBlockquote().run()}
             className={cn(
               "h-8 w-8 p-0",
-              editor.isActive('blockquote') ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''
+              editor.isActive('blockquote') ? 'bg-blue-600 interaction-button--primary text-white' : ''
             )}
             style={!editor.isActive('blockquote') ? {
               backgroundColor: 'transparent',

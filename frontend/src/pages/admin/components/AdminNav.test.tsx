@@ -17,18 +17,17 @@ describe('AdminNav', () => {
 
         expect(communications).toHaveClass(
             'group/navigation-row',
-            'hover:bg-sidebar-accent',
+            'interaction-navigation',
             'data-[active=true]:bg-sidebar-accent',
         );
         expect(communications.querySelector('svg')).toHaveClass(
+            'navigation-row-icon',
             'text-gray-600',
             'dark:text-gray-400',
-            'group-hover/navigation-row:text-blue-600',
-            'transition-colors',
         );
         expect(operations).toHaveAttribute('aria-current', 'page');
         expect(operations.querySelector('svg')).toHaveClass('text-blue-600');
-        expect(operations.querySelector('svg')).not.toHaveClass('group-hover/navigation-row:text-blue-600');
+        expect(operations.querySelector('svg')).toHaveClass('navigation-row-icon');
     });
 
     it('moves the complete active section into the compact shell selector', () => {

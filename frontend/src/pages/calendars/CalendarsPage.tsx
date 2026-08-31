@@ -11,6 +11,7 @@ import {
     Plus,
     Settings2,
     Trash2,
+    PieChart,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -34,6 +35,7 @@ import { CreateCalendarModal } from './components/CreateCalendarModal';
 import { getCalendarStatusVisual } from './constants/schedulingVisuals';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
+import { FramedSection } from '@/components/ui/framed-section';
 import { HeaderAction, HeaderSearch } from '@/components/layout/DesktopHeaderTools';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
@@ -150,12 +152,14 @@ export function CalendarsPage() {
             <OnboardingModal isOpen={onboarding.showModal} onClose={onboarding.handleClose} onComplete={onboarding.handleComplete} onDismiss={onboarding.handleDismiss} content={ONBOARDING_CONTENT.calendars} />
 
             {!loadError && (
-                <ResponsiveCardRail label="Calendar summary" desktopColumns="md:grid-cols-2 lg:grid-cols-4" className="responsive-stat-summary">
+                <FramedSection title="Overview" icon={PieChart} className="mb-6">
+                <ResponsiveCardRail label="Calendar summary" desktopColumns="md:grid-cols-2 lg:grid-cols-4" className="responsive-stat-summary mb-0">
                     <StatCard title="Total calendars" badgeText="Total" value={stats.total} icon={CalendarDays} description={`${stats.total} configured`} colorTheme="blue" isLoading={loading} />
                     <StatCard title="Active calendars" badgeText="Active" value={stats.active} icon={CalendarCheck2} description="Accepting bookings" colorTheme="blue" isLoading={loading} />
                     <StatCard title="Paused calendars" badgeText="Paused" value={stats.inactive} icon={CalendarOff} description="Not accepting bookings" colorTheme="orange" isLoading={loading} />
                     <StatCard title="Upcoming bookings" badgeText="Upcoming" value={stats.upcoming} icon={CalendarCheck2} description="Across all calendars" colorTheme="green" isLoading={loading} />
                 </ResponsiveCardRail>
+                </FramedSection>
             )}
 
             <Card>
@@ -185,7 +189,7 @@ export function CalendarsPage() {
                                         role="link"
                                         tabIndex={0}
                                         aria-label={`Open ${calendar.name}`}
-                                        className="group flex cursor-pointer items-center gap-3 px-3 py-4 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-4"
+                                        className="group flex cursor-pointer items-center gap-3 px-3 py-4 interaction-row focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-4"
                                         onClick={() => navigate(`/calendars/${calendar.id}`)}
                                         onKeyDown={event => {
                                             if (event.key === 'Enter' || event.key === ' ') {

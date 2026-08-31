@@ -5,7 +5,7 @@ import {
   CreatePipelineInput,
   UpdatePipelineInput,
 } from './pipeline.inputs';
-import { DeletePipelineResult, Pipeline } from './pipeline.types';
+import { DeletePipelineResult, Pipeline, PipelineWorkspace } from './pipeline.types';
 import { PipelinesService } from './pipelines.service';
 
 @RequiresPlan()
@@ -26,6 +26,15 @@ export class PipelinesResolver {
   @Query(() => Pipeline)
   pipeline(@Args('id', { type: () => Int }) id: number): Promise<Pipeline> {
     return this.pipelines.get(this.organizationId(), id);
+  }
+
+  @OrganizationScoped()
+  @Query(() => PipelineWorkspace)
+  pipelineWorkspace(
+    @Args('selectedPipelineId', { type: () => Int, nullable: true })
+    selectedPipelineId?: number,
+  ): Promise<PipelineWorkspace> {
+    return this.pipelines.workspace(this.organizationId(), selectedPipelineId);
   }
 
   @CsrfProtected()

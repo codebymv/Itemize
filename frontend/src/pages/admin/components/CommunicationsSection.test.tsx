@@ -49,9 +49,8 @@ describe('CommunicationsSection', () => {
         expect(usersTab).toHaveAttribute('data-state', 'active');
         expect(usersTab).toHaveClass(
             'icon-tabs-trigger',
-            'hover:bg-sidebar-accent',
+            'interaction-navigation',
             'data-[state=active]:bg-sidebar-accent',
-            'data-[state=active]:hover:bg-background',
             '[&>svg]:transition-colors',
         );
         expect(usersTab).not.toHaveClass('dark:hover:bg-blue-900/40');
@@ -59,7 +58,7 @@ describe('CommunicationsSection', () => {
         expect(emailLogsTab).toHaveAttribute('data-state', 'inactive');
         expect(emailLogsTab).toHaveClass(
             'icon-tabs-trigger',
-            'hover:bg-sidebar-accent',
+            'interaction-navigation',
             '[&>svg]:transition-colors',
         );
 

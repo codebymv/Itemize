@@ -7,9 +7,12 @@ import {
   createPipelineViaGraphql,
   deletePipelineViaGraphql,
   getPipelineViaGraphql,
+  getPipelineWorkspaceViaGraphql,
   getPipelinesViaGraphql,
+  type PipelineWorkspace,
   updatePipelineViaGraphql,
 } from './pipelinesGraphql';
+export type { PipelineWorkspace } from './pipelinesGraphql';
 import {
   createDealViaGraphql,
   deleteDealViaGraphql,
@@ -33,6 +36,14 @@ export const getPipelines = async (organizationId?: number): Promise<Pipeline[]>
 export const getPipeline = async (id: number, organizationId?: number): Promise<Pipeline & { deals: Deal[] }> => {
   return getPipelineViaGraphql(id, organizationId);
 };
+
+export const getPipelineWorkspace = async (
+  selectedPipelineId: number | null | undefined,
+  organizationId?: number,
+  signal?: AbortSignal,
+): Promise<PipelineWorkspace> => (
+  getPipelineWorkspaceViaGraphql(selectedPipelineId, organizationId, signal)
+);
 
 export interface CreatePipelineData {
   name: string;
@@ -136,6 +147,7 @@ export default {
   // Pipelines
   getPipelines,
   getPipeline,
+  getPipelineWorkspace,
   createPipeline,
   updatePipeline,
   deletePipeline,

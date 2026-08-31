@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Save,
@@ -55,19 +56,18 @@ import {
 import { ShellBackButton } from '@/components/layout/ShellBackButton';
 import { ErrorState } from '@/components/ErrorState';
 import { OrganizationErrorState } from '@/components/OrganizationErrorState';
-import { getContact, getContacts } from '@/services/contactsApi';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useDirtyState } from '@/hooks/useDirtyState';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
-import { getProducts, Product } from '@/services/invoicesApi';
+import { Product } from '@/services/invoicesApi';
 import {
     convertEstimateToInvoice,
     createEstimate,
     EstimateItem,
-    getEstimate,
     sendEstimate,
     updateEstimate,
 } from '@/services/estimatesApi';
+import { getEstimateEditorBootstrapViaGraphql } from '@/services/salesDocumentEditorGraphql';
 import type { JsonRecord } from '@/types';
 import { CustomerInfoSection } from './components/CustomerInfoSection';
 import { LineItemsTable } from './components/LineItemsTable';
@@ -122,14 +122,12 @@ export function EstimateEditorPage() {
     const { toast } = useToast();
     const isNew = id === 'new' || !id;
 
-    const [loading, setLoading] = useState(true);
     const [initialized, setInitialized] = useState(false);
-    const [loadError, setLoadError] = useState(false);
-    const [loadAttempt, setLoadAttempt] = useState(0);
     const [saving, setSaving] = useState(false);
     const { organizationId, error: organizationError } = useOrganization();
     const [contacts, setContacts] = useState<Contact[]>([]);
     const [products, setProducts] = useState<Product[]>([]);
+    const initializedBootstrapRef = useRef<string | null>(null);
 
     // Estimate state
     const [estimateNumber, setEstimateNumber] = useState('');
@@ -211,103 +209,105 @@ export function EstimateEditorPage() {
         }
     }, [isNew, issueDate, validUntil]);
 
-    // Initialize
+    const estimateId = !isNew && id
+        && Number.isSafeInteger(Number(id)) && Number(id) > 0
+        ? Number(id)
+        : null;
+    const hasInvalidEstimateId = !isNew && estimateId === null;
+    const initialContactCandidate = Number(searchParams.get('contactId'));
+    const initialContactId = isNew
+        && Number.isSafeInteger(initialContactCandidate)
+        && initialContactCandidate > 0
+        ? initialContactCandidate
+        : null;
+    const bootstrapKey = [
+        organizationId ?? 'none',
+        estimateId ?? 'new',
+        initialContactId ?? 'none',
+    ].join(':');
+    const bootstrapQuery = useQuery({
+        queryKey: [
+            'estimate-editor-bootstrap',
+            organizationId,
+            estimateId,
+            initialContactId,
+        ],
+        queryFn: ({ signal }) => getEstimateEditorBootstrapViaGraphql(
+            organizationId as number,
+            estimateId,
+            initialContactId,
+            signal,
+        ),
+        enabled: Boolean(organizationId) && !hasInvalidEstimateId,
+        refetchOnWindowFocus: false,
+    });
+
     useEffect(() => {
-        if (!organizationId) return;
-        const init = async () => {
-            setLoading(true);
-            setInitialized(false);
-            setLoadError(false);
-            try {
-                const [contactsData, productsData] = await Promise.all([
-                    getContacts({}, organizationId),
-                    getProducts({}, organizationId)
-                ]);
-                const contactList = Array.isArray(contactsData)
-                    ? contactsData
-                    : contactsData.contacts || [];
-                setContacts(contactList);
-                setProducts(productsData || []);
+        if (!bootstrapQuery.data
+            || initializedBootstrapRef.current === bootstrapKey) return;
+        const data = bootstrapQuery.data;
+        const contactList = data.initialContact
+            && !data.contacts.some((contact) => contact.id === data.initialContact?.id)
+            ? [data.initialContact, ...data.contacts]
+            : data.contacts;
+        setInitialized(false);
+        setContacts(contactList);
+        setProducts(data.products);
 
-                // Load existing estimate if editing
-                if (!isNew && id) {
-                    const estimate = await getEstimate(Number(id), organizationId);
-
-                    setEstimateNumber(estimate.estimate_number || '');
-                    setIssueDate(estimate.issue_date?.split('T')[0] || '');
-                    setCurrency(estimate.currency || 'USD');
-                    setContactId(estimate.contact_id);
-                    setCustomerName(estimate.customer_name || '');
-                    setCustomerEmail(estimate.customer_email || '');
-                    setCustomerPhone(estimate.customer_phone || '');
-                    setCustomerAddress(estimate.customer_address || '');
-                    setValidUntil(estimate.valid_until?.split('T')[0] || '');
-                    setNotes(estimate.notes || '');
-                    setTermsAndConditions(estimate.terms_and_conditions || '');
-                    setDiscountType(estimate.discount_type || 'fixed');
-                    setDiscountValue(estimate.discount_value || 0);
-                    setStatus(estimate.status || 'draft');
-                    setLifecycle({
-                        viewedAt: estimate.viewed_at,
-                        acceptedAt: estimate.accepted_at,
-                        declinedAt: estimate.declined_at,
-                    });
-                    
-                    if (estimate.items && estimate.items.length > 0) {
-                        setLineItems((estimate.items as EstimateItem[]).map((item) => ({
-                            id: crypto.randomUUID(),
-                            product_id: item.product_id,
-                            name: item.name,
-                            description: item.description || '',
-                            quantity: item.quantity,
-                            unit_price: item.unit_price,
-                            tax_rate: item.tax_rate || 0,
-                        })));
-                    }
-                } else {
-                    const contactIdParam = searchParams.get('contactId');
-                    const contactIdCandidate = contactIdParam
-                        ? Number(contactIdParam)
-                        : Number.NaN;
-                    const parsedContactId = Number.isSafeInteger(contactIdCandidate)
-                        && contactIdCandidate > 0
-                        ? contactIdCandidate
-                        : undefined;
-
-                    if (parsedContactId) {
-                        let selectedContact = contactList.find(
-                            (contact) => contact.id === parsedContactId,
-                        );
-
-                        if (!selectedContact) {
-                            try {
-                                selectedContact = await getContact(
-                                    parsedContactId,
-                                    organizationId,
-                                ) as Contact;
-                                setContacts([selectedContact, ...contactList]);
-                            } catch {
-                                toast({
-                                    title: 'Contact unavailable',
-                                    description: toastMessages.failedToLoad('contact'),
-                                    variant: 'destructive',
-                                });
-                            }
-                        }
-
-                        if (selectedContact) populateContact(selectedContact);
-                    }
-                }
-            } catch (error) {
-                toast({ title: 'Error', description: toastMessages.failedToLoad('estimate data'), variant: 'destructive' });
-                if (!isNew) setLoadError(true);
-            } finally {
-                setLoading(false);
-                setInitialized(true);
+        if (data.estimate) {
+            const estimate = data.estimate;
+            setEstimateNumber(estimate.estimate_number || '');
+            setIssueDate(estimate.issue_date?.split('T')[0] || '');
+            setCurrency(estimate.currency || 'USD');
+            setContactId(estimate.contact_id ?? undefined);
+            setCustomerName(estimate.customer_name || '');
+            setCustomerEmail(estimate.customer_email || '');
+            setCustomerPhone(estimate.customer_phone || '');
+            setCustomerAddress(estimate.customer_address || '');
+            setValidUntil(estimate.valid_until?.split('T')[0] || '');
+            setNotes(estimate.notes || '');
+            setTermsAndConditions(estimate.terms_and_conditions || '');
+            setDiscountType(estimate.discount_type || 'fixed');
+            setDiscountValue(estimate.discount_value || 0);
+            setStatus(estimate.status || 'draft');
+            setLifecycle({
+                viewedAt: estimate.viewed_at,
+                acceptedAt: estimate.accepted_at,
+                declinedAt: estimate.declined_at,
+            });
+            if (estimate.items && estimate.items.length > 0) {
+                setLineItems((estimate.items as EstimateItem[]).map((item) => ({
+                    id: crypto.randomUUID(),
+                    product_id: item.product_id ?? undefined,
+                    name: item.name,
+                    description: item.description || '',
+                    quantity: item.quantity,
+                    unit_price: item.unit_price,
+                    tax_rate: item.tax_rate || 0,
+                })));
             }
-        };
-        init();
-    }, [organizationId, id, isNew, loadAttempt, populateContact, searchParams, toast]);
+        } else if (data.initialContact) {
+            populateContact(data.initialContact);
+        }
+        initializedBootstrapRef.current = bootstrapKey;
+        setInitialized(true);
+    }, [bootstrapKey, bootstrapQuery.data, populateContact]);
+
+    useEffect(() => {
+        if (initializedBootstrapRef.current !== bootstrapKey) setInitialized(false);
+    }, [bootstrapKey]);
+
+    useEffect(() => {
+        if (!bootstrapQuery.isError) return;
+        toast({
+            title: 'Error',
+            description: toastMessages.failedToLoad('estimate data'),
+            variant: 'destructive',
+        });
+    }, [bootstrapQuery.errorUpdatedAt, bootstrapQuery.isError, toast]);
+
+    const loadError = bootstrapQuery.isError || hasInvalidEstimateId;
+    const loading = !loadError && (bootstrapQuery.isPending || !initialized);
 
     // Handle contact selection
     const handleContactChange = (contactIdStr: string) => {
@@ -499,9 +499,11 @@ export function EstimateEditorPage() {
             >
                 <ErrorState
                     kind="page"
-                    title="Estimate unavailable"
-                    description="We could not load this estimate. Your data has not been changed."
-                    onAction={() => setLoadAttempt(current => current + 1)}
+                    title={hasInvalidEstimateId ? 'Invalid estimate' : 'Estimate unavailable'}
+                    description={hasInvalidEstimateId
+                        ? 'This estimate address is not valid.'
+                        : 'We could not load this estimate. Your data has not been changed.'}
+                    onAction={hasInvalidEstimateId ? undefined : () => bootstrapQuery.refetch()}
                 />
             </PageLayout>
         );
@@ -549,7 +551,7 @@ export function EstimateEditorPage() {
                         disabled={saving || isDirty}
                         className="group/menu"
                     >
-                        <Send className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                        <Send className="mr-2 h-4 w-4" />
                         Send Estimate
                     </DropdownMenuItem>
                 )}
@@ -559,7 +561,7 @@ export function EstimateEditorPage() {
                         disabled={saving || isDirty}
                         className="group/menu"
                     >
-                        <ArrowRight className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                        <ArrowRight className="mr-2 h-4 w-4" />
                         Convert to Invoice
                     </DropdownMenuItem>
                 )}
@@ -585,6 +587,7 @@ export function EstimateEditorPage() {
                         onClick={handleSave}
                         icon={<Save className="h-4 w-4" />}
                         disabled={!canSave}
+                        busy={saving}
                     />
                 ),
             }}
@@ -658,7 +661,7 @@ export function EstimateEditorPage() {
                                 Estimate Details
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4">
+                        <CardContent surface="inset" className="space-y-4">
                             <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_10rem] sm:items-center">
                                 <Label className="text-muted-foreground">Estimate number</Label>
                                 <Input
@@ -711,7 +714,7 @@ export function EstimateEditorPage() {
                                 Notes &amp; Terms
                             </CardTitle>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent surface="inset">
                             <Textarea
                                 value={notes}
                                 onChange={(event) => setNotes(event.target.value)}
@@ -729,7 +732,7 @@ export function EstimateEditorPage() {
                                 Totals
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-3">
+                        <CardContent surface="inset" className="space-y-3">
                             <div className="flex justify-between text-sm">
                                 <span>Subtotal</span>
                                 <span>{formatCurrency(subtotal, currency)}</span>
@@ -803,7 +806,7 @@ export function EstimateEditorPage() {
                 <Collapsible open={footerOpen} onOpenChange={setFooterOpen}>
                     <Card>
                         <CollapsibleTrigger asChild>
-                            <CardHeader className="cursor-pointer rounded-t-lg transition-colors hover:bg-muted/50">
+                            <CardHeader className="cursor-pointer rounded-t-lg interaction-row">
                                 <CardTitle className="flex items-center justify-between gap-3 text-base">
                                     <span className="flex items-center gap-2">
                                         <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
@@ -818,7 +821,7 @@ export function EstimateEditorPage() {
                             </CardHeader>
                         </CollapsibleTrigger>
                         <CollapsibleContent>
-                            <CardContent>
+                            <CardContent surface="inset">
                                 <Textarea
                                     value={termsAndConditions}
                                     onChange={(event) => setTermsAndConditions(event.target.value)}
@@ -840,7 +843,7 @@ export function EstimateEditorPage() {
                     <Button
                         onClick={handleSave}
                         disabled={!canSave}
-                        className="bg-blue-600 text-white hover:bg-blue-700"
+                        className="bg-blue-600 text-white interaction-button--primary"
                     >
                         <Save className="mr-2 h-4 w-4" />
                         {primaryActionLabel}

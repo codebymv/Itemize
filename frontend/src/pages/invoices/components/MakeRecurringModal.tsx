@@ -204,7 +204,7 @@ export function MakeRecurringModal({
                     <Button
                         onClick={handleSubmit}
                         disabled={!isValid || converting}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                        className="bg-blue-600 interaction-button--primary text-white"
                     >
                         {converting ? 'Creating...' : 'Create schedule'}
                     </Button>

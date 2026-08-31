@@ -157,7 +157,7 @@ export function SocialPage() {
                                 actionLabel={searchQuery ? 'Clear search' : undefined}
                                 onAction={searchQuery ? () => setSearchQuery('') : undefined}
                                 action={!searchQuery ? (
-                                    <Button onClick={() => void handleConnectFacebook()} className="bg-blue-600 text-white hover:bg-blue-700">
+                                    <Button onClick={() => void handleConnectFacebook()} className="bg-blue-600 text-white interaction-button--primary">
                                         <IntegrationProviderMark provider="facebook" className="mr-2 h-4 w-4" />
                                         Connect Facebook
                                     </Button>

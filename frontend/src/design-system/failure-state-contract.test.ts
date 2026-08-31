@@ -100,8 +100,8 @@ describe('failure-state contract', () => {
 
   it('does not label a failed pipeline query as an empty pipeline collection', () => {
     const source = read('pages/pipelines/PipelinesPage.tsx');
-    expect(source.indexOf('pipelinesError ?')).toBeLessThan(source.indexOf('pipelines.length === 0 ?'));
-    expect(source).toContain('onRetry={() => void refetchPipelines()}');
+    expect(source.indexOf('pipelineWorkspaceError ?')).toBeLessThan(source.indexOf('pipelines.length === 0 ?'));
+    expect(source).toContain('onRetry={() => void refetchPipelineWorkspace()}');
   });
 
   it.each([

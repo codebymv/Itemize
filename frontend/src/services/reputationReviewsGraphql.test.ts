@@ -45,13 +45,14 @@ describe('reputation reviews GraphQL consumer', () => {
   });
 
   it('maps filters, paging, organization context, and retained casing', async () => {
+    const controller = new AbortController();
     vi.mocked(fetch).mockResolvedValueOnce(response({ data: { reputationReviews: {
       nodes: [review], pageInfo: { page: 2, pageSize: 10, total: 11, totalPages: 2 },
     } } }));
     await expect(getReviewsViaGraphql({
       platform: 'google', rating: 5, status: 'all', sentiment: 'positive',
       search: 'Ada', page: 2, limit: 10,
-    }, 3)).resolves.toEqual({
+    }, 3, controller.signal)).resolves.toEqual({
       reviews: [expect.objectContaining({
         id: 9, organization_id: 3, platform_id: 4, review_text: 'Excellent',
         reviewer_name: 'Ada', review_url: 'https://google.example/review',
@@ -65,6 +66,7 @@ describe('reputation reviews GraphQL consumer', () => {
       page: { page: 2, pageSize: 10 },
     });
     expect((init.headers as Record<string, string>)['x-organization-id']).toBe('3');
+    expect(init.signal).toBe(controller.signal);
   });
 
   it('maps detail without leaking nullable fields into the retained shape', async () => {

@@ -173,14 +173,33 @@ const isReliabilitySchemaMismatch = (error: unknown): boolean =>
   error instanceof GraphqlRequestError
   && /Cannot query field "(?:pageCount|deliveryState|completionState|isReady)"/.test(error.message);
 
+type ReliabilityScope = 'document' | 'template';
+type ReliabilityCapability = 'unknown' | 'current' | 'legacy';
+
+const reliabilityCapabilities: Record<ReliabilityScope, ReliabilityCapability> = {
+  document: 'unknown',
+  template: 'unknown',
+};
+
+export const resetSignatureReliabilityCapabilities = (): void => {
+  reliabilityCapabilities.document = 'unknown';
+  reliabilityCapabilities.template = 'unknown';
+};
+
 const withLegacyReliabilitySelection = async <T>(
   currentRequest: () => Promise<T>,
   legacyRequest: () => Promise<T>,
+  scope: ReliabilityScope = 'document',
 ): Promise<T> => {
+  if (reliabilityCapabilities[scope] === 'legacy') return legacyRequest();
+
   try {
-    return await currentRequest();
+    const result = await currentRequest();
+    reliabilityCapabilities[scope] = 'current';
+    return result;
   } catch (error) {
     if (!isReliabilitySchemaMismatch(error)) throw error;
+    reliabilityCapabilities[scope] = 'legacy';
     return legacyRequest();
   }
 };
@@ -191,9 +210,11 @@ const mutationWithLegacyReliabilitySelection = <TData, TVariables extends object
   organizationId?: number,
   fields = documentFields,
   legacyFields = legacyDocumentFields,
+  scope: ReliabilityScope = 'document',
 ): Promise<TData> => withLegacyReliabilitySelection(
   () => graphqlMutationRequest<TData, TVariables>(query(fields), variables, organizationId),
   () => graphqlMutationRequest<TData, TVariables>(query(legacyFields), variables, organizationId),
+  scope,
 );
 
 const mapDocument = (document: GqlDocument): SignatureDocument => ({
@@ -432,6 +453,7 @@ export const listSignatureDocumentsViaGraphql = async (
 export const getSignatureDocumentViaGraphql = async (
   id: number,
   organizationId?: number,
+  signal?: AbortSignal,
 ): Promise<SignatureDocumentDetails> => {
   type DocumentDetailData = {
     signatureDocument: {
@@ -455,11 +477,13 @@ export const getSignatureDocumentViaGraphql = async (
       query(documentFields, recipientFields),
       { id },
       organizationId,
+      signal,
     ),
     () => graphqlRequest<DocumentDetailData, { id: number }>(
       query(legacyDocumentFields, legacyRecipientFields),
       { id },
       organizationId,
+      signal,
     ),
   );
 
@@ -499,6 +523,7 @@ export const listSignatureTemplatesViaGraphql = async (
       {},
       organizationId,
     ),
+    'template',
   );
   return data.signatureTemplates.map(mapTemplate);
 };
@@ -506,6 +531,7 @@ export const listSignatureTemplatesViaGraphql = async (
 export const getSignatureTemplateViaGraphql = async (
   id: number,
   organizationId?: number,
+  signal?: AbortSignal,
 ) => {
   type TemplateDetailData = {
     signatureTemplate: {
@@ -528,12 +554,15 @@ export const getSignatureTemplateViaGraphql = async (
       query(templateFields),
       { id },
       organizationId,
+      signal,
     ),
     () => graphqlRequest<TemplateDetailData, { id: number }>(
       query(legacyTemplateFields),
       { id },
       organizationId,
+      signal,
     ),
+    'template',
   );
 
   return {
@@ -616,17 +645,17 @@ export const getSignatureEmailPreviewViaGraphql=async(input:SignatureEmailPrevie
 };
 
 export const createSignatureTemplateViaGraphql=async(payload:Partial<SignatureTemplate>,organizationId?:number):Promise<SignatureTemplate>=>{
-  const data=await mutationWithLegacyReliabilitySelection<{createSignatureTemplate:GqlTemplate},{input:ReturnType<typeof templateInput>}>(fields=>`mutation CreateSignatureTemplate($input:CreateSignatureTemplateInput!){createSignatureTemplate(input:$input){${fields}}}`,{input:templateInput(payload)},organizationId,templateFields,legacyTemplateFields);
+  const data=await mutationWithLegacyReliabilitySelection<{createSignatureTemplate:GqlTemplate},{input:ReturnType<typeof templateInput>}>(fields=>`mutation CreateSignatureTemplate($input:CreateSignatureTemplateInput!){createSignatureTemplate(input:$input){${fields}}}`,{input:templateInput(payload)},organizationId,templateFields,legacyTemplateFields,'template');
   return mapTemplate(data.createSignatureTemplate);
 };
 
 export const updateSignatureTemplateViaGraphql=async(id:number,payload:Partial<SignatureTemplate>&{roles?:SignatureTemplateRole[];fields?:SignatureTemplateField[]},organizationId?:number):Promise<SignatureTemplate>=>{
-  const data=await mutationWithLegacyReliabilitySelection<{updateSignatureTemplate:GqlTemplate},{id:number;input:ReturnType<typeof templateInput>}>(fields=>`mutation UpdateSignatureTemplate($id:Int!,$input:UpdateSignatureTemplateInput!){updateSignatureTemplate(id:$id,input:$input){${fields}}}`,{id,input:templateInput(payload)},organizationId,templateFields,legacyTemplateFields);
+  const data=await mutationWithLegacyReliabilitySelection<{updateSignatureTemplate:GqlTemplate},{id:number;input:ReturnType<typeof templateInput>}>(fields=>`mutation UpdateSignatureTemplate($id:Int!,$input:UpdateSignatureTemplateInput!){updateSignatureTemplate(id:$id,input:$input){${fields}}}`,{id,input:templateInput(payload)},organizationId,templateFields,legacyTemplateFields,'template');
   return mapTemplate(data.updateSignatureTemplate);
 };
 
 export const deleteSignatureTemplateViaGraphql=async(id:number,organizationId?:number):Promise<SignatureTemplate>=>{
-  const data=await mutationWithLegacyReliabilitySelection<{deleteSignatureTemplate:GqlTemplate},{id:number}>(fields=>`mutation DeleteSignatureTemplate($id:Int!){deleteSignatureTemplate(id:$id){${fields}}}`,{id},organizationId,templateFields,legacyTemplateFields);
+  const data=await mutationWithLegacyReliabilitySelection<{deleteSignatureTemplate:GqlTemplate},{id:number}>(fields=>`mutation DeleteSignatureTemplate($id:Int!){deleteSignatureTemplate(id:$id){${fields}}}`,{id},organizationId,templateFields,legacyTemplateFields,'template');
   return mapTemplate(data.deleteSignatureTemplate);
 };
 

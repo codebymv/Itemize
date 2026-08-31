@@ -49,7 +49,8 @@ import {
   DndContext,
   closestCenter,
   KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragEndEvent,
@@ -270,7 +271,8 @@ export const VaultCard: React.FC<VaultCardProps> = ({
 
   // Drag and drop sensors
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
@@ -457,7 +459,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                         onClick={() => setIsEditing(true)}
                         className="group/menu font-raleway"
                       >
-                        <Edit3 className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                        <Edit3 className="mr-2 h-4 w-4" />
                         Edit Title
                       </DropdownMenuItem>
                       {isVaultLocked && !isUnlockedForSession && (
@@ -465,7 +467,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                           onClick={() => openSecurityDialog("unlock")}
                           className="group/menu font-raleway"
                         >
-                          <KeyRound className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                          <KeyRound className="mr-2 h-4 w-4" />
                           Open Vault
                         </DropdownMenuItem>
                       )}
@@ -481,7 +483,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                         }
                         className="group/menu font-raleway"
                       >
-                        <Lock className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                        <Lock className="mr-2 h-4 w-4" />
                         {needsEnrollment
                           ? "Set vault password"
                           : isVaultLocked
@@ -497,7 +499,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                             }
                             className="group/menu font-raleway"
                           >
-                            <KeyRound className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                            <KeyRound className="mr-2 h-4 w-4" />
                             Remove Password
                           </DropdownMenuItem>
                         )}
@@ -506,7 +508,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                         disabled={isVaultLocked}
                         className="group/menu font-raleway"
                       >
-                        <Share2 className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                        <Share2 className="mr-2 h-4 w-4" />
                         Share
                       </DropdownMenuItem>
                       <DropdownMenuItem
@@ -644,7 +646,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                     <Button
                       size="sm"
                       onClick={handleAddItem}
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                      className="bg-blue-600 interaction-button--primary text-white"
                     >
                       Add
                     </Button>

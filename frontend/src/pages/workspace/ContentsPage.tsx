@@ -119,7 +119,7 @@ type WorkspaceShareTarget = {
 export function ContentsPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { token } = useAuthState();
+  const { token, currentUser } = useAuthState();
   const isMobile = useIsMobile();
 
   const {
@@ -150,7 +150,7 @@ export function ContentsPage() {
     refreshing,
     error: contentError,
     refresh: fetchAllContent,
-  } = useWorkspaceContent(token);
+  } = useWorkspaceContent(currentUser?.uid);
 
   const [showNewNoteModal, setShowNewNoteModal] = useState(false);
   const [showNewListModal, setShowNewListModal] = useState(false);
@@ -1193,7 +1193,7 @@ export function ContentsPage() {
             <DropdownMenuTrigger asChild>
               <Button
                 size="icon"
-                className="h-9 w-9 bg-blue-600 p-0 text-white hover:bg-blue-700"
+                className="h-9 w-9 bg-blue-600 p-0 text-white interaction-button--primary"
                 aria-label="Add content"
               >
                 <Plus className="h-4 w-4" />
@@ -1207,7 +1207,7 @@ export function ContentsPage() {
           <TooltipTrigger asChild>
             <DropdownMenuTrigger asChild>
               <Button
-                className="h-11 min-w-11 gap-2 bg-blue-600 px-3 font-light text-white hover:bg-blue-700"
+                className="h-11 min-w-11 gap-2 bg-blue-600 px-3 font-light text-white interaction-button--primary"
                 aria-label="Add content"
               >
                 <Plus className="h-4 w-4" />
@@ -1221,7 +1221,7 @@ export function ContentsPage() {
         <DropdownMenuTrigger asChild>
           <Button
             size="sm"
-            className="h-9 bg-blue-600 px-3 font-light text-white hover:bg-blue-700"
+            className="h-9 bg-blue-600 px-3 font-light text-white interaction-button--primary"
           >
             <Plus className="h-4 w-4" />
             <span>Add Content</span>
@@ -1415,7 +1415,7 @@ export function ContentsPage() {
                 ) : (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                      <Button className="bg-blue-600 interaction-button--primary text-white">
                         <Plus className="h-4 w-4 mr-2" />
                         Add Content
                       </Button>

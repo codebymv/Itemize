@@ -5,6 +5,10 @@ interface SpinnerProps {
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   variant?: 'primary' | 'brand' | 'muted' | 'current';
   className?: string;
+  /** Accessible label when the spinner is the state announcement. */
+  label?: string;
+  /** Hides the spinner when an enclosing control already owns the state. */
+  decorative?: boolean;
 }
 
 const sizeMap = {
@@ -25,7 +29,9 @@ const variantMap = {
 export const Spinner: React.FC<SpinnerProps> = ({ 
   size = 'md',
   variant = 'primary',
-  className = ''
+  className = '',
+  label = 'Loading',
+  decorative = false,
 }) => {
   return (
     <div
@@ -35,8 +41,9 @@ export const Spinner: React.FC<SpinnerProps> = ({
         variantMap[variant],
         className
       )}
-      role="status"
-      aria-label="Loading"
+      role={decorative ? undefined : 'status'}
+      aria-label={decorative ? undefined : label}
+      aria-hidden={decorative ? true : undefined}
     />
   );
 };

@@ -75,7 +75,7 @@ const normalizeUser = (data: Record<string, unknown>): User | null => {
   const uid = (data.id || data.uid) as string | undefined;
   if (!uid) return null;
   return {
-    uid,
+    uid: String(uid),
     name: (data.name as string) || '',
     email: (data.email as string) || '',
     photoURL: data.photoURL as string | undefined,
@@ -112,6 +112,7 @@ export const useAuth = () => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
+  const skipSessionHydration = isPublicAuthSkipPath(location.pathname);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
@@ -143,7 +144,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         const sessionHint = hasSessionHint();
-        const onPublic = isPublicAuthSkipPath(location.pathname);
         const allowHintlessDevProbe =
           import.meta.env.DEV &&
           import.meta.env.VITE_DEV_AUTH_PROBE_WITHOUT_HINT === 'true';
@@ -157,7 +157,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         // Returning visitors on marketing/public: hydrate from cache, skip probe
-        if (onPublic) {
+        if (skipSessionHydration) {
           const cached = storage.getJson<Record<string, unknown>>('itemize_user');
           if (cached) {
             const user = normalizeUser(cached);
@@ -212,7 +212,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     initializeAuth();
-  }, [location.pathname]);
+  }, [skipSessionHydration]);
 
   /**
    * Deprecated stub — Google sign-in lives in useGoogleSignIn (login/register only).

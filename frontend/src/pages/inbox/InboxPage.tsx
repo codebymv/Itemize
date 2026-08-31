@@ -497,7 +497,7 @@ export function InboxPage() {
                                     <button
                                         type="button"
                                         key={conv.id}
-                                        className={`w-full border-b p-4 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${selectedConversation?.id === conv.id ? 'bg-muted' : ''
+                                        className={`w-full border-b p-4 text-left interaction-row focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${selectedConversation?.id === conv.id ? 'bg-muted' : ''
                                             }`}
                                         onClick={() => void handleSelectConversation(conv)}
                                     >
@@ -720,7 +720,7 @@ export function InboxPage() {
                                         <Button
                                             onClick={handleSendMessage}
                                             disabled={sendingMessage || !newMessage.trim()}
-                                            className={selectedConversation.channel === 'sms' ? "bg-green-600 hover:bg-green-700" : "bg-blue-600 hover:bg-blue-700"}
+                                            className="bg-blue-600 interaction-button--primary"
                                         >
                                             Send
                                         </Button>

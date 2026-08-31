@@ -9,5 +9,6 @@ import { InvoiceSettingsService } from './invoice-settings.service';
     InvoiceSettingsService,
     InvoiceSettingsResolver,
   ],
+  exports: [InvoiceSettingsService],
 })
 export class InvoiceSettingsModule {}

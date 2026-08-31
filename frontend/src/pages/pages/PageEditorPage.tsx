@@ -369,12 +369,12 @@ export function PageEditorPage() {
             <DropdownMenuContent align="end">
                 {page.status === 'published' && (
                     <DropdownMenuItem onClick={() => setShowPreview(true)} className="group/menu">
-                        <Eye className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                        <Eye className="mr-2 h-4 w-4" />
                         Preview page
                     </DropdownMenuItem>
                 )}
                 <DropdownMenuItem onClick={() => setShowVersionHistory(true)} className="group/menu">
-                    <HistoryIcon className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                    <HistoryIcon className="mr-2 h-4 w-4" />
                     Version history
                 </DropdownMenuItem>
             </DropdownMenuContent>
@@ -395,7 +395,7 @@ export function PageEditorPage() {
             headerTools={{
                 status: <Badge className={cn('pointer-events-none whitespace-nowrap', statusVisual.badgeClass)}>{statusVisual.label}</Badge>,
                 secondaryAction: <>{moreActions}{publishAction}</>,
-                primaryAction: <HeaderAction label={saving ? 'Saving...' : 'Save changes'} icon={<Save className="h-4 w-4" />} onClick={handleSave} disabled={saving || !isDirty} />,
+                primaryAction: <HeaderAction label={saving ? 'Saving...' : 'Save changes'} icon={<Save className="h-4 w-4" />} onClick={handleSave} disabled={saving || !isDirty} busy={saving} />,
             }}
         >
                 <EntityDetailHeader
@@ -413,13 +413,13 @@ export function PageEditorPage() {
                         <CardHeader className="pb-3">
                             <div className="flex items-center justify-between">
                                 <SectionCardTitle icon={Layout}>Page sections</SectionCardTitle>
-                                <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => setShowAddSection(true)}>
+                                <Button size="sm" className="bg-blue-600 text-white interaction-button--primary" onClick={() => setShowAddSection(true)}>
                                     <Plus className="mr-2 h-4 w-4" />
                                     Add section
                                 </Button>
                             </div>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent surface="inset">
                             {(!page.sections || page.sections.length === 0) ? (
                                 <EmptyState
                                     icon={Layout}
@@ -433,7 +433,7 @@ export function PageEditorPage() {
                                     {page.sections.map((section, index) => (
                                         <div
                                             key={section.id}
-                                            className={`flex items-center gap-2 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer ${selectedSection?.id === section.id ? 'ring-2 ring-blue-600' : ''}`}
+                                            className={`flex items-center gap-2 p-3 rounded-lg border bg-card interaction-row cursor-pointer ${selectedSection?.id === section.id ? 'ring-2 ring-blue-600' : ''}`}
                                             onClick={() => setSelectedSection(section)}
                                         >
                                             <GripVertical className="h-4 w-4 text-muted-foreground" />
@@ -495,7 +495,7 @@ export function PageEditorPage() {
                                     </Button>
                                 </div>
                             </CardHeader>
-                            <CardContent>
+                            <CardContent surface="inset">
                                 <SectionEditor
                                     section={selectedSection}
                                     onUpdate={(content) => handleUpdateSectionContent(selectedSection.id!, content)}
@@ -511,7 +511,7 @@ export function PageEditorPage() {
                         <CardHeader className="pb-3">
                             <SectionCardTitle icon={Settings2}>Page settings</SectionCardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4">
+                        <CardContent surface="inset" className="space-y-4">
                             <div className="space-y-2">
                                 <Label>Name</Label>
                                 <Input
@@ -545,7 +545,7 @@ export function PageEditorPage() {
                         <CardHeader className="pb-3">
                             <SectionCardTitle icon={Search}>SEO settings</SectionCardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4">
+                        <CardContent surface="inset" className="space-y-4">
                             <div className="space-y-2">
                                 <Label>SEO title</Label>
                                 <Input
@@ -586,7 +586,7 @@ export function PageEditorPage() {
                             {(Object.entries(SECTION_TEMPLATES) as [SectionType, typeof SECTION_TEMPLATES[SectionType]][]).map(([type, template]) => (
                                 <button
                                     key={type}
-                                    className="flex flex-col items-center gap-2 p-4 rounded-lg border hover:bg-muted/50 hover:border-blue-300 transition-colors text-left"
+                                    className="interaction-card flex flex-col items-center gap-2 rounded-lg border p-4 text-left"
                                     onClick={() => handleAddSection(type)}
                                 >
                                     <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
@@ -833,7 +833,7 @@ function SectionEditor({ section, onUpdate }: { section: PageSection; onUpdate: 
         <div className="space-y-4">
             {renderFields()}
             {hasChanges && (
-                <Button onClick={handleSave} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                <Button onClick={handleSave} className="w-full bg-blue-600 interaction-button--primary text-white">
                     <Save className="h-4 w-4 mr-2" />
                     Save Section
                 </Button>

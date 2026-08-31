@@ -17,7 +17,7 @@ export type GetStartedProgress = {
 export const getStartedProgressQueryKey = (organizationId: number | null | undefined) =>
   ['get-started-progress', organizationId] as const;
 
-const progressFields = `
+export const getStartedProgressFields = `
   dismissed
   completedCount
   totalCount
@@ -26,13 +26,13 @@ const progressFields = `
 
 const progressQuery = `
   query GetStartedProgress {
-    getStartedProgress { ${progressFields} }
+    getStartedProgress { ${getStartedProgressFields} }
   }
 `;
 
 const dismissMutation = `
   mutation DismissGetStarted {
-    dismissGetStarted { ${progressFields} }
+    dismissGetStarted { ${getStartedProgressFields} }
   }
 `;
 

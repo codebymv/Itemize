@@ -10,6 +10,13 @@ import type {
   WorkflowPerformance,
 } from './analyticsApi';
 import { graphqlRequest } from './graphqlClient';
+import {
+  mapRevenueFlow,
+  PAYMENT_PERIOD_ENUM,
+  revenueFlowFields,
+  type GraphqlRevenueFlow,
+  type RevenueFlow,
+} from './invoicePaymentsApi';
 
 type GraphqlDashboardAnalytics = Omit<
   DashboardAnalytics,
@@ -42,9 +49,7 @@ type GraphqlDashboardAnalytics = Omit<
   };
 };
 
-const dashboardAnalyticsQuery = `
-  query DashboardAnalytics {
-    dashboardAnalytics {
+const dashboardAnalyticsFields = `
       asOf
       reportingTimezone
       contacts {
@@ -74,9 +79,43 @@ const dashboardAnalyticsQuery = `
         activeItems lists notes
         recentItems { type title date }
       }
+`;
+
+const dashboardAnalyticsQuery = `
+  query DashboardAnalytics {
+    dashboardAnalytics {
+      ${dashboardAnalyticsFields}
     }
   }
 `;
+
+const mapDashboardAnalytics = (
+  result: GraphqlDashboardAnalytics,
+): DashboardAnalytics => ({
+  ...result,
+  contacts: {
+    ...result.contacts,
+    recentContacts: result.contacts.recentContacts.map((contact) => ({
+      ...contact,
+      id: String(contact.id),
+      email: contact.email ?? undefined,
+    })),
+  },
+  invoiceMetrics: {
+    ...result.invoiceMetrics,
+    recentInvoices: result.invoiceMetrics.recentInvoices.map((invoice) => ({
+      ...invoice,
+      id: String(invoice.id),
+    })),
+  },
+  signatureMetrics: {
+    ...result.signatureMetrics,
+    recentDocuments: result.signatureMetrics.recentDocuments.map((document) => ({
+      ...document,
+      id: String(document.id),
+    })),
+  },
+});
 
 export const getDashboardAnalyticsViaGraphql = async (
   organizationId?: number,
@@ -85,32 +124,7 @@ export const getDashboardAnalyticsViaGraphql = async (
     { dashboardAnalytics: GraphqlDashboardAnalytics },
     Record<string, never>
   >(dashboardAnalyticsQuery, {}, organizationId);
-  const result = data.dashboardAnalytics;
-  return {
-    ...result,
-    contacts: {
-      ...result.contacts,
-      recentContacts: result.contacts.recentContacts.map((contact) => ({
-        ...contact,
-        id: String(contact.id),
-        email: contact.email ?? undefined,
-      })),
-    },
-    invoiceMetrics: {
-      ...result.invoiceMetrics,
-      recentInvoices: result.invoiceMetrics.recentInvoices.map((invoice) => ({
-        ...invoice,
-        id: String(invoice.id),
-      })),
-    },
-    signatureMetrics: {
-      ...result.signatureMetrics,
-      recentDocuments: result.signatureMetrics.recentDocuments.map((document) => ({
-        ...document,
-        id: String(document.id),
-      })),
-    },
-  };
+  return mapDashboardAnalytics(data.dashboardAnalytics);
 };
 
 const contactTrendsQuery = `
@@ -141,9 +155,7 @@ const bookingAnalyticsQuery = `
   }
 `;
 
-const communicationStatsQuery = `
-  query CommunicationStats($period: CommunicationAnalyticsPeriod) {
-    communicationStats(period: $period) {
+const communicationStatsFields = `
       asOf period
       email {
         total sent delivered opened clicked bounced failed
@@ -153,6 +165,12 @@ const communicationStatsQuery = `
         total outbound inbound sent delivered failed segments
         rates { delivery }
       }
+`;
+
+const communicationStatsQuery = `
+  query CommunicationStats($period: CommunicationAnalyticsPeriod) {
+    communicationStats(period: $period) {
+      ${communicationStatsFields}
     }
   }
 `;
@@ -174,15 +192,19 @@ const workflowPerformanceQuery = `
   }
 `;
 
-const conversionRatesQuery = `
-  query ConversionRates($period: ConversionAnalyticsPeriod) {
-    conversionRates(period: $period) {
+const conversionRatesFields = `
       asOf reportingTimezone period
       dealWinRate {
         rate won lost totalClosed
         valuesByCurrency { currency wonValue lostValue }
       }
       formToContact { rate submissions converted }
+`;
+
+const conversionRatesQuery = `
+  query ConversionRates($period: ConversionAnalyticsPeriod) {
+    conversionRates(period: $period) {
+      ${conversionRatesFields}
     }
   }
 `;
@@ -207,9 +229,7 @@ const revenueTrendsQuery = `
   }
 `;
 
-const pipelineDealAgeQuery = `
-  query PipelineDealAge($pipelineId: Int) {
-    pipelineDealAge(pipelineId: $pipelineId) {
+const pipelineDealAgeFields = `
       asOf
       pipeline { id name }
       stages {
@@ -220,6 +240,12 @@ const pipelineDealAgeQuery = `
       summary {
         averageDaysToWin averageDaysToLose openDeals wonDeals lostDeals winRate
       }
+`;
+
+const pipelineDealAgeQuery = `
+  query PipelineDealAge($pipelineId: Int) {
+    pipelineDealAge(pipelineId: $pipelineId) {
+      ${pipelineDealAgeFields}
     }
   }
 `;
@@ -255,6 +281,73 @@ const revenuePeriods = {
   '6months': 'MONTHS_6',
   '12months': 'MONTHS_12',
 } as const;
+
+export type DashboardPeriod = '7days' | '30days' | '90days';
+
+export interface DashboardSnapshot {
+  analytics: DashboardAnalytics;
+  conversions: ConversionRates;
+  communications: CommunicationStats;
+  pipelineDealAge: PipelineDealAge;
+  revenue: RevenueFlow;
+}
+
+const dashboardSnapshotQuery = `
+  query DashboardSnapshot(
+    $conversionPeriod: ConversionAnalyticsPeriod!
+    $communicationPeriod: CommunicationAnalyticsPeriod!
+    $paymentPeriod: PaymentPeriod!
+  ) {
+    dashboardAnalytics { ${dashboardAnalyticsFields} }
+    conversionRates(period: $conversionPeriod) { ${conversionRatesFields} }
+    communicationStats(period: $communicationPeriod) { ${communicationStatsFields} }
+    pipelineDealAge { ${pipelineDealAgeFields} }
+    revenueFlow(period: $paymentPeriod) { ${revenueFlowFields} }
+  }
+`;
+
+/**
+ * Dashboard is a route-level read model: all values share one selected period
+ * and one request lifecycle. Independent mutation screens retain their own
+ * queries and invalidate this snapshot when they change dashboard signals.
+ */
+export const getDashboardSnapshotViaGraphql = async (
+  period: DashboardPeriod,
+  organizationId: number,
+  signal?: AbortSignal,
+): Promise<DashboardSnapshot> => {
+  const data = await graphqlRequest<
+    {
+      dashboardAnalytics: GraphqlDashboardAnalytics;
+      conversionRates: ConversionRates;
+      communicationStats: CommunicationStats;
+      pipelineDealAge: PipelineDealAge;
+      revenueFlow: GraphqlRevenueFlow;
+    },
+    {
+      conversionPeriod: (typeof conversionPeriods)[DashboardPeriod];
+      communicationPeriod: (typeof communicationPeriods)[DashboardPeriod];
+      paymentPeriod: string;
+    }
+  >(
+    dashboardSnapshotQuery,
+    {
+      conversionPeriod: conversionPeriods[period],
+      communicationPeriod: communicationPeriods[period],
+      paymentPeriod: PAYMENT_PERIOD_ENUM[period],
+    },
+    organizationId,
+    signal,
+  );
+
+  return {
+    analytics: mapDashboardAnalytics(data.dashboardAnalytics),
+    conversions: data.conversionRates,
+    communications: data.communicationStats,
+    pipelineDealAge: data.pipelineDealAge,
+    revenue: mapRevenueFlow(data.revenueFlow, period),
+  };
+};
 
 export const getContactTrendsViaGraphql = async (
   period: keyof typeof contactPeriods,

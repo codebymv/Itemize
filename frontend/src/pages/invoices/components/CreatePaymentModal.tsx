@@ -178,7 +178,7 @@ export function CreatePaymentModal({
                     <Button
                         onClick={handleSubmit}
                         disabled={!isValid || creating}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                        className="bg-blue-600 interaction-button--primary text-white"
                     >
                         {creating ? 'Recording...' : 'Record Payment'}
                     </Button>

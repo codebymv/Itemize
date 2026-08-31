@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuthState } from '@/contexts/AuthContext';
 import {
     Plus,
     CreditCard,
@@ -17,6 +18,7 @@ import {
     RotateCcw,
     Loader2,
     TrendingUp,
+    PieChart,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,8 +57,11 @@ import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { StatCard } from '@/components/StatCard';
+import { ResponsiveMoneyValue } from '@/components/ui/responsive-value';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
-import { RevenueFlowChart } from '@/components/payments/RevenueFlowChart';
+import { FramedSection } from '@/components/ui/framed-section';
+import { RevenueFlowChart, RevenueFlowSeriesControls } from '@/components/payments/RevenueFlowChart';
+import { RevenueFlowSizeControls } from '@/components/payments/RevenueFlowSizeControls';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
@@ -79,6 +84,7 @@ import { CreatePaymentModal } from './components/CreatePaymentModal';
 import type { PaymentData } from './components/CreatePaymentModal';
 import { getPaymentStatusVisual } from './constants/paymentConstants';
 import { ExpandedRowActionLabel, ExpandedRowActions } from '@/components/ui/expanded-row';
+import { useRevenueFlowPreferences } from '@/hooks/useRevenueFlowPreferences';
 
 type Payment = InvoicePayment;
 
@@ -115,6 +121,7 @@ const EMPTY_PAYMENT_OVERVIEW: PaymentOverviewCurrency = {
 
 export function PaymentsPage() {
     const navigate = useNavigate();
+    const { currentUser } = useAuthState();
     const [searchParams, setSearchParams] = useSearchParams();
     const { toast } = useToast();
     // Route-aware onboarding (will show 'invoices' onboarding for all Sales & Payments routes)
@@ -141,6 +148,11 @@ export function PaymentsPage() {
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
     const { organizationId, organization, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
+    const revenueFlowPreferences = useRevenueFlowPreferences({
+        organizationId,
+        userId: currentUser?.uid,
+        context: 'payments',
+    });
     const canRefund = organization?.role === 'owner' || organization?.role === 'admin';
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -486,7 +498,10 @@ export function PaymentsPage() {
                 ),
             }}
         >
-            {!loadError && overviewCurrencies.map((currencyOverview) => {
+            {!loadError && overviewCurrencies.length > 0 ? (
+              <FramedSection title="Overview" icon={PieChart} className="mb-6">
+              <div className="space-y-4">
+              {overviewCurrencies.map((currencyOverview) => {
                 const netIsNegative = currencyOverview.netAmount < 0;
                 return (
                 <section key={currencyOverview.currency} className="space-y-2">
@@ -498,12 +513,12 @@ export function PaymentsPage() {
                 <ResponsiveCardRail
                     label={`Payment summary in ${currencyOverview.currency} for ${PAYMENT_PERIOD_LABELS[period]}`}
                     desktopColumns="md:grid-cols-4"
-                    className="responsive-stat-summary"
+                    className="responsive-stat-summary mb-0"
                 >
                     <StatCard
                         title="Failed"
                         badgeText="Failed"
-                        value={formatCurrency(currencyOverview.failedAmount, currencyOverview.currency)}
+                        value={<ResponsiveMoneyValue amount={currencyOverview.failedAmount} currency={currencyOverview.currency} locale="en-US" />}
                         icon={getPaymentStatusVisual('failed').icon}
                         description={`${currencyOverview.failedCount} payment${currencyOverview.failedCount !== 1 ? 's' : ''}`}
                         colorTheme={getPaymentStatusVisual('failed').theme}
@@ -512,7 +527,7 @@ export function PaymentsPage() {
                     <StatCard
                         title="Gross volume"
                         badgeText="Gross volume"
-                        value={formatCurrency(currencyOverview.grossAmount, currencyOverview.currency)}
+                        value={<ResponsiveMoneyValue amount={currencyOverview.grossAmount} currency={currencyOverview.currency} locale="en-US" />}
                         icon={CreditCard}
                         description={`${currencyOverview.grossCount} successful`}
                         colorTheme="blue"
@@ -521,7 +536,7 @@ export function PaymentsPage() {
                     <StatCard
                         title="In progress"
                         badgeText="In progress"
-                        value={formatCurrency(currencyOverview.inProgressAmount, currencyOverview.currency)}
+                        value={<ResponsiveMoneyValue amount={currencyOverview.inProgressAmount} currency={currencyOverview.currency} locale="en-US" />}
                         icon={Clock}
                         description={`${currencyOverview.inProgressCount} payment${currencyOverview.inProgressCount !== 1 ? 's' : ''}`}
                         colorTheme="orange"
@@ -530,7 +545,7 @@ export function PaymentsPage() {
                     <StatCard
                         title="Net received"
                         badgeText="Net received"
-                        value={formatCurrency(currencyOverview.netAmount, currencyOverview.currency)}
+                        value={<ResponsiveMoneyValue amount={currencyOverview.netAmount} currency={currencyOverview.currency} locale="en-US" />}
                         icon={netIsNegative
                             ? getPaymentStatusVisual('failed').icon
                             : getPaymentStatusVisual('succeeded').icon}
@@ -545,18 +560,38 @@ export function PaymentsPage() {
                 </ResponsiveCardRail>
                 </section>
                 );
-            })}
+              })}
+              </div>
+              </FramedSection>
+            ) : null}
 
             {!loadError && (
-                <Card>
-                    <CardHeader className="pb-2">
+                <Card className="revenue-flow-card">
+                    <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 pb-2">
                         <CardTitle className="flex items-center gap-2 text-base">
                             <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                             Revenue flow
                         </CardTitle>
+                        <RevenueFlowSeriesControls
+                            visibleSeries={revenueFlowPreferences.visibleSeries}
+                            onVisibleSeriesChange={revenueFlowPreferences.setVisibleSeries}
+                            variant="direct"
+                            className="revenue-flow-series-header min-w-0 shrink-0"
+                        />
+                        <RevenueFlowSizeControls
+                            size={revenueFlowPreferences.size}
+                            onSizeChange={revenueFlowPreferences.setSize}
+                        />
                     </CardHeader>
-                    <CardContent>
-                        <RevenueFlowChart data={revenueFlow} isLoading={loading} />
+                    <CardContent surface="inset" className="p-0">
+                        <RevenueFlowChart
+                            data={revenueFlow}
+                            isLoading={loading}
+                            context="payments"
+                            size={revenueFlowPreferences.size}
+                            visibleSeries={revenueFlowPreferences.visibleSeries}
+                            onVisibleSeriesChange={revenueFlowPreferences.setVisibleSeries}
+                        />
                     </CardContent>
                 </Card>
             )}
@@ -605,7 +640,7 @@ export function PaymentsPage() {
                                     <div key={payment.id}>
                                         {/* Payment Row - Aligned with VaultCard Pattern */}
                                         <div
-                                            className="p-4 hover:bg-muted/50 transition-colors cursor-pointer group"
+                                            className="p-4 interaction-row cursor-pointer group"
                                             onClick={(e) => handleToggleExpand(payment.id, e)}
                                         >
                                             {/* Header Row: Icon + Amount on left, Date + Chevron + Menu on right */}
@@ -665,7 +700,7 @@ export function PaymentsPage() {
                                                                     onClick={() => navigate(`/invoices/${payment.invoice_id}`)}
                                                                     className="group/menu"
                                                                 >
-                                                                    <Receipt className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                                                                    <Receipt className="h-4 w-4 mr-2" />
                                                                     View Invoice
                                                                 </DropdownMenuItem>
                                                             )}
@@ -674,7 +709,7 @@ export function PaymentsPage() {
                                                                     className="group/menu"
                                                                     onClick={() => window.open(payment.receipt_url, '_blank', 'noopener,noreferrer')}
                                                                 >
-                                                                    <Download className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                                                                    <Download className="h-4 w-4 mr-2" />
                                                                     Download Receipt
                                                                 </DropdownMenuItem>
                                                             )}
@@ -683,7 +718,7 @@ export function PaymentsPage() {
                                                                     className="group/menu"
                                                                     onClick={() => openRefund(payment)}
                                                                 >
-                                                                    <RotateCcw className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                                                                    <RotateCcw className="h-4 w-4 mr-2" />
                                                                     Refund payment
                                                                 </DropdownMenuItem>
                                                             )}

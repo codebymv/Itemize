@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Code2, Copy, LayoutGrid, MoreHorizontal, Pause, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Code2, Copy, LayoutGrid, MoreHorizontal, Pause, Pencil, Plus, Trash2, PieChart } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,6 +14,7 @@ import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { HeaderAction, HeaderFilters, HeaderSearch } from '@/components/layout/DesktopHeaderTools';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
+import { FramedSection } from '@/components/ui/framed-section';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { StatCard } from '@/components/StatCard';
 import { ListRowSkeleton } from '@/components/ui/loading-skeletons';
@@ -21,7 +23,9 @@ import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { deleteReviewWidget, getReviewWidgets, getWidgetEmbedCode, type ReviewWidget } from '@/services/reputationApi';
+import { deleteReviewWidget, type ReviewWidget } from '@/services/reputationApi';
+import { getWidgetEmbedCodeViaGraphql, getWidgetsViaGraphql } from '@/services/reputationConfigurationGraphql';
+import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
 import { getReputationPlatformLabel, getReviewWidgetAvailabilityVisual } from './constants/reputationVisuals';
 
 const WIDGET_TYPES: Array<ReviewWidget['widget_type'] | 'all'> = ['all', 'carousel', 'grid', 'list', 'badge', 'floating'];
@@ -29,31 +33,24 @@ const WIDGET_TYPES: Array<ReviewWidget['widget_type'] | 'all'> = ['all', 'carous
 export function ReputationWidgetsPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
+  const queryClient = useQueryClient();
+  const { organizationId, isLoading: organizationLoading, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
   const { showModal: showOnboarding, handleComplete, handleDismiss, handleClose, featureKey } = useRouteOnboarding();
-  const [widgets, setWidgets] = useState<ReviewWidget[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [widgetToDelete, setWidgetToDelete] = useState<ReviewWidget | null>(null);
 
-  useEffect(() => { if (initError) setLoading(false); }, [initError]);
-
-  const fetchWidgets = useCallback(async () => {
-    if (!organizationId) return;
-    setLoading(true);
-    setLoadError(false);
-    try {
-      setWidgets(await getReviewWidgets(organizationId));
-    } catch {
-      setLoadError(true);
-    } finally {
-      setLoading(false);
-    }
-  }, [organizationId]);
-
-  useEffect(() => { void fetchWidgets(); }, [fetchWidgets]);
+  const widgetsQueryKey = ['reputation-widgets', organizationId] as const;
+  const widgetsQuery = useQuery({
+    queryKey: widgetsQueryKey,
+    queryFn: ({ signal }) => getWidgetsViaGraphql(organizationId as number, signal),
+    enabled: organizationId !== null,
+    staleTime: QUERY_STALE_TIME_MS,
+    retry: shouldRetryQuery,
+  });
+  const widgets = useMemo(() => widgetsQuery.data ?? [], [widgetsQuery.data]);
+  const loading = organizationLoading || widgetsQuery.isPending;
+  const loadError = Boolean(widgetsQuery.error && !widgetsQuery.data);
 
   const filteredWidgets = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -63,7 +60,7 @@ export function ReputationWidgetsPage() {
   const copyEmbedCode = async (widget: ReviewWidget) => {
     if (!organizationId) return;
     try {
-      const result = await getWidgetEmbedCode(widget.id, organizationId);
+      const result = await getWidgetEmbedCodeViaGraphql(widget.id, organizationId);
       await navigator.clipboard.writeText(result.embed_code);
       toast({ title: 'Embed code copied' });
     } catch {
@@ -75,7 +72,9 @@ export function ReputationWidgetsPage() {
     if (!organizationId || !widgetToDelete) return false;
     try {
       await deleteReviewWidget(widgetToDelete.id, organizationId);
-      setWidgets(current => current.filter(widget => widget.id !== widgetToDelete.id));
+      queryClient.setQueryData<ReviewWidget[]>(widgetsQueryKey, current =>
+        current?.filter(widget => widget.id !== widgetToDelete.id),
+      );
       setWidgetToDelete(null);
       return true;
     } catch {
@@ -110,11 +109,13 @@ export function ReputationWidgetsPage() {
         primaryAction: <HeaderAction label="New widget" icon={<Plus className="h-4 w-4" />} onClick={() => navigate('/review-widgets/new')} />,
       }}
     >
-      {!loadError ? <ResponsiveCardRail label="Widget summary" desktopColumns="md:grid-cols-3" className="responsive-stat-summary">
-        <StatCard title="Total widgets" badgeText="Total" value={widgets.length} icon={LayoutGrid} description="Configured widgets" colorTheme="blue" isLoading={loading} />
-        <StatCard title="Available widgets" badgeText="Available" value={availableCount} icon={Code2} description="Rendering when installed" colorTheme="blue" isLoading={loading} />
-        <StatCard title="Unavailable widgets" badgeText="Unavailable" value={widgets.length - availableCount} icon={Pause} description="Retained for later" colorTheme="orange" isLoading={loading} />
-      </ResponsiveCardRail> : null}
+      {!loadError ? <FramedSection title="Overview" icon={PieChart} className="mb-6">
+        <ResponsiveCardRail label="Widget summary" desktopColumns="md:grid-cols-3" className="responsive-stat-summary mb-0">
+          <StatCard title="Total widgets" badgeText="Total" value={widgets.length} icon={LayoutGrid} description="Configured widgets" colorTheme="blue" isLoading={loading} />
+          <StatCard title="Available widgets" badgeText="Available" value={availableCount} icon={Code2} description="Rendering when installed" colorTheme="blue" isLoading={loading} />
+          <StatCard title="Unavailable widgets" badgeText="Unavailable" value={widgets.length - availableCount} icon={Pause} description="Retained for later" colorTheme="orange" isLoading={loading} />
+        </ResponsiveCardRail>
+      </FramedSection> : null}
 
       <Card>
         <CardContent className="p-0">
@@ -124,7 +125,7 @@ export function ReputationWidgetsPage() {
               icon={LayoutGrid}
               title="Unable to load review widgets"
               description="We couldn't load your review widgets. Try again."
-              onRetry={() => void fetchWidgets()}
+              onRetry={() => void widgetsQuery.refetch()}
             />
           ) : filteredWidgets.length === 0 ? (
             <EmptyState
@@ -145,7 +146,7 @@ export function ReputationWidgetsPage() {
                 const visual = getReviewWidgetAvailabilityVisual(widget.is_active);
                 const StatusIcon = visual.icon;
                 return (
-                  <div key={widget.id} role="button" tabIndex={0} className="group flex cursor-pointer items-center gap-3 px-3 py-4 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-4" onClick={() => navigate(`/review-widgets/${widget.id}`)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); navigate(`/review-widgets/${widget.id}`); } }}>
+                  <div key={widget.id} role="button" tabIndex={0} className="group flex cursor-pointer items-center gap-3 px-3 py-4 interaction-row focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-4" onClick={() => navigate(`/review-widgets/${widget.id}`)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); navigate(`/review-widgets/${widget.id}`); } }}>
                     <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full', visual.iconBackgroundClass)}><StatusIcon className={cn('h-5 w-5', visual.iconClass)} aria-hidden="true" /></div>
                     <div className="min-w-0 flex-1">
                       <div className="flex min-w-0 items-center gap-2"><h3 className="truncate font-medium">{widget.name}</h3><Badge className={cn('shrink-0 text-xs', visual.badgeClass)}>{visual.label}</Badge></div>

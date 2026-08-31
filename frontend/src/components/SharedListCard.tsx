@@ -114,7 +114,7 @@ export const SharedListCard: React.FC<SharedListCardProps> = ({ listData, isLive
                 className={`flex min-w-0 items-center rounded-md px-3 py-2.5 transition-all duration-300 ${
                   animatingItems.has(item.id)
                     ? 'scale-[1.01] bg-primary/10 shadow-sm'
-                    : 'hover:bg-muted/60'
+                    : ''
                 }`}
               >
                 <div className="flex-shrink-0 mr-2">

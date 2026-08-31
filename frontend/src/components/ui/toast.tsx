@@ -59,8 +59,8 @@ const toastActionVariants = cva(
   {
     variants: {
       variant: {
-        default: "border bg-transparent hover:bg-secondary group-[.destructive]:border-muted/40 group-[.destructive]:hover:border-destructive/30 group-[.destructive]:hover:bg-destructive group-[.destructive]:hover:text-destructive-foreground group-[.destructive]:focus:ring-destructive",
-        primary: "bg-blue-600 text-white border-blue-600 hover:bg-blue-700 group-[.destructive]:bg-destructive group-[.destructive]:border-destructive group-[.destructive]:hover:bg-destructive/90",
+        default: "toast-action--default border bg-transparent group-[.destructive]:border-muted/40 group-[.destructive]:focus:ring-destructive",
+        primary: "interaction-button--primary border-blue-600 bg-blue-600 text-white group-[.destructive]:border-destructive group-[.destructive]:bg-destructive",
       },
     },
     defaultVariants: {
@@ -89,7 +89,7 @@ const ToastClose = React.forwardRef<
   <ToastPrimitives.Close
     ref={ref}
     className={cn(
-      "absolute right-2 top-2 rounded-md p-1 text-foreground/70 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100 group-[.destructive]:text-white/90 group-[.destructive]:hover:text-white group-[.destructive]:focus:ring-red-400 group-[.destructive]:focus:ring-offset-red-600",
+      "interaction-reveal absolute right-2 top-2 rounded-md p-1 text-foreground/70 hover:text-foreground focus:outline-none focus:ring-2 group-[.destructive]:text-white/90 group-[.destructive]:hover:text-white group-[.destructive]:focus:ring-red-400 group-[.destructive]:focus:ring-offset-red-600",
       className
     )}
     toast-close=""

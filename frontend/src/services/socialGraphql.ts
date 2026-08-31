@@ -6,7 +6,7 @@ import type {
 } from './socialApi';
 import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
 
-type GraphqlSocialChannel = {
+export type GraphqlSocialChannel = {
   id: number;
   organizationId: number;
   channelType: SocialChannel['channel_type'];
@@ -87,6 +87,8 @@ const channelFields = `
   createdAt updatedAt
 `;
 
+export const socialChannelFields = channelFields;
+
 const messageFields = `
   id organizationId conversationId channelId externalMessageId messageType
   textContent mediaUrl mediaType mediaFilename direction senderId senderName
@@ -124,6 +126,8 @@ const mapChannel = (row: GraphqlSocialChannel): SocialChannel => ({
   created_at: row.createdAt,
   updated_at: row.updatedAt,
 });
+
+export const mapSocialChannel = mapChannel;
 
 const mapMessage = (row: GraphqlSocialMessage): SocialMessage => ({
   id: row.id,
@@ -181,6 +185,7 @@ const mapConversation = (
 export const getSocialChannelsViaGraphql = async (
   channelType?: SocialChannel['channel_type'],
   organizationId?: number,
+  signal?: AbortSignal,
 ): Promise<SocialChannel[]> => {
   const data = await graphqlRequest<
     { socialChannels: GraphqlSocialChannel[] },
@@ -191,6 +196,7 @@ export const getSocialChannelsViaGraphql = async (
     }`,
     { ...(channelType ? { channelType } : {}) },
     organizationId,
+    signal,
   );
   return data.socialChannels.map(mapChannel);
 };

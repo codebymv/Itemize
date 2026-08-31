@@ -7,6 +7,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'react-router-dom';
 import {
   billingApi,
@@ -23,6 +24,11 @@ import {
 } from '../lib/subscription';
 import { isPublicAuthSkipPath } from './AuthContext';
 import { useOrganizationContext } from './organization-context';
+import { useOrganizationBootstrap } from '@/hooks/useOrganizationBootstrap';
+import {
+  organizationBootstrapQueryKey,
+  type OrganizationBootstrap,
+} from '@/services/organizationBootstrapGraphql';
 
 // Legacy Types (re-defined here to remove dependency on subscriptionsApi.ts)
 export interface Subscription {
@@ -243,15 +249,20 @@ interface SubscriptionProviderProps {
 export function SubscriptionProvider({ children, isAuthenticated = false }: SubscriptionProviderProps) {
   const { pathname } = useLocation();
   const { organizationId } = useOrganizationContext();
+  const queryClient = useQueryClient();
   const skipFetch = isPublicAuthSkipPath(pathname);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [usage, setUsage] = useState<UsageStats | null>(null);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const bootstrapEnabled = !skipFetch && isAuthenticated && organizationId !== null;
+  const bootstrap = useOrganizationBootstrap(bootstrapEnabled);
+  const refetchBootstrap = bootstrap.refetch;
 
   // Keep subscription limits in a ref to avoid infinite loops when they are used in refreshUsage
   const subscriptionLimitsRef = useRef<Record<string, number> | undefined>(undefined);
+  const supportingDataOrganizationRef = useRef<number | null>(null);
 
   // Fetch subscription data
   const refreshSubscription = useCallback(async () => {
@@ -262,15 +273,15 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
     }
 
     try {
-      const response = await billingApi.getBillingStatus();
-      if (response.success && response.data) {
-        const legacySub = toLegacySubscription(response.data);
+      const response = await refetchBootstrap();
+      if (response.data?.billingStatus) {
+        const legacySub = toLegacySubscription(response.data.billingStatus);
         subscriptionLimitsRef.current = legacySub.limits;
         setSubscription(legacySub);
         setError(null);
         return legacySub;
       }
-      setError(response.error || 'Failed to load subscription');
+      setError(response.error instanceof Error ? response.error.message : 'Failed to load subscription');
       return null;
     } catch (err: unknown) {
       console.error('Failed to fetch subscription:', err);
@@ -280,7 +291,7 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
       }
       return null;
     }
-  }, [isAuthenticated, organizationId]);
+  }, [isAuthenticated, organizationId, refetchBootstrap]);
 
   // Fetch usage data
   const refreshUsage = useCallback(async () => {
@@ -410,19 +421,46 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
       setSubscription(null);
       setUsage(null);
       subscriptionLimitsRef.current = undefined;
+      supportingDataOrganizationRef.current = null;
       return;
     }
 
-    const loadData = async () => {
-      setIsLoading(true);
-      await fetchPlans();
-      await refreshSubscription();
-      await refreshUsage();
+    if (bootstrap.error) {
+      setError(bootstrap.error instanceof Error ? bootstrap.error.message : 'Failed to load subscription');
       setIsLoading(false);
-    };
+      return;
+    }
 
-    loadData();
-  }, [skipFetch, isAuthenticated, fetchPlans, refreshSubscription, refreshUsage]);
+    if (!bootstrap.data || organizationId === null) {
+      setIsLoading(bootstrap.isLoading);
+      return;
+    }
+
+    const legacySub = toLegacySubscription(bootstrap.data.billingStatus);
+    subscriptionLimitsRef.current = legacySub.limits;
+    setSubscription(legacySub);
+    setError(null);
+
+    if (supportingDataOrganizationRef.current === organizationId) {
+      setIsLoading(false);
+      return;
+    }
+
+    supportingDataOrganizationRef.current = organizationId;
+    setIsLoading(true);
+    void Promise.all([fetchPlans(), refreshUsage()]).finally(() => {
+      setIsLoading(false);
+    });
+  }, [
+    bootstrap.data,
+    bootstrap.error,
+    bootstrap.isLoading,
+    fetchPlans,
+    isAuthenticated,
+    organizationId,
+    refreshUsage,
+    skipFetch,
+  ]);
 
   // Computed values
   const isTrialing = subscription?.status === 'trialing'
@@ -502,8 +540,12 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
     subscriptionLimitsRef.current = legacySub.limits;
     setSubscription(legacySub);
     setError(null);
+    queryClient.setQueryData<OrganizationBootstrap>(
+      organizationBootstrapQueryKey(organizationId),
+      (current) => current ? { ...current, billingStatus: result.data! } : current,
+    );
     await refreshUsage();
-  }, [refreshUsage]);
+  }, [organizationId, queryClient, refreshUsage]);
 
   // Open billing portal
   const openBillingPortal = useCallback(async () => {

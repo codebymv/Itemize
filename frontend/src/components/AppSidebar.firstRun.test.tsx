@@ -13,7 +13,7 @@ const subscriptionState = vi.hoisted(() => ({
   tierLevel: 1,
 }));
 
-const getStartedProgressViaGraphql = vi.hoisted(() => vi.fn());
+const getOrganizationBootstrapViaGraphql = vi.hoisted(() => vi.fn());
 
 const LocationProbe = () => {
   const location = useLocation();
@@ -36,11 +36,10 @@ vi.mock('@/hooks/use-mobile', () => ({
   useIsMobile: () => false,
 }));
 
-vi.mock('@/services/getStartedGraphql', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/services/getStartedGraphql')>();
+vi.mock('@/services/organizationBootstrapGraphql', () => {
   return {
-    ...actual,
-    getStartedProgressViaGraphql,
+    organizationBootstrapQueryKey: (organizationId: number) => ['organization-bootstrap', organizationId],
+    getOrganizationBootstrapViaGraphql,
   };
 });
 
@@ -71,15 +70,19 @@ describe('AppSidebar first-run disclosure', () => {
   });
 
   it('keeps the trial golden path visible and places expansion modules under More tools', async () => {
-    getStartedProgressViaGraphql.mockResolvedValue({
-      dismissed: false,
-      completedCount: 1,
-      totalCount: 3,
-      steps: [
-        { id: 'first_contact', completed: true, completedAt: '2026-08-24T00:00:00Z', href: '/contacts' },
-        { id: 'first_artifact', completed: false, completedAt: null, href: '/estimates/new' },
-        { id: 'first_send', completed: false, completedAt: null, href: '/estimates' },
-      ],
+    getOrganizationBootstrapViaGraphql.mockResolvedValue({
+      billingStatus: {},
+      onboardingProgress: {},
+      getStartedProgress: {
+        dismissed: false,
+        completedCount: 1,
+        totalCount: 3,
+        steps: [
+          { id: 'first_contact', completed: true, completedAt: '2026-08-24T00:00:00Z', href: '/contacts' },
+          { id: 'first_artifact', completed: false, completedAt: null, href: '/estimates/new' },
+          { id: 'first_send', completed: false, completedAt: null, href: '/estimates' },
+        ],
+      },
     });
 
     renderSidebar();
@@ -100,15 +103,19 @@ describe('AppSidebar first-run disclosure', () => {
   });
 
   it('restores the full navigation after the first provider-confirmed send', async () => {
-    getStartedProgressViaGraphql.mockResolvedValue({
-      dismissed: false,
-      completedCount: 3,
-      totalCount: 3,
-      steps: [
-        { id: 'first_contact', completed: true, completedAt: '2026-08-24T00:00:00Z', href: '/contacts' },
-        { id: 'first_artifact', completed: true, completedAt: '2026-08-24T00:01:00Z', href: '/estimates/1' },
-        { id: 'first_send', completed: true, completedAt: '2026-08-24T00:02:00Z', href: '/estimates' },
-      ],
+    getOrganizationBootstrapViaGraphql.mockResolvedValue({
+      billingStatus: {},
+      onboardingProgress: {},
+      getStartedProgress: {
+        dismissed: false,
+        completedCount: 3,
+        totalCount: 3,
+        steps: [
+          { id: 'first_contact', completed: true, completedAt: '2026-08-24T00:00:00Z', href: '/contacts' },
+          { id: 'first_artifact', completed: true, completedAt: '2026-08-24T00:01:00Z', href: '/estimates/1' },
+          { id: 'first_send', completed: true, completedAt: '2026-08-24T00:02:00Z', href: '/estimates' },
+        ],
+      },
     });
 
     renderSidebar();
@@ -133,7 +140,7 @@ describe('AppSidebar first-run disclosure', () => {
   it('keeps every Settings section discoverable on the Free plan', async () => {
     subscriptionState.isSubscribed = false;
     subscriptionState.isTrialing = false;
-    getStartedProgressViaGraphql.mockResolvedValue(null);
+    getOrganizationBootstrapViaGraphql.mockResolvedValue(null);
 
     renderSidebar('/settings/integrations');
 
@@ -144,7 +151,7 @@ describe('AppSidebar first-run disclosure', () => {
   it('deep-links Free users from Unlock business tools to the expanded plans section', async () => {
     subscriptionState.isSubscribed = false;
     subscriptionState.isTrialing = false;
-    getStartedProgressViaGraphql.mockResolvedValue(null);
+    getOrganizationBootstrapViaGraphql.mockResolvedValue(null);
 
     renderSidebar('/contents');
 

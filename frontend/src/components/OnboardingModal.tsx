@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog } from '@/components/ui/dialog';
+import { ModalBody, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Lightbulb } from 'lucide-react';
 
@@ -79,20 +80,16 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent 
-        className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto p-4 sm:p-6"
+      <ModalContent
+        size="lg"
         onKeyDown={handleKeyDown}
       >
-<DialogHeader className="pb-2 sm:pb-4">
-          <DialogTitle className="text-xl sm:text-2xl font-bold">
-            {currentStepContent.title}
-          </DialogTitle>
-          <DialogDescription className="mt-1 sm:mt-2 text-sm">
-            {currentStepContent.description}
-          </DialogDescription>
-        </DialogHeader>
+        <ModalHeader
+          title={currentStepContent.title}
+          description={currentStepContent.description}
+        />
 
-        <div className="py-3 sm:py-6">
+        <ModalBody className="py-4 sm:py-6">
 {/* Step indicator */}
           <div className="flex items-center justify-center gap-1.5 sm:gap-2 mb-4 sm:mb-6">
             {content.steps.map((_, index) => (
@@ -152,9 +149,9 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
               </div>
             )}
           </div>
-        </div>
+        </ModalBody>
 
-<DialogFooter className="flex-col sm:flex-col gap-2 sm:gap-3 pt-2">
+        <ModalFooter className="flex-col gap-2 sm:flex-col sm:gap-3">
           {/* Navigation buttons */}
           <div className="flex items-center justify-between w-full gap-2">
             <Button
@@ -194,8 +191,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({
           <div className="text-center text-xs sm:text-sm text-muted-foreground">
             Step {currentStep + 1} of {totalSteps}
           </div>
-        </DialogFooter>
-      </DialogContent>
+        </ModalFooter>
+      </ModalContent>
     </Dialog>
   );
 };

@@ -45,14 +45,14 @@ import {
     Ellipsis,
 } from 'lucide-react';
 import { AppHeaderIconButton } from '@/components/ui/app-header-icon-button';
-import { Input } from '@/components/ui/input';
 import { useSearch } from '@/components/AppShell';
 import { useSubscriptionState } from '@/contexts/SubscriptionContext';
 import { useOrganization } from '@/hooks/useOrganization';
 import {
-    getStartedProgressQueryKey,
-    getStartedProgressViaGraphql,
-} from '@/services/getStartedGraphql';
+    getOrganizationBootstrapViaGraphql,
+    organizationBootstrapQueryKey,
+    type OrganizationBootstrap,
+} from '@/services/organizationBootstrapGraphql';
 import { getWorkspaceDestinations, getWorkspaceLanding } from '@/lib/workspaceNavigation';
 import { AVAILABLE_PLANS_PATH } from '@/lib/settingsNavigation';
 
@@ -300,15 +300,21 @@ export function AppSidebar() {
         isSubscribed,
         isTrialing,
         tierLevel,
+        subscription,
+        error: subscriptionError,
     } = useSubscriptionState();
     const [searchShortcutHint, setSearchShortcutHint] = React.useState<'apple' | 'other' | null>(null);
     const [isMoreToolsOpen, setIsMoreToolsOpen] = React.useState(false);
 
-    const { data: getStartedProgress } = useQuery({
-        queryKey: getStartedProgressQueryKey(organizationId),
-        queryFn: getStartedProgressViaGraphql,
+    const { data: getStartedProgress } = useQuery<OrganizationBootstrap, Error, OrganizationBootstrap['getStartedProgress']>({
+        queryKey: organizationBootstrapQueryKey(organizationId),
+        queryFn: ({ signal }) => getOrganizationBootstrapViaGraphql(
+            organizationId as number,
+            signal,
+        ),
         enabled: isTrialing && !!organizationId,
-        staleTime: 30_000,
+        staleTime: 5 * 60 * 1000,
+        select: (bootstrap) => bootstrap.getStartedProgress,
     });
 
     const isCollapsed = state === 'collapsed';
@@ -332,7 +338,8 @@ export function AppSidebar() {
     const moreToolsItems = shouldFocusTrialNavigation
         ? paidItems.filter((item) => !FIRST_RUN_PRIMARY_NAV.has(item.title))
         : [];
-    const filteredMainNavItems = isSubscriptionLoading
+    const subscriptionUnavailable = !!subscriptionError && !subscription;
+    const filteredMainNavItems = isSubscriptionLoading || subscriptionUnavailable
         ? workspaceItems
         : isSubscribed
             ? focusedPaidItems
@@ -415,7 +422,7 @@ export function AppSidebar() {
                                     }
                                 }}
                             >
-                                <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600 dark:group-hover/item:text-blue-400")} />
+                                <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600 group-focus-visible/item:text-blue-600 dark:group-hover/item:text-blue-400 dark:group-focus-visible/item:text-blue-400")} />
                                 <span className="min-w-0 flex-1 truncate whitespace-nowrap">{item.title}</span>
                                 <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 text-gray-600 dark:text-gray-400" />
                             </SidebarMenuButton>
@@ -429,9 +436,9 @@ export function AppSidebar() {
                                             isActive={location.pathname === subItem.path}
                                             className="font-raleway"
                                         >
-                                            <div onClick={() => handleNavigate(subItem.path)} className="cursor-pointer">
+                                            <button type="button" onClick={() => handleNavigate(subItem.path)} className="w-full cursor-pointer text-left">
                                                 <span className="block min-w-0 truncate whitespace-nowrap">{subItem.title}</span>
-                                            </div>
+                                            </button>
                                         </SidebarMenuSubButton>
                                     </SidebarMenuSubItem>
                                 ))}
@@ -454,7 +461,7 @@ export function AppSidebar() {
                         isActive ? 'text-gray-900 dark:text-white font-medium' : '',
                     )}
                 >
-                    <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600 dark:group-hover/item:text-blue-400")} />
+                    <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600 group-focus-visible/item:text-blue-600 dark:group-hover/item:text-blue-400 dark:group-focus-visible/item:text-blue-400")} />
                     <span className="min-w-0 flex-1 truncate whitespace-nowrap">{item.title}</span>
                     {item.disabled && (
                         <span className="ml-auto text-xs text-muted-foreground">Soon</span>
@@ -568,21 +575,17 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <div className={cn("px-3 py-2", isCollapsed && "hidden")}>
-                <div
+                <button
+                    type="button"
                     onClick={() => setSearchOpen(true)}
-                    className="relative flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground bg-background border rounded-md hover:bg-muted cursor-pointer transition-colors"
+                    className="interaction-control relative flex min-h-11 w-full items-center gap-2 rounded-md border bg-background px-3 py-2 text-left text-sm text-muted-foreground"
                 >
                     <Search className="h-4 w-4" />
-                    <Input
-                        type="text"
-                        placeholder="Search anything..."
-                        className="flex-1 h-auto px-0 border-none bg-transparent focus-visible:ring-0 text-sm"
-                        readOnly
-                    />
+                    <span className="min-w-0 flex-1 truncate">Search anything...</span>
                     <kbd className="ml-auto pointer-events-none inline-flex h-5 select-none items-center gap-1 rounded border bg-muted/50 px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100">
                         <span className="text-xs">{searchShortcutHint === 'apple' ? '⌘' : 'Ctrl'}</span>K
                     </kbd>
-                </div>
+                </button>
             </div>
 
             <SidebarContent>
@@ -612,7 +615,7 @@ export function AppSidebar() {
                                                     }
                                                 }}
                                             >
-                                                <Ellipsis className={cn("h-4 w-4 transition-colors", isMoreToolsRouteActive ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600 dark:group-hover/item:text-blue-400")} />
+                                                <Ellipsis className={cn("h-4 w-4 transition-colors", isMoreToolsRouteActive ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600 group-focus-visible/item:text-blue-600 dark:group-hover/item:text-blue-400 dark:group-focus-visible/item:text-blue-400")} />
                                                 <span className="min-w-0 flex-1 truncate whitespace-nowrap">More tools</span>
                                                 <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/more-tools:rotate-90 text-gray-600 dark:text-gray-400" />
                                             </SidebarMenuButton>
@@ -668,7 +671,7 @@ export function AppSidebar() {
                                                                 // When expanded, CollapsibleTrigger handles toggle via onOpenChange
                                                             }}
                                                         >
-                                                            <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600 dark:group-hover/item:text-blue-400")} />
+                                                            <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600 group-focus-visible/item:text-blue-600 dark:group-hover/item:text-blue-400 dark:group-focus-visible/item:text-blue-400")} />
                                                             <span className="min-w-0 flex-1 truncate whitespace-nowrap">{item.title}</span>
                                                             <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 text-gray-600 dark:text-gray-400" />
                                                         </SidebarMenuButton>
@@ -682,9 +685,9 @@ export function AppSidebar() {
                                                                         isActive={location.pathname === subItem.path}
                                                                         className="font-raleway"
                                                                     >
-                                                                        <div onClick={() => handleNavigate(subItem.path)} className="cursor-pointer">
+                                                                        <button type="button" onClick={() => handleNavigate(subItem.path)} className="w-full cursor-pointer text-left">
                                                                             <span className="block min-w-0 truncate whitespace-nowrap">{subItem.title}</span>
-                                                                        </div>
+                                                                        </button>
                                                                     </SidebarMenuSubButton>
                                                                 </SidebarMenuSubItem>
                                                             ))}
@@ -706,7 +709,7 @@ export function AppSidebar() {
                                                     isActive ? 'text-gray-900 dark:text-white font-medium' : ''
                                                 )}
                                             >
-                                                <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600 dark:group-hover/item:text-blue-400")} />
+                                                <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600 group-focus-visible/item:text-blue-600 dark:group-hover/item:text-blue-400 dark:group-focus-visible/item:text-blue-400")} />
                                                 <span className="min-w-0 flex-1 truncate whitespace-nowrap">{item.title}</span>
                                             </SidebarMenuButton>
                                         </SidebarMenuItem>

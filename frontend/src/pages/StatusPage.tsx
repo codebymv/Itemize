@@ -21,6 +21,8 @@ import { ShellBackButton } from '@/components/layout/ShellBackButton';
 import { useSafeShellBack } from '@/components/layout/useSafeShellBack';
 import { PUBLIC_SHELL_WIDTH } from '@/components/layout/PageContainer';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ErrorState } from '@/components/ErrorState';
+import { FailureNotice } from '@/components/FailureNotice';
 import BackgroundClouds from '@/components/ui/BackgroundClouds';
 import { cn } from '@/lib/utils';
 import { useAuthState } from '@/contexts/AuthContext';
@@ -98,7 +100,6 @@ const StatusPage: React.FC = () => {
       setLastUpdated(new Date());
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to fetch status'));
-      setStatusData(null);
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -259,7 +260,14 @@ const StatusPage: React.FC = () => {
         headerTools={{ secondaryAction: renderHeaderRefreshAction() }}
         className={cn('flex-1', !currentUser && PUBLIC_SHELL_WIDTH)}
       >
-        <div className="space-y-4">
+        <div
+          className="space-y-4"
+          data-loading-state="section"
+          role="status"
+          aria-label="Loading system status"
+          aria-live="polite"
+          aria-busy="true"
+        >
           {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20" />)}
         </div>
       </PageLayout>
@@ -276,17 +284,26 @@ const StatusPage: React.FC = () => {
     >
       <BackgroundClouds />
         <div className="space-y-3">
-          {error && (
-            <Card className="border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/20">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 text-red-700 dark:text-red-300 text-sm">
-                  <XCircle className="w-4 h-4" />
-                  <span className="font-medium">Error:</span>
-                  <span className="text-red-600 dark:text-red-400">{error}</span>
-                </div>
+          {error && statusData ? (
+            <FailureNotice
+              title="Status data may be out of date"
+              description={error}
+              onRetry={() => void fetchStatus()}
+            />
+          ) : null}
+
+          {error && !statusData ? (
+            <Card>
+              <CardContent className="p-0">
+                <ErrorState
+                  kind="page"
+                  title="Status unavailable"
+                  description={error}
+                  onRetry={() => void fetchStatus()}
+                />
               </CardContent>
             </Card>
-          )}
+          ) : null}
 
           {statusData && typeof statusData === 'object' && statusData.status && (
             <>

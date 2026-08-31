@@ -35,13 +35,18 @@ describe('reputation request management GraphQL adapter', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('maps bounded pages to the retained shape', async () => {
+    const controller = new AbortController();
     vi.mocked(graphqlRequest).mockResolvedValue({
       reputationRequests: {
         nodes: [request], pageInfo: { page: 2, pageSize: 10, total: 11, totalPages: 2 },
       },
     });
 
-    await expect(getReviewRequestsViaGraphql({ status: 'clicked', page: 2, limit: 10 }, 3))
+    await expect(getReviewRequestsViaGraphql(
+      { status: 'clicked', page: 2, limit: 10 },
+      3,
+      controller.signal,
+    ))
       .resolves.toEqual({
         requests: [expect.objectContaining({
           id: 8, organization_id: 3, contact_id: 4, contact_email: 'snapshot@example.test',
@@ -54,6 +59,7 @@ describe('reputation request management GraphQL adapter', () => {
       expect.stringContaining('query ReputationRequests'),
       { filter: { status: 'clicked' }, page: { page: 2, pageSize: 10 } },
       3,
+      controller.signal,
     );
   });
 

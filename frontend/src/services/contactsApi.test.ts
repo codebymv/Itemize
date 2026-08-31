@@ -10,6 +10,7 @@ import {
   deleteOrganization,
   ensureDefaultOrganization,
   getContact,
+  getContactDetailBootstrap,
   getContactActivities,
   getContactContent,
   getContacts,
@@ -36,6 +37,7 @@ import {
   bulkUpdateContactsViaGraphql,
   createContactViaGraphql,
   deleteContactViaGraphql,
+  getContactDetailBootstrapViaGraphql,
   getContactViaGraphql,
   getContactActivitiesViaGraphql,
   getContactContentViaGraphql,
@@ -83,6 +85,7 @@ vi.mock('./contactsGraphql', () => ({
   createContactViaGraphql: vi.fn(),
   updateContactViaGraphql: vi.fn(),
   deleteContactViaGraphql: vi.fn(),
+  getContactDetailBootstrapViaGraphql: vi.fn(),
 }));
 
 vi.mock('./organizationsGraphql', () => ({
@@ -228,6 +231,24 @@ describe('contacts API GraphQL transport', () => {
 
     expect(getContactsViaGraphql).toHaveBeenCalledWith({ page: 1 }, 42);
     expect(getContactViaGraphql).toHaveBeenCalledWith(11, 42);
+    expect(api.get).not.toHaveBeenCalled();
+  });
+
+  it('routes the contact detail bootstrap through one cancellable GraphQL read', async () => {
+    const result = {
+      contact: { id: 11 },
+      activities: [],
+      relatedContent: { lists: [], notes: [], whiteboards: [], wireframes: [] },
+    } as never;
+    const controller = new AbortController();
+    vi.mocked(getContactDetailBootstrapViaGraphql).mockResolvedValue(result);
+
+    await expect(getContactDetailBootstrap(11, 42, controller.signal)).resolves.toBe(result);
+    expect(getContactDetailBootstrapViaGraphql).toHaveBeenCalledWith(
+      11,
+      42,
+      controller.signal,
+    );
     expect(api.get).not.toHaveBeenCalled();
   });
 

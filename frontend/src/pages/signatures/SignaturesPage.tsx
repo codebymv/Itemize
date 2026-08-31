@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Send, XCircle, Download, Eye, FileSignature, FileText, CheckCircle, ChevronDown, MoreVertical, Trash2, RefreshCw } from 'lucide-react';
+import { Plus, Send, XCircle, Download, Eye, FileSignature, FileText, CheckCircle, ChevronDown, MoreVertical, Trash2, RefreshCw, PieChart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -11,6 +11,7 @@ import { ErrorState } from '@/components/ErrorState';
 import { Card, CardContent } from '@/components/ui/card';
 import { StatCard } from '@/components/StatCard';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
+import { FramedSection } from '@/components/ui/framed-section';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { ExpandedRowActionLabel, ExpandedRowActions } from '@/components/ui/expanded-row';
@@ -223,10 +224,11 @@ export function SignaturesPage() {
       }}
     >
           {!loadError && (
+          <FramedSection title="Overview" icon={PieChart} className="mb-6">
           <ResponsiveCardRail
             label="Document status summary"
             desktopColumns="md:grid-cols-4"
-            className="responsive-stat-summary"
+            className="responsive-stat-summary mb-0"
           >
             <StatCard
               title="Invalid"
@@ -265,6 +267,7 @@ export function SignaturesPage() {
               isLoading={loading}
             />
           </ResponsiveCardRail>
+          </FramedSection>
           )}
 
           <Card>
@@ -305,7 +308,7 @@ export function SignaturesPage() {
                     return (
                       <div key={doc.id}>
                         <div
-                          className="p-4 hover:bg-muted/50 transition-colors cursor-pointer group"
+                          className="p-4 interaction-row cursor-pointer group"
                           onClick={(e) => handleToggleExpand(doc.id, e)}
                         >
                           <div className="flex items-center justify-between">
@@ -452,7 +455,7 @@ export function SignaturesPage() {
                               {doc.status === 'draft' && (
                                 <Button
                                   size="sm"
-                                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
+                                  className="bg-blue-600 interaction-button--primary text-white text-xs sm:text-sm"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleSend(doc.id);
@@ -465,7 +468,7 @@ export function SignaturesPage() {
                               {hasProcessingFailure && (
                                 <Button
                                   size="sm"
-                                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
+                                  className="bg-blue-600 interaction-button--primary text-white text-xs sm:text-sm"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleRetry(doc.id);
@@ -478,7 +481,7 @@ export function SignaturesPage() {
                               {!hasProcessingFailure && (doc.status === 'sent' || doc.status === 'in_progress') && (
                                 <Button
                                   size="sm"
-                                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
+                                  className="bg-blue-600 interaction-button--primary text-white text-xs sm:text-sm"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleResend(doc.id);
@@ -505,7 +508,7 @@ export function SignaturesPage() {
                               {doc.status === 'completed' && (
                                 <Button
                                   size="sm"
-                                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm"
+                                  className="bg-blue-600 interaction-button--primary text-white text-xs sm:text-sm"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleDownload(doc.id);
@@ -519,7 +522,7 @@ export function SignaturesPage() {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive focus:text-destructive text-xs sm:text-sm"
+                                  className="text-destructive border-destructive/30 interaction-button--destructive-ghost focus:text-destructive text-xs sm:text-sm"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setDeleteDocumentId(doc.id);

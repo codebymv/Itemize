@@ -264,7 +264,7 @@ function AccountInfo({
         <CardHeader>
           <SettingsSectionTitle icon={User}>Account Information</SettingsSectionTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent surface="inset" className="space-y-6">
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
             <div className="h-16 w-16 rounded-full bg-blue-600 flex items-center justify-center text-white text-xl font-medium flex-shrink-0">
               {currentUser?.name?.[0]?.toUpperCase() || 'U'}
@@ -317,7 +317,7 @@ function AccountInfo({
               </span>
             </SettingsSectionTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent surface="inset">
             <UsageIndicatorGrid>
               <UsageIndicator
                 resourceType="emails"
@@ -352,7 +352,7 @@ function AccountInfo({
         <CardHeader>
           <SettingsSectionTitle icon={Layers3}>Available Plans</SettingsSectionTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent surface="inset">
           <Collapsible open={plansOpen} onOpenChange={setPlansOpen}>
             <div className="flex flex-col gap-4 min-[1300px]:flex-row min-[1300px]:items-center min-[1300px]:justify-between">
               <p className="text-sm text-muted-foreground">
@@ -447,11 +447,11 @@ function PreferencesSettings() {
         <CardHeader>
           <SettingsSectionTitle icon={Lightbulb}>Appearance</SettingsSectionTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent surface="inset">
           <div className="grid grid-cols-3 gap-2 sm:gap-4">
             <Button
               variant={theme === 'light' ? 'default' : 'outline'}
-              className={theme === 'light' ? 'bg-blue-600 text-white hover:bg-blue-700' : ''}
+              className={theme === 'light' ? 'bg-blue-600 text-white interaction-button--primary' : ''}
               onClick={() => setTheme('light')}
             >
               <Sun className="mr-2 h-4 w-4" />
@@ -459,7 +459,7 @@ function PreferencesSettings() {
             </Button>
             <Button
               variant={theme === 'dark' ? 'default' : 'outline'}
-              className={`flex-1 ${theme === 'dark' ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}`}
+              className={`flex-1 ${theme === 'dark' ? 'bg-blue-600 interaction-button--primary text-white' : ''}`}
               onClick={() => setTheme('dark')}
             >
               <Moon className="mr-2 h-4 w-4" />
@@ -467,7 +467,7 @@ function PreferencesSettings() {
             </Button>
             <Button
               variant={theme === 'system' ? 'default' : 'outline'}
-              className={theme === 'system' ? 'bg-blue-600 text-white hover:bg-blue-700' : ''}
+              className={theme === 'system' ? 'bg-blue-600 text-white interaction-button--primary' : ''}
               onClick={() => setTheme('system')}
             >
               <Monitor className="mr-2 h-4 w-4" />
@@ -481,7 +481,7 @@ function PreferencesSettings() {
         <CardHeader>
           <SettingsSectionTitle icon={LogIn}>After sign in</SettingsSectionTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent surface="inset">
           <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_16rem] sm:items-center">
             <Label htmlFor="start-page">Open Itemize to</Label>
             <Select value={startPage} onValueChange={handleStartPageChange}>
@@ -507,7 +507,7 @@ function PreferencesSettings() {
         <CardHeader>
           <SettingsSectionTitle icon={Accessibility}>Accessibility</SettingsSectionTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent surface="inset">
           <div className="flex items-center justify-between gap-4">
             <div>
               <Label htmlFor="reduce-motion-toggle">Reduce motion</Label>
@@ -529,7 +529,7 @@ function PreferencesSettings() {
         <CardHeader>
           <SettingsSectionTitle icon={Sparkles}>AI Features</SettingsSectionTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent surface="inset">
           <div className="flex items-center justify-between gap-4">
             <div>
               <Label htmlFor="ai-toggle">Enable AI Enhancements</Label>
@@ -610,6 +610,7 @@ function PaymentsSettings({ setSaveButton, showCheckoutSuccess, onCloseCheckoutS
         label={label}
         onClick={handleSaveSettings}
         disabled={saving}
+        busy={saving}
         icon={saving
           ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
           : <Save aria-hidden="true" className="h-4 w-4" />}

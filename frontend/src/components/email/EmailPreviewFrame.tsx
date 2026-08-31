@@ -107,10 +107,10 @@ export function EmailPreviewFrame({ html, loading = false, error, className }: E
       <div className="flex min-h-10 items-center justify-end gap-1">
         {loading && <Loader2 className="mr-auto h-4 w-4 animate-spin text-muted-foreground" aria-label="Updating preview" />}
         <div className="flex items-center rounded-lg bg-muted/60 p-1" aria-label="Preview device">
-          <Button type="button" variant={device === 'desktop' ? 'default' : 'ghost'} size="sm" className={cn('h-8 px-2.5', device === 'desktop' && 'bg-blue-600 text-white hover:bg-blue-700')} onClick={() => setDevice('desktop')} aria-label="Desktop preview" aria-pressed={device === 'desktop'}>
+          <Button type="button" variant="toggle" size="compact" className="px-2.5" onClick={() => setDevice('desktop')} aria-label="Desktop preview" aria-pressed={device === 'desktop'}>
             <Monitor className="h-4 w-4" /><span className="hidden sm:inline">Desktop</span>
           </Button>
-          <Button type="button" variant={device === 'mobile' ? 'default' : 'ghost'} size="sm" className={cn('h-8 px-2.5', device === 'mobile' && 'bg-blue-600 text-white hover:bg-blue-700')} onClick={() => setDevice('mobile')} aria-label="Mobile preview" aria-pressed={device === 'mobile'}>
+          <Button type="button" variant="toggle" size="compact" className="px-2.5" onClick={() => setDevice('mobile')} aria-label="Mobile preview" aria-pressed={device === 'mobile'}>
             <Smartphone className="h-4 w-4" /><span className="hidden sm:inline">Mobile</span>
           </Button>
         </div>

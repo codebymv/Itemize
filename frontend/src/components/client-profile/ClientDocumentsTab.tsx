@@ -71,7 +71,7 @@ export function ClientDocumentsTab({
             </Button>
           )}
         </CardHeader>
-        <CardContent>
+        <CardContent surface="inset">
           {invoices.length === 0 ? (
             <EmptyState icon={DollarSign} kind="inline" title="No invoices yet" />
           ) : (
@@ -81,7 +81,7 @@ export function ClientDocumentsTab({
                 return (
                   <div
                     key={invoice.id}
-                    className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                    className="flex items-center justify-between p-3 rounded-lg border interaction-row"
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
@@ -133,7 +133,7 @@ export function ClientDocumentsTab({
             </Button>
           )}
         </CardHeader>
-        <CardContent>
+        <CardContent surface="inset">
           {signatures.length === 0 ? (
             <EmptyState icon={FileText} kind="inline" title="No documents yet" />
           ) : (
@@ -143,7 +143,7 @@ export function ClientDocumentsTab({
                 return (
                   <div
                     key={signature.id}
-                    className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                    className="flex items-center justify-between p-3 rounded-lg border interaction-row"
                   >
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">

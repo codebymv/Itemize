@@ -334,6 +334,7 @@ export function OrganizationSettings({
         label={saving ? 'Saving…' : 'Save changes'}
         onClick={() => void handleSave()}
         disabled={saving}
+        busy={saving}
         icon={saving
           ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
           : <Save aria-hidden="true" className="h-4 w-4" />}
@@ -513,7 +514,7 @@ export function OrganizationSettings({
             </Badge>
           )}
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent surface="inset" className="space-y-4">
           <div className="flex flex-col gap-4 min-[1300px]:flex-row min-[1300px]:items-center min-[1300px]:justify-between">
             <div className="flex min-w-0 items-center gap-1.5">
               <p className="text-sm text-muted-foreground">
@@ -593,7 +594,7 @@ export function OrganizationSettings({
         <CardHeader>
           <SettingsSectionTitle icon={Building2}>Organization details</SettingsSectionTitle>
         </CardHeader>
-        <CardContent className="space-y-5">
+        <CardContent surface="inset" className="space-y-5">
           <div className="grid gap-2">
             <SettingsFieldLabel
               htmlFor="organization-name"
@@ -694,7 +695,7 @@ export function OrganizationSettings({
             </Badge>
           )}
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent surface="inset" className="space-y-4">
           {canManage && (
             <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_9rem_auto]">
               <Label htmlFor="member-email" className="sr-only">Member email</Label>
@@ -881,7 +882,7 @@ export function OrganizationSettings({
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
                               <AlertDialogAction
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                className="bg-destructive text-destructive-foreground interaction-button--destructive"
                                 onClick={() => void handleRemove(member)}
                                 disabled={memberActionId !== null}
                               >
@@ -905,7 +906,7 @@ export function OrganizationSettings({
           <CardHeader>
             <SettingsSectionTitle icon={History}>Recent organization activity</SettingsSectionTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent surface="inset">
             {loading ? (
               <div className="h-20 animate-pulse rounded-lg bg-muted/50" />
             ) : detailsLoadError ? null : activity.length === 0 ? (
@@ -969,7 +970,7 @@ export function OrganizationSettings({
         <CardHeader>
           <SettingsSectionTitle icon={Settings2}>Manage organization</SettingsSectionTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent surface="inset">
           {!isOwner && (
             <section className="space-y-3" aria-labelledby="leave-organization-title">
               <div className="space-y-1.5">
@@ -1046,7 +1047,7 @@ export function OrganizationSettings({
                   <AlertDialogFooter>
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction
-                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      className="bg-destructive text-destructive-foreground interaction-button--destructive"
                       onClick={() => void handleLifecycle('delete')}
                       disabled={lifecycleAction !== null || deleteConfirmation !== organization.name}
                     >

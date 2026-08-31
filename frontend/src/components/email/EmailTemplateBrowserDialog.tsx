@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Check, Eye, FileText, Loader2, Mail, Search, X } from 'lucide-react';
+import { Check, Eye, FileText, Loader2, Mail, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import { SearchField } from '@/components/ui/search-field';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { EmptyState } from '@/components/EmptyState';
 import { cn } from '@/lib/utils';
@@ -119,18 +119,16 @@ export function EmailTemplateBrowserDialog<T extends EmailTemplateBrowserItem>({
           <section className={cn('flex min-h-0 flex-1 flex-col', previewItem && 'hidden lg:flex')} aria-label="Email templates">
             <div className="shrink-0 border-b p-4">
               <div className="flex min-w-0 items-center gap-2">
-                <div className="relative min-w-0 flex-1">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    aria-label="Search email templates"
+                <SearchField
+                    label="Search email templates"
                     placeholder="Search templates…"
                     value={searchQuery}
-                    onChange={event => setSearchQuery(event.target.value)}
-                    className="h-10 pl-9"
+                    onValueChange={setSearchQuery}
+                    controlSize="compact"
+                    containerClassName="min-w-0 flex-1"
                   />
-                </div>
                 <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger className="h-10 w-[132px] shrink-0 sm:w-[168px]" aria-label="Filter email templates by category">
+                  <SelectTrigger controlSize="compact" className="w-[132px] shrink-0 sm:w-[168px]" aria-label="Filter email templates by category">
                     <SelectValue placeholder="Category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -161,7 +159,7 @@ export function EmailTemplateBrowserDialog<T extends EmailTemplateBrowserItem>({
                   {filteredItems.map(item => {
                     const isSelected = selectedId === item.id;
                     return (
-                      <div key={item.id} className={cn('group flex min-w-0 items-center gap-2 transition-colors hover:bg-muted/50', isSelected && 'bg-blue-500/5')}>
+                      <div key={item.id} className={cn('group flex min-w-0 items-center gap-2 interaction-row', isSelected && 'bg-blue-500/5')}>
                         <button type="button" className="flex min-w-0 flex-1 items-center gap-3 px-3 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring" onClick={() => choose(item)}>
                           <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400', isSelected && 'bg-blue-600 text-white dark:text-white')}>
                             {isSelected ? <Check className="h-4 w-4" /> : <Mail className="h-4 w-4" />}
@@ -196,7 +194,7 @@ export function EmailTemplateBrowserDialog<T extends EmailTemplateBrowserItem>({
                   <p className="truncate text-sm font-medium">{previewItem.name}</p>
                   <p className="truncate text-xs text-muted-foreground">{previewItem.subject}</p>
                 </div>
-                <Button type="button" size="sm" className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => choose(previewItem)}>Use template</Button>
+                <Button type="button" size="sm" className="bg-blue-600 text-white interaction-button--primary" onClick={() => choose(previewItem)}>Use template</Button>
               </div>
               <div className="min-h-0 flex-1 overflow-hidden p-3 sm:p-4">{renderPreview(previewItem)}</div>
             </section>

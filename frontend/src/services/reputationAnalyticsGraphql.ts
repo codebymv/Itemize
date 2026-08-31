@@ -35,11 +35,12 @@ const reputationAnalyticsQuery = `
 export const getReputationAnalyticsViaGraphql = async (
   days = 30,
   organizationId?: number,
+  signal?: AbortSignal,
 ): Promise<ReputationAnalytics> => {
   const data = await graphqlRequest<
     { reputationAnalytics: GraphqlReputationAnalytics },
     { days: number }
-  >(reputationAnalyticsQuery, { days }, organizationId);
+  >(reputationAnalyticsQuery, { days }, organizationId, signal);
   const result = data.reputationAnalytics;
   return {
     overall: {

@@ -10,7 +10,7 @@ import type {
   UsageStats,
 } from './billingApi';
 
-type GraphqlBillingStatus = {
+export type GraphqlBillingStatus = {
   plan: Plan;
   subscriptionStatus: string;
   billingPeriod: 'monthly' | 'yearly';
@@ -53,7 +53,7 @@ type GraphqlUsageStats = {
   };
 };
 
-const statusFields = `
+export const billingStatusFields = `
   plan subscriptionStatus billingPeriod billingPeriodStart billingPeriodEnd
   stripeCustomerId stripeSubscriptionId emailsUsed emailsLimit smsUsed smsLimit
   apiCallsUsed apiCallsLimit contactsLimit usersLimit workflowsLimit
@@ -63,7 +63,7 @@ const statusFields = `
 
 const billingStatusQuery = `
   query BillingStatus {
-    billingStatus { ${statusFields} }
+    billingStatus { ${billingStatusFields} }
   }
 `;
 
@@ -115,11 +115,11 @@ const acknowledgeMutation = `
 
 const startSoloTrialMutation = `
   mutation StartBillingSoloTrial {
-    startBillingSoloTrial { ${statusFields} }
+    startBillingSoloTrial { ${billingStatusFields} }
   }
 `;
 
-const mapStatus = (status: GraphqlBillingStatus): BillingStatus => ({
+export const mapBillingStatus = (status: GraphqlBillingStatus): BillingStatus => ({
   plan: status.plan,
   subscription_status: status.subscriptionStatus,
   billing_period: status.billingPeriod,
@@ -155,7 +155,7 @@ export const getBillingStatusViaGraphql = async (): Promise<BillingStatus> => {
     { billingStatus: GraphqlBillingStatus },
     Record<string, never>
   >(billingStatusQuery, {});
-  return mapStatus(response.billingStatus);
+  return mapBillingStatus(response.billingStatus);
 };
 
 export const getBillingPlansViaGraphql = async (): Promise<PlanInfo[]> => {
@@ -236,5 +236,5 @@ export const startBillingSoloTrialViaGraphql = async (): Promise<BillingStatus> 
     { startBillingSoloTrial: GraphqlBillingStatus },
     Record<string, never>
   >(startSoloTrialMutation, {});
-  return mapStatus(response.startBillingSoloTrial);
+  return mapBillingStatus(response.startBillingSoloTrial);
 };

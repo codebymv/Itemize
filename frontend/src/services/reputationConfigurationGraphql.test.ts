@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  GraphqlRequestError,
   graphqlMutationRequest,
   graphqlRequest,
 } from './graphqlClient';
@@ -7,10 +8,14 @@ import {
   createWidgetViaGraphql,
   deletePlatformViaGraphql,
   deleteWidgetViaGraphql,
+  getReputationConfigurationBootstrapViaGraphql,
   getPlatformsViaGraphql,
   getReputationSettingsViaGraphql,
+  getWidgetViaGraphql,
   getWidgetEmbedCodeViaGraphql,
   getWidgetsViaGraphql,
+  resetReputationConfigurationBootstrapCapability,
+  resetReputationWidgetDetailCapability,
   updateReputationSettingsViaGraphql,
   updateWidgetViaGraphql,
   upsertPlatformViaGraphql,
@@ -48,7 +53,51 @@ const settings = {
 };
 
 describe('reputation configuration GraphQL adapters', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetReputationConfigurationBootstrapCapability();
+    resetReputationWidgetDetailCapability();
+  });
+
+  it('loads the complete configuration route in one cancellable operation', async () => {
+    const controller = new AbortController();
+    vi.mocked(graphqlRequest).mockResolvedValueOnce({
+      reputationConfigurationBootstrap: { platforms: [platform], settings },
+    });
+
+    await expect(getReputationConfigurationBootstrapViaGraphql(
+      3,
+      controller.signal,
+    )).resolves.toMatchObject({
+      platforms: [{ id: 4, platform_name: 'Google' }],
+      settings: { organization_id: 3, auto_request_delay_days: 3 },
+    });
+    expect(graphqlRequest).toHaveBeenCalledWith(
+      expect.stringContaining('query ReputationConfigurationBootstrap'),
+      {},
+      3,
+      controller.signal,
+    );
+  });
+
+  it('negotiates separate platform and settings reads once', async () => {
+    vi.mocked(graphqlRequest)
+      .mockRejectedValueOnce(new GraphqlRequestError(
+        'Cannot query field "reputationConfigurationBootstrap" on type "Query".',
+        200,
+      ))
+      .mockResolvedValueOnce({ reputationPlatforms: [platform] })
+      .mockResolvedValueOnce({ reputationSettings: settings })
+      .mockResolvedValueOnce({ reputationPlatforms: [platform] })
+      .mockResolvedValueOnce({ reputationSettings: settings });
+
+    await getReputationConfigurationBootstrapViaGraphql(3);
+    await getReputationConfigurationBootstrapViaGraphql(3);
+
+    expect(graphqlRequest).toHaveBeenCalledTimes(5);
+    expect(vi.mocked(graphqlRequest).mock.calls.filter(([query]) =>
+      String(query).includes('ReputationConfigurationBootstrap'))).toHaveLength(1);
+  });
 
   it('maps platform reads, upserts, and exact deletes without credential fields', async () => {
     vi.mocked(graphqlRequest).mockResolvedValueOnce({ reputationPlatforms: [platform] });
@@ -89,6 +138,38 @@ describe('reputation configuration GraphQL adapters', () => {
       embed_code: '<script data-widget-key="key"></script>', widget_key: 'key',
     });
     await expect(deleteWidgetViaGraphql(8, 3)).resolves.toEqual({ success: true });
+  });
+
+  it('loads only the selected widget and supports cancellation', async () => {
+    const controller = new AbortController();
+    vi.mocked(graphqlRequest).mockResolvedValueOnce({ reputationWidget: widget });
+
+    await expect(getWidgetViaGraphql(8, 3, controller.signal)).resolves.toEqual(
+      expect.objectContaining({ id: 8, name: 'Homepage', widget_type: 'grid' }),
+    );
+    expect(graphqlRequest).toHaveBeenCalledWith(
+      expect.stringContaining('query ReputationWidget($id:Int!)'),
+      { id: 8 },
+      3,
+      controller.signal,
+    );
+  });
+
+  it('negotiates the legacy widget-list fallback once', async () => {
+    vi.mocked(graphqlRequest)
+      .mockRejectedValueOnce(new GraphqlRequestError(
+        'Cannot query field "reputationWidget" on type "Query".',
+        200,
+      ))
+      .mockResolvedValueOnce({ reputationWidgets: [widget] })
+      .mockResolvedValueOnce({ reputationWidgets: [widget] });
+
+    await expect(getWidgetViaGraphql(8, 3)).resolves.toMatchObject({ id: 8 });
+    await expect(getWidgetViaGraphql(8, 3)).resolves.toMatchObject({ id: 8 });
+
+    expect(graphqlRequest).toHaveBeenCalledTimes(3);
+    expect(vi.mocked(graphqlRequest).mock.calls.filter(([query]) =>
+      String(query).includes('query ReputationWidget($id:Int!)'))).toHaveLength(1);
   });
 
   it('maps virtual defaults and partial settings mutations', async () => {

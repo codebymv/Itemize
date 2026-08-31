@@ -76,7 +76,7 @@ function ChangeTierSection() {
                                 <Button
                                     key={plan.id}
                                     variant={isSelected ? 'default' : 'outline'}
-                                    className={`h-auto py-4 flex items-center justify-center gap-2 ${isSelected ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}`}
+                                    className={`h-auto py-4 flex items-center justify-center gap-2 ${isSelected ? 'bg-blue-600 interaction-button--primary text-white' : ''}`}
                                     onClick={() => handleChangePlan(plan.id)}
                                     disabled={loadingPlan !== null}
                                 >

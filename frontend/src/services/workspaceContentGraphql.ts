@@ -3,7 +3,7 @@ import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
 import { rememberWorkspaceWhiteboardRevision } from './workspaceWhiteboardRevision';
 import { rememberWorkspaceWireframeRevision } from './workspaceWireframeRevision';
 
-type GraphqlPageInfo = {
+export type GraphqlPageInfo = {
   page: number;
   pageSize: number;
   total: number;
@@ -12,7 +12,7 @@ type GraphqlPageInfo = {
   hasPreviousPage: boolean;
 };
 
-type GraphqlWorkspaceList = {
+export type GraphqlWorkspaceList = {
   id: number;
   userId: number;
   title: string;
@@ -32,7 +32,7 @@ type GraphqlWorkspaceList = {
   updatedAt: string;
 };
 
-type GraphqlWorkspaceNote = {
+export type GraphqlWorkspaceNote = {
   id: number;
   userId: number;
   title: string;
@@ -184,14 +184,14 @@ export type LegacyPageInfo = {
   hasPrev: boolean;
 };
 
-const listFields = `
+export const listFields = `
   id userId title category categoryId
   items { id text completed }
   colorValue positionX positionY width height zIndex
   shareToken isPublic sharedAt createdAt updatedAt
 `;
 
-const noteFields = `
+export const noteFields = `
   id userId title content category categoryId
   colorValue positionX positionY width height zIndex
   shareToken isPublic sharedAt createdAt updatedAt
@@ -263,7 +263,7 @@ const mapPage = (page: GraphqlPageInfo): LegacyPageInfo => ({
   hasPrev: page.hasPreviousPage,
 });
 
-const mapList = (list: GraphqlWorkspaceList): LegacyWorkspaceList => ({
+export const mapList = (list: GraphqlWorkspaceList): LegacyWorkspaceList => ({
   id: list.id,
   user_id: list.userId,
   title: list.title,
@@ -284,7 +284,7 @@ const mapList = (list: GraphqlWorkspaceList): LegacyWorkspaceList => ({
   updated_at: list.updatedAt,
 });
 
-const mapNote = (note: GraphqlWorkspaceNote): LegacyWorkspaceNote => ({
+export const mapNote = (note: GraphqlWorkspaceNote): LegacyWorkspaceNote => ({
   id: note.id,
   user_id: note.userId,
   title: note.title,

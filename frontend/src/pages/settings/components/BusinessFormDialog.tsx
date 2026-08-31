@@ -217,7 +217,7 @@ export const BusinessFormDialog: React.FC<BusinessFormDialogProps> = ({
           <Button
             onClick={onSave}
             disabled={saving || uploadingLogo}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-blue-600 interaction-button--primary text-white"
           >
             {saving ? (
               <>

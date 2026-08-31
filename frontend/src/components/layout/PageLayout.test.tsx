@@ -88,7 +88,7 @@ describe('PageLayout', () => {
     expect(screen.queryByRole('region', { name: 'CONTENTS actions' })).not.toBeInTheDocument();
   });
 
-  it('keeps a secondary-only command secondary when no primary action exists', () => {
+  it('promotes a secondary-only command when no primary action exists', () => {
     renderLayout(
       <PageLayout
         title="SHARED"
@@ -102,10 +102,10 @@ describe('PageLayout', () => {
     );
 
     const tools = screen.getByTestId('desktop-tools');
-    expect(tools.querySelector('.desktop-header-tools__secondary')).toContainElement(
+    expect(tools.querySelector('[data-promoted-primary]')).toContainElement(
       screen.getByRole('button', { name: 'Canvas' }),
     );
-    expect(tools.querySelector('.desktop-header-tools__primary')).toBeNull();
+    expect(tools.querySelector('.desktop-header-tools__secondary')).toBeNull();
   });
 
   it('renders compact section navigation in the shell until wide navigation takes over', () => {

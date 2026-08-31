@@ -60,10 +60,10 @@ export function EmailStudioDialog({
               <div className="ml-auto flex shrink-0 items-center gap-2">
                 {headerActions}
                 <div className="flex items-center rounded-lg bg-muted/60 p-1 xl:hidden">
-                  <Button type="button" variant={mode === 'edit' ? 'default' : 'ghost'} size="sm" className={cn('h-8 px-2 sm:px-3', mode === 'edit' && 'bg-blue-600 text-white hover:bg-blue-700')} onClick={() => onModeChange('edit')}>
+                  <Button type="button" variant="toggle" size="compact" className="px-2 sm:px-3" aria-pressed={mode === 'edit'} onClick={() => onModeChange('edit')}>
                     <MonitorCog className="h-4 w-4" /><span className="hidden sm:inline">Edit</span><span className="sr-only sm:hidden">Edit email</span>
                   </Button>
-                  <Button type="button" variant={mode === 'preview' ? 'default' : 'ghost'} size="sm" className={cn('h-8 px-2 sm:px-3', mode === 'preview' && 'bg-blue-600 text-white hover:bg-blue-700')} onClick={() => onModeChange('preview')}>
+                  <Button type="button" variant="toggle" size="compact" className="px-2 sm:px-3" aria-pressed={mode === 'preview'} onClick={() => onModeChange('preview')}>
                     <Eye className="h-4 w-4" /><span className="hidden sm:inline">Preview</span><span className="sr-only sm:hidden">Preview email</span>
                   </Button>
                 </div>
@@ -98,7 +98,7 @@ export function EmailStudioDialog({
                   <Button type="button" variant="outline" disabled={busy || testDisabled} onClick={onTest}>
                     {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}<span className="hidden sm:inline">Send test</span><span className="sm:hidden">Test</span>
                   </Button>
-                  <Button type="button" className="bg-blue-600 text-white hover:bg-blue-700" disabled={busy || publishDisabled} onClick={onPublish}>
+                  <Button type="button" disabled={busy || publishDisabled} onClick={onPublish}>
                     {publishing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Publish
                   </Button>
                 </>

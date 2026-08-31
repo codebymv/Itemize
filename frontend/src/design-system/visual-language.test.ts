@@ -375,7 +375,7 @@ describe('visual language: shared page chrome', () => {
   it('keeps page-shell icons legible in both themes', () => {
     [...INDEX_PAGES, ...DETAIL_PAGES, ...SPECIAL_APP_PAGES].forEach(path => {
       const pageLayoutIcons = [...read(path).matchAll(
-        /<PageLayout[\s\S]{0,600}?icon=\{<[^>]+className="([^"]+)"\s*\/>\}/g,
+        /<PageLayout[\s\S]{0,600}?icon=\{\s*<[^>]+className="([^"]+)"\s*\/>\s*\}/g,
       )];
       expect(pageLayoutIcons.length, `${path} must expose a concrete PageLayout icon`).toBeGreaterThan(0);
       pageLayoutIcons.forEach(match => {

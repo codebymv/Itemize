@@ -53,7 +53,7 @@ describe('ResponsiveCardRail', () => {
 
     expect(scrollTo).toHaveBeenCalledWith({ left: 480, behavior: 'smooth' });
     expect(thirdIndicator).toHaveAttribute('aria-current', 'true');
-    expect(thirdIndicator).toHaveClass('h-8', 'w-8');
+    expect(thirdIndicator).toHaveClass('h-11', 'w-11', 'touch-manipulation');
     expect(thirdIndicator.firstElementChild).toHaveClass('h-1.5');
   });
 

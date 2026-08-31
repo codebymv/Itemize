@@ -183,7 +183,7 @@ type GraphqlPayment = {
   updatedAt: string;
 };
 
-type GraphqlRevenueFlow = {
+export type GraphqlRevenueFlow = {
   period: string;
   startAt: string | null;
   endAt: string;
@@ -263,7 +263,7 @@ const mapPayment = (payment: GraphqlPayment): InvoicePayment => ({
 const enumValue = (value?: string): string | undefined =>
   value === undefined ? undefined : value.toUpperCase();
 
-const PAYMENT_PERIOD_ENUM: Record<PaymentPeriod, string> = {
+export const PAYMENT_PERIOD_ENUM: Record<PaymentPeriod, string> = {
   '7days': 'LAST_7_DAYS',
   '30days': 'LAST_30_DAYS',
   '90days': 'LAST_90_DAYS',
@@ -276,7 +276,7 @@ const PAYMENT_PERIOD_FROM_ENUM: Record<string, PaymentPeriod> = Object.fromEntri
   Object.entries(PAYMENT_PERIOD_ENUM).map(([period, enumName]) => [enumName, period]),
 ) as Record<string, PaymentPeriod>;
 
-const revenueFlowFields = `
+export const revenueFlowFields = `
   period startAt endAt timeZone bucketUnit
   currencies {
     currency
@@ -295,7 +295,7 @@ const revenueFlowFields = `
   }
 `;
 
-const mapRevenueFlow = (
+export const mapRevenueFlow = (
   flow: GraphqlRevenueFlow,
   fallbackPeriod: PaymentPeriod,
 ): RevenueFlow => ({

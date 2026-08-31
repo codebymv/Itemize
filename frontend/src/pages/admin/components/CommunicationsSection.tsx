@@ -56,7 +56,7 @@ function PlanFilterControls({
                 variant={planFilter === null ? 'default' : 'outline'}
                 onClick={() => onChange(null)}
                 className={`${compact ? 'col-span-2 w-full justify-start' : ''} ${planFilter === null
-                    ? 'h-11 bg-blue-600 hover:bg-blue-700'
+                    ? 'h-11 bg-blue-600 interaction-button--primary'
                     : 'h-11'}`}
             >
                 <Globe2 className={`mr-1 h-4 w-4 ${planFilter === null ? 'text-white' : 'icon-accent'}`} />
@@ -70,7 +70,7 @@ function PlanFilterControls({
                         variant={planFilter === planId ? 'default' : 'outline'}
                         onClick={() => onChange(planFilter === planId ? null : planId)}
                         className={`${compact ? 'w-full justify-start' : ''} ${planFilter === planId
-                            ? 'h-11 bg-blue-600 hover:bg-blue-700'
+                            ? 'h-11 bg-blue-600 interaction-button--primary'
                             : 'h-11'}`}
                     >
                         <PlanIcon className={`mr-1 h-4 w-4 ${planFilter === planId ? 'text-white' : 'icon-accent'}`} />
@@ -452,7 +452,7 @@ export default function CommunicationsSection({
                                         aria-pressed={selectedUsers.size >= users.length && users.length > 0 && !allFilteredSelected}
                                         onClick={handleSelectAllVisible}
                                         disabled={loadingAllIds}
-                                        className="inline-flex h-11 w-11 items-center justify-center rounded-md hover:bg-muted disabled:opacity-50"
+                                        className="interaction-control inline-flex h-11 w-11 items-center justify-center rounded-md disabled:opacity-50"
                                     >
                                         <span className={`flex h-5 w-5 items-center justify-center rounded border-2 transition-colors ${
                                             selectedUsers.size >= users.length && users.length > 0 && !allFilteredSelected
@@ -477,7 +477,7 @@ export default function CommunicationsSection({
                                     aria-pressed={allFilteredSelected}
                                     onClick={handleSelectAllFiltered}
                                     disabled={loadingAllIds}
-                                    className="inline-flex h-11 w-11 items-center justify-center rounded-md hover:bg-muted disabled:opacity-50"
+                                    className="interaction-control inline-flex h-11 w-11 items-center justify-center rounded-md disabled:opacity-50"
                                 >
                                     <span className={`flex h-5 w-5 items-center justify-center rounded border-2 transition-colors ${
                                         allFilteredSelected
@@ -524,7 +524,7 @@ export default function CommunicationsSection({
                                 <Button
                                     onClick={handleOpenCompose}
                                     disabled={loadingRecipients}
-                                    className="h-11 bg-blue-600 hover:bg-blue-700"
+                                    className="h-11 bg-blue-600 interaction-button--primary"
                                 >
                                     {loadingRecipients ? (
                                         <>
@@ -564,12 +564,14 @@ export default function CommunicationsSection({
                             ) : showResults ? (
                                 <div className="space-y-2 max-h-[500px] overflow-y-auto">
                                     {users.map((user) => (
-                                        <div
+                                        <button
+                                            type="button"
                                             key={user.id}
-                                            className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                                            aria-pressed={selectedUsers.has(user.id)}
+                                            className={`interaction-row flex w-full items-center gap-3 rounded-lg border p-3 text-left ${
                                                 selectedUsers.has(user.id)
                                                     ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
-                                                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
+                                                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
                                             }`}
                                             onClick={() => handleSelectUser(user.id, !selectedUsers.has(user.id))}
                                         >
@@ -609,7 +611,7 @@ export default function CommunicationsSection({
                                                     </span>
                                                 );
                                             })()}
-                                        </div>
+                                        </button>
                                     ))}
 
                                     {hasMore && (
@@ -621,7 +623,7 @@ export default function CommunicationsSection({
                                                     variant="outline"
                                                     size="sm"
                                                     onClick={handleLoadMore}
-                                                    className="text-blue-600 border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                                    className="border-blue-600 text-blue-600"
                                                 >
                                                     Load More
                                                 </Button>

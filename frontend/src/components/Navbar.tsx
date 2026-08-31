@@ -136,7 +136,7 @@ const Navbar: React.FC = () => {
             {currentUser ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0 bg-blue-600 hover:bg-blue-700 border-0">
+                  <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0 bg-blue-600 interaction-button--primary border-0">
                     <User className="h-5 w-5 text-white" />
                   </Button>
                 </DropdownMenuTrigger>

@@ -19,8 +19,7 @@ describe('ShellBackButton', () => {
       'w-11',
       'text-blue-600',
       'dark:text-blue-400',
-      'hover:bg-accent',
-      'hover:text-accent-foreground',
+      'interaction-button--neutral',
     );
     expect(button).not.toHaveClass('hover:bg-blue-50', 'dark:hover:bg-blue-950/40');
     expect(button).not.toHaveTextContent('Back to contacts');

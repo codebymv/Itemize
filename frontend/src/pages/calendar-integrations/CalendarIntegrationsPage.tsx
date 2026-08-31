@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { CalendarDays, Plug } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -12,15 +13,16 @@ import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { IntegrationProviderMark } from '@/components/brand/IntegrationProviderMark';
 import { SettingsPlanGate, SettingsSectionTitle } from '@/components/settings/SettingsPrimitives';
 import {
-    getCalendarConnections,
     disconnectCalendar,
     syncCalendar,
     initiateGoogleAuth,
-    type CalendarConnection,
 } from '@/services/calendarIntegrationsApi';
-import { disconnectChannel, getChannels, getFacebookConnectUrl } from '@/services/socialApi';
-import { getPaymentSettings } from '@/services/invoicesApi';
+import { disconnectChannel, getFacebookConnectUrl } from '@/services/socialApi';
 import { disconnectStripeConnect, initiateStripeConnect } from '@/services/stripeConnectApi';
+import {
+    getIntegrationOverviewViaGraphql,
+    type IntegrationOverview,
+} from '@/services/integrationOverviewGraphql';
 import {
     INTEGRATIONS_PATH,
     integrationOAuthToast,
@@ -28,21 +30,41 @@ import {
 } from '@/lib/integrationOAuthReturn';
 import { IntegrationStatusRow } from '@/components/integrations/IntegrationStatusRow';
 import { AVAILABLE_PLANS_PATH } from '@/lib/settingsNavigation';
+import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
 
 export function CalendarIntegrationsPage({ embedded = false }: { embedded?: boolean }) {
     const { toast } = useToast();
     const navigate = useNavigate();
     const location = useLocation();
     const { isLoading: subscriptionLoading, isSubscribed } = useSubscriptionState();
+    const queryClient = useQueryClient();
 
-    const [connections, setConnections] = useState<CalendarConnection[]>([]);
-    const [facebookChannel, setFacebookChannel] = useState<{ id: number; name: string } | null>(null);
-    const [stripeConnected, setStripeConnected] = useState(false);
-    const [loading, setLoading] = useState(true);
-    const [loadError, setLoadError] = useState(false);
-    const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
+    const {
+        organizationId,
+        isLoading: organizationLoading,
+        error: initError,
+    } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [syncing, setSyncing] = useState<number | null>(null);
     const [connecting, setConnecting] = useState<'google' | 'facebook' | 'stripe' | null>(null);
+    const overviewQueryKey = ['integration-overview', organizationId] as const;
+    const overviewQuery = useQuery({
+        queryKey: overviewQueryKey,
+        queryFn: ({ signal }) => getIntegrationOverviewViaGraphql(
+            organizationId as number,
+            signal,
+        ),
+        enabled: organizationId !== null && !subscriptionLoading && isSubscribed,
+        staleTime: QUERY_STALE_TIME_MS,
+        retry: shouldRetryQuery,
+    });
+    const overview = overviewQuery.data;
+    const connections = overview?.calendarConnections ?? [];
+    const facebookChannel = overview?.facebookChannel ?? null;
+    const stripeConnected = overview?.stripeConnected ?? false;
+    const loading = subscriptionLoading
+        || organizationLoading
+        || (isSubscribed && overviewQuery.isPending);
+    const loadError = Boolean(overviewQuery.error && !overviewQuery.data);
 
     const handleConnectGoogle = useCallback(async () => {
         if (!organizationId) return;
@@ -80,53 +102,12 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
         }
     }, [organizationId, toast]);
 
-    const fetchStatus = useCallback(async () => {
-        if (!organizationId || subscriptionLoading || !isSubscribed) return;
-        setLoading(true);
-        setLoadError(false);
-        try {
-            const [calendarRes, channelsRes, paymentRes] = await Promise.all([
-                getCalendarConnections(organizationId),
-                getChannels({}, organizationId).catch(() => []),
-                getPaymentSettings(organizationId).catch(() => ({ stripe_connected: false })),
-            ]);
-            setConnections(calendarRes || []);
-            const channels = Array.isArray(channelsRes) ? channelsRes : [];
-            const facebook = channels.find((channel) => channel.channel_type === 'facebook' && channel.is_active);
-            setFacebookChannel(facebook ? { id: facebook.id, name: facebook.name } : null);
-            setStripeConnected(Boolean(paymentRes?.stripe_connected));
-        } catch {
-            setLoadError(true);
-        } finally {
-            setLoading(false);
-        }
-    }, [isSubscribed, organizationId, subscriptionLoading]);
-
-    useEffect(() => {
-        fetchStatus();
-    }, [fetchStatus]);
-
     useEffect(() => {
         const result = readIntegrationOAuthResult(location.search);
         if (!result) return;
         toast(integrationOAuthToast(result));
         window.history.replaceState({}, document.title, location.pathname);
-        if (result.ok) {
-            void fetchStatus();
-        }
-    }, [fetchStatus, location.pathname, location.search, toast]);
-
-    useEffect(() => {
-        if (!organizationId && initError) {
-            setLoading(false);
-        }
-    }, [organizationId, initError]);
-
-    useEffect(() => {
-        if (!subscriptionLoading && !isSubscribed) {
-            setLoading(false);
-        }
-    }, [isSubscribed, subscriptionLoading]);
+    }, [location.pathname, location.search, toast]);
 
     const handleSync = async (id: number) => {
         if (!organizationId) return;
@@ -134,7 +115,6 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
         try {
             await syncCalendar(id, organizationId);
             toast({ title: 'Sync queued', description: 'Calendar sync will continue in the background.' });
-            fetchStatus();
         } catch {
             toast({ title: 'Error', description: 'Sync failed', variant: 'destructive' });
         } finally {
@@ -146,7 +126,17 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
         if (!organizationId) return;
         try {
             await disconnectCalendar(id, organizationId);
-            setConnections((prev) => prev.filter((connection) => connection.id !== id));
+            queryClient.setQueryData<IntegrationOverview>(
+                overviewQueryKey,
+                (current) => current
+                    ? {
+                        ...current,
+                        calendarConnections: current.calendarConnections.filter(
+                            (connection) => connection.id !== id,
+                        ),
+                    }
+                    : current,
+            );
             toast({ title: 'Disconnected', description: 'Calendar disconnected successfully' });
         } catch {
             toast({ title: 'Error', description: 'Failed to disconnect', variant: 'destructive' });
@@ -157,7 +147,12 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
         if (!organizationId || !facebookChannel) return;
         try {
             await disconnectChannel(facebookChannel.id, organizationId);
-            setFacebookChannel(null);
+            queryClient.setQueryData<IntegrationOverview>(
+                overviewQueryKey,
+                (current) => current
+                    ? { ...current, facebookChannel: null, facebookStatusAvailable: true }
+                    : current,
+            );
             toast({ title: 'Disconnected', description: 'Facebook disconnected successfully' });
         } catch {
             toast({ title: 'Error', description: 'Failed to disconnect Facebook', variant: 'destructive' });
@@ -168,7 +163,12 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
         if (!organizationId) return;
         try {
             await disconnectStripeConnect(organizationId);
-            setStripeConnected(false);
+            queryClient.setQueryData<IntegrationOverview>(
+                overviewQueryKey,
+                (current) => current
+                    ? { ...current, stripeConnected: false, stripeStatusAvailable: true }
+                    : current,
+            );
             toast({ title: 'Disconnected', description: 'Stripe is no longer connected for invoice payments.' });
         } catch {
             toast({ title: 'Error', description: 'Failed to disconnect Stripe', variant: 'destructive' });
@@ -227,7 +227,7 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
                 <CardHeader>
                     <SettingsSectionTitle icon={Plug}>Connections</SettingsSectionTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent surface="inset">
                     {loading ? (
                         <div className="divide-y rounded-lg border">
                             {[0, 1, 2, 3, 4].map((index) => (
@@ -247,7 +247,7 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
                             icon={Plug}
                             title="Unable to load integrations"
                             description="We couldn't load your connection status. Try again."
-                            onRetry={() => void fetchStatus()}
+                            onRetry={() => void overviewQuery.refetch()}
                         />
                     ) : (
                         <div className="divide-y rounded-lg border">
@@ -264,12 +264,18 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
                             <IntegrationStatusRow
                                 name="Facebook"
                                 description="Bring Page messages into the Itemize inbox."
-                                status={facebookChannel ? 'connected' : 'disconnected'}
+                                status={!overview?.facebookStatusAvailable
+                                    ? 'unavailable'
+                                    : facebookChannel ? 'connected' : 'disconnected'}
                                 detail={facebookChannel?.name || undefined}
                                 icon={<IntegrationProviderMark provider="facebook" />}
-                                primaryLabel={facebookChannel ? 'Reconnect' : 'Connect'}
+                                primaryLabel={!overview?.facebookStatusAvailable
+                                    ? 'Retry'
+                                    : facebookChannel ? 'Reconnect' : 'Connect'}
                                 secondaryLabel="Inbox"
-                                onPrimary={() => void handleConnectFacebook()}
+                                onPrimary={!overview?.facebookStatusAvailable
+                                    ? () => void overviewQuery.refetch()
+                                    : () => void handleConnectFacebook()}
                                 onSecondary={() => navigate('/social')}
                                 onDisconnect={facebookChannel ? () => void handleDisconnectFacebook() : undefined}
                                 busy={connecting === 'facebook'}
@@ -277,11 +283,17 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
                             <IntegrationStatusRow
                                 name="Stripe"
                                 description="Accept card payments on invoices to your Stripe account."
-                                status={stripeConnected ? 'connected' : 'disconnected'}
+                                status={!overview?.stripeStatusAvailable
+                                    ? 'unavailable'
+                                    : stripeConnected ? 'connected' : 'disconnected'}
                                 icon={<IntegrationProviderMark provider="stripe" />}
-                                primaryLabel={stripeConnected ? 'Reconnect' : 'Connect'}
+                                primaryLabel={!overview?.stripeStatusAvailable
+                                    ? 'Retry'
+                                    : stripeConnected ? 'Reconnect' : 'Connect'}
                                 secondaryLabel="Payments"
-                                onPrimary={() => void handleConnectStripe()}
+                                onPrimary={!overview?.stripeStatusAvailable
+                                    ? () => void overviewQuery.refetch()
+                                    : () => void handleConnectStripe()}
                                 onSecondary={() => navigate('/payment-settings')}
                                 onDisconnect={stripeConnected ? () => void handleDisconnectStripe() : undefined}
                                 busy={connecting === 'stripe'}
@@ -311,7 +323,7 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
                     <CardHeader>
                         <SettingsSectionTitle icon={CalendarDays}>Calendar accounts</SettingsSectionTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent surface="inset">
                         <div className="divide-y rounded-lg border">
                             {connections.map((connection) => (
                                 <IntegrationStatusRow

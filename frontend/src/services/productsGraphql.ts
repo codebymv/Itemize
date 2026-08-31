@@ -1,7 +1,7 @@
 import type { Product } from './invoicesApi';
 import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
 
-type GraphqlProduct = {
+export type GraphqlProduct = {
   id: number;
   organizationId: number;
   name: string;
@@ -19,12 +19,12 @@ type GraphqlProduct = {
   updatedAt: string;
 };
 
-const fields = `
+export const productFields = `
   id organizationId name description sku price currency productType
   billingPeriod taxRate taxable isActive createdById createdAt updatedAt
 `;
 
-const mapProduct = (product: GraphqlProduct): Product => ({
+export const mapProduct = (product: GraphqlProduct): Product => ({
   id: product.id,
   organization_id: product.organizationId,
   name: product.name,
@@ -89,6 +89,7 @@ const mapUpdateInput = (product: Partial<Product>) => ({
 export const getProductsViaGraphql = async (
   filter: { is_active?: boolean; search?: string } = {},
   organizationId?: number,
+  signal?: AbortSignal,
 ): Promise<Product[]> => {
   const products: Product[] = [];
   let page = 1;
@@ -108,7 +109,7 @@ export const getProductsViaGraphql = async (
     >(
       `query Products($filter: ProductFilterInput, $page: PageInput) {
         products(filter: $filter, page: $page) {
-          nodes { ${fields} }
+          nodes { ${productFields} }
           pageInfo { hasNextPage }
         }
       }`,
@@ -122,6 +123,7 @@ export const getProductsViaGraphql = async (
         page: { page, pageSize: 100 },
       },
       organizationId,
+      signal,
     );
     products.push(...data.products.nodes.map(mapProduct));
     hasNextPage = data.products.pageInfo.hasNextPage;
@@ -139,7 +141,7 @@ export const createProductViaGraphql = async (
     { input: ReturnType<typeof mapCreateInput> }
   >(
     `mutation CreateProduct($input: CreateProductInput!) {
-      createProduct(input: $input) { ${fields} }
+      createProduct(input: $input) { ${productFields} }
     }`,
     { input: mapCreateInput(product) },
     organizationId,
@@ -157,7 +159,7 @@ export const updateProductViaGraphql = async (
     { id: number; input: ReturnType<typeof mapUpdateInput> }
   >(
     `mutation UpdateProduct($id: Int!, $input: UpdateProductInput!) {
-      updateProduct(id: $id, input: $input) { ${fields} }
+      updateProduct(id: $id, input: $input) { ${productFields} }
     }`,
     { id, input: mapUpdateInput(product) },
     organizationId,

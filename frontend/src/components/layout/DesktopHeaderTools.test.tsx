@@ -13,7 +13,7 @@ import {
 } from './DesktopHeaderTools';
 
 describe('ResponsiveHeaderTools', () => {
-  it('marks one command declaration for mobile and desktop shell rendering', () => {
+  it('promotes a lone secondary command into the primary action in both shell renderers', () => {
     const { container } = render(
       <TooltipProvider>
         <ResponsiveHeaderTools
@@ -34,6 +34,11 @@ describe('ResponsiveHeaderTools', () => {
       'desktop-header-tools--responsive',
     );
     expect(screen.getAllByRole('button', { name: 'Canvas' })).toHaveLength(2);
+    expect(container.querySelectorAll('[data-promoted-primary]')).toHaveLength(2);
+    screen.getAllByRole('button', { name: 'Canvas' }).forEach((button) => {
+      expect(button).toHaveClass('bg-primary', 'text-primary-foreground');
+      expect(button).not.toHaveClass('border-input');
+    });
   });
 
   it('keeps query, secondary, and primary commands in one three-control mobile rail', () => {
@@ -184,6 +189,9 @@ describe('HeaderSearch', () => {
 
     expect(container.querySelector('.desktop-header-search__wide')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Search documents...')).toBeInTheDocument();
+    expect(screen.getByRole('searchbox', { name: 'Search documents' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Search documents' })).toHaveLength(2);
+    expect(container.querySelector('.desktop-header-search__label')).toHaveTextContent('Search');
   });
 });
 
@@ -200,7 +208,7 @@ describe('HeaderRefreshAction', () => {
 
     const button = screen.getByRole('button', { name: 'Refresh' });
     expect(container.querySelector('.desktop-header-tools__primary')).toContainElement(button);
-    expect(button).toHaveClass('h-11', 'min-w-11', 'bg-blue-600');
+    expect(button).toHaveClass('h-11', 'min-w-11', 'bg-primary', 'interaction-button--primary');
     expect(screen.getByText('Refresh')).toHaveClass('desktop-header-action-label');
 
     fireEvent.click(button);
@@ -214,13 +222,15 @@ describe('HeaderRefreshAction', () => {
       </TooltipProvider>,
     );
 
-    const button = screen.getByRole('button', { name: 'Refresh' });
+    const button = screen.getByRole('button', { name: 'Refreshing' });
     expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('aria-busy', 'true');
+    expect(button).toHaveAttribute('data-busy');
     expect(button.querySelector('svg')).toHaveClass('animate-spin');
   });
 
-  it('supports secondary refresh prominence without changing its responsive grammar', () => {
-    render(
+  it('promotes a secondary refresh when it is the only page action', () => {
+    const { container } = render(
       <TooltipProvider>
         <DesktopHeaderTools
           secondaryAction={(
@@ -231,8 +241,9 @@ describe('HeaderRefreshAction', () => {
     );
 
     const button = screen.getByRole('button', { name: 'Refresh' });
-    expect(button).toHaveClass('border', 'bg-background');
-    expect(button).not.toHaveClass('bg-blue-600');
+    expect(container.querySelector('[data-promoted-primary]')).toContainElement(button);
+    expect(button).toHaveClass('bg-primary', 'text-primary-foreground', 'interaction-button--primary');
+    expect(button).not.toHaveClass('border-input');
     expect(screen.getByText('Refresh')).toHaveClass('desktop-header-action-label');
   });
 });
@@ -256,7 +267,28 @@ describe('HeaderAction', () => {
     const button = screen.getByRole('button', { name: 'Save changes' });
     expect(button).toContainElement(screen.getByTestId('save-icon'));
     expect(screen.getByText('Save changes')).toHaveClass('desktop-header-action-label');
-    expect(button).toHaveClass('h-11', 'min-w-11', 'bg-blue-600');
+    expect(button).toHaveClass('h-11', 'min-w-11', 'bg-primary', 'interaction-button--primary');
+  });
+
+  it('owns the mutation state and prevents duplicate activation while busy', () => {
+    const onClick = vi.fn();
+    render(
+      <TooltipProvider>
+        <HeaderAction
+          label="Saving…"
+          icon={<Save data-testid="busy-save-icon" />}
+          onClick={onClick}
+          busy
+        />
+      </TooltipProvider>,
+    );
+
+    const button = screen.getByRole('button', { name: 'Saving…' });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('aria-busy', 'true');
+    expect(button).toHaveAttribute('data-busy');
+    fireEvent.click(button);
+    expect(onClick).not.toHaveBeenCalled();
   });
 });
 

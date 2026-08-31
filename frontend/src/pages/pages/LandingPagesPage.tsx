@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Layout, MoreHorizontal, Trash2, Copy, Eye, EyeOff, BarChart3, Pencil, Archive, ChevronDown, Maximize2, Loader2 } from 'lucide-react';
+import { Plus, Layout, MoreHorizontal, Trash2, Copy, Eye, EyeOff, BarChart3, Pencil, Archive, ChevronDown, Maximize2, Loader2, PieChart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -29,6 +29,7 @@ import { getPages, getPage, updatePage, deletePage, duplicatePage, createPage, t
 import { PageLayout } from '@/components/layout/PageLayout';
 import { HeaderAction, HeaderCombinedQuery, HeaderFilters, HeaderSearch } from '@/components/layout/DesktopHeaderTools';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
+import { FramedSection } from '@/components/ui/framed-section';
 import { StatCard } from '@/components/StatCard';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
@@ -262,12 +263,14 @@ const handleDuplicate = async (id: number) => {
                 content={ONBOARDING_CONTENT.pages}
             />
             {!loadError && (
-                <ResponsiveCardRail label="Page status summary" desktopColumns="md:grid-cols-2 lg:grid-cols-4" className="responsive-stat-summary">
+                <FramedSection title="Overview" icon={PieChart} className="mb-6">
+                <ResponsiveCardRail label="Page status summary" desktopColumns="md:grid-cols-2 lg:grid-cols-4" className="responsive-stat-summary mb-0">
                     <StatCard title="Archived pages" badgeText="Archived" value={stats.archived} icon={Archive} description={`${stats.archived} unavailable`} colorTheme="red" isLoading={loading} />
                     <StatCard title="Total pages" badgeText="Total" value={stats.total} icon={Layout} description={`${stats.total} configured`} colorTheme="blue" isLoading={loading} />
                     <StatCard title="Draft pages" badgeText="Draft" value={stats.draft} icon={Pencil} description={`${stats.draft} being prepared`} colorTheme="blue" isLoading={loading} />
                     <StatCard title="Published pages" badgeText="Published" value={stats.published} icon={Eye} description={`${stats.published} live`} colorTheme="green" isLoading={loading} />
                 </ResponsiveCardRail>
+                </FramedSection>
             )}
 
             <Card>
@@ -301,7 +304,7 @@ const handleDuplicate = async (id: number) => {
                                         aria-expanded={isExpanded}
                                         aria-controls={`page-preview-${page.id}`}
                                         aria-label={`${isExpanded ? 'Collapse' : 'Preview'} ${page.name}`}
-                                        className="group flex cursor-pointer items-center gap-3 px-3 py-4 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-4"
+                                        className="group flex cursor-pointer items-center gap-3 px-3 py-4 interaction-row focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-4"
                                         onClick={() => void toggleExpanded(page)}
                                         onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); void toggleExpanded(page); } }}
                                     >
@@ -332,25 +335,25 @@ const handleDuplicate = async (id: number) => {
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                                                     <DropdownMenuItem onClick={() => navigate(`/pages/${page.id}`)} className="group/menu">
-                                                        <Pencil className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Edit
+                                                        <Pencil className="h-4 w-4 mr-2" />Edit
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem onClick={() => void openFullPreview(page)} className="group/menu">
-                                                        <Maximize2 className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Full preview
+                                                        <Maximize2 className="h-4 w-4 mr-2" />Full preview
                                                     </DropdownMenuItem>
                                                     {page.status === 'published' ? (
                                                         <DropdownMenuItem onClick={() => handleToggleStatus(page, 'draft')} className="group/menu">
-                                                            <EyeOff className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Unpublish
+                                                            <EyeOff className="h-4 w-4 mr-2" />Unpublish
                                                         </DropdownMenuItem>
                                                     ) : (
                                                         <DropdownMenuItem onClick={() => handleToggleStatus(page, 'published')} className="group/menu">
-                                                            <Eye className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Publish
+                                                            <Eye className="h-4 w-4 mr-2" />Publish
                                                         </DropdownMenuItem>
                                                     )}
                                                     {page.status === 'published' && <DropdownMenuItem onClick={() => copyPageLink(page.slug)} className="group/menu">
-                                                        <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Copy link
+                                                        <Copy className="h-4 w-4 mr-2" />Copy link
                                                     </DropdownMenuItem>}
                                                     <DropdownMenuItem onClick={() => handleDuplicate(page.id)} className="group/menu">
-                                                        <Copy className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Duplicate
+                                                        <Copy className="h-4 w-4 mr-2" />Duplicate
                                                     </DropdownMenuItem>
                                                     <DropdownMenuSeparator />
                                                     <DropdownMenuItem onClick={() => setPageToDelete(page)} className="text-destructive focus:text-destructive">
@@ -366,20 +369,20 @@ const handleDuplicate = async (id: number) => {
                                                 <Button variant="outline" size="sm" onClick={() => navigate(`/pages/${page.id}`)}>
                                                     <Pencil className="h-4 w-4" /><ExpandedRowActionLabel full="Edit page" compact="Edit" />
                                                 </Button>
-                                                <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700" disabled={!previewData} onClick={() => previewData && setPreviewPage(previewData)}>
+                                                <Button size="sm" className="bg-blue-600 text-white interaction-button--primary" disabled={!previewData} onClick={() => previewData && setPreviewPage(previewData)}>
                                                     <Maximize2 className="h-4 w-4" /><ExpandedRowActionLabel full="Full preview" compact="Preview" />
                                                 </Button>
-                                                <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => handleToggleStatus(page, page.status === 'published' ? 'draft' : 'published')}>
+                                                <Button size="sm" className="bg-blue-600 text-white interaction-button--primary" onClick={() => handleToggleStatus(page, page.status === 'published' ? 'draft' : 'published')}>
                                                     {page.status === 'published' ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                                     <ExpandedRowActionLabel full={page.status === 'published' ? 'Unpublish page' : 'Publish page'} compact={page.status === 'published' ? 'Unpublish' : 'Publish'} />
                                                 </Button>
-                                                {page.status === 'published' && <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => copyPageLink(page.slug)}>
+                                                {page.status === 'published' && <Button size="sm" className="bg-blue-600 text-white interaction-button--primary" onClick={() => copyPageLink(page.slug)}>
                                                     <Copy className="h-4 w-4" /><ExpandedRowActionLabel full="Copy public link" compact="Copy" />
                                                 </Button>}
-                                                <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700" onClick={() => handleDuplicate(page.id)}>
+                                                <Button size="sm" className="bg-blue-600 text-white interaction-button--primary" onClick={() => handleDuplicate(page.id)}>
                                                     <Copy className="h-4 w-4" /><ExpandedRowActionLabel full="Duplicate page" compact="Duplicate" />
                                                 </Button>
-                                                <Button size="sm" variant="outline" className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => setPageToDelete(page)}>
+                                                <Button size="sm" variant="outline" className="border-destructive/30 text-destructive interaction-button--destructive-ghost" onClick={() => setPageToDelete(page)}>
                                                     <Trash2 className="h-4 w-4" /><ExpandedRowActionLabel full="Delete page" compact="Delete" />
                                                 </Button>
                                             </ExpandedRowActions>

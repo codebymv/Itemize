@@ -55,7 +55,7 @@ export function ClientCommunicationsTab({
         <CardHeader>
           <CardTitle className="text-base">Quick Actions</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2">
+        <CardContent surface="inset" className="space-y-2">
           {onSendEmail && (
             <Button variant="outline" className="w-full justify-start" onClick={onSendEmail}>
               <Mail className="h-4 w-4 mr-2" />
@@ -82,7 +82,7 @@ export function ClientCommunicationsTab({
         <CardHeader>
           <CardTitle className="text-base">Communication History</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent surface="inset">
           {communications.length === 0 ? (
             <EmptyState icon={MessageSquare} kind="inline" title="No communication history yet" />
           ) : (

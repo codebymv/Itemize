@@ -6,15 +6,24 @@ export type CardSurface = "frame" | "inset"
 
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   surface?: CardSurface
+  interactive?: boolean
 }
 
-const Card = React.forwardRef<HTMLDivElement, CardProps>(({ className, surface = "frame", ...props }, ref) => (
+export type CardContentSurface = "plain" | "inset"
+
+interface CardContentProps extends React.HTMLAttributes<HTMLDivElement> {
+  surface?: CardContentSurface
+}
+
+const Card = React.forwardRef<HTMLDivElement, CardProps>(({ className, surface = "frame", interactive = false, ...props }, ref) => (
   <div
     ref={ref}
     data-card-surface={surface}
+    data-interactive={interactive || undefined}
     className={cn(
-      "rounded-lg border bg-card text-card-foreground shadow-sm",
+      "min-w-0 rounded-lg border bg-card text-card-foreground shadow-sm",
       surface === "inset" && "bg-[hsl(var(--background-alt))]",
+      interactive && "interaction-card cursor-pointer",
       className
     )}
     {...props}
@@ -61,11 +70,18 @@ const CardDescription = React.forwardRef<
 ))
 CardDescription.displayName = "CardDescription"
 
-const CardContent = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
+const CardContent = React.forwardRef<HTMLDivElement, CardContentProps>(({ className, surface = "plain", ...props }, ref) => (
+  <div
+    ref={ref}
+    data-card-content-surface={surface}
+    className={cn(
+      surface === "inset"
+        ? "mx-4 mb-4 min-w-0 rounded-lg border bg-[hsl(var(--background-alt))] p-4 sm:mx-6 sm:mb-6 sm:p-5"
+        : "p-6 pt-0",
+      className
+    )}
+    {...props}
+  />
 ))
 CardContent.displayName = "CardContent"
 

@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { Search, X, Loader2, ChevronRight, LayoutDashboard, List, StickyNote, FileText, FileSignature, Users, Inbox, Zap, Calendar, BarChart3, PenTool, Workflow, Lock, Package, Megaphone, LucideIcon } from 'lucide-react';
+import { Search, X, ChevronRight, LayoutDashboard, List, StickyNote, FileText, FileSignature, Users, Inbox, Zap, Calendar, BarChart3, PenTool, Workflow, Lock, Package, Megaphone, LucideIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { SearchField } from '@/components/ui/search-field';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { FailureNotice } from '@/components/FailureNotice';
@@ -58,14 +58,9 @@ export function GlobalSearch({ open, onClose, hasPaidAccess }: GlobalSearchProps
   const [loading, setLoading] = useState(false);
   const [searchError, setSearchError] = useState(false);
   const [searchAttempt, setSearchAttempt] = useState(0);
-  const [mounted, setMounted] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState<number | string>(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const handleSelect = useCallback((result: SearchResult) => {
     navigate(result.href);
@@ -87,11 +82,6 @@ export function GlobalSearch({ open, onClose, hasPaidAccess }: GlobalSearchProps
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!open) return;
-
-      if (e.key === 'Escape') {
-        onClose();
-        return;
-      }
 
       if (e.key === 'ArrowDown') {
         e.preventDefault();
@@ -139,17 +129,6 @@ export function GlobalSearch({ open, onClose, hasPaidAccess }: GlobalSearchProps
       return () => window.removeEventListener('keydown', handleKeyDown);
     }
   }, [handleSelect, open, onClose, results, selectedIndex, query]);
-
-  useEffect(() => {
-    if (open) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [open]);
 
   const getOrgId = useCallback(() => {
     return localStorage.getItem('current_org_id');
@@ -406,26 +385,33 @@ export function GlobalSearch({ open, onClose, hasPaidAccess }: GlobalSearchProps
     return () => clearTimeout(debounce);
   }, [query, getOrgId, hasPaidAccess, searchAttempt]);
 
-  if (!mounted || !open) return null;
-
-  return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-start sm:justify-center pt-0 sm:pt-20 sm:pt-32">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm transition-opacity" onClick={onClose} />
-      <div className="relative w-full sm:max-w-2xl mx-0 sm:mx-4 bg-white dark:bg-slate-800 rounded-none sm:rounded-xl shadow-2xl overflow-hidden flex flex-col h-full sm:max-h-[70vh] sm:min-h-[400px] animate-in fade-in zoom-in-95 duration-200">
-        <div className="flex items-center gap-3 p-4 border-b bg-white dark:bg-slate-800 shrink-0">
-          <Search className="h-5 w-5 text-slate-400" />
-          <input
+  return (
+    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onClose()}>
+      <DialogContent
+        hideCloseButton
+        aria-describedby={undefined}
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          inputRef.current?.focus();
+        }}
+        className="top-0 flex h-dvh w-full max-w-none translate-y-0 flex-col gap-0 overflow-hidden rounded-none border-border bg-popover p-0 text-popover-foreground shadow-2xl sm:top-32 sm:h-auto sm:max-h-[70vh] sm:min-h-[400px] sm:max-w-2xl sm:translate-y-0 sm:rounded-xl"
+      >
+        <DialogTitle className="sr-only">Global search</DialogTitle>
+        <div className="flex shrink-0 items-center gap-3 border-b border-border bg-popover p-4">
+          <SearchField
             ref={inputRef}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onValueChange={setQuery}
+            label="Search anything"
             placeholder="Search anything..."
-            className="flex-1 text-lg outline-none placeholder:text-slate-400 text-slate-900 dark:text-slate-100 bg-transparent border-none focus:ring-0"
+            loading={loading}
+            containerClassName="flex-1"
+            className="border-0 bg-transparent text-lg shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
             autoFocus
           />
-          <div className="flex items-center gap-2">
-            {loading && <Loader2 className="h-4 w-4 animate-spin text-blue-600" />}
-            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 text-slate-400 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-600">
-              <kbd className="hidden sm:inline-block pointer-events-none h-5 select-none items-center gap-1 rounded border bg-slate-100 dark:bg-slate-700 px-1.5 font-mono text-[10px] font-medium text-slate-600 dark:text-slate-400 opacity-100">
+          <div className="flex items-center">
+            <Button variant="ghost" size="iconToolbar" onClick={onClose} aria-label="Close global search">
+              <kbd className="pointer-events-none hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground opacity-100 sm:inline-block">
                 ESC
               </kbd>
               <X className="h-5 w-5 sm:hidden" />
@@ -433,19 +419,19 @@ export function GlobalSearch({ open, onClose, hasPaidAccess }: GlobalSearchProps
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-2 bg-slate-50/50 dark:bg-slate-900/50 min-h-[300px]">
+        <div className="min-h-[300px] flex-1 overflow-y-auto bg-muted/20 p-2">
           {!query && (
-            <div className="p-8 text-center text-slate-600 dark:text-slate-400">
-              <Search className="h-12 w-12 mx-auto mb-3 text-slate-300 dark:text-slate-600" />
-              <p className="text-lg font-medium text-slate-700 dark:text-slate-300">Search for anything</p>
-              <p className="text-sm">
+            <div className="p-8 text-center text-muted-foreground">
+              <Search className="mx-auto mb-3 h-12 w-12 text-primary/50" />
+              <p className="text-lg font-medium text-foreground">Search for anything</p>
+              <p className="text-sm text-muted-foreground">
                 {hasPaidAccess
                   ? 'Type to find lists, notes, contacts, campaigns, and more.'
                   : 'Type to find lists, notes, whiteboards, wireframes, and vaults.'}
               </p>
 
               <div className="mt-8 text-left max-w-sm mx-auto">
-                <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase mb-3 px-2">Quick Links</p>
+                <p className="mb-3 px-2 text-xs font-semibold uppercase text-muted-foreground">Quick links</p>
                 <div className="space-y-1">
                   {(hasPaidAccess
                     ? STATIC_PAGES.slice(0, 5)
@@ -456,11 +442,11 @@ export function GlobalSearch({ open, onClose, hasPaidAccess }: GlobalSearchProps
                       onClick={() => handleSelect(page)}
                       onMouseEnter={() => setSelectedIndex(`quick-${index}`)}
                       className={cn(
-                        "w-full flex items-center gap-3 p-2 rounded-lg hover:bg-white dark:hover:bg-slate-800 hover:shadow-sm transition-all text-slate-700 dark:text-slate-300 group",
-                        selectedIndex === `quick-${index}` && "bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-200"
+                        "interaction-row group flex w-full items-center gap-3 rounded-lg p-2 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                        selectedIndex === `quick-${index}` && "bg-muted"
                       )}
                     >
-                      <div className="w-8 h-8 rounded-md bg-blue-50 dark:bg-blue-950 flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:bg-blue-100 dark:group-hover:bg-blue-900 transition-colors">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-md bg-blue-50 text-blue-600 transition-colors group-hover:bg-blue-100 group-focus-visible:bg-blue-100 dark:bg-blue-950 dark:text-blue-400 dark:group-hover:bg-blue-900 dark:group-focus-visible:bg-blue-900">
                         {page.icon && <page.icon className="h-4 w-4" />}
                       </div>
                       <span className="font-medium">{page.title}</span>
@@ -510,8 +496,8 @@ export function GlobalSearch({ open, onClose, hasPaidAccess }: GlobalSearchProps
                   onClick={() => handleSelect(result)}
                   onMouseEnter={() => setSelectedIndex(index)}
                   className={cn(
-                    "w-full flex items-center gap-4 p-3 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/30 hover:text-blue-900 dark:hover:text-blue-200 transition-colors group text-left",
-                    selectedIndex === index && "bg-blue-50 dark:bg-blue-950/30 text-blue-900 dark:text-blue-200"
+                    "interaction-row group flex w-full items-center gap-4 rounded-lg p-3 text-left text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                    selectedIndex === index && "bg-muted"
                   )}
                 >
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 dark:bg-slate-700 dark:text-slate-300 ${
@@ -531,31 +517,30 @@ export function GlobalSearch({ open, onClose, hasPaidAccess }: GlobalSearchProps
                     {result.icon ? <result.icon className="h-5 w-5" /> : <Search className="h-5 w-5" />}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate text-slate-700 dark:text-slate-200 group-hover:text-blue-900 dark:group-hover:text-blue-200">
+                    <p className="truncate font-medium text-foreground">
                       {result.title}
                     </p>
                     {result.subtitle && (
-                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate group-hover:text-blue-700 dark:group-hover:text-blue-400">
+                      <p className="truncate text-xs text-muted-foreground">
                         {result.subtitle}
                       </p>
                     )}
                   </div>
-                  <ChevronRight className="h-4 w-4 text-slate-300 dark:text-slate-600 group-hover:text-blue-400 dark:group-hover:text-blue-500" />
+                  <ChevronRight className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-blue-600 group-focus-visible:text-blue-600 dark:group-hover:text-blue-400 dark:group-focus-visible:text-blue-400" />
                 </button>
               ))}
             </div>
           )}
         </div>
 
-        <div className="p-3 bg-slate-50 dark:bg-slate-900 border-t dark:border-slate-700 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 shrink-0">
+        <div className="flex shrink-0 items-center justify-between border-t border-border bg-muted/20 p-3 text-xs text-muted-foreground">
           <div className="flex gap-4">
-            <span><kbd className="font-sans border rounded px-1 bg-white dark:bg-slate-800">↑</kbd> <kbd className="font-sans border rounded px-1 bg-white dark:bg-slate-800">↓</kbd> to navigate</span>
-            <span><kbd className="font-sans border rounded px-1 bg-white dark:bg-slate-800">↵</kbd> to select</span>
+            <span><kbd className="rounded border bg-background px-1 font-sans">↑</kbd> <kbd className="rounded border bg-background px-1 font-sans">↓</kbd> to navigate</span>
+            <span><kbd className="rounded border bg-background px-1 font-sans">↵</kbd> to select</span>
           </div>
-          <span><kbd className="font-sans border rounded px-1 bg-white dark:bg-slate-800">ESC</kbd> to close</span>
+          <span><kbd className="rounded border bg-background px-1 font-sans">ESC</kbd> to close</span>
         </div>
-      </div>
-    </div>,
-    document.body
+      </DialogContent>
+    </Dialog>
   );
 }

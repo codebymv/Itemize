@@ -22,7 +22,7 @@ describe('EmailTemplateBrowserDialog', () => {
       />,
     );
 
-    await user.type(screen.getByRole('textbox', { name: 'Search email templates' }), 'monthly');
+    await user.type(screen.getByRole('searchbox', { name: 'Search email templates' }), 'monthly');
     expect(screen.queryByText('Welcome')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /Monthly update/ }));
 

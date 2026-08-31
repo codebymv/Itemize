@@ -71,7 +71,7 @@ export const EmptyState = memo(({
           onClick={onAction}
           className={cn(
             'mt-4 h-11',
-            !isResultsState && 'bg-blue-600 text-white hover:bg-blue-700',
+            !isResultsState && 'bg-blue-600 text-white interaction-button--primary',
             compact && 'mt-3',
           )}
         >

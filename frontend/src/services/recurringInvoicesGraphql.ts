@@ -16,7 +16,7 @@ type GraphqlRecurringItem = {
   taxRate: string;
 };
 
-type GraphqlRecurringInvoice = {
+export type GraphqlRecurringInvoice = {
   id: number;
   organizationId: number;
   templateName: string;
@@ -68,7 +68,7 @@ const coreFields = `
   invoicesGenerated
 `;
 
-const detailFields = `
+export const recurringInvoiceDetailFields = `
   ${coreFields}
   items { productId name description quantity unitPrice taxRate }
 `;
@@ -82,7 +82,7 @@ const mapItem = (item: GraphqlRecurringItem): RecurringInvoiceItem => ({
   tax_rate: Number(item.taxRate),
 });
 
-const mapRecurringInvoice = (row: GraphqlRecurringInvoice): RecurringInvoice => ({
+export const mapRecurringInvoice = (row: GraphqlRecurringInvoice): RecurringInvoice => ({
   id: row.id,
   organization_id: row.organizationId,
   template_name: row.templateName,
@@ -145,6 +145,7 @@ const mapInput = (input: RecurringInvoiceWriteInput) => ({
 export const getRecurringInvoicesViaGraphql = async (
   status: RecurringStatus | 'all',
   organizationId?: number,
+  signal?: AbortSignal,
 ): Promise<RecurringInvoice[]> => {
   const rows: RecurringInvoice[] = [];
   let page = 1;
@@ -169,6 +170,7 @@ export const getRecurringInvoicesViaGraphql = async (
         page: { page, pageSize: 100 },
       },
       organizationId,
+      signal,
     );
     rows.push(...data.recurringInvoices.nodes.map(mapRecurringInvoice));
     totalPages = data.recurringInvoices.pageInfo.totalPages;
@@ -180,21 +182,24 @@ export const getRecurringInvoicesViaGraphql = async (
 export const getRecurringInvoiceViaGraphql = async (
   id: number,
   organizationId?: number,
+  signal?: AbortSignal,
 ): Promise<RecurringInvoice> => {
   const data = await graphqlRequest<
     { recurringInvoice: GraphqlRecurringInvoice }, { id: number }
   >(
     `query RecurringInvoice($id: Int!) {
-      recurringInvoice(id: $id) { ${detailFields} }
+      recurringInvoice(id: $id) { ${recurringInvoiceDetailFields} }
     }`,
     { id },
     organizationId,
+    signal,
   );
   return mapRecurringInvoice(data.recurringInvoice);
 };
 
 export const getRecurringInvoiceNumberPreviewViaGraphql = async (
   organizationId?: number,
+  signal?: AbortSignal,
 ): Promise<string> => {
   const data = await graphqlRequest<
     { previewRecurringInvoiceNumber: string },
@@ -205,6 +210,7 @@ export const getRecurringInvoiceNumberPreviewViaGraphql = async (
     }`,
     {},
     organizationId,
+    signal,
   );
   return data.previewRecurringInvoiceNumber;
 };
@@ -259,7 +265,7 @@ export const createRecurringInvoiceViaGraphql = async (
     { input: ReturnType<typeof mapInput> }
   >(
     `mutation CreateRecurringInvoice($input: CreateRecurringInvoiceInput!) {
-      createRecurringInvoice(input: $input) { ${detailFields} }
+      createRecurringInvoice(input: $input) { ${recurringInvoiceDetailFields} }
     }`,
     { input: mapInput(input) },
     organizationId,
@@ -324,7 +330,7 @@ export const updateRecurringInvoiceViaGraphql = async (
     `mutation UpdateRecurringInvoice(
       $id: Int!, $input: UpdateRecurringInvoiceInput!
     ) {
-      updateRecurringInvoice(id: $id, input: $input) { ${detailFields} }
+      updateRecurringInvoice(id: $id, input: $input) { ${recurringInvoiceDetailFields} }
     }`,
     { id, input: mapInput(input) },
     organizationId,
@@ -362,7 +368,7 @@ const lifecycleMutation = async (
       { id: number }
     >(
       `mutation PauseRecurringInvoice($id: Int!) {
-        pauseRecurringInvoice(id: $id) { ${detailFields} }
+        pauseRecurringInvoice(id: $id) { ${recurringInvoiceDetailFields} }
       }`,
       { id },
       organizationId,
@@ -374,7 +380,7 @@ const lifecycleMutation = async (
     { id: number }
   >(
     `mutation ResumeRecurringInvoice($id: Int!) {
-      resumeRecurringInvoice(id: $id) { ${detailFields} }
+      resumeRecurringInvoice(id: $id) { ${recurringInvoiceDetailFields} }
     }`,
     { id },
     organizationId,
@@ -398,7 +404,12 @@ export const generateRecurringInvoiceNowViaGraphql = async (
   id: number,
   organizationId?: number,
   idempotencyKey?: string,
-): Promise<{ invoice_number: string }> => {
+): Promise<{
+  invoice_number: string;
+  next_run_date: string | null;
+  template_status: RecurringInvoice['status'];
+  replayed: boolean;
+}> => {
   const data = await graphqlMutationRequest<{
     generateRecurringInvoiceNow: {
       invoiceId: number;
@@ -428,5 +439,8 @@ export const generateRecurringInvoiceNowViaGraphql = async (
   );
   return {
     invoice_number: data.generateRecurringInvoiceNow.invoiceNumber,
+    next_run_date: data.generateRecurringInvoiceNow.nextRunDate,
+    template_status: data.generateRecurringInvoiceNow.templateStatus as RecurringInvoice['status'],
+    replayed: data.generateRecurringInvoiceNow.replayed,
   };
 };

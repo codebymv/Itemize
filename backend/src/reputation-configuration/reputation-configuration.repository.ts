@@ -134,6 +134,14 @@ export class ReputationConfigurationRepository {
     return result.rows;
   }
 
+  async getWidget(organizationId: number, id: number): Promise<ReputationWidgetRow | null> {
+    const result = await this.pool.query<ReputationWidgetRow>(
+      `SELECT ${widgetSelection} FROM review_widgets
+       WHERE id=$1 AND organization_id=$2`, [id, organizationId],
+    );
+    return result.rows[0] ?? null;
+  }
+
   async createWidget(
     organizationId: number, widgetKey: string, values: ReputationWidgetValues,
   ): Promise<ReputationWidgetRow> {

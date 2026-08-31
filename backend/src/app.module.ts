@@ -17,6 +17,7 @@ import { BookingsModule } from './bookings/bookings.module';
 import { CalendarIntegrationsModule } from './calendar-integrations/calendar-integrations.module';
 import { ChatWidgetModule } from './chat-widget/chat-widget.module';
 import { CampaignsModule } from './campaigns/campaigns.module';
+import { CampaignEditorModule } from './campaign-editor/campaign-editor.module';
 import { CampaignDeliveryModule } from './campaign-delivery/campaign-delivery.module';
 import { CategoriesModule } from './categories/categories.module';
 import { CalendarsModule } from './calendars/calendars.module';
@@ -61,6 +62,7 @@ import { InvoiceJobsModule } from './invoice-jobs/invoice-jobs.module';
 import { InvoiceLogoCleanupModule } from './invoice-logo-cleanup/invoice-logo-cleanup.module';
 import { InvoiceLogoUploadsModule } from './invoice-logo-uploads/invoice-logo-uploads.module';
 import { InvoiceSettingsModule } from './invoice-settings/invoice-settings.module';
+import { IntegrationOverviewModule } from './integration-overview/integration-overview.module';
 import { InvoiceWebhooksModule } from './invoice-webhooks/invoice-webhooks.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { LandingPagesModule } from './landing-pages/landing-pages.module';
@@ -73,6 +75,7 @@ import { PipelinesModule } from './pipelines/pipelines.module';
 import { PaymentsModule } from './payments/payments.module';
 import { ProductsModule } from './products/products.module';
 import { RecurringInvoicesModule } from './recurring-invoices/recurring-invoices.module';
+import { RecurringInvoicePreviewModule } from './recurring-invoice-preview/recurring-invoice-preview.module';
 import { ReputationConfigurationModule } from './reputation-configuration/reputation-configuration.module';
 import { ReputationReviewsModule } from './reputation-reviews/reputation-reviews.module';
 import { ReputationRequestsModule } from './reputation-requests/reputation-requests.module';
@@ -88,6 +91,7 @@ import { WorkflowsModule } from './workflows/workflows.module';
 import { WorkflowExecutionModule } from './workflow-execution/workflow-execution.module';
 import { WorkflowJobsModule } from './workflow-jobs/workflow-jobs.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { SalesDocumentEditorModule } from './sales-document-editor/sales-document-editor.module';
 
 // Apollo's conditional exports expose distinct ESM/CJS private HeaderMap types to
 // ts-jest even though the plugin is runtime-compatible with Nest's Apollo driver.
@@ -112,6 +116,7 @@ const observabilityPlugins = [
     CalendarIntegrationsModule,
     ChatWidgetModule,
     CampaignsModule,
+    CampaignEditorModule,
     SegmentsModule,
     CampaignDeliveryModule,
     BookingsModule,
@@ -153,6 +158,7 @@ const observabilityPlugins = [
     PaymentsModule,
     ProductsModule,
     RecurringInvoicesModule,
+    RecurringInvoicePreviewModule,
     ReputationConfigurationModule,
     ReputationReviewsModule,
     ReputationRequestsModule,
@@ -164,6 +170,7 @@ const observabilityPlugins = [
     InvoiceLogoCleanupModule,
     InvoiceLogoUploadsModule,
     InvoiceSettingsModule,
+    IntegrationOverviewModule,
     InvoiceWebhooksModule,
     InvoicesModule,
     LandingPagesModule,
@@ -174,6 +181,7 @@ const observabilityPlugins = [
     WorkflowExecutionModule,
     WorkflowJobsModule,
     NotificationsModule,
+    SalesDocumentEditorModule,
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
       path: '/graphql',

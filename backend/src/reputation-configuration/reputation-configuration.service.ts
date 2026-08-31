@@ -18,6 +18,7 @@ import {
   ReputationWidgetValues,
 } from './reputation-configuration.repository';
 import {
+  ReputationConfigurationBootstrap,
   ReputationPlatform,
   ReputationSettings,
   ReputationWidget,
@@ -33,6 +34,14 @@ const has = (value: object, field: string): boolean => Object.prototype.hasOwnPr
 @Injectable()
 export class ReputationConfigurationService {
   constructor(private readonly repository: ReputationConfigurationRepository) {}
+
+  async bootstrap(organizationId: number): Promise<ReputationConfigurationBootstrap> {
+    const [platforms, settings] = await Promise.all([
+      this.platforms(organizationId),
+      this.settings(organizationId),
+    ]);
+    return { platforms, settings };
+  }
 
   async platforms(organizationId: number): Promise<ReputationPlatform[]> {
     try { return (await this.repository.listPlatforms(organizationId)).map((row) => this.mapPlatform(row)); }
@@ -70,6 +79,15 @@ export class ReputationConfigurationService {
   async widgets(organizationId: number): Promise<ReputationWidget[]> {
     try { return (await this.repository.listWidgets(organizationId)).map((row) => this.mapWidget(row)); }
     catch (error) { this.rethrow(error); }
+  }
+
+  async widget(organizationId: number, id: number): Promise<ReputationWidget> {
+    this.id(id, 'Widget');
+    try {
+      const row = await this.repository.getWidget(organizationId, id);
+      if (!row) throw itemizeGraphqlError('Review widget not found', 'NOT_FOUND');
+      return this.mapWidget(row);
+    } catch (error) { this.rethrow(error); }
   }
 
   async createWidget(

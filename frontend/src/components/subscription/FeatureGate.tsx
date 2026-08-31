@@ -111,7 +111,7 @@ export function FeatureGate({
                 };
                 startCheckout(planMap[requiredTier] || 'unlimited', 'monthly');
               }}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary-hover transition-colors"
+              className="interaction-button--primary inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-primary-foreground"
             >
               <Sparkles className="w-4 h-4" />
               Upgrade Now
@@ -144,7 +144,7 @@ export function FeatureGate({
           };
           startCheckout(planMap[requiredTier] || 'unlimited', 'monthly');
         }}
-        className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary-hover transition-colors"
+        className="interaction-button--primary inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-primary-foreground"
       >
         <Sparkles className="w-4 h-4" />
         Upgrade to {tierName}

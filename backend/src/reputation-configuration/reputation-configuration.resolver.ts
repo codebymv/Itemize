@@ -11,6 +11,7 @@ import { ReputationConfigurationService } from './reputation-configuration.servi
 import {
   DeleteReputationPlatformResult,
   DeleteReputationWidgetResult,
+  ReputationConfigurationBootstrap,
   ReputationPlatform,
   ReputationSettings,
   ReputationWidget,
@@ -24,6 +25,12 @@ export class ReputationConfigurationResolver {
     private readonly configuration: ReputationConfigurationService,
     private readonly requestContext: RequestContextService,
   ) {}
+
+  @OrganizationScoped()
+  @Query(() => ReputationConfigurationBootstrap)
+  reputationConfigurationBootstrap(): Promise<ReputationConfigurationBootstrap> {
+    return this.configuration.bootstrap(this.organizationId());
+  }
 
   @OrganizationScoped()
   @Query(() => [ReputationPlatform])
@@ -53,6 +60,14 @@ export class ReputationConfigurationResolver {
   @Query(() => [ReputationWidget])
   reputationWidgets(): Promise<ReputationWidget[]> {
     return this.configuration.widgets(this.organizationId());
+  }
+
+  @OrganizationScoped()
+  @Query(() => ReputationWidget)
+  reputationWidget(
+    @Args('id', { type: () => Int }) id: number,
+  ): Promise<ReputationWidget> {
+    return this.configuration.widget(this.organizationId(), id);
   }
 
   @CsrfProtected()

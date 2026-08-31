@@ -64,7 +64,7 @@ export const ErrorState = memo(({
         <Button
           type="button"
           onClick={actionHandler}
-          className={cn('mt-4 h-11 bg-blue-600 text-white hover:bg-blue-700', compact && 'mt-3')}
+          className={cn('mt-4 h-11 bg-blue-600 text-white interaction-button--primary', compact && 'mt-3')}
         >
           {actionLabel}
         </Button>

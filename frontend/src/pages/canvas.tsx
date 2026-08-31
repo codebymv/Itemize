@@ -52,7 +52,8 @@ const CanvasPage: React.FC = () => {
     handleClose: closeOnboarding,
   } = useOnboardingTrigger("canvas");
 
-  const canvasData = useCanvasData();
+  const { currentUser } = useAuthState();
+  const canvasData = useCanvasData(currentUser?.uid);
   const {
     lists,
     notes,
@@ -104,7 +105,6 @@ const CanvasPage: React.FC = () => {
   const canvasMethodsRef = useRef<CanvasContainerMethods | null>(null);
 
   const { toast } = useToast();
-  const { currentUser } = useAuthState();
   const { enqueuePositionUpdate } = useCanvasPositionSync();
   const updateWireframe = useCallback(
     (updated: Wireframe) => {

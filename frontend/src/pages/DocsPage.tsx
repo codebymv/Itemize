@@ -106,7 +106,7 @@ const DocsPage: React.FC = () => {
               type="button"
               aria-expanded={isExpanded}
               onClick={() => toggleFolder(item.path)}
-              className={`flex w-full items-center px-3 py-2 rounded-lg text-sm transition-all duration-200 ${textColor} ${hoverBg}`}
+              className={`flex w-full items-center px-3 py-2 rounded-lg text-sm transition-colors duration-150 ${textColor} ${hoverBg}`}
               style={{ paddingLeft: `${level * 16 + 12}px`, fontFamily: '"Raleway", sans-serif' }}
             >
               {isExpanded ? (
@@ -128,7 +128,7 @@ const DocsPage: React.FC = () => {
         <div key={item.path}>
           <Link
             to={`/help/${item.path}`}
-            className={`flex items-center px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
+            className={`flex items-center px-3 py-2 rounded-lg text-sm transition-colors duration-150 ${
               isActive ? `${activeBg} shadow-sm` : `${textColor} ${hoverBg}`
             }`}
             style={{ paddingLeft: `${level * 16 + 12}px`, fontFamily: '"Raleway", sans-serif' }}

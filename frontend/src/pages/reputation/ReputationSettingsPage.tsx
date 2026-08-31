@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { BellRing, Link2, Loader2, MoreHorizontal, Pencil, Plus, Save, Settings2, Trash2, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog } from '@/components/ui/dialog';
+import { ModalBody, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/modal';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
@@ -24,13 +26,16 @@ import { useOrganization } from '@/hooks/useOrganization';
 import { useToast } from '@/hooks/use-toast';
 import {
   addPlatform,
-  getPlatforms,
-  getReputationSettings,
   removePlatform,
   updateReputationSettings,
   type ReputationSettings,
   type ReviewPlatform,
 } from '@/services/reputationApi';
+import {
+  getReputationConfigurationBootstrapViaGraphql,
+  type ReputationConfigurationBootstrap,
+} from '@/services/reputationConfigurationGraphql';
+import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
 import { ReputationPlatformMark } from './components/ReputationPlatformMark';
 import { getReputationPlatformLabel, getReviewPlatformConnectionVisual, REPUTATION_PLATFORM_LABELS, type ReputationPlatformKey } from './constants/reputationVisuals';
 
@@ -47,35 +52,42 @@ const EMPTY_PLATFORM: PlatformDraft = { platform: 'google' };
 
 export function ReputationSettingsPage() {
   const { toast } = useToast();
-  const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
+  const queryClient = useQueryClient();
+  const { organizationId, isLoading: organizationLoading, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
   const [mode, setMode] = useState<SettingsMode>('platforms');
-  const [platforms, setPlatforms] = useState<ReviewPlatform[]>([]);
   const [settings, setSettings] = useState<ReputationSettings | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [platformDialogOpen, setPlatformDialogOpen] = useState(false);
   const [platformDraft, setPlatformDraft] = useState<PlatformDraft>(EMPTY_PLATFORM);
   const [savingPlatform, setSavingPlatform] = useState(false);
   const [platformToDelete, setPlatformToDelete] = useState<ReviewPlatform | null>(null);
-  const { isDirty, markClean } = useDirtyState({ value: settings, ready: !loading && Boolean(settings), resetKey: settings?.id ?? 'settings' });
+  const bootstrapQueryKey = ['reputation-configuration', organizationId] as const;
+  const bootstrapQuery = useQuery({
+    queryKey: bootstrapQueryKey,
+    queryFn: ({ signal }) => getReputationConfigurationBootstrapViaGraphql(
+      organizationId as number,
+      signal,
+    ),
+    enabled: organizationId !== null,
+    staleTime: QUERY_STALE_TIME_MS,
+    retry: shouldRetryQuery,
+  });
+  const platforms = bootstrapQuery.data?.platforms ?? [];
+  const settingsReady = Boolean(settings && settings.organization_id === organizationId);
+  const loading = organizationLoading || bootstrapQuery.isPending || !settingsReady;
+  const loadError = Boolean(bootstrapQuery.error && !bootstrapQuery.data);
+  const { isDirty, markClean } = useDirtyState({
+    value: settings,
+    ready: !loading && settingsReady,
+    resetKey: organizationId ?? 'settings',
+  });
 
-  const load = useCallback(async () => {
-    if (!organizationId) return;
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const [platformResult, settingsResult] = await Promise.all([getPlatforms(organizationId), getReputationSettings(organizationId)]);
-      setPlatforms(platformResult);
-      setSettings(settingsResult);
-    } catch {
-      setLoadError('Could not load reputation settings.');
-    } finally {
-      setLoading(false);
-    }
-  }, [organizationId]);
-
-  useEffect(() => { if (organizationId) void load(); }, [load, organizationId]);
+  useEffect(() => {
+    if (!bootstrapQuery.data) return;
+    setSettings(current => current?.organization_id === organizationId
+      ? current
+      : bootstrapQuery.data.settings);
+  }, [bootstrapQuery.data, organizationId]);
 
   const updateSetting = <K extends keyof ReputationSettings>(field: K, value: ReputationSettings[K]) => {
     setSettings(current => current ? { ...current, [field]: value } : current);
@@ -87,6 +99,10 @@ export function ReputationSettingsPage() {
     try {
       const saved = await updateReputationSettings(settings, organizationId);
       setSettings(saved);
+      queryClient.setQueryData<ReputationConfigurationBootstrap>(
+        bootstrapQueryKey,
+        current => current ? { ...current, settings: saved } : current,
+      );
       markClean(saved);
       toast({ title: 'Reputation settings saved' });
     } catch {
@@ -113,8 +129,11 @@ export function ReputationSettingsPage() {
     setSavingPlatform(true);
     try {
       const saved = await addPlatform(platformDraft, organizationId);
-      setPlatforms(current => [...current.filter(item => item.id !== saved.id && !(item.platform === saved.platform && item.place_id === saved.place_id)), saved]
-        .sort((left, right) => getReputationPlatformLabel(left.platform).localeCompare(getReputationPlatformLabel(right.platform))));
+      queryClient.setQueryData<ReputationConfigurationBootstrap>(bootstrapQueryKey, current => current ? {
+        ...current,
+        platforms: [...current.platforms.filter(item => item.id !== saved.id && !(item.platform === saved.platform && item.place_id === saved.place_id)), saved]
+          .sort((left, right) => getReputationPlatformLabel(left.platform).localeCompare(getReputationPlatformLabel(right.platform))),
+      } : current);
       setPlatformDialogOpen(false);
       toast({ title: 'Review platform saved' });
     } catch {
@@ -128,7 +147,10 @@ export function ReputationSettingsPage() {
     if (!organizationId || !platformToDelete) return false;
     try {
       await removePlatform(platformToDelete.id, organizationId);
-      setPlatforms(current => current.filter(item => item.id !== platformToDelete.id));
+      queryClient.setQueryData<ReputationConfigurationBootstrap>(bootstrapQueryKey, current => current ? {
+        ...current,
+        platforms: current.platforms.filter(item => item.id !== platformToDelete.id),
+      } : current);
       setPlatformToDelete(null);
       return true;
     } catch {
@@ -142,7 +164,7 @@ export function ReputationSettingsPage() {
         {initError ? (
           <OrganizationErrorState title="Unable to load reputation settings" icon={Settings2} />
         ) : (
-          <ErrorState kind="page" title="Unable to load reputation settings" description={loadError || undefined} onAction={() => void load()} />
+          <ErrorState kind="page" title="Unable to load reputation settings" description="Could not load reputation settings." onAction={() => void bootstrapQuery.refetch()} />
         )}
       </PageLayout>
     );
@@ -161,7 +183,7 @@ export function ReputationSettingsPage() {
         modeNavigation: <HeaderModeNavigation label="Reputation settings mode" value={mode} onValueChange={value => setMode(value as SettingsMode)} items={[...MODES]} />,
         primaryAction: mode === 'platforms'
           ? <HeaderAction label="Add platform" icon={<Plus className="h-4 w-4" />} onClick={() => openPlatform()} />
-          : <HeaderAction label={saving ? 'Saving...' : 'Save changes'} icon={saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} disabled={saving || !isDirty} onClick={() => void saveSettings()} />,
+          : <HeaderAction label={saving ? 'Saving...' : 'Save changes'} icon={saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} disabled={saving || !isDirty} busy={saving} onClick={() => void saveSettings()} />,
       }}
     >
       <Tabs value={mode} onValueChange={value => setMode(value as SettingsMode)}>
@@ -190,7 +212,7 @@ export function ReputationSettingsPage() {
         <TabsContent value="automation" className="mt-0 space-y-6">
           <Card>
             <CardHeader><SectionCardTitle icon={Zap}>Automatic requests</SectionCardTitle></CardHeader>
-            <CardContent className="space-y-5">
+            <CardContent surface="inset" className="space-y-5">
               <AvailabilitySettingRow id="auto-review-requests" label="Send review requests automatically" checked={settings.auto_request_enabled} onCheckedChange={value => updateSetting('auto_request_enabled', value)} help="Requests are created after the selected customer event and delay." helpLabel="About automatic review requests" />
               <div className="grid gap-4 border-t pt-5 sm:grid-cols-3">
                 <div className="grid gap-2"><Label htmlFor="request-trigger">Trigger</Label><Select value={settings.auto_request_trigger} onValueChange={value => updateSetting('auto_request_trigger', value)}><SelectTrigger id="request-trigger"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="invoice_paid">Invoice paid</SelectItem><SelectItem value="booking_completed">Booking completed</SelectItem><SelectItem value="deal_won">Deal won</SelectItem></SelectContent></Select></div>
@@ -205,7 +227,7 @@ export function ReputationSettingsPage() {
         <TabsContent value="alerts" className="mt-0">
           <Card>
             <CardHeader><SectionCardTitle icon={BellRing}>Feedback routing</SectionCardTitle></CardHeader>
-            <CardContent className="space-y-5">
+            <CardContent surface="inset" className="space-y-5">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="grid gap-2"><Label htmlFor="negative-threshold">Negative rating threshold</Label><Select value={String(settings.negative_threshold)} onValueChange={value => updateSetting('negative_threshold', Number(value))}><SelectTrigger id="negative-threshold"><SelectValue /></SelectTrigger><SelectContent>{[1, 2, 3, 4, 5].map(rating => <SelectItem key={rating} value={String(rating)}>{rating} stars or lower</SelectItem>)}</SelectContent></Select></div>
                 <div className="grid gap-2"><Label htmlFor="negative-alert-email">Alert email</Label><Input id="negative-alert-email" type="email" value={settings.negative_alert_email ?? ''} onChange={event => updateSetting('negative_alert_email', event.target.value || null)} /></div>
@@ -221,18 +243,22 @@ export function ReputationSettingsPage() {
       </Tabs>
 
       <Dialog open={platformDialogOpen} onOpenChange={setPlatformDialogOpen}>
-        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg">
-          <DialogHeader><DialogTitle>Review platform</DialogTitle></DialogHeader>
-          <div className="grid gap-4 sm:grid-cols-2">
+        <ModalContent size="md">
+          <ModalHeader
+            icon={Link2}
+            title="Review platform"
+            description="Connect a destination where customers can leave a public review."
+          />
+          <ModalBody className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2"><Label htmlFor="platform-type">Platform</Label><Select value={platformDraft.platform} onValueChange={value => setPlatformDraft({ ...EMPTY_PLATFORM, platform: value as ReviewPlatform['platform'] })}><SelectTrigger id="platform-type"><SelectValue /></SelectTrigger><SelectContent>{PLATFORM_KEYS.map(platform => <SelectItem key={platform} value={platform}>{REPUTATION_PLATFORM_LABELS[platform]}</SelectItem>)}</SelectContent></Select></div>
             <div className="grid gap-2"><Label htmlFor="platform-name">Display name</Label><Input id="platform-name" value={platformDraft.platform_name ?? ''} onChange={event => setPlatformDraft(current => ({ ...current, platform_name: event.target.value || null }))} /></div>
             {platformDraft.platform === 'google' ? <div className="grid gap-2 sm:col-span-2"><Label htmlFor="platform-place-id">Google Place ID</Label><Input id="platform-place-id" value={platformDraft.place_id ?? ''} onChange={event => setPlatformDraft(current => ({ ...current, place_id: event.target.value || null }))} /></div> : null}
             {platformDraft.platform === 'facebook' ? <div className="grid gap-2 sm:col-span-2"><Label htmlFor="platform-page-id">Facebook Page ID</Label><Input id="platform-page-id" value={platformDraft.page_id ?? ''} onChange={event => setPlatformDraft(current => ({ ...current, page_id: event.target.value || null }))} /></div> : null}
             <div className="grid gap-2 sm:col-span-2"><Label htmlFor="platform-review-url">Review URL</Label><Input id="platform-review-url" type="url" placeholder="https://..." value={platformDraft.review_url ?? ''} onChange={event => setPlatformDraft(current => ({ ...current, review_url: event.target.value || null }))} /></div>
             <div className="grid gap-2 sm:col-span-2"><Label htmlFor="platform-business-url">Business URL</Label><Input id="platform-business-url" type="url" placeholder="https://..." value={platformDraft.business_url ?? ''} onChange={event => setPlatformDraft(current => ({ ...current, business_url: event.target.value || null }))} /></div>
-          </div>
-          <DialogFooter><Button variant="outline" onClick={() => setPlatformDialogOpen(false)} disabled={savingPlatform}>Cancel</Button><Button onClick={() => void savePlatform()} disabled={savingPlatform}>{savingPlatform ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}Save platform</Button></DialogFooter>
-        </DialogContent>
+          </ModalBody>
+          <ModalFooter><Button variant="outline" onClick={() => setPlatformDialogOpen(false)} disabled={savingPlatform}>Cancel</Button><Button onClick={() => void savePlatform()} disabled={savingPlatform}>{savingPlatform ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}Save platform</Button></ModalFooter>
+        </ModalContent>
       </Dialog>
       <DeleteDialog open={Boolean(platformToDelete)} onOpenChange={open => { if (!open) setPlatformToDelete(null); }} onConfirm={deletePlatform} itemType="generic" itemTitle={platformToDelete ? getReputationPlatformLabel(platformToDelete.platform) : undefined} title="Disconnect review platform?" description="This removes the platform connection from Reputation. Existing reviews are retained." confirmText="Disconnect" successTitle="Review platform disconnected" errorDescription="Could not disconnect the review platform. Please try again." />
     </PageLayout>

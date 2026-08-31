@@ -5,7 +5,7 @@ import type {
 } from './calendarIntegrationsApi';
 import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
 
-type GraphqlCalendarConnection = {
+export type GraphqlCalendarConnection = {
   id: number;
   provider: 'google' | 'outlook' | 'apple';
   providerEmail: string | null;
@@ -49,6 +49,8 @@ const connectionFields = `
   updatedAt
 `;
 
+export const calendarConnectionFields = connectionFields;
+
 const jobFields = `
   id
   connectionId
@@ -80,6 +82,8 @@ const mapConnection = (
   updated_at: connection.updatedAt,
 });
 
+export const mapCalendarConnection = mapConnection;
+
 const mapJob = (job: GraphqlCalendarSyncJob): SyncResult['job'] => ({
   id: Number(job.id),
   connection_id: job.connectionId,
@@ -96,6 +100,7 @@ const mapJob = (job: GraphqlCalendarSyncJob): SyncResult['job'] => ({
 
 export const getCalendarConnectionsViaGraphql = async (
   organizationId?: number,
+  signal?: AbortSignal,
 ): Promise<CalendarConnection[]> => {
   const response = await graphqlRequest<
     { calendarConnections: GraphqlCalendarConnection[] },
@@ -106,6 +111,7 @@ export const getCalendarConnectionsViaGraphql = async (
     }`,
     {},
     organizationId,
+    signal,
   );
   return response.calendarConnections.map(mapConnection);
 };

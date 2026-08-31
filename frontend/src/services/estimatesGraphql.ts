@@ -26,7 +26,7 @@ type GraphqlEstimateItem = {
   updatedAt: string;
 };
 
-type GraphqlEstimate = {
+export type GraphqlEstimate = {
   id: number;
   organizationId: number;
   estimateNumber: string;
@@ -72,7 +72,7 @@ const coreFields = `
   contactFirstName contactLastName contactEmail
 `;
 
-const detailFields = `
+export const estimateDetailFields = `
   ${coreFields}
   items {
     id estimateId organizationId productId productName name description
@@ -100,7 +100,7 @@ const mapItem = (item: GraphqlEstimateItem): EstimateItem => ({
   updated_at: item.updatedAt,
 });
 
-const mapEstimate = (estimate: GraphqlEstimate): Estimate => ({
+export const mapEstimate = (estimate: GraphqlEstimate): Estimate => ({
   id: estimate.id,
   organization_id: estimate.organizationId,
   estimate_number: estimate.estimateNumber,
@@ -203,11 +203,13 @@ export const getEstimatesViaGraphql = async (
 export const getEstimateViaGraphql = async (
   id: number,
   organizationId?: number,
+  signal?: AbortSignal,
 ): Promise<Estimate> => {
   const data = await graphqlRequest<{ estimate: GraphqlEstimate }, { id: number }>(
-    `query Estimate($id: Int!) { estimate(id: $id) { ${detailFields} } }`,
+    `query Estimate($id: Int!) { estimate(id: $id) { ${estimateDetailFields} } }`,
     { id },
     organizationId,
+    signal,
   );
   return mapEstimate(data.estimate);
 };
@@ -221,7 +223,7 @@ export const createEstimateViaGraphql = async (
     { input: ReturnType<typeof mapInput> }
   >(
     `mutation CreateEstimate($input: CreateEstimateInput!) {
-      createEstimate(input: $input) { ${detailFields} }
+      createEstimate(input: $input) { ${estimateDetailFields} }
     }`,
     { input: mapInput(input) },
     organizationId,
@@ -239,7 +241,7 @@ export const updateEstimateViaGraphql = async (
     { id: number; input: ReturnType<typeof mapInput> }
   >(
     `mutation UpdateEstimate($id: Int!, $input: UpdateEstimateInput!) {
-      updateEstimate(id: $id, input: $input) { ${detailFields} }
+      updateEstimate(id: $id, input: $input) { ${estimateDetailFields} }
     }`,
     { id, input: mapInput(input) },
     organizationId,

@@ -1,7 +1,7 @@
 import type { EmailTemplate } from './automationsApi';
 import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
 
-type GraphqlEmailTemplate = {
+export type GraphqlEmailTemplate = {
   id: number;
   organizationId: number;
   name: string;
@@ -40,13 +40,13 @@ export type EmailTemplateInput = {
 
 type EmailTemplateUpdate = Partial<Omit<EmailTemplateInput, 'organization_id'>>;
 
-const fields = `
+export const emailTemplateFields = `
   id organizationId name subject preheader bodyHtml bodyText variables category isActive
   createdById createdByName createdAt updatedAt draftVersion publishedVersion
   draftSubject draftPreheader draftBodyHtml draftBodyText draftUpdatedAt draftIsActive hasUnpublishedChanges
 `;
 
-const mapTemplate = (template: GraphqlEmailTemplate): EmailTemplate => ({
+export const mapEmailTemplate = (template: GraphqlEmailTemplate): EmailTemplate => ({
   id: template.id,
   organization_id: template.organizationId,
   name: template.name,
@@ -95,6 +95,7 @@ const mapUpdateInput = (input: EmailTemplateUpdate) => ({
 export const getEmailTemplatesViaGraphql = async (
   filters: { category?: string; is_active?: boolean; search?: string } = {},
   organizationId?: number,
+  signal?: AbortSignal,
 ): Promise<{ templates: EmailTemplate[]; total: number }> => {
   const templates: EmailTemplate[] = [];
   let page = 1;
@@ -107,7 +108,7 @@ export const getEmailTemplatesViaGraphql = async (
     >(
       `query EmailTemplates($filter: EmailTemplateFilterInput, $page: PageInput) {
         emailTemplates(filter: $filter, page: $page) {
-          nodes { ${fields} }
+          nodes { ${emailTemplateFields} }
           pageInfo { total hasNextPage }
         }
       }`,
@@ -120,8 +121,9 @@ export const getEmailTemplatesViaGraphql = async (
         page: { page, pageSize: 100 },
       },
       organizationId,
+      signal,
     );
-    templates.push(...data.emailTemplates.nodes.map(mapTemplate));
+    templates.push(...data.emailTemplates.nodes.map(mapEmailTemplate));
     total = data.emailTemplates.pageInfo.total;
     hasNextPage = data.emailTemplates.pageInfo.hasNextPage;
     page += 1;
@@ -134,11 +136,11 @@ export const getEmailTemplateViaGraphql = async (
   organizationId?: number,
 ): Promise<EmailTemplate> => {
   const data = await graphqlRequest<{ emailTemplate: GraphqlEmailTemplate }, { id: number }>(
-    `query EmailTemplate($id: Int!) { emailTemplate(id: $id) { ${fields} } }`,
+    `query EmailTemplate($id: Int!) { emailTemplate(id: $id) { ${emailTemplateFields} } }`,
     { id },
     organizationId,
   );
-  return mapTemplate(data.emailTemplate);
+  return mapEmailTemplate(data.emailTemplate);
 };
 
 export const getEmailTemplateCategoriesViaGraphql = async (
@@ -164,12 +166,12 @@ export const createEmailTemplateViaGraphql = async (
     { input: ReturnType<typeof mapCreateInput> }
   >(
     `mutation CreateEmailTemplate($input: CreateEmailTemplateInput!) {
-      createEmailTemplate(input: $input) { ${fields} }
+      createEmailTemplate(input: $input) { ${emailTemplateFields} }
     }`,
     { input: mapCreateInput(input) },
     organizationId,
   );
-  return mapTemplate(data.createEmailTemplate);
+  return mapEmailTemplate(data.createEmailTemplate);
 };
 
 export const createEmailTemplateDraftViaGraphql = async (
@@ -181,12 +183,12 @@ export const createEmailTemplateDraftViaGraphql = async (
     { input: ReturnType<typeof mapCreateInput> }
   >(
     `mutation CreateEmailTemplateDraft($input: CreateEmailTemplateInput!) {
-      createEmailTemplateDraft(input: $input) { ${fields} }
+      createEmailTemplateDraft(input: $input) { ${emailTemplateFields} }
     }`,
     { input: mapCreateInput(input) },
     organizationId,
   );
-  return mapTemplate(data.createEmailTemplateDraft);
+  return mapEmailTemplate(data.createEmailTemplateDraft);
 };
 
 export const updateEmailTemplateViaGraphql = async (
@@ -199,12 +201,12 @@ export const updateEmailTemplateViaGraphql = async (
     { id: number; input: ReturnType<typeof mapUpdateInput> }
   >(
     `mutation UpdateEmailTemplate($id: Int!, $input: UpdateEmailTemplateInput!) {
-      updateEmailTemplate(id: $id, input: $input) { ${fields} }
+      updateEmailTemplate(id: $id, input: $input) { ${emailTemplateFields} }
     }`,
     { id, input: mapUpdateInput(input) },
     organizationId,
   );
-  return mapTemplate(data.updateEmailTemplate);
+  return mapEmailTemplate(data.updateEmailTemplate);
 };
 
 export const saveEmailTemplateDraftViaGraphql = async (
@@ -217,12 +219,12 @@ export const saveEmailTemplateDraftViaGraphql = async (
     { id: number; input: ReturnType<typeof mapUpdateInput> }
   >(
     `mutation SaveEmailTemplateDraft($id: Int!, $input: UpdateEmailTemplateInput!) {
-      saveEmailTemplateDraft(id: $id, input: $input) { ${fields} }
+      saveEmailTemplateDraft(id: $id, input: $input) { ${emailTemplateFields} }
     }`,
     { id, input: mapUpdateInput(input) },
     organizationId,
   );
-  return mapTemplate(data.saveEmailTemplateDraft);
+  return mapEmailTemplate(data.saveEmailTemplateDraft);
 };
 
 export const publishEmailTemplateViaGraphql = async (
@@ -235,12 +237,12 @@ export const publishEmailTemplateViaGraphql = async (
     { id: number; input: { isActive: boolean } }
   >(
     `mutation PublishEmailTemplate($id: Int!, $input: PublishEmailTemplateInput!) {
-      publishEmailTemplate(id: $id, input: $input) { ${fields} }
+      publishEmailTemplate(id: $id, input: $input) { ${emailTemplateFields} }
     }`,
     { id, input: { isActive } },
     organizationId,
   );
-  return mapTemplate(data.publishEmailTemplate);
+  return mapEmailTemplate(data.publishEmailTemplate);
 };
 
 export type EmailTemplatePreview = {
@@ -283,12 +285,12 @@ export const duplicateEmailTemplateViaGraphql = async (
     { id: number }
   >(
     `mutation DuplicateEmailTemplate($id: Int!) {
-      duplicateEmailTemplate(id: $id) { ${fields} }
+      duplicateEmailTemplate(id: $id) { ${emailTemplateFields} }
     }`,
     { id },
     organizationId,
   );
-  return mapTemplate(data.duplicateEmailTemplate);
+  return mapEmailTemplate(data.duplicateEmailTemplate);
 };
 
 export const deleteEmailTemplateViaGraphql = async (

@@ -43,6 +43,7 @@ const executeGraphqlRequest = async <TData, TVariables extends object>(
   variables: TVariables,
   organizationId?: number,
   csrfToken?: string,
+  signal?: AbortSignal,
 ): Promise<GraphqlResult<TData>> => {
   const response = await fetch(getGraphqlUrl(), {
     method: 'POST',
@@ -55,6 +56,7 @@ const executeGraphqlRequest = async <TData, TVariables extends object>(
       ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
     },
     body: JSON.stringify({ query, variables }),
+    signal,
   });
 
   try {
@@ -76,12 +78,14 @@ const runGraphqlRequest = async <TData, TVariables extends object>(
   organizationId?: number,
   csrfToken?: string,
   refreshOnUnauthenticated = true,
+  signal?: AbortSignal,
 ): Promise<TData> => {
   let result = await executeGraphqlRequest<TData, TVariables>(
     query,
     variables,
     organizationId,
     csrfToken,
+    signal,
   );
   if (
     refreshOnUnauthenticated &&
@@ -100,6 +104,7 @@ const runGraphqlRequest = async <TData, TVariables extends object>(
       variables,
       organizationId,
       csrfToken,
+      signal,
     );
   }
 
@@ -122,7 +127,15 @@ export const graphqlRequest = async <TData, TVariables extends object>(
   query: string,
   variables: TVariables,
   organizationId?: number,
-): Promise<TData> => runGraphqlRequest(query, variables, organizationId);
+  signal?: AbortSignal,
+): Promise<TData> => runGraphqlRequest(
+  query,
+  variables,
+  organizationId,
+  undefined,
+  true,
+  signal,
+);
 
 export const graphqlMutationRequest = async <TData, TVariables extends object>(
   query: string,

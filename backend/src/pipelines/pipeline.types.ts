@@ -134,6 +134,15 @@ export class Pipeline {
 }
 
 @ObjectType()
+export class PipelineWorkspace {
+  @Field(() => [Pipeline])
+  pipelines: Pipeline[];
+
+  @Field(() => Pipeline, { nullable: true })
+  selectedPipeline: Pipeline | null;
+}
+
+@ObjectType()
 export class DeletePipelineResult {
   @Field(() => Int)
   deletedId: number;

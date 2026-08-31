@@ -71,7 +71,7 @@ export function CustomerInfoSection({
           Customer Information
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent surface="inset">
         <div className="space-y-4">
           {/* Contact selector */}
           {contacts.length > 0 && (

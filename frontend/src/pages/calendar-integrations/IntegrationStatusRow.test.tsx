@@ -39,4 +39,21 @@ describe('IntegrationStatusRow', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Disconnect' }));
     expect(onDisconnect).toHaveBeenCalledOnce();
   });
+
+  it('does not misrepresent an unavailable status read as disconnected', () => {
+    render(
+      <IntegrationStatusRow
+        name="Stripe"
+        description="Accept invoice payments."
+        status="unavailable"
+        icon={<span>S</span>}
+        primaryLabel="Retry"
+        onPrimary={() => undefined}
+      />,
+    );
+
+    expect(screen.getByText('Unavailable')).toBeInTheDocument();
+    expect(screen.queryByText('Not connected')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeEnabled();
+  });
 });

@@ -146,7 +146,7 @@ export function BookingEditorDialog({
           {error ? <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert> : null}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" disabled={saving || !selectedCalendar} className="bg-blue-600 text-white hover:bg-blue-700">{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{booking ? 'Reschedule' : 'Create booking'}</Button>
+            <Button type="submit" disabled={saving || !selectedCalendar} className="bg-blue-600 text-white interaction-button--primary">{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{booking ? 'Reschedule' : 'Create booking'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useImperativeHandle, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Dialog } from '@/components/ui/dialog';
+import { ModalBody, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/modal';
 import { useToast } from '@/hooks/use-toast';
 import { Mail, Loader2 } from 'lucide-react';
 import { getEmailLog, getEmailLogs, EmailLog } from '@/services/adminEmailApi';
@@ -102,8 +103,16 @@ export const EmailLogsView = React.forwardRef<EmailLogsViewHandle, EmailLogsView
                         {logs.map(log => (
                             <div
                                 key={log.id}
-                                className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent/50 cursor-pointer transition-colors"
+                                className="interaction-row flex cursor-pointer items-center justify-between rounded-lg border p-3"
                                 onClick={() => void selectLog(log)}
+                                role="button"
+                                tabIndex={0}
+                                onKeyDown={event => {
+                                    if (event.key === 'Enter' || event.key === ' ') {
+                                        event.preventDefault();
+                                        void selectLog(log);
+                                    }
+                                }}
                             >
                                 <div className="flex-1 min-w-0">
                                     <p className="font-medium truncate">{log.subject}</p>
@@ -137,17 +146,22 @@ export const EmailLogsView = React.forwardRef<EmailLogsViewHandle, EmailLogsView
                 )}
             </div>
 
-            {/* Log Detail Dialog */}
-            {selectedLog && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <Card className="w-full max-w-2xl max-h-[80vh] flex flex-col mx-4">
-                        <CardHeader>
-                            <CardTitle>{selectedLog.subject}</CardTitle>
-                            <CardDescription>
+            <Dialog
+                open={Boolean(selectedLog)}
+                onOpenChange={open => !open && setSelectedLog(null)}
+            >
+                {selectedLog ? (
+                    <ModalContent size="lg">
+                        <ModalHeader
+                            icon={Mail}
+                            title={selectedLog.subject}
+                            description={
+                                <>
                                 Sent to {selectedLog.recipientEmail} • {new Date(selectedLog.createdAt).toLocaleString()}
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="flex-1 overflow-auto">
+                                </>
+                            }
+                        />
+                        <ModalBody>
                             <div className="grid grid-cols-2 gap-4 mb-4">
                                 <div>
                                     <p className="text-sm text-muted-foreground">Status</p>
@@ -172,13 +186,13 @@ export const EmailLogsView = React.forwardRef<EmailLogsViewHandle, EmailLogsView
                             ) : (
                                 <p className="text-muted-foreground italic">Email content not available</p>
                             )}
-                        </CardContent>
-                        <div className="flex justify-end p-4 border-t">
+                        </ModalBody>
+                        <ModalFooter>
                             <Button variant="outline" onClick={() => setSelectedLog(null)}>Close</Button>
-                        </div>
-                    </Card>
-                </div>
-            )}
+                        </ModalFooter>
+                    </ModalContent>
+                ) : null}
+            </Dialog>
         </>
     );
 });

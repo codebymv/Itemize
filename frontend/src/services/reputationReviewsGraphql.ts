@@ -53,6 +53,7 @@ export const getReviewsViaGraphql = async (
   params: { platform?: string; rating?: number; status?: Review['status'] | 'all';
     sentiment?: Review['sentiment'] | 'all'; page?: number; limit?: number; search?: string } = {},
   organizationId?: number,
+  signal?: AbortSignal,
 ): Promise<{ reviews: Review[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> => {
   const variables = {
     filter: {
@@ -68,7 +69,7 @@ export const getReviewsViaGraphql = async (
     reputationReviews: { nodes: GraphqlReview[]; pageInfo: { page: number; pageSize: number; total: number; totalPages: number } };
   }, typeof variables>(`query ReputationReviews($filter: ReputationReviewFilterInput, $page: PageInput) {
     reputationReviews(filter: $filter, page: $page) { nodes { ${fields} } pageInfo { page pageSize total totalPages } }
-  }`, variables, organizationId);
+  }`, variables, organizationId, signal);
   const info = data.reputationReviews.pageInfo;
   return {
     reviews: data.reputationReviews.nodes.map(mapReview),

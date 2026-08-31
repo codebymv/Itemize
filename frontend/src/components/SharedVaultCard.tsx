@@ -111,7 +111,7 @@ export const SharedVaultCard: React.FC<SharedVaultCardProps> = ({ vaultData }) =
                 return (
                   <div
                     key={item.id}
-                    className="group flex items-start gap-2 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors min-w-0"
+                    className="group interaction-row flex min-w-0 items-start gap-2 rounded-lg bg-muted/30 p-3"
                   >
                     {/* Item type icon */}
                     <div className="flex-shrink-0 pt-0.5">

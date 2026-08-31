@@ -83,7 +83,7 @@ export function InvoiceEmailPreview({
                         size="sm"
                         onClick={() => setViewMode('desktop')}
                         className={viewMode === 'desktop' 
-                            ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                            ? 'bg-blue-600 interaction-button--primary text-white'
                             : ''
                         }
                     >
@@ -95,7 +95,7 @@ export function InvoiceEmailPreview({
                         size="sm"
                         onClick={() => setViewMode('mobile')}
                         className={viewMode === 'mobile' 
-                            ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                            ? 'bg-blue-600 interaction-button--primary text-white'
                             : ''
                         }
                     >

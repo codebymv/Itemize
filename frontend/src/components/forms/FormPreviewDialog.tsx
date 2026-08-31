@@ -3,7 +3,7 @@ import { Monitor, Smartphone, Tablet, X } from 'lucide-react';
 
 import { FormPreviewCanvas } from '@/components/forms/FormPreviewCanvas';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { Form } from '@/types';
 import { cn } from '@/lib/utils';
 
@@ -30,6 +30,9 @@ export function FormPreviewDialog({ open, onOpenChange, form }: FormPreviewDialo
         <DialogHeader className="shrink-0 border-b px-4 py-3">
           <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center">
             <DialogTitle className="truncate text-lg font-semibold">{form.name}</DialogTitle>
+            <DialogDescription className="sr-only">
+              Preview this form at desktop, tablet, and mobile widths.
+            </DialogDescription>
             <div className="flex min-w-0 w-full items-center gap-2 sm:ml-auto sm:w-auto sm:shrink-0">
               <div className="flex min-w-0 flex-1 items-center gap-1 rounded-lg bg-muted/50 p-1 sm:flex-none">
                 {options.map(({ value, label, icon: Icon }) => (

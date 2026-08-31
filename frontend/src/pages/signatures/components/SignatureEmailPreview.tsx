@@ -92,7 +92,7 @@ export function SignatureEmailPreview({
             variant={viewMode === 'desktop' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setViewMode('desktop')}
-            className={viewMode === 'desktop' ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}
+            className={viewMode === 'desktop' ? 'bg-blue-600 interaction-button--primary text-white' : ''}
           >
             <Monitor className="h-4 w-4 mr-1" />
             Desktop
@@ -101,7 +101,7 @@ export function SignatureEmailPreview({
             variant={viewMode === 'mobile' ? 'default' : 'outline'}
             size="sm"
             onClick={() => setViewMode('mobile')}
-            className={viewMode === 'mobile' ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}
+            className={viewMode === 'mobile' ? 'bg-blue-600 interaction-button--primary text-white' : ''}
           >
             <Smartphone className="h-4 w-4 mr-1" />
             Mobile

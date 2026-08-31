@@ -162,7 +162,7 @@ export function createCanvasHeaderTools({
           <Button
             data-canvas-add-button
             onClick={onAddClick}
-            className="h-11 min-w-11 gap-2 bg-blue-600 px-3 font-light text-white hover:bg-blue-700"
+            className="h-11 min-w-11 gap-2 bg-blue-600 px-3 font-light text-white interaction-button--primary"
             aria-label="Add content"
           >
             <Plus className="h-4 w-4" />

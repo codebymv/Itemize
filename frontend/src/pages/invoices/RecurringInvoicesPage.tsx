@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     Plus,
     RefreshCw,
@@ -18,6 +19,7 @@ import {
     ExternalLink,
     FileText,
     Receipt,
+    PieChart,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,12 +33,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
     Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
 } from '@/components/ui/dialog';
+import { ModalBody, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/modal';
 import {
     Select,
     SelectContent,
@@ -52,19 +50,17 @@ import { Separator } from '@/components/ui/separator';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { getContacts } from '@/services/contactsApi';
-import { getProducts, Product, getBusinesses, Business } from '@/services/invoicesApi';
 import {
     createRecurringInvoice,
     deleteRecurringInvoice,
     generateRecurringInvoiceNow,
-    getRecurringInvoice,
-    getRecurringInvoiceNumberPreview,
     getRecurringInvoices,
     pauseRecurringInvoice,
     RecurringFrequency,
     RecurringInvoice,
     resumeRecurringInvoice,
 } from '@/services/recurringInvoicesApi';
+import { getRecurringInvoicePreviewBootstrapViaGraphql } from '@/services/recurringInvoicePreviewGraphql';
 import { useOrganization } from '@/hooks/useOrganization';
 import { InvoicePreviewCard } from './components/InvoicePreviewCard';
 import { PageLayout } from '@/components/layout/PageLayout';
@@ -79,6 +75,7 @@ import { ErrorState } from '@/components/ErrorState';
 import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { StatCard } from '@/components/StatCard';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
+import { FramedSection } from '@/components/ui/framed-section';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
@@ -86,6 +83,7 @@ import { cn } from '@/lib/utils';
 import { InvoiceViewSelect, type InvoiceView } from './components/InvoiceViewSelect';
 import { getRecurringStatusVisual } from './constants/recurringConstants';
 import { ExpandedRowActionLabel, ExpandedRowActions } from '@/components/ui/expanded-row';
+import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
 
 const RECURRING_FREQUENCIES: RecurringFrequency[] = ['weekly', 'monthly', 'quarterly', 'yearly'];
 
@@ -128,6 +126,7 @@ const getApiErrorMessage = (error: unknown, fallback: string): string => {
 
 export function RecurringInvoicesPage() {
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const [searchParams] = useSearchParams();
     const { toast } = useToast();
     // Route-aware onboarding (will show 'invoices' onboarding for all Sales & Payments routes)
@@ -139,19 +138,12 @@ export function RecurringInvoicesPage() {
         featureKey: onboardingFeatureKey,
     } = useRouteOnboarding();
 
-    const [recurringInvoices, setRecurringInvoices] = useState<RecurringInvoice[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [loadError, setLoadError] = useState<string | null>(null);
-    const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
+    const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({ onError: () => 'Failed to initialize.' });
     const [searchQuery, setSearchQuery] = useState('');
     const [activeTab, setActiveTab] = useState<string>('all');
 
     // Expanded recurring state
     const [expandedId, setExpandedId] = useState<number | null>(null);
-    const [expandedData, setExpandedData] = useState<RecurringInvoice | null>(null);
-    const [loadingPreview, setLoadingPreview] = useState(false);
-    const [previewError, setPreviewError] = useState(false);
-    const [previewInvoiceNumber, setPreviewInvoiceNumber] = useState<string>('INV-00001');
     const autoExpandedScheduleRef = useRef<number | null>(null);
     
     // Delete confirmation dialog state
@@ -161,13 +153,8 @@ export function RecurringInvoicesPage() {
     // Generate invoice state
     const [generatingInvoice, setGeneratingInvoice] = useState<number | null>(null);
 
-    // Business data for preview
-    const [business, setBusiness] = useState<Business | null>(null);
-
     // Create dialog state
     const [dialogOpen, setDialogOpen] = useState(false);
-    const [contacts, setContacts] = useState<Contact[]>([]);
-    const [products, setProducts] = useState<Product[]>([]);
     const [saving, setSaving] = useState(false);
 
     // Form state
@@ -184,47 +171,72 @@ export function RecurringInvoicesPage() {
     useEffect(() => {
         if (!initError) return;
         toast({ title: 'Error', description: initError, variant: 'destructive' });
-        setLoadError(initError);
-        setLoading(false);
     }, [initError, toast]);
 
-    useEffect(() => {
-        if (!organizationId) return;
-        const loadSupportData = async () => {
-            try {
-                const [contactsData, productsData, businessesData] = await Promise.all([
-                    getContacts({}, organizationId),
-                    getProducts({}, organizationId),
-                    getBusinesses(organizationId)
-                ]);
-                setContacts(Array.isArray(contactsData) ? contactsData : contactsData.contacts || []);
-                setProducts(productsData || []);
-                if (businessesData && businessesData.length > 0) {
-                    setBusiness(businessesData[0]);
-                }
-            } catch (error) {
-                toast({ title: 'Error', description: 'Failed to load supporting data', variant: 'destructive' });
-            }
-        };
-        loadSupportData();
-    }, [organizationId, toast]);
+    const listQueryKey = ['recurring-invoices', organizationId, 'all'] as const;
+    const recurringInvoicesQuery = useQuery({
+        queryKey: listQueryKey,
+        queryFn: ({ signal }) => getRecurringInvoices('all', organizationId!, signal),
+        enabled: Boolean(organizationId) && !initError,
+        staleTime: QUERY_STALE_TIME_MS,
+        retry: shouldRetryQuery,
+    });
+    const recurringInvoices = useMemo(
+        () => recurringInvoicesQuery.data ?? [],
+        [recurringInvoicesQuery.data],
+    );
+    const loading = orgLoading || (
+        Boolean(organizationId)
+        && recurringInvoicesQuery.isPending
+    );
+    const loadError = recurringInvoicesQuery.isError
+        ? 'Recurring schedules could not be loaded. Please try again.'
+        : null;
 
-    const fetchRecurringInvoices = useCallback(async () => {
-        if (!organizationId) return;
-        setLoading(true);
-        setLoadError(null);
-        try {
-            setRecurringInvoices(await getRecurringInvoices('all', organizationId));
-        } catch (error) {
-            setLoadError('Recurring schedules could not be loaded. Please try again.');
-        } finally {
-            setLoading(false);
-        }
-    }, [organizationId]);
+    const contactsQuery = useQuery({
+        queryKey: ['recurring-invoice-create-contacts', organizationId],
+        queryFn: ({ signal }) => getContacts(
+            { limit: 100, sort_by: 'first_name', sort_order: 'asc' },
+            organizationId!,
+            signal,
+        ),
+        enabled: Boolean(organizationId) && dialogOpen,
+        staleTime: QUERY_STALE_TIME_MS,
+        retry: shouldRetryQuery,
+    });
+    const contacts: Contact[] = contactsQuery.data?.contacts ?? [];
 
-    useEffect(() => {
-        fetchRecurringInvoices();
-    }, [fetchRecurringInvoices]);
+    const previewQuery = useQuery({
+        queryKey: ['recurring-invoice-preview', organizationId, expandedId],
+        queryFn: ({ signal }) => getRecurringInvoicePreviewBootstrapViaGraphql(
+            organizationId!,
+            expandedId!,
+            signal,
+        ),
+        enabled: Boolean(organizationId) && expandedId !== null,
+        staleTime: QUERY_STALE_TIME_MS,
+        retry: shouldRetryQuery,
+    });
+    const expandedData = previewQuery.data?.recurringInvoice ?? null;
+    const previewInvoiceNumber = previewQuery.data?.previewInvoiceNumber ?? 'INV-00001';
+    const business = previewQuery.data?.business ?? null;
+    const loadingPreview = previewQuery.isPending && previewQuery.fetchStatus !== 'idle';
+    const previewError = previewQuery.isError;
+
+    const cacheRecurringInvoice = (updated: RecurringInvoice) => {
+        queryClient.setQueryData<RecurringInvoice[]>(listQueryKey, (current) => {
+            if (!current) return [updated];
+            return current.some((invoice) => invoice.id === updated.id)
+                ? current.map((invoice) => invoice.id === updated.id ? updated : invoice)
+                : [updated, ...current];
+        });
+        queryClient.setQueryData(
+            ['recurring-invoice-preview', organizationId, updated.id],
+            (current: typeof previewQuery.data) => current
+                ? { ...current, recurringInvoice: updated }
+                : current,
+        );
+    };
 
     const openCreateDialog = () => {
         setTemplateName('');
@@ -283,7 +295,7 @@ export function RecurringInvoicesPage() {
 
         setSaving(true);
         try {
-            await createRecurringInvoice({
+            const created = await createRecurringInvoice({
                 template_name: templateName,
                 contact_id: contactId,
                 customer_name: customerName || undefined,
@@ -298,9 +310,9 @@ export function RecurringInvoicesPage() {
                     tax_rate: item.tax_rate,
                 })),
             }, organizationId);
+            cacheRecurringInvoice(created);
             toast({ title: 'Created', description: 'Recurring invoice created successfully' });
             setDialogOpen(false);
-            fetchRecurringInvoices();
         } catch (error) {
             toast({ title: 'Error', description: 'Failed to create recurring schedule', variant: 'destructive' });
         } finally {
@@ -311,9 +323,9 @@ export function RecurringInvoicesPage() {
     const handlePause = async (id: number) => {
         if (!organizationId) return;
         try {
-            await pauseRecurringInvoice(id, organizationId);
+            const updated = await pauseRecurringInvoice(id, organizationId);
+            cacheRecurringInvoice(updated);
             toast({ title: 'Paused', description: 'Recurring invoice paused' });
-            fetchRecurringInvoices();
         } catch (error) {
             toast({ title: 'Error', description: 'Failed to pause', variant: 'destructive' });
         }
@@ -322,9 +334,9 @@ export function RecurringInvoicesPage() {
     const handleResume = async (id: number) => {
         if (!organizationId) return;
         try {
-            await resumeRecurringInvoice(id, organizationId);
+            const updated = await resumeRecurringInvoice(id, organizationId);
+            cacheRecurringInvoice(updated);
             toast({ title: 'Resumed', description: 'Recurring invoice resumed' });
-            fetchRecurringInvoices();
         } catch (error) {
             toast({ title: 'Error', description: 'Failed to resume', variant: 'destructive' });
         }
@@ -341,7 +353,22 @@ export function RecurringInvoicesPage() {
                 title: 'Invoice Generated', 
                 description: `${result.invoice_number} created successfully`
             });
-            fetchRecurringInvoices();
+            queryClient.setQueryData<RecurringInvoice[]>(listQueryKey, (current) =>
+                current?.map((invoice) => invoice.id === id ? {
+                    ...invoice,
+                    next_run_date: result.next_run_date,
+                    status: result.template_status,
+                    invoices_generated: invoice.invoices_generated + (result.replayed ? 0 : 1),
+                } : invoice),
+            );
+            await Promise.all([
+                queryClient.invalidateQueries({
+                    queryKey: ['recurring-invoice-preview', organizationId, id],
+                }),
+                queryClient.invalidateQueries({
+                    queryKey: ['dashboard-snapshot', organizationId],
+                }),
+            ]);
         } catch (error: unknown) {
             const message = getApiErrorMessage(error, 'Failed to generate invoice');
             toast({ title: 'Error', description: message, variant: 'destructive' });
@@ -360,11 +387,15 @@ export function RecurringInvoicesPage() {
         if (!organizationId || !recurringToDelete) return false;
         try {
             await deleteRecurringInvoice(recurringToDelete.id, organizationId);
-            setRecurringInvoices(prev => prev.filter(r => r.id !== recurringToDelete.id));
+            queryClient.setQueryData<RecurringInvoice[]>(listQueryKey, (current) =>
+                current?.filter((invoice) => invoice.id !== recurringToDelete.id),
+            );
+            queryClient.removeQueries({
+                queryKey: ['recurring-invoice-preview', organizationId, recurringToDelete.id],
+            });
             // Collapse if deleted item was expanded
             if (expandedId === recurringToDelete.id) {
                 setExpandedId(null);
-                setExpandedData(null);
             }
             return true;
         } catch (error) {
@@ -385,38 +416,15 @@ export function RecurringInvoicesPage() {
         ].filter(Boolean).join(' ')
         : undefined;
 
-    const loadExpandedRecurring = useCallback(async (recurringId: number) => {
-        if (!organizationId) return;
-        setExpandedId(recurringId);
-        setExpandedData(null);
-        setPreviewError(false);
-        setLoadingPreview(true);
-
-        try {
-            const [recurring, previewNumber] = await Promise.all([
-                getRecurringInvoice(recurringId, organizationId),
-                getRecurringInvoiceNumberPreview(organizationId),
-            ]);
-            setExpandedData(recurring);
-            setPreviewInvoiceNumber(previewNumber);
-        } catch {
-            setPreviewError(true);
-        } finally {
-            setLoadingPreview(false);
-        }
-    }, [organizationId]);
-
-    const handleToggleExpand = async (recurringId: number, e: React.MouseEvent) => {
+    const handleToggleExpand = (recurringId: number, e: React.MouseEvent) => {
         e.stopPropagation();
 
         if (expandedId === recurringId) {
             setExpandedId(null);
-            setExpandedData(null);
-            setPreviewError(false);
             return;
         }
 
-        await loadExpandedRecurring(recurringId);
+        setExpandedId(recurringId);
     };
 
     useEffect(() => {
@@ -426,8 +434,8 @@ export function RecurringInvoicesPage() {
         if (autoExpandedScheduleRef.current === requestedId) return;
 
         autoExpandedScheduleRef.current = requestedId;
-        void loadExpandedRecurring(requestedId);
-    }, [loadExpandedRecurring, loading, recurringInvoices, searchParams]);
+        setExpandedId(requestedId);
+    }, [loading, recurringInvoices, searchParams]);
 
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('en-US', {
@@ -579,11 +587,12 @@ export function RecurringInvoicesPage() {
             }}
         >
                 {!loadError && (
-                <ResponsiveCardRail
-                    label="Recurring invoice summary"
-                    desktopColumns="md:grid-cols-3"
-                    className="responsive-stat-summary"
-                >
+                <FramedSection title="Overview" icon={PieChart} className="mb-6">
+                  <ResponsiveCardRail
+                      label="Recurring invoice summary"
+                      desktopColumns="md:grid-cols-3"
+                      className="responsive-stat-summary mb-0"
+                  >
                 <StatCard
                     title="Active"
                     badgeText="Active"
@@ -611,7 +620,8 @@ export function RecurringInvoicesPage() {
                     colorTheme={getRecurringStatusVisual('completed').theme}
                     isLoading={loading}
                 />
-                </ResponsiveCardRail>
+                  </ResponsiveCardRail>
+                </FramedSection>
                 )}
 
             {/* Recurring List */}
@@ -625,7 +635,7 @@ export function RecurringInvoicesPage() {
                         initError ? (
                             <OrganizationErrorState kind="section" title="Unable to load recurring schedules" />
                         ) : (
-                            <ErrorState kind="section" title="Unable to load recurring schedules" description={loadError} onAction={() => void fetchRecurringInvoices()} />
+                            <ErrorState kind="section" title="Unable to load recurring schedules" description={loadError} onAction={() => void recurringInvoicesQuery.refetch()} />
                         )
                     ) : filteredRecurring.length === 0 ? (
                         <EmptyState
@@ -649,7 +659,7 @@ export function RecurringInvoicesPage() {
                                     <div key={recurring.id}>
                                         {/* Recurring Row - Aligned with VaultCard Pattern */}
                                         <div
-                                            className="p-4 hover:bg-muted/50 transition-colors cursor-pointer group"
+                                            className="p-4 interaction-row cursor-pointer group"
                                             onClick={(e) => handleToggleExpand(recurring.id, e)}
                                         >
                                             {/* Header Row: Icon + Template Name on left, Amount + Chevron + Menu on right */}
@@ -698,10 +708,10 @@ export function RecurringInvoicesPage() {
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                                                             <DropdownMenuItem className="group/menu">
-                                                                <Edit className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Edit
+                                                                <Edit className="h-4 w-4 mr-2" />Edit
                                                             </DropdownMenuItem>
                                                             <DropdownMenuItem className="group/menu">
-                                                                <History className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />View History
+                                                                <History className="h-4 w-4 mr-2" />View History
                                                             </DropdownMenuItem>
                                                             {recurring.status !== 'completed' && (
                                                                 <DropdownMenuItem 
@@ -709,19 +719,19 @@ export function RecurringInvoicesPage() {
                                                                     disabled={generatingInvoice === recurring.id}
                                                                     className="group/menu"
                                                                 >
-                                                                    <FileText className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                                                                    <FileText className="h-4 w-4 mr-2" />
                                                                     {generatingInvoice === recurring.id ? 'Generating...' : 'Generate Next Invoice'}
                                                                 </DropdownMenuItem>
                                                             )}
                                                             <DropdownMenuSeparator />
                                                             {recurring.status === 'active' && (
                                                                 <DropdownMenuItem onClick={() => handlePause(recurring.id)} className="group/menu">
-                                                                    <Pause className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Pause
+                                                                    <Pause className="h-4 w-4 mr-2" />Pause
                                                                 </DropdownMenuItem>
                                                             )}
                                                             {recurring.status === 'paused' && (
                                                                 <DropdownMenuItem onClick={() => handleResume(recurring.id)} className="group/menu">
-                                                                    <Play className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Resume
+                                                                    <Play className="h-4 w-4 mr-2" />Resume
                                                                 </DropdownMenuItem>
                                                             )}
                                                             <DropdownMenuSeparator />
@@ -789,7 +799,7 @@ export function RecurringInvoicesPage() {
                                                     {recurring.status !== 'completed' && (
                                                         <Button
                                                             size="sm"
-                                                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                                                            className="bg-blue-600 interaction-button--primary text-white"
                                                             onClick={(e) => handleGenerateNow(recurring.id, e)}
                                                             disabled={generatingInvoice === recurring.id}
                                                         >
@@ -804,7 +814,6 @@ export function RecurringInvoicesPage() {
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
-                                                            className="border-yellow-500 text-yellow-600 hover:bg-yellow-50"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 handlePause(recurring.id);
@@ -817,7 +826,7 @@ export function RecurringInvoicesPage() {
                                                     {recurring.status === 'paused' && (
                                                         <Button
                                                             size="sm"
-                                                            className="bg-green-600 hover:bg-green-700 text-white"
+                                                            className="bg-blue-600 interaction-button--primary text-white"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 handleResume(recurring.id);
@@ -830,7 +839,7 @@ export function RecurringInvoicesPage() {
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
-                                                        className="border-destructive text-destructive hover:bg-destructive/10"
+                                                        className="border-destructive text-destructive interaction-button--destructive-ghost"
                                                         onClick={(e) => handleDeleteClick(recurring, e)}
                                                     >
                                                         <Trash2 className="h-4 w-4 mr-2" />
@@ -848,7 +857,7 @@ export function RecurringInvoicesPage() {
                                                         icon={Receipt}
                                                         title="Unable to load schedule details"
                                                         description="The recurring schedule is still available to edit."
-                                                        onRetry={() => void loadExpandedRecurring(recurring.id)}
+                                                        onRetry={() => void previewQuery.refetch()}
                                                     />
                                                 ) : expandedData ? (
                                                     <div className="max-w-6xl mx-auto">
@@ -963,17 +972,13 @@ export function RecurringInvoicesPage() {
 
             {/* Create Recurring Dialog */}
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <RefreshCw className="h-5 w-5 text-blue-600" />
-                            Create recurring schedule
-                        </DialogTitle>
-                        <DialogDescription>
-                            Set up an invoice that automatically generates on a schedule
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
+                <ModalContent size="lg">
+                    <ModalHeader
+                        icon={RefreshCw}
+                        title="Create recurring schedule"
+                        description="Set up an invoice that automatically generates on a schedule."
+                    />
+                    <ModalBody className="grid gap-4">
                         <div className="space-y-2">
                             <Label>Schedule name *</Label>
                             <Input
@@ -988,12 +993,15 @@ export function RecurringInvoicesPage() {
                                 <Select
                                     value={contactId?.toString() || 'none'}
                                     onValueChange={handleContactChange}
+                                    disabled={contactsQuery.isPending}
                                 >
                                     <SelectTrigger>
                                         <SelectValue placeholder="Select contact" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="none">Select...</SelectItem>
+                                        <SelectItem value="none">
+                                            {contactsQuery.isPending ? 'Loading contacts...' : 'Select...'}
+                                        </SelectItem>
                                         {contacts.map(contact => (
                                             <SelectItem key={contact.id} value={contact.id.toString()}>
                                                 {contact.first_name} {contact.last_name}
@@ -1001,6 +1009,20 @@ export function RecurringInvoicesPage() {
                                         ))}
                                     </SelectContent>
                                 </Select>
+                                {contactsQuery.isError && (
+                                    <div className="flex items-center gap-2 text-xs text-destructive">
+                                        <span>Contacts unavailable.</span>
+                                        <Button
+                                            type="button"
+                                            variant="link"
+                                            size="sm"
+                                            className="h-auto p-0 text-xs"
+                                            onClick={() => void contactsQuery.refetch()}
+                                        >
+                                            Try again
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
                             <div className="space-y-2">
                                 <Label>Frequency *</Label>
@@ -1096,20 +1118,20 @@ export function RecurringInvoicesPage() {
                                 <span className="font-medium">{formatCurrency(total)}</span>
                             </div>
                         </div>
-                    </div>
-                    <DialogFooter>
+                    </ModalBody>
+                    <ModalFooter>
                         <Button variant="outline" onClick={() => setDialogOpen(false)}>
                             Cancel
                         </Button>
                         <Button
                             onClick={handleSaveRecurring}
                             disabled={saving || !templateName || lineItems.filter(i => i.name).length === 0}
-                            className="bg-blue-600 hover:bg-blue-700 text-white"
+                            className="bg-blue-600 interaction-button--primary text-white"
                         >
                             {saving ? 'Creating...' : 'Create schedule'}
                         </Button>
-                    </DialogFooter>
-                </DialogContent>
+                    </ModalFooter>
+                </ModalContent>
             </Dialog>
 
             <DeleteDialog

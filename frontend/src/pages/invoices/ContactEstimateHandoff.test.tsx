@@ -1,12 +1,14 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ContactDetailPage } from '@/pages/contacts/ContactDetailPage';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { EstimateEditorPage } from './EstimateEditorPage';
 
 const contactsApi = vi.hoisted(() => ({
   getContact: vi.fn(),
+  getContactDetailBootstrap: vi.fn(),
   getContacts: vi.fn(),
   deleteContact: vi.fn(),
   getContactActivities: vi.fn(),
@@ -26,11 +28,16 @@ const estimatesApi = vi.hoisted(() => ({
   updateEstimate: vi.fn(),
 }));
 
+const editorApi = vi.hoisted(() => ({
+  getEstimateEditorBootstrapViaGraphql: vi.fn(),
+}));
+
 const toast = vi.hoisted(() => vi.fn());
 
 vi.mock('@/services/contactsApi', () => contactsApi);
 vi.mock('@/services/invoicesApi', () => invoicesApi);
 vi.mock('@/services/estimatesApi', () => estimatesApi);
+vi.mock('@/services/salesDocumentEditorGraphql', () => editorApi);
 vi.mock('@/hooks/useOrganization', () => ({
   useOrganization: () => ({ organizationId: 42 }),
 }));
@@ -84,10 +91,29 @@ function LocationProbe() {
   return <div data-testid="location">{location.pathname}{location.search}</div>;
 }
 
+const renderApp = (ui: React.ReactNode) => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
+  );
+};
+
 describe('contact to estimate handoff', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     contactsApi.getContact.mockResolvedValue(contact);
+    contactsApi.getContactDetailBootstrap.mockResolvedValue({
+      contact,
+      activities: [],
+      relatedContent: {
+        lists: [],
+        notes: [],
+        whiteboards: [],
+        wireframes: [],
+      },
+    });
     contactsApi.getContacts.mockResolvedValue([]);
     contactsApi.getContactActivities.mockResolvedValue([]);
     contactsApi.getContactContent.mockResolvedValue({
@@ -97,10 +123,16 @@ describe('contact to estimate handoff', () => {
       wireframes: [],
     });
     invoicesApi.getProducts.mockResolvedValue([]);
+    editorApi.getEstimateEditorBootstrapViaGraphql.mockResolvedValue({
+      contacts: [],
+      products: [],
+      estimate: null,
+      initialContact: null,
+    });
   });
 
   it('promotes one responsive Create Estimate shell action and passes only contactId', async () => {
-    render(
+    renderApp(
       <MemoryRouter initialEntries={['/contacts/17']}>
         <Routes>
           <Route path="/contacts/:id" element={<ContactDetailPage />} />
@@ -112,6 +144,11 @@ describe('contact to estimate handoff', () => {
     const createEstimateActions = await screen.findAllByRole('button', {
       name: /create estimate/i,
     });
+    expect(contactsApi.getContactDetailBootstrap).toHaveBeenCalledWith(
+      17,
+      42,
+      expect.any(AbortSignal),
+    );
     expect(createEstimateActions).toHaveLength(2);
     expect(screen.getByTestId('page-actions')).toContainElement(createEstimateActions[0]);
 
@@ -124,7 +161,13 @@ describe('contact to estimate handoff', () => {
   });
 
   it('loads the authoritative contact and prefills the new estimate', async () => {
-    render(
+    editorApi.getEstimateEditorBootstrapViaGraphql.mockResolvedValue({
+      contacts: [],
+      products: [],
+      estimate: null,
+      initialContact: contact,
+    });
+    renderApp(
       <MemoryRouter initialEntries={['/estimates/new?contactId=17']}>
         <Routes>
           <Route path="/estimates/:id" element={<EstimateEditorPage />} />
@@ -133,19 +176,22 @@ describe('contact to estimate handoff', () => {
     );
 
     await waitFor(() => {
-      expect(contactsApi.getContact).toHaveBeenCalledWith(17, 42);
+      expect(editorApi.getEstimateEditorBootstrapViaGraphql)
+        .toHaveBeenCalledWith(42, null, 17, expect.any(AbortSignal));
     });
 
-    expect(document.querySelector('#estimate-customer-name')).toHaveValue('Ada Lovelace');
-    expect(document.querySelector('#estimate-customer-email')).toHaveValue('ada@example.com');
-    expect(document.querySelector('#estimate-customer-phone')).toHaveValue('602-555-0117');
-    expect(document.querySelector('#estimate-customer-address')).toHaveValue(
-      '123 Main St, Phoenix, AZ, 85001, US',
-    );
+    await waitFor(() => {
+      expect(document.querySelector('#estimate-customer-name')).toHaveValue('Ada Lovelace');
+      expect(document.querySelector('#estimate-customer-email')).toHaveValue('ada@example.com');
+      expect(document.querySelector('#estimate-customer-phone')).toHaveValue('602-555-0117');
+      expect(document.querySelector('#estimate-customer-address')).toHaveValue(
+        '123 Main St, Phoenix, AZ, 85001, US',
+      );
+    });
   });
 
   it('ignores malformed contact identifiers', async () => {
-    render(
+    renderApp(
       <MemoryRouter initialEntries={['/estimates/new?contactId=17-invalid']}>
         <Routes>
           <Route path="/estimates/:id" element={<EstimateEditorPage />} />
@@ -153,8 +199,12 @@ describe('contact to estimate handoff', () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(contactsApi.getContacts).toHaveBeenCalled());
-    expect(contactsApi.getContact).not.toHaveBeenCalled();
-    expect(document.querySelector('#estimate-customer-name')).toHaveValue('');
+    await waitFor(() => {
+      expect(editorApi.getEstimateEditorBootstrapViaGraphql)
+        .toHaveBeenCalledWith(42, null, null, expect.any(AbortSignal));
+    });
+    await waitFor(() => {
+      expect(document.querySelector('#estimate-customer-name')).toHaveValue('');
+    });
   });
 });

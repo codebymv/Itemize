@@ -548,7 +548,7 @@ const WireframeCanvasInner: React.FC<WireframeCanvasProps> = ({
                         className={cn(
                           "h-8 w-8 p-0 transition-colors",
                           selectedTool === tool.id 
-                            ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                            ? 'bg-blue-600 interaction-button--primary text-white'
                             : ''
                         )}
                         style={selectedTool !== tool.id ? { 

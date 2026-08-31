@@ -208,7 +208,7 @@ const Index = () => {
               {/* <Button 
                 onClick={() => setShowCreateModal(true)}
                 size="sm"
-                className="bg-blue-600 hover:bg-blue-700"
+                className="bg-blue-600 interaction-button--primary"
               >
                 <Plus className="h-4 w-4 mr-1" />
                 <span className="hidden sm:inline">New List</span>
@@ -242,7 +242,7 @@ const Index = () => {
                 variant={selectedFilter === filter ? "default" : "outline"}
                 size="sm"
                 onClick={() => setSelectedFilter(filter)}
-                className={`capitalize ${selectedFilter === filter ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
+                className={`capitalize ${selectedFilter === filter ? 'bg-blue-600 interaction-button--primary' : ''}`}
               >
                 {filter} ({count})
               </Button>

@@ -5,6 +5,7 @@ import {
   Kanban,
   Maximize2,
   Minus,
+  MoveRight,
   MoreHorizontal,
   Plus,
   Trophy,
@@ -21,10 +22,14 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useToast } from '@/hooks/use-toast';
 import { Pipeline, Deal, PipelineStage } from '@/types';
 import { markDealWon, markDealLost, deleteDeal } from '@/services/pipelinesApi';
@@ -69,6 +74,7 @@ export function KanbanBoard({
   onRemove,
 }: KanbanBoardProps) {
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [draggedDealId, setDraggedDealId] = useState<number | null>(null);
   const [dragOverStageId, setDragOverStageId] = useState<string | null>(null);
   const [deleteDealId, setDeleteDealId] = useState<number | null>(null);
@@ -130,7 +136,7 @@ export function KanbanBoard({
     }
   }, [organizationId, pipeline.id, zoomSetting]);
 
-  const effectiveZoom = zoomSetting === 'fit' ? fitZoom : zoomSetting;
+  const effectiveZoom = isMobile ? 100 : zoomSetting === 'fit' ? fitZoom : zoomSetting;
   const zoomIndex = ZOOM_LEVELS.findIndex((level) => level >= effectiveZoom);
   const zoomOut = () => {
     const nextIndex = zoomIndex <= 0 ? 0 : zoomIndex - 1;
@@ -271,7 +277,7 @@ export function KanbanBoard({
         </div>
 
         <div className="flex items-center justify-between gap-2 sm:justify-end">
-          <div className="flex h-9 items-center rounded-md border bg-background" aria-label={`${pipeline.name} board zoom`}>
+          <div className="hidden h-9 items-center rounded-md border bg-background md:flex" aria-label={`${pipeline.name} board zoom`}>
             <Button
               type="button"
               variant="ghost"
@@ -302,7 +308,7 @@ export function KanbanBoard({
             type="button"
             variant="outline"
             size="sm"
-            className={`h-9 gap-2 font-light ${
+            className={`hidden h-9 gap-2 font-light md:inline-flex ${
               zoomSetting === 'fit' ? 'bg-muted text-blue-600 dark:text-blue-400' : ''
             }`}
             onClick={() => setZoomSetting('fit')}
@@ -327,7 +333,7 @@ export function KanbanBoard({
         </div>
       </div>
 
-      <div ref={boardViewportRef} className="min-h-96 overflow-x-auto">
+      <div ref={boardViewportRef} className="min-h-96 touch-pan-x touch-pan-y overflow-x-auto overscroll-x-contain">
         <div
           className="flex gap-4 p-6"
           style={{
@@ -373,10 +379,10 @@ export function KanbanBoard({
                   {stageDeals.map((deal) => (
                     <Card
                       key={deal.id}
-                      className={`cursor-grab active:cursor-grabbing transition-shadow hover:shadow-md ${
+                      className={`cursor-grab touch-pan-y active:cursor-grabbing transition-shadow hover:shadow-md ${
                         draggedDealId === deal.id ? 'opacity-50' : ''
                       }`}
-                      draggable
+                      draggable={!isMobile}
                       onDragStart={(e) => handleDragStart(e, deal.id)}
                       onDragEnd={handleDragEnd}
                     >
@@ -392,6 +398,30 @@ export function KanbanBoard({
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
+                              <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>
+                                  <MoveRight className="mr-2 h-4 w-4" />
+                                  Move to
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuSubContent>
+                                  {stages
+                                    .filter((targetStage) => targetStage.id !== deal.stage_id)
+                                    .map((targetStage) => (
+                                      <DropdownMenuItem
+                                        key={targetStage.id}
+                                        onClick={() => onDealMove(deal.id, targetStage.id)}
+                                      >
+                                        <span
+                                          aria-hidden="true"
+                                          className="mr-2 h-2.5 w-2.5 rounded-full"
+                                          style={{ backgroundColor: targetStage.color }}
+                                        />
+                                        {targetStage.name}
+                                      </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuSubContent>
+                              </DropdownMenuSub>
+                              <DropdownMenuSeparator />
                               <DropdownMenuItem onClick={() => handleMarkWon(deal.id)}>
                                 <Trophy className="h-4 w-4 mr-2 text-green-600" />
                                 Mark as Won

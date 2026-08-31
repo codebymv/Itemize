@@ -285,7 +285,7 @@ export function CreatePipelineModal({
             <Button 
               type="submit" 
               disabled={loading}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-blue-600 interaction-button--primary text-white"
               style={{ fontFamily: '"Raleway", sans-serif' }}
               aria-label={loading
                 ? `${isEditing ? 'Saving' : 'Creating'} pipeline...`

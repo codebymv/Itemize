@@ -24,7 +24,7 @@ type GraphqlKdf = {
   parallelism: number;
 };
 
-type GraphqlVault = {
+export type GraphqlVault = {
   id: number;
   userId: number;
   title: string;
@@ -74,7 +74,7 @@ type GraphqlVaultSharingResult = {
   sharedAt: string | null;
 };
 
-const VAULT_FIELDS = `
+export const VAULT_FIELDS = `
   id userId title category colorValue positionX positionY width height zIndex
   isLocked encryptionSalt cryptoVersion wrappedVek wrappedVekRecovery
   itemCount requiresUnlock shareToken isPublic sharedAt
@@ -102,7 +102,7 @@ const legacyVaultItem = (item: GraphqlVaultItem): VaultItem => ({
   updated_at: item.updatedAt,
 });
 
-const legacyVault = (vault: GraphqlVault): Vault => ({
+export const legacyVault = (vault: GraphqlVault): Vault => ({
   id: vault.id,
   user_id: vault.userId,
   title: vault.title,
@@ -129,7 +129,7 @@ const legacyVault = (vault: GraphqlVault): Vault => ({
   updated_at: vault.updatedAt,
 });
 
-export const getVaultsViaGraphql = async (): Promise<{
+export const getVaultsViaGraphql = async (signal?: AbortSignal): Promise<{
   vaults: Vault[];
   pagination: {
     page: number;
@@ -153,6 +153,8 @@ export const getVaultsViaGraphql = async (): Promise<{
       }
     }`,
     {},
+    undefined,
+    signal,
   );
   const { nodes, pageInfo } = data.workspaceVaults;
   return {

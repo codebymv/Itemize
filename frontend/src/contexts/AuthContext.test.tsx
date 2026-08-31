@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useNavigate } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   getCurrentUserViaGraphql,
@@ -115,6 +115,36 @@ describe('AuthProvider GraphQL authentication', () => {
 
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.currentUser?.createdAt).toBe('2026-08-27T18:25:00.000Z');
+  });
+
+  it('does not re-probe the session between protected routes', async () => {
+    vi.mocked(isLoggedOut).mockReturnValue(false);
+    vi.mocked(hasSessionHint).mockReturnValue(true);
+    vi.mocked(getCurrentUserViaGraphql).mockResolvedValue({
+      id: 42,
+      email: 'member@example.com',
+      name: 'Member',
+      provider: 'email',
+      emailVerified: true,
+      role: 'USER',
+      createdAt: '2026-08-27T18:25:00.000Z',
+    });
+
+    const protectedWrapper = ({ children }: { children: ReactNode }) => (
+      <MemoryRouter initialEntries={['/dashboard']}>
+        <AuthProvider>{children}</AuthProvider>
+      </MemoryRouter>
+    );
+    const { result } = renderHook(() => ({
+      auth: useAuthState(),
+      navigate: useNavigate(),
+    }), { wrapper: protectedWrapper });
+
+    await waitFor(() => expect(result.current.auth.loading).toBe(false));
+    act(() => result.current.navigate('/contacts'));
+    await waitFor(() => expect(result.current.auth.currentUser?.uid).toBe('42'));
+
+    expect(getCurrentUserViaGraphql).toHaveBeenCalledTimes(1);
   });
 
   it('routes registration directly through GraphQL', async () => {

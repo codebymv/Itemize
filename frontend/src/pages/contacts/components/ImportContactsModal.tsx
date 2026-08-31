@@ -290,13 +290,13 @@ export function ImportContactsModal({ organizationId, onClose, onImported }: Imp
                             <Button variant="outline" onClick={() => { setStep('upload'); setParsedData([]); }} style={{ fontFamily: '"Raleway", sans-serif' }} aria-label="Back to upload">
                                 Back
                             </Button>
-                            <Button onClick={handleImport} className="bg-blue-600 hover:bg-blue-700 text-white" style={{ fontFamily: '"Raleway", sans-serif' }} aria-label={`Import ${parsedData.length} contacts`}>
+                            <Button onClick={handleImport} className="bg-blue-600 interaction-button--primary text-white" style={{ fontFamily: '"Raleway", sans-serif' }} aria-label={`Import ${parsedData.length} contacts`}>
                                 Import {parsedData.length} Contacts
                             </Button>
                         </>
                     )}
                     {step === 'complete' && (
-                        <Button onClick={onClose} className="bg-blue-600 hover:bg-blue-700 text-white" style={{ fontFamily: '"Raleway", sans-serif' }} aria-label="Close">Done</Button>
+                        <Button onClick={onClose} className="bg-blue-600 interaction-button--primary text-white" style={{ fontFamily: '"Raleway", sans-serif' }} aria-label="Close">Done</Button>
                     )}
                 </DialogFooter>
             </DialogContent>

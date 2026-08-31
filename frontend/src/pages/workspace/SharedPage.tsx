@@ -93,7 +93,7 @@ export function SharedPage() {
   const workspaceLanding = getWorkspaceLanding(isMobile);
   const WorkspaceLandingIcon = isMobile ? LayoutGrid : Map;
   const { toast } = useToast();
-  const { token } = useAuthState();
+  const { token, currentUser } = useAuthState();
 
   // Route-aware onboarding (will show 'canvas' onboarding for Workspace group)
   const {
@@ -122,7 +122,7 @@ export function SharedPage() {
     loading,
     error: contentError,
     refresh: fetchAllContent,
-  } = useWorkspaceContent(token);
+  } = useWorkspaceContent(currentUser?.uid);
 
   // Unshare confirmation dialog
   const [unshareDialogOpen, setUnshareDialogOpen] = useState(false);
@@ -498,7 +498,7 @@ export function SharedPage() {
               action={headerQueryCount === 0 ?
                 <Button
                   onClick={() => navigate(workspaceLanding.path)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="bg-blue-600 interaction-button--primary text-white"
                 >
                   <WorkspaceLandingIcon className="mr-2 h-4 w-4" />
                   Go to {workspaceLanding.title}
@@ -524,7 +524,7 @@ export function SharedPage() {
                       return (
                         <tr
                           key={`${content.type}-${content.id}`}
-                          className="border-b hover:bg-muted/20 transition-colors"
+                          className="border-b"
                         >
                           <td className="p-3">
                             <div className="flex items-center gap-2">
@@ -616,7 +616,7 @@ export function SharedPage() {
                 <AlertDialogCancel className="font-raleway">Cancel</AlertDialogCancel>
                 <AlertDialogAction
                   onClick={handleUnshare}
-                  className="bg-red-600 hover:bg-red-700 text-white font-raleway"
+                  className="interaction-button--destructive bg-red-600 text-white font-raleway"
                 >
                   Disable Sharing
                 </AlertDialogAction>

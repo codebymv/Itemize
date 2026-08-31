@@ -61,7 +61,7 @@ export function ContactCard({
     return (
         <>
         <Card
-            className="cursor-pointer hover:shadow-md transition-shadow"
+            interactive
             onClick={() => onToggleExpand(contact.id)}
         >
             <CardContent className="p-4">
@@ -72,6 +72,7 @@ export function ContactCard({
                         onClick={(e) => e.stopPropagation()}
                     >
                         <Checkbox
+                            aria-label={`Select ${getContactName()}`}
                             checked={isSelected}
                             onCheckedChange={(checked) => onSelect(contact.id, !!checked)}
                         />
@@ -118,13 +119,13 @@ export function ContactCard({
                                             }}
                                             className="group/menu"
                                         >
-                                            <Edit className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                                            <Edit className="mr-2 h-4 w-4" />
                                             Edit
                                         </DropdownMenuItem>
                                         {contact.email && (
                                             <DropdownMenuItem className="group/menu" asChild>
                                                 <a href={`mailto:${contact.email}`} onClick={(e) => e.stopPropagation()}>
-                                                    <Mail className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                                                    <Mail className="mr-2 h-4 w-4" />
                                                     Email
                                                 </a>
                                             </DropdownMenuItem>
@@ -160,7 +161,7 @@ export function ContactCard({
                             {contact.email && (
                                 <a
                                     href={`mailto:${contact.email}`}
-                                    className="flex items-center gap-1.5 text-muted-foreground hover:underline max-w-full"
+                                    className="touch-target-mobile flex touch-manipulation items-center gap-1.5 text-muted-foreground hover:underline max-w-full"
                                 >
                                     <Mail className="h-4 w-4 flex-shrink-0 text-blue-600 dark:text-blue-400" />
                                     <span className="truncate max-w-[180px]">{contact.email}</span>
@@ -169,7 +170,7 @@ export function ContactCard({
                             {contact.phone && (
                                 <a
                                     href={`tel:${contact.phone}`}
-                                    className="flex items-center gap-1.5 text-muted-foreground hover:underline max-w-full"
+                                    className="touch-target-mobile flex touch-manipulation items-center gap-1.5 text-muted-foreground hover:underline max-w-full"
                                 >
                                     <Phone className="h-4 w-4 flex-shrink-0 text-blue-600 dark:text-blue-400" />
                                     <span className="truncate max-w-[150px]">{contact.phone}</span>
@@ -193,7 +194,7 @@ export function ContactCard({
                                         <ExpandedRowActionLabel full="Edit contact" compact="Edit" />
                                     </Button>
                                     {contact.email && (
-                                        <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm" asChild>
+                                        <Button size="sm" className="bg-blue-600 interaction-button--primary text-white text-xs sm:text-sm" asChild>
                                             <a href={`mailto:${contact.email}`} onClick={(e) => e.stopPropagation()}>
                                                 <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
                                                 <ExpandedRowActionLabel full="Email contact" compact="Email" />

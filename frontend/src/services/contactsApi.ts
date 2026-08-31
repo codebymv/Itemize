@@ -10,11 +10,13 @@ import {
   bulkUpdateContactsViaGraphql,
   createContactViaGraphql,
   deleteContactViaGraphql,
+  getContactDetailBootstrapViaGraphql,
   getContactViaGraphql,
   getContactActivitiesViaGraphql,
   getContactContentViaGraphql,
   getContactsViaGraphql,
   updateContactViaGraphql,
+  type ContactDetailBootstrap,
 } from './contactsGraphql';
 import {
   createOrganizationInvitationViaGraphql,
@@ -140,14 +142,28 @@ export interface ContactsQueryParams {
   organization_id?: number;
 }
 
-export const getContacts = async (params: ContactsQueryParams = {}, organizationId?: number): Promise<ContactsResponse> => {
+export const getContacts = async (
+  params: ContactsQueryParams = {},
+  organizationId?: number,
+  signal?: AbortSignal,
+): Promise<ContactsResponse> => {
   const orgId = organizationId ?? params.organization_id;
-  return getContactsViaGraphql(params, orgId);
+  return signal === undefined
+    ? getContactsViaGraphql(params, orgId)
+    : getContactsViaGraphql(params, orgId, signal);
 };
 
 export const getContact = async (id: number, organizationId?: number): Promise<Contact> => {
   return getContactViaGraphql(id, organizationId);
 };
+
+export const getContactDetailBootstrap = async (
+  contactId: number,
+  organizationId: number,
+  signal?: AbortSignal,
+): Promise<ContactDetailBootstrap> => (
+  getContactDetailBootstrapViaGraphql(contactId, organizationId, signal)
+);
 
 export interface CreateContactData {
   first_name?: string;
@@ -329,6 +345,7 @@ export default {
   // Contacts
   getContacts,
   getContact,
+  getContactDetailBootstrap,
   createContact,
   updateContact,
   deleteContact,

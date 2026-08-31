@@ -10,6 +10,7 @@ import {
     Pencil,
     ChevronDown,
     Loader2,
+    PieChart,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -50,7 +51,9 @@ import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { StatCard } from '@/components/StatCard';
+import { ResponsiveMoneyValue } from '@/components/ui/responsive-value';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
+import { FramedSection } from '@/components/ui/framed-section';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
@@ -323,15 +326,16 @@ export function EstimatesPage() {
             }}
         >
             {!loadError && (
-            <ResponsiveCardRail
-                label="Estimate status summary"
-                desktopColumns="md:grid-cols-4"
-                className="responsive-stat-summary"
-            >
+            <FramedSection title="Overview" icon={PieChart} className="mb-6">
+              <ResponsiveCardRail
+                  label="Estimate status summary"
+                  desktopColumns="md:grid-cols-4"
+                  className="responsive-stat-summary mb-0"
+              >
                 <StatCard
                     title="Expired"
                     badgeText="Expired"
-                    value={formatCurrency(stats.expired.total)}
+                    value={<ResponsiveMoneyValue amount={stats.expired.total} currency="USD" locale="en-US" />}
                     icon={getEstimateStatusVisual('expired').icon}
                     description={`${stats.expired.count} estimate${stats.expired.count !== 1 ? 's' : ''}`}
                     colorTheme={getEstimateStatusVisual('expired').theme}
@@ -340,7 +344,7 @@ export function EstimatesPage() {
                 <StatCard
                     title="Draft"
                     badgeText="Draft"
-                    value={formatCurrency(stats.draft.total)}
+                    value={<ResponsiveMoneyValue amount={stats.draft.total} currency="USD" locale="en-US" />}
                     icon={getEstimateStatusVisual('draft').icon}
                     description={`${stats.draft.count} estimate${stats.draft.count !== 1 ? 's' : ''}`}
                     colorTheme={getEstimateStatusVisual('draft').theme}
@@ -349,7 +353,7 @@ export function EstimatesPage() {
                 <StatCard
                     title="Sent"
                     badgeText="Sent"
-                    value={formatCurrency(stats.sent.total)}
+                    value={<ResponsiveMoneyValue amount={stats.sent.total} currency="USD" locale="en-US" />}
                     icon={getEstimateStatusVisual('sent').icon}
                     description={`${stats.sent.count} estimate${stats.sent.count !== 1 ? 's' : ''}`}
                     colorTheme={getEstimateStatusVisual('sent').theme}
@@ -358,13 +362,14 @@ export function EstimatesPage() {
                 <StatCard
                     title="Accepted"
                     badgeText="Accepted"
-                    value={formatCurrency(stats.accepted.total)}
+                    value={<ResponsiveMoneyValue amount={stats.accepted.total} currency="USD" locale="en-US" />}
                     icon={getEstimateStatusVisual('accepted').icon}
                     description={`${stats.accepted.count} estimate${stats.accepted.count !== 1 ? 's' : ''}`}
                     colorTheme={getEstimateStatusVisual('accepted').theme}
                     isLoading={loading}
                 />
-            </ResponsiveCardRail>
+              </ResponsiveCardRail>
+            </FramedSection>
             )}
 
             {/* Estimates List */}
@@ -403,7 +408,7 @@ export function EstimatesPage() {
                                 return (
                                     <div key={estimate.id}>
                                         <div
-                                            className="group cursor-pointer p-4 transition-colors hover:bg-muted/50"
+                                            className="group cursor-pointer p-4 interaction-row"
                                             onClick={(event) => handleToggleExpand(estimate.id, event)}
                                         >
                                             <div className="flex items-center justify-between">
@@ -443,16 +448,16 @@ export function EstimatesPage() {
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()}>
                                                             <DropdownMenuItem onClick={() => navigate(`/estimates/${estimate.id}`)} className="group/menu">
-                                                                <Pencil className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Edit
+                                                                <Pencil className="mr-2 h-4 w-4" />Edit
                                                             </DropdownMenuItem>
                                                             {estimate.status === 'draft' && (
                                                                 <DropdownMenuItem onClick={() => handleSendEstimate(estimate.id)} className="group/menu">
-                                                                    <Send className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Send
+                                                                    <Send className="mr-2 h-4 w-4" />Send
                                                                 </DropdownMenuItem>
                                                             )}
                                                             {['sent', 'accepted'].includes(estimate.status) && !estimate.converted_invoice_id && (
                                                                 <DropdownMenuItem onClick={() => handleConvertToInvoice(estimate.id)} className="group/menu">
-                                                                    <ArrowRight className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />Convert to Invoice
+                                                                    <ArrowRight className="mr-2 h-4 w-4" />Convert to Invoice
                                                                 </DropdownMenuItem>
                                                             )}
                                                             <DropdownMenuSeparator />

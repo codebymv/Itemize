@@ -131,8 +131,8 @@ export function RecentActivityList({ activities, isLoading }: { activities: Dash
                 const IconComponent = config.icon;
                 
                 return (
-                    <div key={activity.id} className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors group">
-                        <div className={`p-2 rounded-lg flex-shrink-0 ${config.bgColor} transition-transform group-hover:scale-110`}>
+                    <div key={activity.id} className="flex items-start gap-3 rounded-lg p-2">
+                        <div className={`flex-shrink-0 rounded-lg p-2 ${config.bgColor}`}>
                             <IconComponent className={config.color} />
                         </div>
                         

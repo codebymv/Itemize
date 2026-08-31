@@ -1,7 +1,7 @@
 import type { PaymentSettings } from './invoicesApi';
 import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
 
-type GraphqlInvoiceSettings = {
+export type GraphqlInvoiceSettings = {
   id: number | null;
   organizationId: number;
   stripeAccountId: string | null;
@@ -25,7 +25,7 @@ type GraphqlInvoiceSettings = {
   updatedAt: string | null;
 };
 
-const fields = `
+export const invoiceSettingsFields = `
   id organizationId stripeAccountId stripePublishableKey stripeConnected
   stripeConnectedAt invoicePrefix nextInvoiceNumber defaultPaymentTerms
   defaultNotes defaultTerms defaultTaxRate taxId businessName businessAddress
@@ -114,14 +114,16 @@ export const mapInvoiceSettingsInput = (settings: Partial<PaymentSettings>) => (
 
 export const getInvoiceSettingsViaGraphql = async (
   organizationId?: number,
+  signal?: AbortSignal,
 ): Promise<PaymentSettings> => {
   const data = await graphqlRequest<
     { invoiceSettings: GraphqlInvoiceSettings },
     Record<string, never>
   >(
-    `query InvoiceSettings { invoiceSettings { ${fields} } }`,
+    `query InvoiceSettings { invoiceSettings { ${invoiceSettingsFields} } }`,
     {},
     organizationId,
+    signal,
   );
   return mapInvoiceSettings(data.invoiceSettings);
 };
@@ -136,7 +138,7 @@ export const updateInvoiceSettingsViaGraphql = async (
     { input: typeof input }
   >(
     `mutation UpdateInvoiceSettings($input: UpdateInvoiceSettingsInput!) {
-      updateInvoiceSettings(input: $input) { ${fields} }
+      updateInvoiceSettings(input: $input) { ${invoiceSettingsFields} }
     }`,
     { input },
     organizationId,

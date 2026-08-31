@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import {
     Save,
@@ -74,19 +75,15 @@ import { getAssetUrl } from '@/lib/api';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useDirtyState } from '@/hooks/useDirtyState';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
-import { getContacts } from '@/services/contactsApi';
 import type { JsonRecord } from '@/types';
 import {
-    getInvoice,
-    getProducts,
-    getPaymentSettings,
-    getBusinesses,
     Product,
     PaymentSettings,
     Business,
     Invoice,
     createRecurringTemplateFromInvoice,
 } from '@/services/invoicesApi';
+import { getInvoiceEditorBootstrapViaGraphql } from '@/services/salesDocumentEditorGraphql';
 import {
     getRecurringInvoice,
     pauseRecurringInvoice,
@@ -129,10 +126,7 @@ export function InvoiceEditorPage() {
     const { toast } = useToast();
     const isNew = id === 'new' || !id;
 
-    const [loading, setLoading] = useState(true);
     const [initialized, setInitialized] = useState(false);
-    const [loadError, setLoadError] = useState(false);
-    const [loadAttempt, setLoadAttempt] = useState(0);
     const { organizationId, organization, error: organizationError } = useOrganization();
     const defaultBusinessId = typeof organization?.settings.defaultBusinessId === 'number'
         ? organization.settings.defaultBusinessId
@@ -151,6 +145,25 @@ export function InvoiceEditorPage() {
     const [recurringScheduleLoading, setRecurringScheduleLoading] = useState(false);
     const [recurringScheduleSaving, setRecurringScheduleSaving] = useState(false);
     const [pauseScheduleOpen, setPauseScheduleOpen] = useState(false);
+    const initializedBootstrapRef = useRef<string | null>(null);
+    const invoiceId = !isNew && id
+        && Number.isSafeInteger(Number(id)) && Number(id) > 0
+        ? Number(id)
+        : null;
+    const hasInvalidInvoiceId = !isNew && invoiceId === null;
+    const bootstrapKey = `${organizationId ?? 'none'}:${invoiceId ?? 'new'}`;
+    const bootstrapQuery = useQuery({
+        queryKey: ['invoice-editor-bootstrap', organizationId, invoiceId],
+        queryFn: ({ signal }) => getInvoiceEditorBootstrapViaGraphql(
+            organizationId as number,
+            invoiceId,
+            signal,
+        ),
+        enabled: Boolean(organizationId) && !hasInvalidInvoiceId,
+        refetchOnWindowFocus: false,
+    });
+    const loadError = bootstrapQuery.isError || hasInvalidInvoiceId;
+    const loading = !loadError && (bootstrapQuery.isPending || !initialized);
 
     // Use extracted hooks
     const {
@@ -427,98 +440,84 @@ export function InvoiceEditorPage() {
         }
     };
 
-    // Initialize
+    // Initialize once per route so a background refetch cannot overwrite edits.
     useEffect(() => {
-        if (!organizationId) return;
-        const init = async () => {
-            setLoading(true);
-            setInitialized(false);
-            setLoadError(false);
-            try {
-                const [contactsData, productsData, businessesData, settingsData] = await Promise.all([
-                    getContacts({}, organizationId),
-                    getProducts({}, organizationId),
-                    getBusinesses(organizationId),
-                    getPaymentSettings(organizationId)
-                ]);
-                setContacts(Array.isArray(contactsData) ? contactsData : contactsData.contacts || []);
-                setProducts(productsData);
-                setBusinesses(businessesData);
-                setSettings(settingsData);
+        if (!bootstrapQuery.data
+            || initializedBootstrapRef.current === bootstrapKey) return;
+        const data = bootstrapQuery.data;
+        setInitialized(false);
+        setContacts(data.contacts);
+        setProducts(data.products);
+        setBusinesses(data.businesses);
+        setSettings(data.settings);
 
-                // Load existing invoice if editing
-                if (!isNew && id) {
-                    const invoice = await getInvoice(parseInt(id), organizationId);
-                    setLoadedInvoice(invoice);
-                    loadInvoiceData(invoice);
-                    loadContactData({
-                        id: invoice.contact_id,
-                        name: invoice.customer_name,
-                        email: invoice.customer_email,
-                        phone: invoice.customer_phone,
-                        address: invoice.customer_address,
-                    });
-                    
-                    if (invoice.items && invoice.items.length > 0) {
-                        setLineItems(invoice.items.map(item => ({
-                            id: crypto.randomUUID(),
-                            product_id: item.product_id,
-                            name: item.name,
-                            description: item.description || '',
-                            quantity: item.quantity,
-                            unit_price: item.unit_price,
-                            tax_rate: item.tax_rate || 0,
-                        })));
-                    }
-                } else {
-                    setLoadedInvoice(null);
-                    // Pre-fill from URL (e.g. from Contact detail "Create Invoice")
-                    const contactIdParam = searchParams.get('contactId');
-                    const contactNameParam = searchParams.get('contactName');
-                    const contactEmailParam = searchParams.get('contactEmail');
-                    if (contactIdParam || contactNameParam || contactEmailParam) {
-                        const numId = contactIdParam ? parseInt(contactIdParam, 10) : undefined;
-                        if (numId) setContactId(numId);
-                        loadContactData({
-                            id: numId,
-                            name: contactNameParam || undefined,
-                            email: contactEmailParam || undefined,
-                        });
-                    }
-                    // Prefer the organization default, then recent activity.
-                    const businessesList = businessesData;
-                    if (businessesList.length > 0) {
-                        const preferred = businessesList.find(b => b.id === defaultBusinessId)
-                            || businessesList.find(b => b.last_used_at)
-                            || businessesList[0];
-                        if (preferred) {
-                            setSelectedBusinessId(preferred.id);
-                        }
-                    }
-                }
-            } catch (error) {
-                toast({ title: 'Error', description: toastMessages.failedToLoad('invoice data'), variant: 'destructive' });
-                if (!isNew) setLoadError(true);
-            } finally {
-                setLoading(false);
-                setInitialized(true);
+        if (data.invoice) {
+            const invoice = data.invoice;
+            setLoadedInvoice(invoice);
+            loadInvoiceData(invoice);
+            loadContactData({
+                id: invoice.contact_id,
+                name: invoice.customer_name,
+                email: invoice.customer_email,
+                phone: invoice.customer_phone,
+                address: invoice.customer_address,
+            });
+            if (invoice.items && invoice.items.length > 0) {
+                setLineItems(invoice.items.map(item => ({
+                    id: crypto.randomUUID(),
+                    product_id: item.product_id,
+                    name: item.name,
+                    description: item.description || '',
+                    quantity: item.quantity,
+                    unit_price: item.unit_price,
+                    tax_rate: item.tax_rate || 0,
+                })));
             }
-        };
-        init();
+        } else {
+            setLoadedInvoice(null);
+            const contactIdParam = searchParams.get('contactId');
+            const contactNameParam = searchParams.get('contactName');
+            const contactEmailParam = searchParams.get('contactEmail');
+            if (contactIdParam || contactNameParam || contactEmailParam) {
+                const numId = contactIdParam ? parseInt(contactIdParam, 10) : undefined;
+                if (numId) setContactId(numId);
+                loadContactData({
+                    id: numId,
+                    name: contactNameParam || undefined,
+                    email: contactEmailParam || undefined,
+                });
+            }
+            const preferred = data.businesses.find(b => b.id === defaultBusinessId)
+                || data.businesses.find(b => b.last_used_at)
+                || data.businesses[0];
+            if (preferred) setSelectedBusinessId(preferred.id);
+        }
+        initializedBootstrapRef.current = bootstrapKey;
+        setInitialized(true);
     }, [
-        organizationId,
+        bootstrapKey,
+        bootstrapQuery.data,
         defaultBusinessId,
-        id,
-        isNew,
-        toast,
         loadInvoiceData,
         loadContactData,
         setLineItems,
         setSelectedBusinessId,
         setContactId,
         searchParams,
-        loadAttempt,
     ]);
+
+    useEffect(() => {
+        if (initializedBootstrapRef.current !== bootstrapKey) setInitialized(false);
+    }, [bootstrapKey]);
+
+    useEffect(() => {
+        if (!bootstrapQuery.isError) return;
+        toast({
+            title: 'Error',
+            description: toastMessages.failedToLoad('invoice data'),
+            variant: 'destructive',
+        });
+    }, [bootstrapQuery.errorUpdatedAt, bootstrapQuery.isError, toast]);
 
 
 
@@ -561,9 +560,11 @@ export function InvoiceEditorPage() {
             >
                 <ErrorState
                     kind="page"
-                    title="Invoice unavailable"
-                    description="We could not load this invoice. Your data has not been changed."
-                    onAction={() => setLoadAttempt(current => current + 1)}
+                    title={hasInvalidInvoiceId ? 'Invalid invoice' : 'Invoice unavailable'}
+                    description={hasInvalidInvoiceId
+                        ? 'This invoice address is not valid.'
+                        : 'We could not load this invoice. Your data has not been changed.'}
+                    onAction={hasInvalidInvoiceId ? undefined : () => bootstrapQuery.refetch()}
                 />
             </PageLayout>
         );
@@ -609,7 +610,7 @@ export function InvoiceEditorPage() {
             </Tooltip>
             <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => setShowPreview(true)} className="group/menu">
-                    <Eye className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                    <Eye className="mr-2 h-4 w-4" />
                     Preview Invoice
                 </DropdownMenuItem>
                 {!isNew && (
@@ -620,7 +621,7 @@ export function InvoiceEditorPage() {
                             disabled={saving || isDirty}
                             className="group/menu"
                         >
-                            <Send className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                            <Send className="mr-2 h-4 w-4" />
                             Send Invoice
                         </DropdownMenuItem>
                         <DropdownMenuItem
@@ -628,7 +629,7 @@ export function InvoiceEditorPage() {
                             disabled={saving || isDirty}
                             className="group/menu"
                         >
-                            <FileSignature className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                            <FileSignature className="mr-2 h-4 w-4" />
                             Send for Signature
                         </DropdownMenuItem>
                     </>
@@ -655,6 +656,7 @@ export function InvoiceEditorPage() {
                         onClick={handleSave}
                         icon={<Save className="h-4 w-4" />}
                         disabled={!canSave}
+                        busy={saving}
                     />
                 ),
             }}
@@ -683,7 +685,7 @@ export function InvoiceEditorPage() {
                 <Collapsible open={businessSectionOpen} onOpenChange={setBusinessSectionOpen}>
                     <Card>
                         <CollapsibleTrigger asChild>
-                            <CardHeader className="cursor-pointer rounded-t-lg transition-colors hover:bg-muted/50">
+                            <CardHeader className="cursor-pointer rounded-t-lg interaction-row">
                                 <CardTitle className="flex items-center justify-between gap-3 text-base">
                                     <span className="flex items-center gap-2">
                                         <Building2 className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
@@ -698,7 +700,7 @@ export function InvoiceEditorPage() {
                             </CardHeader>
                         </CollapsibleTrigger>
                         <CollapsibleContent>
-                            <CardContent>
+                            <CardContent surface="inset">
                                 <div className="flex flex-col gap-6 sm:flex-row">
                                     {/* Left: Logo */}
                                     <div className="flex-shrink-0">
@@ -843,7 +845,7 @@ export function InvoiceEditorPage() {
                                 Invoice Details
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4">
+                        <CardContent surface="inset" className="space-y-4">
                             <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_10rem] sm:items-center">
                                 <Label className="text-muted-foreground">Invoice number</Label>
                                 <Input
@@ -983,7 +985,7 @@ export function InvoiceEditorPage() {
                                 Notes &amp; Terms
                             </CardTitle>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent surface="inset">
                             <Textarea
                                 ref={notesRef}
                                 value={notes}
@@ -1006,7 +1008,7 @@ export function InvoiceEditorPage() {
                                 Totals
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-3">
+                        <CardContent surface="inset" className="space-y-3">
                         <div className="flex justify-between text-sm">
                             <span>Subtotal</span>
                             <span>{formatCurrency(subtotal, currency)}</span>
@@ -1155,7 +1157,7 @@ export function InvoiceEditorPage() {
                 <Collapsible open={footerOpen} onOpenChange={setFooterOpen}>
                     <Card>
                         <CollapsibleTrigger asChild>
-                            <CardHeader className="cursor-pointer rounded-t-lg transition-colors hover:bg-muted/50">
+                            <CardHeader className="cursor-pointer rounded-t-lg interaction-row">
                                 <CardTitle className="flex items-center justify-between gap-3 text-base">
                                     <span className="flex items-center gap-2">
                                         <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
@@ -1170,7 +1172,7 @@ export function InvoiceEditorPage() {
                             </CardHeader>
                         </CollapsibleTrigger>
                         <CollapsibleContent>
-                            <CardContent>
+                            <CardContent surface="inset">
                                 <Textarea
                                     ref={footerRef}
                                     value={termsAndConditions}
@@ -1198,7 +1200,7 @@ export function InvoiceEditorPage() {
                     <Button
                         onClick={handleSave}
                         disabled={!canSave}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                        className="bg-blue-600 interaction-button--primary text-white"
                     >
                         <Save className="h-4 w-4 mr-2" />
                         {primaryActionLabel}

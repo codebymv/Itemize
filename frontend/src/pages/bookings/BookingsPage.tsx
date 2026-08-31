@@ -255,7 +255,7 @@ export function BookingsPage() {
                                             tabIndex={0}
                                             aria-expanded={isExpanded}
                                             className={cn(
-                                                'group flex cursor-pointer items-center gap-3 px-3 py-4 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-4',
+                                                'group flex cursor-pointer items-center gap-3 px-3 py-4 interaction-row focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-4',
                                                 isExpanded && 'bg-muted/30',
                                             )}
                                             onClick={() => setExpandedBookingId(isExpanded ? null : booking.id)}
@@ -317,7 +317,7 @@ export function BookingsPage() {
                                                             <CalendarClock className="mr-2 h-4 w-4" />
                                                             <ExpandedRowActionLabel full="Reschedule booking" compact="Reschedule" />
                                                         </Button>
-                                                        <Button variant="outline" size="sm" className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => void handleCancelBooking(booking.id)}>
+                                                        <Button variant="outline" size="sm" className="border-destructive/30 text-destructive interaction-button--destructive-ghost" onClick={() => void handleCancelBooking(booking.id)}>
                                                             <X className="mr-2 h-4 w-4" />
                                                             <ExpandedRowActionLabel full="Cancel booking" compact="Cancel" />
                                                         </Button>

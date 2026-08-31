@@ -7,7 +7,7 @@ type GraphqlCampaignLink = {
   uniqueClicks: number; createdAt: string;
 };
 
-type GraphqlCampaign = {
+export type GraphqlCampaign = {
   id: number; organizationId: number; name: string; subject: string;
   fromName: string | null; fromEmail: string | null; replyTo: string | null;
   templateId: number | null; contentHtml: string | null; contentText: string | null;
@@ -37,7 +37,7 @@ type GraphqlCampaignRecipient = {
   contactLastName: string | null;
 };
 
-const fields = `
+export const campaignFields = `
   id organizationId name subject fromName fromEmail replyTo templateId contentHtml contentText
   segmentType segmentId segmentFilter tagIds excludedTagIds status scheduledAt sendImmediately timezone
   isAbTest abVariants abWinnerCriteria abTestDurationHours totalRecipients totalSent totalDelivered
@@ -59,7 +59,7 @@ const mapLink = (link: GraphqlCampaignLink) => ({
   created_at: link.createdAt,
 });
 
-const mapCampaign = (campaign: GraphqlCampaign): EmailCampaign => ({
+export const mapCampaign = (campaign: GraphqlCampaign): EmailCampaign => ({
   id: campaign.id,
   organization_id: campaign.organizationId,
   name: campaign.name,
@@ -162,7 +162,7 @@ export const getCampaignsViaGraphql = async (
   >(
     `query Campaigns($filter: CampaignFilterInput, $page: PageInput) {
       campaigns(filter: $filter, page: $page) {
-        nodes { ${fields} }
+        nodes { ${campaignFields} }
         pageInfo { page pageSize total totalPages }
       }
     }`,
@@ -182,11 +182,16 @@ export const getCampaignsViaGraphql = async (
   };
 };
 
-export const getCampaignViaGraphql = async (id: number, organizationId?: number): Promise<EmailCampaign> => {
+export const getCampaignViaGraphql = async (
+  id: number,
+  organizationId?: number,
+  signal?: AbortSignal,
+): Promise<EmailCampaign> => {
   const data = await graphqlRequest<{ campaign: GraphqlCampaign }, { id: number }>(
-    `query Campaign($id: Int!) { campaign(id: $id) { ${fields} } }`,
+    `query Campaign($id: Int!) { campaign(id: $id) { ${campaignFields} } }`,
     { id },
     organizationId,
+    signal,
   );
   return mapCampaign(data.campaign);
 };
@@ -194,6 +199,7 @@ export const getCampaignViaGraphql = async (id: number, organizationId?: number)
 export const previewCampaignViaGraphql = async (
   id: number,
   organizationId?: number,
+  signal?: AbortSignal,
 ): Promise<CampaignPreview> => {
   const data = await graphqlRequest<
     { campaignAudiencePreview: CampaignPreview },
@@ -204,6 +210,7 @@ export const previewCampaignViaGraphql = async (
     }`,
     { id },
     organizationId,
+    signal,
   );
   return data.campaignAudiencePreview;
 };
@@ -212,6 +219,7 @@ export const getCampaignRecipientsViaGraphql = async (
   campaignId: number,
   params: { status?: CampaignRecipient['status'] | 'all'; page?: number; limit?: number } = {},
   organizationId?: number,
+  signal?: AbortSignal,
 ): Promise<{ recipients: CampaignRecipient[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> => {
   const data = await graphqlRequest<
     { campaignRecipients: { nodes: GraphqlCampaignRecipient[]; pageInfo: {
@@ -236,6 +244,7 @@ export const getCampaignRecipientsViaGraphql = async (
       page: { page: params.page ?? 1, pageSize: params.limit ?? 50 },
     },
     organizationId,
+    signal,
   );
   const page = data.campaignRecipients.pageInfo;
   return {
@@ -293,7 +302,7 @@ export const sendCampaignViaGraphql = async (
   }, { campaignId: number; idempotencyKey: string }>(
     `mutation SendCampaign($campaignId: Int!, $idempotencyKey: String!) {
       sendCampaign(campaignId: $campaignId, idempotencyKey: $idempotencyKey) {
-        campaign { ${fields} }
+        campaign { ${campaignFields} }
         recipientCount deliveryJobId replayed message
       }
     }`,
@@ -320,7 +329,7 @@ export const pauseCampaignViaGraphql = async (
   }, { campaignId: number }>(
     `mutation PauseCampaign($campaignId: Int!) {
       pauseCampaign(campaignId: $campaignId) {
-        campaign { ${fields} }
+        campaign { ${campaignFields} }
         pendingRecipients message
       }
     }`,
@@ -364,7 +373,7 @@ export const createCampaignViaGraphql = async (
     { input: ReturnType<typeof mapInput> }
   >(
     `mutation CreateCampaign($input: CreateCampaignInput!) {
-      createCampaign(input: $input) { ${fields} }
+      createCampaign(input: $input) { ${campaignFields} }
     }`,
     { input: mapInput(input) },
     organizationId,
@@ -382,7 +391,7 @@ export const updateCampaignViaGraphql = async (
     { id: number; input: ReturnType<typeof mapInput> }
   >(
     `mutation UpdateCampaign($id: Int!, $input: UpdateCampaignInput!) {
-      updateCampaign(id: $id, input: $input) { ${fields} }
+      updateCampaign(id: $id, input: $input) { ${campaignFields} }
     }`,
     { id, input: mapInput(input) },
     organizationId,
@@ -392,7 +401,7 @@ export const updateCampaignViaGraphql = async (
 
 export const duplicateCampaignViaGraphql = async (id: number, organizationId?: number): Promise<EmailCampaign> => {
   const data = await graphqlMutationRequest<{ duplicateCampaign: GraphqlCampaign }, { id: number }>(
-    `mutation DuplicateCampaign($id: Int!) { duplicateCampaign(id: $id) { ${fields} } }`,
+    `mutation DuplicateCampaign($id: Int!) { duplicateCampaign(id: $id) { ${campaignFields} } }`,
     { id },
     organizationId,
   );
@@ -425,7 +434,7 @@ export const scheduleCampaignViaGraphql = async (
     { id: number; input: { scheduledAt: string; timezone?: string } }
   >(
     `mutation ScheduleCampaign($id: Int!, $input: ScheduleCampaignInput!) {
-      scheduleCampaign(id: $id, input: $input) { ${fields} }
+      scheduleCampaign(id: $id, input: $input) { ${campaignFields} }
     }`,
     { id, input: { scheduledAt, ...(timezone === undefined ? {} : { timezone }) } },
     organizationId,
@@ -435,7 +444,7 @@ export const scheduleCampaignViaGraphql = async (
 
 export const unscheduleCampaignViaGraphql = async (id: number, organizationId?: number): Promise<EmailCampaign> => {
   const data = await graphqlMutationRequest<{ unscheduleCampaign: GraphqlCampaign }, { id: number }>(
-    `mutation UnscheduleCampaign($id: Int!) { unscheduleCampaign(id: $id) { ${fields} } }`,
+    `mutation UnscheduleCampaign($id: Int!) { unscheduleCampaign(id: $id) { ${campaignFields} } }`,
     { id },
     organizationId,
   );

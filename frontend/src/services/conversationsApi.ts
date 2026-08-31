@@ -20,8 +20,7 @@ export interface ConversationsQueryParams {
     organization_id?: number;
 }
 
-const BASE_CONVERSATION_FIELDS = `
-    fragment ConversationFields on Conversation {
+const BASE_CONVERSATION_FIELD_SELECTION = `
         id
         organization_id: organizationId
         contact_id: contactId
@@ -40,12 +39,10 @@ const BASE_CONVERSATION_FIELDS = `
         contact_last_name: contactLastName
         contact_email: contactEmail
         contact_phone: contactPhone
-    }
 `;
 
-const PROVIDER_CONVERSATION_FIELDS = BASE_CONVERSATION_FIELDS.replace(
-    /\n {4}}\n$/,
-    `
+const PROVIDER_CONVERSATION_FIELD_SELECTION = `
+        ${BASE_CONVERSATION_FIELD_SELECTION}
         social_conversation_id: socialConversationId
         provider_account_name: providerAccountName
         provider_participant_name: providerParticipantName
@@ -57,9 +54,19 @@ const PROVIDER_CONVERSATION_FIELDS = BASE_CONVERSATION_FIELDS.replace(
         chat_visitor_email: chatVisitorEmail
         chat_visitor_phone: chatVisitorPhone
         chat_widget_name: chatWidgetName
+`;
+
+const BASE_CONVERSATION_FIELDS = `
+    fragment ConversationFields on Conversation {
+        ${BASE_CONVERSATION_FIELD_SELECTION}
     }
-`,
-);
+`;
+
+const PROVIDER_CONVERSATION_FIELDS = `
+    fragment ConversationFields on Conversation {
+        ${PROVIDER_CONVERSATION_FIELD_SELECTION}
+    }
+`;
 
 const providerFieldsUnavailable = (error: unknown): boolean =>
     error instanceof Error
@@ -88,6 +95,148 @@ const MESSAGE_FIELDS = `
         created_at: createdAt
     }
 `;
+
+const providerConversationsWithChannelQuery = `
+    ${PROVIDER_CONVERSATION_FIELDS}
+    query Conversations(
+        $status: String
+        $channel: String
+        $assignedTo: Int
+        $contactId: Int
+        $page: Int
+        $limit: Int
+    ) {
+        conversations(
+            status: $status
+            channel: $channel
+            assignedTo: $assignedTo
+            contactId: $contactId
+            page: $page
+            limit: $limit
+        ) {
+            conversations { ...ConversationFields }
+            page
+            limit
+            total
+            totalPages
+        }
+    }
+`;
+
+const baseConversationsWithChannelQuery = `
+    ${BASE_CONVERSATION_FIELDS}
+    query Conversations(
+        $status: String
+        $channel: String
+        $assignedTo: Int
+        $contactId: Int
+        $page: Int
+        $limit: Int
+    ) {
+        conversations(
+            status: $status
+            channel: $channel
+            assignedTo: $assignedTo
+            contactId: $contactId
+            page: $page
+            limit: $limit
+        ) {
+            conversations { ...ConversationFields }
+            page
+            limit
+            total
+            totalPages
+        }
+    }
+`;
+
+const providerConversationsWithoutChannelQuery = `
+    ${PROVIDER_CONVERSATION_FIELDS}
+    query Conversations(
+        $status: String
+        $assignedTo: Int
+        $contactId: Int
+        $page: Int
+        $limit: Int
+    ) {
+        conversations(
+            status: $status
+            assignedTo: $assignedTo
+            contactId: $contactId
+            page: $page
+            limit: $limit
+        ) {
+            conversations { ...ConversationFields }
+            page
+            limit
+            total
+            totalPages
+        }
+    }
+`;
+
+const baseConversationsWithoutChannelQuery = `
+    ${BASE_CONVERSATION_FIELDS}
+    query Conversations(
+        $status: String
+        $assignedTo: Int
+        $contactId: Int
+        $page: Int
+        $limit: Int
+    ) {
+        conversations(
+            status: $status
+            assignedTo: $assignedTo
+            contactId: $contactId
+            page: $page
+            limit: $limit
+        ) {
+            conversations { ...ConversationFields }
+            page
+            limit
+            total
+            totalPages
+        }
+    }
+`;
+
+const providerConversationQuery = `
+    ${PROVIDER_CONVERSATION_FIELDS}
+    ${MESSAGE_FIELDS}
+    query Conversation($id: Int!) {
+        conversation(id: $id) {
+            ...ConversationFields
+            messages { ...ConversationMessageFields }
+        }
+    }
+`;
+
+const baseConversationQuery = `
+    ${BASE_CONVERSATION_FIELDS}
+    ${MESSAGE_FIELDS}
+    query Conversation($id: Int!) {
+        conversation(id: $id) {
+            ...ConversationFields
+            messages { ...ConversationMessageFields }
+        }
+    }
+`;
+
+const conversationListDocuments = [
+    { document: providerConversationsWithChannelQuery, includesChannel: true },
+    { document: baseConversationsWithChannelQuery, includesChannel: true },
+    { document: providerConversationsWithoutChannelQuery, includesChannel: false },
+    { document: baseConversationsWithoutChannelQuery, includesChannel: false },
+] as const;
+
+let conversationListCapability: number | null = null;
+let conversationDetailCapability: 'provider' | 'base' | null = null;
+
+/** Test-only reset for the process-local schema capability memory. */
+export const resetConversationCapabilities = () => {
+    conversationListCapability = null;
+    conversationDetailCapability = null;
+};
 
 export const getConversations = async (
     params: ConversationsQueryParams = {}
@@ -125,49 +274,32 @@ export const getConversations = async (
         ...(params.page === undefined ? {} : { page: params.page }),
         ...(params.limit === undefined ? {} : { limit: params.limit }),
     };
-    const request = (fields: string, includeChannel = true) => graphqlRequest<Response, Variables>(
-        `
-            ${fields}
-            query Conversations(
-                $status: String
-                ${includeChannel ? '$channel: String' : ''}
-                $assignedTo: Int
-                $contactId: Int
-                $page: Int
-                $limit: Int
-            ) {
-                conversations(
-                    status: $status
-                    ${includeChannel ? 'channel: $channel' : ''}
-                    assignedTo: $assignedTo
-                    contactId: $contactId
-                    page: $page
-                    limit: $limit
-                ) {
-                    conversations { ...ConversationFields }
-                    page
-                    limit
-                    total
-                    totalPages
-                }
-            }
-        `,
-        variables,
-        params.organization_id,
-    );
     let data: Response | null = null;
     let lastError: unknown;
     let serverAppliedChannel = true;
-    const attempts: Array<[string, boolean]> = [
-        [PROVIDER_CONVERSATION_FIELDS, true],
-        [BASE_CONVERSATION_FIELDS, true],
-        [PROVIDER_CONVERSATION_FIELDS, false],
-        [BASE_CONVERSATION_FIELDS, false],
-    ];
-    for (const [fields, includeChannel] of attempts) {
+    const capabilityOrder = conversationListCapability === null
+        ? conversationListDocuments.map((_, index) => index)
+        : [
+            conversationListCapability,
+            ...conversationListDocuments
+                .map((_, index) => index)
+                .filter((index) => index !== conversationListCapability),
+        ];
+    for (const capabilityIndex of capabilityOrder) {
+        const capability = conversationListDocuments[capabilityIndex];
+        const requestVariables = capability.includesChannel
+            ? variables
+            : Object.fromEntries(
+                Object.entries(variables).filter(([key]) => key !== 'channel'),
+            ) as Variables;
         try {
-            data = await request(fields, includeChannel);
-            serverAppliedChannel = includeChannel;
+            data = await graphqlRequest<Response, Variables>(
+                capability.document,
+                requestVariables,
+                params.organization_id,
+            );
+            conversationListCapability = capabilityIndex;
+            serverAppliedChannel = capability.includesChannel;
             break;
         } catch (error) {
             if (!providerFieldsUnavailable(error) && !channelFilterUnavailable(error)) throw error;
@@ -189,27 +321,28 @@ export const getConversation = async (
     id: number,
     organizationId?: number
 ): Promise<Conversation> => {
-    const request = (fields: string) => graphqlRequest<{ conversation: Conversation }, { id: number }>(
-        `
-            ${fields}
-            ${MESSAGE_FIELDS}
-            query Conversation($id: Int!) {
-                conversation(id: $id) {
-                    ...ConversationFields
-                    messages { ...ConversationMessageFields }
-                }
-            }
-        `,
-        { id },
-        organizationId,
-    );
-    let data: { conversation: Conversation };
-    try {
-        data = await request(PROVIDER_CONVERSATION_FIELDS);
-    } catch (error) {
-        if (!providerFieldsUnavailable(error)) throw error;
-        data = await request(BASE_CONVERSATION_FIELDS);
+    const requestConversation = (document: string) => graphqlRequest<
+        { conversation: Conversation },
+        { id: number }
+    >(document, { id }, organizationId);
+    const documents = conversationDetailCapability === 'base'
+        ? [baseConversationQuery]
+        : [providerConversationQuery, baseConversationQuery];
+    let data: { conversation: Conversation } | null = null;
+    let lastError: unknown;
+    for (const document of documents) {
+        try {
+            data = await requestConversation(document);
+            conversationDetailCapability = document === providerConversationQuery
+                ? 'provider'
+                : 'base';
+            break;
+        } catch (error) {
+            if (!providerFieldsUnavailable(error)) throw error;
+            lastError = error;
+        }
     }
+    if (!data) throw lastError;
     return data.conversation;
 };
 

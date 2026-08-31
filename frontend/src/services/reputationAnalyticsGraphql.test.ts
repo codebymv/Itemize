@@ -11,6 +11,7 @@ describe('reputation analytics GraphQL adapter', () => {
   beforeEach(() => vi.clearAllMocks());
 
   it('passes the bounded period and selected organization', async () => {
+    const controller = new AbortController();
     vi.mocked(graphqlRequest).mockResolvedValue({
       reputationAnalytics: {
         overall: {
@@ -25,7 +26,7 @@ describe('reputation analytics GraphQL adapter', () => {
       },
     });
 
-    await expect(getReputationAnalyticsViaGraphql(90, 7)).resolves.toEqual({
+    await expect(getReputationAnalyticsViaGraphql(90, 7, controller.signal)).resolves.toEqual({
       overall: {
         total_reviews: 3, average_rating: 4, positive_reviews: 2,
         negative_reviews: 1, new_reviews: 1, responded_reviews: 2,
@@ -40,6 +41,7 @@ describe('reputation analytics GraphQL adapter', () => {
       expect.stringContaining('query ReputationAnalytics'),
       { days: 90 },
       7,
+      controller.signal,
     );
   });
 });

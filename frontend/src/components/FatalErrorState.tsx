@@ -19,7 +19,7 @@ export function FatalErrorState({ details, onRetry, onGoHome }: FatalErrorStateP
           description="This view stopped responding. Refresh it or return to the dashboard."
           action={(
             <div className="flex flex-col justify-center gap-3 sm:flex-row">
-              <Button type="button" onClick={onRetry} className="h-11 gap-2 bg-blue-600 text-white hover:bg-blue-700">
+              <Button type="button" onClick={onRetry} className="h-11 gap-2 bg-blue-600 text-white interaction-button--primary">
                 <RefreshCw className="h-4 w-4" aria-hidden="true" />
                 Refresh page
               </Button>

@@ -5,6 +5,7 @@ import {
   getCommunicationStatsViaGraphql,
   getContactTrendsViaGraphql,
   getDashboardAnalyticsViaGraphql,
+  getDashboardSnapshotViaGraphql,
   getDealPerformanceViaGraphql,
   getConversionRatesViaGraphql,
   getPipelineDealAgeViaGraphql,
@@ -74,6 +75,58 @@ describe('dashboard analytics GraphQL adapter', () => {
     expect(vi.mocked(graphqlRequest).mock.calls[0][0]).toContain(
       'recentContacts { id name email }',
     );
+  });
+
+  it('loads the dashboard route through one period-consistent GraphQL operation', async () => {
+    const conversions = {
+      period: '30days',
+      dealWinRate: { rate: 0, won: 0, lost: 0, totalClosed: 0, valuesByCurrency: [] },
+      formToContact: { rate: 0, submissions: 0, converted: 0 },
+    };
+    const communications = {
+      period: '30days',
+      email: { total: 0 },
+      sms: { total: 0 },
+    };
+    const dealAge = { pipeline: null, stages: [], summary: {} };
+    vi.mocked(graphqlRequest).mockResolvedValue({
+      dashboardAnalytics: dashboard,
+      conversionRates: conversions,
+      communicationStats: communications,
+      pipelineDealAge: dealAge,
+      revenueFlow: {
+        period: 'LAST_30_DAYS',
+        startAt: null,
+        endAt: '2026-07-20T18:00:00.000Z',
+        timeZone: 'UTC',
+        bucketUnit: 'day',
+        currencies: [],
+      },
+    });
+
+    await expect(getDashboardSnapshotViaGraphql('30days', 4)).resolves.toMatchObject({
+      analytics: { contacts: { recentContacts: [{ id: '3' }] } },
+      conversions,
+      communications,
+      pipelineDealAge: dealAge,
+      revenue: { period: '30days', currencies: [] },
+    });
+
+    expect(graphqlRequest).toHaveBeenCalledTimes(1);
+    expect(graphqlRequest).toHaveBeenCalledWith(
+      expect.stringContaining('query DashboardSnapshot'),
+      {
+        conversionPeriod: 'DAYS_30',
+        communicationPeriod: 'DAYS_30',
+        paymentPeriod: 'LAST_30_DAYS',
+      },
+      4,
+      undefined,
+    );
+    const query = vi.mocked(graphqlRequest).mock.calls[0][0];
+    expect(query).toContain('dashboardAnalytics');
+    expect(query).toContain('revenueFlow');
+    expect(query).toContain('communicationStats');
   });
 
   it('maps legacy period values to typed GraphQL enum variables', async () => {

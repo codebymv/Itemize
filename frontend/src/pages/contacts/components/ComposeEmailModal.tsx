@@ -6,12 +6,8 @@ import React, { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import {
     Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
 } from '@/components/ui/dialog';
+import { ModalBody, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -133,17 +129,14 @@ export function ComposeEmailModal({
 
     return (
         <Dialog open onOpenChange={() => onClose()}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        <Send className="h-5 w-5 text-blue-600" />
-                        Send Email to {contactName}
-                    </DialogTitle>
-                    <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>
-                        Send to: {contact.email}
-                    </DialogDescription>
-                </DialogHeader>
+            <ModalContent size="lg">
+                <ModalHeader
+                    icon={Send}
+                    title={`Send email to ${contactName}`}
+                    description={`Send to ${contact.email}`}
+                />
 
+                <ModalBody>
                 <Tabs value={mode} onValueChange={(v) => setMode(v as 'template' | 'custom')}>
                     <TabsList className="grid w-full grid-cols-2">
                         <TabsTrigger value="custom" className="gap-2">
@@ -251,8 +244,9 @@ export function ComposeEmailModal({
                         )}
                     </TabsContent>
                 </Tabs>
+                </ModalBody>
 
-                <DialogFooter className="mt-4">
+                <ModalFooter>
                     <Button variant="outline" onClick={onClose} style={{ fontFamily: '"Raleway", sans-serif' }} aria-label="Cancel">
                         Cancel
                     </Button>
@@ -263,7 +257,7 @@ export function ComposeEmailModal({
                             (mode === 'template' && !selectedTemplateId) ||
                             (mode === 'custom' && (!subject.trim() || !body.trim()))
                         }
-                        className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                        className="gap-2 bg-blue-600 interaction-button--primary text-white"
                         style={{ fontFamily: '"Raleway", sans-serif' }}
                         aria-label={isSending ? 'Sending email...' : 'Send email'}
                     >
@@ -279,8 +273,8 @@ export function ComposeEmailModal({
                             </>
                         )}
                     </Button>
-                </DialogFooter>
-            </DialogContent>
+                </ModalFooter>
+            </ModalContent>
         </Dialog>
     );
 }

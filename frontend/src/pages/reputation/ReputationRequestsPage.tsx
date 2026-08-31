@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { Mail, MessageSquareText, MessagesSquare, MoreHorizontal, Plus, RotateCw, Send, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +20,9 @@ import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { deleteReviewRequest, getReviewRequests, resendReviewRequest, type ReviewRequest } from '@/services/reputationApi';
+import { deleteReviewRequest, resendReviewRequest, type ReviewRequest } from '@/services/reputationApi';
+import { getReviewRequestsViaGraphql } from '@/services/reputationRequestsGraphql';
+import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
 import { SendReviewRequestModal } from './SendReviewRequestModal';
 import { getReviewRequestStatusVisual } from './constants/reputationVisuals';
 
@@ -35,36 +38,28 @@ const channelLabel = (channel: ReviewRequest['channel']) => channel === 'both' ?
 
 export function ReputationRequestsPage() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { organizationId, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
+  const { organizationId, isLoading: organizationLoading, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
   const { showModal: showOnboarding, handleComplete, handleDismiss, handleClose, featureKey } = useRouteOnboarding();
-  const [requests, setRequests] = useState<ReviewRequest[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [showSendModal, setShowSendModal] = useState(searchParams.get('compose') === '1');
   const [requestToDelete, setRequestToDelete] = useState<ReviewRequest | null>(null);
 
-  useEffect(() => { if (initError) setLoading(false); }, [initError]);
-
-  const fetchRequests = useCallback(async () => {
-    if (!organizationId) return;
-    setLoading(true);
-    setLoadError(false);
-    try {
-      const response = await getReviewRequests({
+  const requestsQueryKey = ['reputation-requests', organizationId, statusFilter] as const;
+  const requestsQuery = useQuery({
+    queryKey: requestsQueryKey,
+    queryFn: ({ signal }) => getReviewRequestsViaGraphql({
         status: statusFilter === 'all' ? undefined : statusFilter as ReviewRequest['status'],
-      }, organizationId);
-      setRequests(response.requests ?? []);
-    } catch {
-      setLoadError(true);
-    } finally {
-      setLoading(false);
-    }
-  }, [organizationId, statusFilter]);
-
-  useEffect(() => { void fetchRequests(); }, [fetchRequests]);
+      }, organizationId as number, signal),
+    enabled: organizationId !== null,
+    staleTime: QUERY_STALE_TIME_MS,
+    retry: shouldRetryQuery,
+  });
+  const requests = useMemo(() => requestsQuery.data?.requests ?? [], [requestsQuery.data]);
+  const loading = organizationLoading || requestsQuery.isPending;
+  const loadError = Boolean(requestsQuery.error && !requestsQuery.data);
 
   const filteredRequests = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -90,7 +85,7 @@ export function ReputationRequestsPage() {
         title: result.status === 'sent' ? 'Request resent' : result.status === 'failed' ? 'Delivery failed' : 'Resend accepted',
         variant: result.status === 'failed' ? 'destructive' : 'default',
       });
-      await fetchRequests();
+      await queryClient.invalidateQueries({ queryKey: ['reputation-requests', organizationId] });
     } catch {
       toast({ title: 'Could not resend request', variant: 'destructive' });
     }
@@ -100,7 +95,22 @@ export function ReputationRequestsPage() {
     if (!organizationId || !requestToDelete) return false;
     try {
       await deleteReviewRequest(requestToDelete.id, organizationId);
-      setRequests(current => current.filter(request => request.id !== requestToDelete.id));
+      queryClient.setQueriesData<{
+        requests: ReviewRequest[];
+        pagination: { page: number; limit: number; total: number; totalPages: number };
+      }>({ queryKey: ['reputation-requests', organizationId] }, current => {
+        if (!current?.requests.some(request => request.id === requestToDelete.id)) return current;
+        const total = Math.max(0, current.pagination.total - 1);
+        return {
+          ...current,
+          requests: current.requests.filter(request => request.id !== requestToDelete.id),
+          pagination: {
+            ...current.pagination,
+            total,
+            totalPages: Math.ceil(total / current.pagination.limit),
+          },
+        };
+      });
       setRequestToDelete(null);
       return true;
     } catch {
@@ -147,7 +157,7 @@ export function ReputationRequestsPage() {
               icon={Send}
               title="Unable to load review requests"
               description="We couldn't load your review requests. Try again."
-              onRetry={() => void fetchRequests()}
+              onRetry={() => void requestsQuery.refetch()}
             />
           ) : filteredRequests.length === 0 ? (
             <EmptyState
@@ -197,7 +207,7 @@ export function ReputationRequestsPage() {
         </CardContent>
       </Card>
 
-      {showSendModal && organizationId ? <SendReviewRequestModal organizationId={organizationId} onClose={closeComposer} onSent={() => { closeComposer(); void fetchRequests(); }} /> : null}
+      {showSendModal && organizationId ? <SendReviewRequestModal organizationId={organizationId} onClose={closeComposer} onSent={() => { closeComposer(); void queryClient.invalidateQueries({ queryKey: ['reputation-requests', organizationId] }); }} /> : null}
       {featureKey && ONBOARDING_CONTENT[featureKey] ? <OnboardingModal isOpen={showOnboarding} onClose={handleClose} onComplete={handleComplete} onDismiss={handleDismiss} content={ONBOARDING_CONTENT[featureKey]} /> : null}
       <DeleteDialog open={Boolean(requestToDelete)} onOpenChange={open => { if (!open) setRequestToDelete(null); }} onConfirm={handleDelete} itemType="review-request" itemTitle={requestToDelete ? contactName(requestToDelete) : undefined} />
     </PageLayout>

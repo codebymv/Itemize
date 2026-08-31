@@ -534,13 +534,13 @@ export default function FormEditorPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => void copyPublicLink()} className="group/menu">
-                    <Copy className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                    <Copy className="mr-2 h-4 w-4" />
                     Copy link
                 </DropdownMenuItem>
                 {form.status === 'published' && (
                     <DropdownMenuItem asChild className="group/menu">
                         <a href={publicPath} target="_blank" rel="noreferrer">
-                            <ExternalLink className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+                            <ExternalLink className="mr-2 h-4 w-4" />
                             Preview form
                         </a>
                     </DropdownMenuItem>
@@ -575,7 +575,7 @@ export default function FormEditorPage() {
             headerTools={{
                 status: <Badge className={cn('pointer-events-none whitespace-nowrap', statusVisual.badgeClass)}>{statusVisual.label}</Badge>,
                 secondaryAction: <>{moreActions}{publishAction}</>,
-                primaryAction: saveActive ? <HeaderAction label={savingActive ? 'Saving...' : saveLabel} icon={<Save className="h-4 w-4" />} onClick={saveActive} disabled={saveDisabled} /> : undefined,
+                primaryAction: saveActive ? <HeaderAction label={savingActive ? 'Saving...' : saveLabel} icon={<Save className="h-4 w-4" />} onClick={saveActive} disabled={saveDisabled} busy={savingActive} /> : undefined,
             }}
         >
                     <EntityDetailHeader
@@ -601,7 +601,7 @@ export default function FormEditorPage() {
                                 <CardHeader>
                                     <SectionCardTitle icon={Settings2}>Form settings</SectionCardTitle>
                                 </CardHeader>
-                                <CardContent className="space-y-6">
+                                <CardContent surface="inset" className="space-y-6">
                                     <div className="grid gap-5 md:grid-cols-2">
                                         <div className="space-y-2">
                                             <Label htmlFor="form-name">Name</Label>
@@ -750,7 +750,7 @@ export default function FormEditorPage() {
                                 <Card>
                                     <CardHeader className="flex flex-row items-center justify-between space-y-0">
                                         <SectionCardTitle icon={ListPlus}>Form fields</SectionCardTitle>
-                                        <Button size="sm" className="bg-blue-600 text-white hover:bg-blue-700" onClick={addField}>
+                                        <Button size="sm" className="bg-blue-600 text-white interaction-button--primary" onClick={addField}>
                                             <Plus className="mr-2 h-4 w-4" />
                                             Add field
                                         </Button>
@@ -903,7 +903,7 @@ export default function FormEditorPage() {
                                     <SectionCardTitle icon={Inbox}>Submissions</SectionCardTitle>
                                     <span className="text-sm text-muted-foreground">{submissionTotal} total</span>
                                 </CardHeader>
-                                <CardContent>
+                                <CardContent surface="inset">
                                     {loadingSubmissions ? (
                                         <div className="space-y-3">
                                             <Skeleton className="h-16 w-full" />
@@ -1002,7 +1002,7 @@ export default function FormEditorPage() {
                                 event.preventDefault();
                                 void confirmDeleteSubmission();
                             }}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            className="bg-destructive text-destructive-foreground interaction-button--destructive"
                         >
                             {deletingSubmission && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                             Delete

@@ -4,7 +4,9 @@ import {
   createPipelineViaGraphql,
   deletePipelineViaGraphql,
   getPipelineViaGraphql,
+  getPipelineWorkspaceViaGraphql,
   getPipelinesViaGraphql,
+  resetPipelineWorkspaceCapability,
   updatePipelineViaGraphql,
 } from './pipelinesGraphql';
 
@@ -65,6 +67,7 @@ const response = (payload: unknown): Response => ({
 describe('pipeline GraphQL consumer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetPipelineWorkspaceCapability();
     vi.stubEnv('VITE_GRAPHQL_URL', 'https://graphql.test.itemize/graphql');
     vi.stubGlobal('fetch', vi.fn());
     vi.mocked(fetchCsrfToken).mockResolvedValue('pipeline-csrf');
@@ -120,6 +123,63 @@ describe('pipeline GraphQL consumer', () => {
         ],
       }),
     );
+  });
+
+  it('loads pipeline navigation and the selected board in one workspace operation', async () => {
+    vi.mocked(fetch).mockResolvedValue(response({
+      data: {
+        pipelineWorkspace: {
+          pipelines: [pipeline],
+          selectedPipeline: { ...pipeline, deals: [deal] },
+        },
+      },
+    }));
+
+    await expect(getPipelineWorkspaceViaGraphql(17, 42)).resolves.toEqual({
+      pipelines: [expect.objectContaining({ id: 17, name: 'Sales' })],
+      selectedPipeline: expect.objectContaining({
+        id: 17,
+        deals: [expect.objectContaining({ id: 91, stage_id: 'lead' })],
+      }),
+    });
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+    const request = JSON.parse(
+      String((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body),
+    );
+    expect(request.query).toContain('query PipelineWorkspace');
+    expect(request.variables).toEqual({ selectedPipelineId: 17 });
+  });
+
+  it('remembers an older schema and falls back to the two-read pipeline flow', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        json: vi.fn().mockResolvedValue({
+          errors: [{
+            message: 'Cannot query field "pipelineWorkspace" on type "Query".',
+            extensions: { code: 'GRAPHQL_VALIDATION_FAILED' },
+          }],
+        }),
+      } as unknown as Response)
+      .mockResolvedValueOnce(response({ data: { pipelines: [pipeline] } }))
+      .mockResolvedValueOnce(response({
+        data: { pipeline: { ...pipeline, deals: [deal] } },
+      }))
+      .mockResolvedValueOnce(response({ data: { pipelines: [pipeline] } }))
+      .mockResolvedValueOnce(response({
+        data: { pipeline: { ...pipeline, deals: [deal] } },
+      }));
+
+    await getPipelineWorkspaceViaGraphql(null, 42);
+    await getPipelineWorkspaceViaGraphql(null, 42);
+
+    expect(fetch).toHaveBeenCalledTimes(5);
+    const secondCallFirstRequest = JSON.parse(
+      String((vi.mocked(fetch).mock.calls[3][1] as RequestInit).body),
+    );
+    expect(secondCallFirstRequest.query).toContain('query PipelineReads');
   });
 
   it('maps create/update inputs and sends CSRF-protected mutations', async () => {

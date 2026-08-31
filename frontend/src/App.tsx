@@ -10,7 +10,7 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation, useParams 
 import { ThemeProvider } from "next-themes";
 import { AuthProvider, useAuthState } from "@/contexts/AuthContext";
 import { AISuggestProvider } from "@/context/AISuggestContext";
-import { SubscriptionProvider, useSubscriptionState } from "@/contexts/SubscriptionContext";
+import { SubscriptionProvider, useSubscriptionFeatures, useSubscriptionState } from "@/contexts/SubscriptionContext";
 import { UpgradePromptCard } from "@/components/subscription/UpgradeCTA";
 import { type Plan } from "@/lib/subscription";
 import { hasPlanAccess } from "@/lib/entitlements";
@@ -20,6 +20,11 @@ import { OnboardingProvider } from "@/contexts/OnboardingContext";
 import { HeaderProvider } from '@/contexts/HeaderContext';
 import { ThemeFavicon } from '@/components/ThemeFavicon';
 import { publicFormPath } from '@/lib/publicContentRoutes';
+import {
+  QUERY_GC_TIME_MS,
+  QUERY_STALE_TIME_MS,
+  shouldRetryQuery,
+} from '@/lib/queryPolicy';
 
 // Layout components
 import Navbar from "@/components/Navbar";
@@ -28,6 +33,7 @@ import AppShell from "@/components/AppShell";
 import { PublicPageHeader } from "@/components/layout/PublicPageHeader";
 import { PageLayout } from '@/components/layout/PageLayout';
 import { Crown } from 'lucide-react';
+import { ErrorState } from '@/components/ErrorState';
 
 // Pages - Static imports for critical pages only
 import NotFound from "./pages/NotFound";
@@ -142,41 +148,28 @@ const isProduction = import.meta.env.PROD;
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // Retry failed queries
-      retry: (failureCount, error) => {
-        // Don't retry on 4xx errors
-        if (error && 'response' in error) {
-          const status = (error as { response?: { status?: number } }).response?.status;
-          if (status && status >= 400 && status < 500) {
-            return false;
-          }
-        }
-        // Max 3 retries for network/5xx errors
-        return failureCount < 3;
-      },
+      retry: shouldRetryQuery,
       
       // Retry delay (exponential backoff)
       retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
       
       // Cache for this long (5 minutes)
-      staleTime: 5 * 60 * 1000,
+      staleTime: QUERY_STALE_TIME_MS,
       
       // Keep cache for 10 minutes after stale
-      gcTime: 10 * 60 * 1000,
+      gcTime: QUERY_GC_TIME_MS,
       
       // Refetch on component mount (use cache if available)
-      refetchOnMount: 'always',
+      refetchOnMount: true,
       
       // Refetch on window focus if data is stale (production only)
       refetchOnWindowFocus: isProduction ? false : true,
     },
     
     mutations: {
-      // Retry mutations once if network error
-      retry: 1,
-      
-      // Don't wait between retries for mutations
-      retryDelay: 0,
+      // Mutations are not assumed idempotent. Individual mutations may opt in
+      // when they carry an idempotency key or have a safe server contract.
+      retry: false,
     },
   },
 });
@@ -190,10 +183,23 @@ const SubscriptionProviderWrapper = ({ children }: { children: React.ReactNode }
 // Root redirect component to handle initial routing based on auth state
 const RootRedirect = () => {
   const { currentUser, loading } = useAuthState();
-  const { isLoading, isSubscribed } = useSubscriptionState();
+  const { isLoading, isSubscribed, subscription, error } = useSubscriptionState();
+  const { refreshSubscription } = useSubscriptionFeatures();
 
   if (loading || (currentUser && isLoading)) {
     return <PageLoading className="min-h-screen" />;
+  }
+
+  if (currentUser && error && !subscription) {
+    return (
+      <ErrorState
+        kind="page"
+        className="min-h-screen"
+        title="Unable to verify account access"
+        description="We couldn't confirm this organization's plan. Try again before continuing."
+        onRetry={() => { void refreshSubscription(); }}
+      />
+    );
   }
 
   return currentUser
@@ -227,10 +233,27 @@ const AuthenticatedLayout = ({ children }: { children: React.ReactNode }) => {
 };
 
 const EntitledRoute = ({ requiredPlan = 'starter' }: { requiredPlan?: Plan }) => {
-  const { subscription, isLoading, isSubscribed, tierLevel, planName } = useSubscriptionState();
+  const { subscription, isLoading, isSubscribed, tierLevel, planName, error } = useSubscriptionState();
+  const { refreshSubscription } = useSubscriptionFeatures();
 
   if (isLoading) {
     return <PageLoading className="min-h-screen" />;
+  }
+
+  if (error && !subscription) {
+    return (
+      <AuthenticatedLayout>
+        <PageLayout title="ACCOUNT ACCESS" icon={<Crown className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />} frame="flush">
+          <ErrorState
+            kind="page"
+            className="min-h-[calc(100dvh-8rem)]"
+            title="Unable to verify account access"
+            description="We couldn't confirm this organization's plan. Try again before continuing."
+            onRetry={() => { void refreshSubscription(); }}
+          />
+        </PageLayout>
+      </AuthenticatedLayout>
+    );
   }
 
   if (!subscription || !hasPlanAccess(isSubscribed, tierLevel, requiredPlan)) {

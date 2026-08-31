@@ -41,11 +41,13 @@ export function PipelineDealAgeCard({ dealAge, isLoading }: { dealAge?: Pipeline
                         </div>
                         <div className="flex items-center justify-between text-xs text-muted-foreground">
                             <span>Avg {stage.averageOpenDealAgeDays} days old</span>
-                            <span>
-                                {stage.openValueByCurrency.map(({ currency, amount }) => (
-                                    `${currency} ${amount.toLocaleString()}`
-                                )).join(' · ') || 'No open value'}
-                            </span>
+                            {stage.openDealCount > 0 && (
+                                <span>
+                                    {stage.openValueByCurrency.map(({ currency, amount }) => (
+                                        `${currency} ${amount.toLocaleString()}`
+                                    )).join(' · ') || 'No open value'}
+                                </span>
+                            )}
                         </div>
                     </div>
                 </div>

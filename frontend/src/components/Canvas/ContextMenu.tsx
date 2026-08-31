@@ -86,45 +86,45 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
       onClick={(e) => e.stopPropagation()}
     >
       <button 
-        className="group/menu relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground bg-transparent border-none text-left font-raleway"
+        className="dropdown-menu-item interaction-navigation relative flex w-full cursor-pointer select-none items-center rounded-sm border-none bg-transparent px-2 py-1.5 text-left text-sm outline-none font-raleway"
         onClick={(e) => handleClickItem(e, onAddList)}
       >
-        <CheckSquare className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+        <CheckSquare className="h-4 w-4 mr-2" />
         <span>Add List</span>
       </button>
       {onAddNote && (
         <button 
-          className="group/menu relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground bg-transparent border-none text-left font-raleway"
+          className="dropdown-menu-item interaction-navigation relative flex w-full cursor-pointer select-none items-center rounded-sm border-none bg-transparent px-2 py-1.5 text-left text-sm outline-none font-raleway"
           onClick={(e) => handleClickItem(e, onAddNote)}
         >
-          <StickyNote className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+          <StickyNote className="h-4 w-4 mr-2" />
           <span>Add Note</span>
         </button>
       )}
       {onAddWireframe && (
         <button 
-          className="group/menu relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground bg-transparent border-none text-left font-raleway"
+          className="dropdown-menu-item interaction-navigation relative flex w-full cursor-pointer select-none items-center rounded-sm border-none bg-transparent px-2 py-1.5 text-left text-sm outline-none font-raleway"
           onClick={(e) => handleClickItem(e, onAddWireframe)}
         >
-          <GitBranch className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+          <GitBranch className="h-4 w-4 mr-2" />
           <span>Add Wireframe</span>
         </button>
       )}
       {onAddWhiteboard && (
         <button 
-          className="group/menu relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground bg-transparent border-none text-left font-raleway"
+          className="dropdown-menu-item interaction-navigation relative flex w-full cursor-pointer select-none items-center rounded-sm border-none bg-transparent px-2 py-1.5 text-left text-sm outline-none font-raleway"
           onClick={(e) => handleClickItem(e, onAddWhiteboard)}
         >
-          <Palette className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+          <Palette className="h-4 w-4 mr-2" />
           <span>Add Whiteboard</span>
         </button>
       )}
       {onAddVault && (
         <button 
-          className="group/menu relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground bg-transparent border-none text-left font-raleway"
+          className="dropdown-menu-item interaction-navigation relative flex w-full cursor-pointer select-none items-center rounded-sm border-none bg-transparent px-2 py-1.5 text-left text-sm outline-none font-raleway"
           onClick={(e) => handleClickItem(e, onAddVault)}
         >
-          <KeyRound className="h-4 w-4 mr-2 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+          <KeyRound className="h-4 w-4 mr-2" />
           <span>Add Vault</span>
         </button>
       )}

@@ -74,6 +74,7 @@ export function ContactsTable({
         <TableRow>
           <TableHead className="w-12">
             <Checkbox
+              aria-label="Select all contacts"
               checked={allSelected}
               ref={(el) => {
                 if (el) {
@@ -96,11 +97,12 @@ export function ContactsTable({
         {contacts.map((contact) => (
           <TableRow
             key={contact.id}
-            className="cursor-pointer hover:bg-muted/50"
+            interactive
             onClick={() => onContactClick(contact)}
           >
             <TableCell onClick={(e) => e.stopPropagation()}>
               <Checkbox
+                aria-label={`Select ${getContactName(contact)}`}
                 checked={selectedContacts.includes(contact.id)}
                 onCheckedChange={(checked) => onSelectContact(contact.id, !!checked)}
               />
@@ -126,7 +128,7 @@ export function ContactsTable({
                 <a
                   href={`mailto:${contact.email}`}
                   onClick={(e) => e.stopPropagation()}
-                  className="flex items-center gap-1 text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                  className="touch-target-mobile flex touch-manipulation items-center gap-1 text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
                 >
                   <Mail className="h-3 w-3" />
                   {contact.email}
@@ -140,7 +142,7 @@ export function ContactsTable({
                 <a
                   href={`tel:${contact.phone}`}
                   onClick={(e) => e.stopPropagation()}
-                  className="flex items-center gap-1 text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                  className="touch-target-mobile flex touch-manipulation items-center gap-1 text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
                 >
                   <Phone className="h-3 w-3" />
                   {contact.phone}
@@ -160,7 +162,7 @@ export function ContactsTable({
             <TableCell onClick={(e) => e.stopPropagation()}>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={`More actions for ${getContactName(contact)}`}>
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>

@@ -70,6 +70,12 @@ export class ReputationSettings {
 }
 
 @ObjectType()
+export class ReputationConfigurationBootstrap {
+  @Field(() => [ReputationPlatform]) platforms: ReputationPlatform[];
+  @Field(() => ReputationSettings) settings: ReputationSettings;
+}
+
+@ObjectType()
 export class ReputationWidgetEmbedCode {
   @Field() embedCode: string;
   @Field() widgetKey: string;

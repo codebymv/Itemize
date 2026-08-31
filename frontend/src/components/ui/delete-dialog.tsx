@@ -439,12 +439,13 @@ export function DeleteDialog({
           <AlertDialogAction
             onClick={handleConfirm}
             disabled={isLoading}
-            className="bg-destructive hover:bg-destructive/90 text-destructive-foreground font-raleway"
+            aria-busy={isLoading ? 'true' : undefined}
+            className="bg-destructive interaction-button--destructive text-destructive-foreground font-raleway"
           >
             {isLoading ? (
               <>
-                <Spinner size="sm" variant="current" className="mr-2" />
-                Deleting...
+                <Spinner size="sm" variant="current" className="mr-2" decorative />
+                Deleting…
               </>
             ) : (
               displayConfirmText

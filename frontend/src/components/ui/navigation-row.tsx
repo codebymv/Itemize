@@ -16,8 +16,7 @@ const NavigationRow = React.forwardRef<HTMLButtonElement, NavigationRowProps>(
       data-active={active}
       aria-current={active ? 'page' : undefined}
       className={cn(
-        'group/navigation-row inline-flex h-11 w-full items-center justify-start gap-2 whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium text-muted-foreground outline-none ring-sidebar-ring transition-colors',
-        'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+        'group/navigation-row interaction-navigation inline-flex h-11 w-full touch-manipulation items-center justify-start gap-2 whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium text-muted-foreground outline-none ring-sidebar-ring',
         'focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
         'disabled:pointer-events-none disabled:opacity-50',
         'data-[active=true]:bg-sidebar-accent data-[active=true]:font-medium data-[active=true]:text-sidebar-accent-foreground',
@@ -28,10 +27,10 @@ const NavigationRow = React.forwardRef<HTMLButtonElement, NavigationRowProps>(
       <Icon
         aria-hidden="true"
         className={cn(
-          'h-4 w-4 shrink-0 transition-colors',
+          'navigation-row-icon h-4 w-4 shrink-0',
           active
             ? 'text-blue-600 dark:text-blue-400'
-            : 'text-gray-600 group-hover/navigation-row:text-blue-600 dark:text-gray-400 dark:group-hover/navigation-row:text-blue-400',
+            : 'text-gray-600 dark:text-gray-400',
         )}
       />
       {children}

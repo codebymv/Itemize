@@ -76,9 +76,10 @@ export default function PublicInvoicePaymentPage() {
   if (loading && !result) {
     return (
       <PaymentResultShell
-        icon={<Loader2 className="h-7 w-7 animate-spin text-primary" />}
+        icon={<Loader2 aria-hidden="true" className="h-7 w-7 animate-spin text-primary" />}
         title="Confirming your payment"
         description="Processing payment. Keep this page open."
+        busy
       />
     );
   }
@@ -150,16 +151,22 @@ function ResultRow({ label, value, strong = false }: {
   );
 }
 
-function PaymentResultShell({ icon, title, description }: {
+function PaymentResultShell({ icon, title, description, busy = false }: {
   icon: React.ReactNode;
   title: string;
   description: string;
+  busy?: boolean;
 }) {
   return (
     <BrandedPublicPage>
       <div className="grid min-h-[calc(100vh-4rem)] place-items-center p-6">
         <BrandedPublicCard className="w-full max-w-md">
-          <CardContent className="p-8 text-center">
+          <CardContent
+            className="p-8 text-center"
+            role={busy ? 'status' : undefined}
+            aria-live={busy ? 'polite' : undefined}
+            aria-busy={busy ? 'true' : undefined}
+          >
             <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-muted">{icon}</div>
             <h1 className="mt-5 text-xl font-semibold">{title}</h1>
             <p className="mt-2 text-sm text-muted-foreground">{description}</p>

@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FileSignature, MousePointer2, Plus, Save, Trash2, UploadCloud, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ import { CardGridSkeleton } from '@/components/ui/loading-skeletons';
 import { SectionCardTitle } from '@/components/ui/section-card-title';
 import { useToast } from '@/hooks/use-toast';
 import { useDirtyState } from '@/hooks/useDirtyState';
+import { useOrganization } from '@/hooks/useOrganization';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import {
   SignatureTemplate,
@@ -30,11 +32,18 @@ import FieldPlacementCanvas from './components/FieldPlacementCanvas';
 import { getTemplateReadinessVisual } from './constants/signatureConstants';
 import { getApiUrl } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
 
 export default function SignatureTemplateEditorPage() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { toast } = useToast();
+  const {
+    organizationId,
+    isLoading: organizationLoading,
+    error: organizationError,
+  } = useOrganization();
+  const queryClient = useQueryClient();
 
   const [template, setTemplate] = useState<SignatureTemplate | null>(null);
   const [title, setTitle] = useState('');
@@ -43,31 +52,46 @@ export default function SignatureTemplateEditorPage() {
   const [file, setFile] = useState<File | null>(null);
   const [roles, setRoles] = useState<SignatureTemplateRole[]>([]);
   const [fields, setFields] = useState<SignatureTemplateField[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
-
-  const loadTemplate = useCallback(async () => {
-    if (!id) return;
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const data = await getSignatureTemplate(Number(id));
-      setTemplate(data.template);
-      setTitle(data.template.title || '');
-      setDescription(data.template.description || '');
-      setMessage(data.template.message || '');
-      setRoles(data.roles || []);
-      setFields(data.fields || []);
-    } catch (error) {
-      setLoadError('This template could not be loaded. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
+  const [working, setWorking] = useState(false);
+  const initializedTemplateKeyRef = useRef<string | null>(null);
+  const parsedTemplateId = id ? Number(id) : null;
+  const templateId = parsedTemplateId !== null
+    && Number.isSafeInteger(parsedTemplateId)
+    && parsedTemplateId > 0
+    ? parsedTemplateId
+    : null;
+  const invalidTemplateId = templateId === null;
+  const templateQueryKey = [
+    'signature-template-editor',
+    organizationId,
+    templateId,
+  ] as const;
+  const templateQuery = useQuery({
+    queryKey: templateQueryKey,
+    queryFn: ({ signal }) => getSignatureTemplate(
+      templateId as number,
+      organizationId as number,
+      signal,
+    ),
+    enabled: !invalidTemplateId && organizationId !== null,
+    staleTime: QUERY_STALE_TIME_MS,
+    retry: shouldRetryQuery,
+  });
 
   useEffect(() => {
-    void loadTemplate();
-  }, [loadTemplate]);
+    const data = templateQuery.data;
+    if (!data || !organizationId || !templateId) return;
+
+    setTemplate(data.template);
+    const initializationKey = `${organizationId}:${templateId}`;
+    if (initializedTemplateKeyRef.current === initializationKey) return;
+    initializedTemplateKeyRef.current = initializationKey;
+    setTitle(data.template.title || '');
+    setDescription(data.template.description || '');
+    setMessage(data.template.message || '');
+    setRoles(data.roles || []);
+    setFields(data.fields || []);
+  }, [organizationId, templateId, templateQuery.data]);
 
   const roleNames = useMemo(
     () => roles.map((role) => role.role_name).filter(Boolean),
@@ -82,7 +106,7 @@ export default function SignatureTemplateEditorPage() {
   }), [description, fields, message, roles, title]);
   const { isDirty, markClean } = useDirtyState({
     value: templateDraft,
-    ready: Boolean(template) && !loading,
+    ready: Boolean(template) && !working,
     resetKey: id ?? 'template',
   });
   const { confirmLeave } = useUnsavedChangesGuard({
@@ -91,37 +115,47 @@ export default function SignatureTemplateEditorPage() {
   });
 
   const handleSave = async () => {
-    if (!template) return;
+    if (!template || !organizationId) return;
     try {
-      setLoading(true);
+      setWorking(true);
       const updated = await updateSignatureTemplate(template.id, {
         title,
         description,
         message,
         roles,
-        fields
-      });
+        fields,
+      }, organizationId);
       setTemplate(updated);
+      queryClient.setQueryData(
+        ['signature-template-editor', organizationId, template.id],
+        { template: updated, roles, fields },
+      );
+      void queryClient.invalidateQueries({ queryKey: ['signature-templates', organizationId] });
       markClean();
       toast({ title: 'Template updated' });
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to save template', variant: 'destructive' });
     } finally {
-      setLoading(false);
+      setWorking(false);
     }
   };
 
   const handleUpload = async () => {
-    if (!template || !file) return;
+    if (!template || !file || !organizationId) return;
     try {
-      setLoading(true);
-      const updated = await uploadSignatureTemplate(template.id, file);
+      setWorking(true);
+      const updated = await uploadSignatureTemplate(template.id, file, organizationId);
       setTemplate(updated);
+      setFile(null);
+      queryClient.setQueryData(
+        ['signature-template-editor', organizationId, template.id],
+        { template: updated, roles, fields },
+      );
       toast({ title: 'File uploaded' });
     } catch (error) {
       toast({ title: 'Upload failed', variant: 'destructive' });
     } finally {
-      setLoading(false);
+      setWorking(false);
     }
   };
 
@@ -142,6 +176,14 @@ export default function SignatureTemplateEditorPage() {
 
   const readinessVisual = getTemplateReadinessVisual(Boolean(template?.is_ready));
   const ReadinessIcon = readinessVisual.icon;
+  const routeLoading = organizationLoading
+    || (!invalidTemplateId && templateQuery.isPending);
+  const loadError = invalidTemplateId
+    ? 'This template link is invalid.'
+    : organizationError
+      || (templateQuery.error && !templateQuery.data
+        ? 'This template could not be loaded. Please try again.'
+        : null);
 
   return (
     <PageLayout
@@ -163,7 +205,8 @@ export default function SignatureTemplateEditorPage() {
             label="Save template"
             icon={<Save className="h-4 w-4" />}
             onClick={() => void handleSave()}
-            disabled={loading || !template || !isDirty}
+            disabled={working || !template || !isDirty}
+            busy={working}
           />
         ),
       }}
@@ -172,9 +215,11 @@ export default function SignatureTemplateEditorPage() {
             <ErrorState
               title="Template unavailable"
               description={loadError}
-              onAction={() => void loadTemplate()}
+              onAction={invalidTemplateId
+                ? undefined
+                : () => void templateQuery.refetch()}
             />
-          ) : loading && !template ? (
+          ) : routeLoading && !template ? (
             <CardGridSkeleton count={2} columns={2} height="h-80" />
           ) : (
           <>
@@ -200,7 +245,7 @@ export default function SignatureTemplateEditorPage() {
               <CardHeader>
                 <SectionCardTitle icon={FileSignature}>Template settings</SectionCardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent surface="inset" className="space-y-4">
                 <div>
                   <Label htmlFor="title">Title</Label>
                   <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} />
@@ -221,7 +266,7 @@ export default function SignatureTemplateEditorPage() {
                     accept="application/pdf"
                     onChange={(e) => setFile(e.target.files?.[0] || null)}
                   />
-                  <Button variant="outline" onClick={handleUpload} disabled={!file || loading}>
+                  <Button variant="outline" onClick={handleUpload} disabled={!file || working}>
                     <UploadCloud className="h-4 w-4 mr-2" />
                     Upload
                   </Button>
@@ -237,7 +282,7 @@ export default function SignatureTemplateEditorPage() {
                   Add
                 </Button>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent surface="inset" className="space-y-4">
                 {roles.length === 0 && (
                   <EmptyState icon={FileSignature} kind="inline" title="No roles yet" />
                 )}
@@ -258,7 +303,7 @@ export default function SignatureTemplateEditorPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="ml-auto h-9 w-9 text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950/30"
+                      className="interaction-button--destructive-ghost ml-auto h-9 w-9 text-red-600 dark:text-red-400"
                       aria-label={`Remove ${role.role_name || `role ${index + 1}`}`}
                       onClick={() => removeRole(index)}
                     >
@@ -274,7 +319,7 @@ export default function SignatureTemplateEditorPage() {
             <CardHeader>
               <SectionCardTitle icon={MousePointer2}>Field placement</SectionCardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent surface="inset" className="p-0">
               <FieldPlacementCanvas
                 fields={fields}
                 onChange={setFields}

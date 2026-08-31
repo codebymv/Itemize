@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, MoreHorizontal, Trash2, Tag, UserPlus, Download, Upload, Users } from 'lucide-react';
+import { Plus, MoreHorizontal, Trash2, Tag, UserPlus, Download, Upload, Users, PieChart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -50,6 +50,7 @@ import { StatCard } from '@/components/StatCard';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { getContactStatusVisual } from './constants/contactStatusConstants';
+import { FramedSection } from '@/components/ui/framed-section';
 
 const getApiStatus = (error: unknown): number | undefined =>
   (error as { response?: { status?: number } })?.response?.status;
@@ -273,14 +274,14 @@ export function ContactsPage() {
       </Tooltip>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => setShowImportModal(true)} className="group/menu">
-          <Upload className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+          <Upload className="mr-2 h-4 w-4" />
           Import CSV
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => organizationId && exportContactsCSV(organizationId)}
           className="group/menu"
         >
-          <Download className="mr-2 h-4 w-4 transition-colors group-hover/menu:text-blue-600 dark:group-hover/menu:text-blue-400" />
+          <Download className="mr-2 h-4 w-4" />
           Export CSV
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -345,48 +346,50 @@ export function ContactsPage() {
         onDismiss={dismissOnboarding}
         content={ONBOARDING_CONTENT.contacts}
       />
-          <ResponsiveCardRail
-            label="Contact status summary"
-            desktopColumns="md:grid-cols-4"
-            className="responsive-stat-summary"
-          >
-            <StatCard
-              title="Archived Contacts"
-              badgeText="Archived"
-              value={contactStats.archived}
-              icon={getContactStatusVisual('archived').icon}
-              description={`${contactStats.archived} contact${contactStats.archived !== 1 ? 's' : ''}`}
-              colorTheme={getContactStatusVisual('archived').theme}
-              isLoading={loading}
-            />
-            <StatCard
-              title="Total Contacts"
-              badgeText="Total"
-              value={contactStats.total}
-              icon={Users}
-              description={`${contactStats.total} contact${contactStats.total !== 1 ? 's' : ''}`}
-              colorTheme="blue"
-              isLoading={loading}
-            />
-            <StatCard
-              title="Active Contacts"
-              badgeText="Active"
-              value={contactStats.active}
-              icon={getContactStatusVisual('active').icon}
-              description={`${contactStats.active} contact${contactStats.active !== 1 ? 's' : ''}`}
-              colorTheme={getContactStatusVisual('active').theme}
-              isLoading={loading}
-            />
-            <StatCard
-              title="Inactive Contacts"
-              badgeText="Inactive"
-              value={contactStats.inactive}
-              icon={getContactStatusVisual('inactive').icon}
-              description={`${contactStats.inactive} contact${contactStats.inactive !== 1 ? 's' : ''}`}
-              colorTheme={getContactStatusVisual('inactive').theme}
-              isLoading={loading}
-            />
-          </ResponsiveCardRail>
+          <FramedSection title="Overview" icon={PieChart} className="mb-6">
+            <ResponsiveCardRail
+              label="Contact status summary"
+              desktopColumns="md:grid-cols-4"
+              className="responsive-stat-summary mb-0"
+            >
+              <StatCard
+                title="Archived Contacts"
+                badgeText="Archived"
+                value={contactStats.archived}
+                icon={getContactStatusVisual('archived').icon}
+                description={`${contactStats.archived} contact${contactStats.archived !== 1 ? 's' : ''}`}
+                colorTheme={getContactStatusVisual('archived').theme}
+                isLoading={loading}
+              />
+              <StatCard
+                title="Total Contacts"
+                badgeText="Total"
+                value={contactStats.total}
+                icon={Users}
+                description={`${contactStats.total} contact${contactStats.total !== 1 ? 's' : ''}`}
+                colorTheme="blue"
+                isLoading={loading}
+              />
+              <StatCard
+                title="Active Contacts"
+                badgeText="Active"
+                value={contactStats.active}
+                icon={getContactStatusVisual('active').icon}
+                description={`${contactStats.active} contact${contactStats.active !== 1 ? 's' : ''}`}
+                colorTheme={getContactStatusVisual('active').theme}
+                isLoading={loading}
+              />
+              <StatCard
+                title="Inactive Contacts"
+                badgeText="Inactive"
+                value={contactStats.inactive}
+                icon={getContactStatusVisual('inactive').icon}
+                description={`${contactStats.inactive} contact${contactStats.inactive !== 1 ? 's' : ''}`}
+                colorTheme={getContactStatusVisual('inactive').theme}
+                isLoading={loading}
+              />
+            </ResponsiveCardRail>
+          </FramedSection>
           {/* Bulk actions */}
           {selectedContacts.length > 0 && (
             <Card className="mb-4 border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/20">

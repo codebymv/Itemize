@@ -1,6 +1,7 @@
 import React, { FormEvent, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
+import { LoadingState } from '@/components/LoadingState';
 import { getPublicForm, PublicFormData, submitPublicForm } from '@/services/formsApi';
 import type { FormField, JsonRecord, JsonValue } from '@/types';
 import { publicFormFieldState, safePublicFormRedirect } from './publicFormBehavior';
@@ -200,7 +201,7 @@ export default function PublicFormPage() {
     if (loading) {
         return (
             <main className="min-h-screen grid place-items-center bg-muted/20">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" aria-label="Loading form" />
+                <LoadingState kind="page" message="Loading form" className="min-h-screen" />
             </main>
         );
     }
@@ -275,10 +276,11 @@ export default function PublicFormPage() {
                     <button
                         type="submit"
                         disabled={submitting}
+                        aria-busy={submitting ? 'true' : undefined}
                         className="inline-flex w-full items-center justify-center rounded-md px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
                         style={{ backgroundColor: form.theme?.primaryColor || '#3B82F6' }}
                     >
-                        {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {submitting && <Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />}
                         {form.submit_button_text || 'Submit'}
                     </button>
                 </div>

@@ -227,7 +227,7 @@ export function EmailComposeDialog({
                         type="button"
                         onClick={handleSend}
                         disabled={sending || !subject.trim() || !body.trim() || allRecipients.length === 0}
-                        className="bg-blue-600 text-white hover:bg-blue-700"
+                        className="bg-blue-600 text-white interaction-button--primary"
                     >
                         {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                         <span className="hidden sm:inline">Send to {allRecipients.length}</span>

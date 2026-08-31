@@ -6,18 +6,24 @@ import { GetStartedCard } from './GetStartedCard'
 
 vi.mock('@/hooks/useOrganization', () => ({ useOrganization: () => ({ organizationId: 7 }) }))
 vi.mock('@/services/getStartedGraphql', () => ({
-  getStartedProgressQueryKey: (organizationId: number) => ['get-started-progress', organizationId],
-  getStartedProgressViaGraphql: vi.fn().mockResolvedValue({
-    dismissed: false,
-    completedCount: 1,
-    totalCount: 3,
-    steps: [
-      { id: 'first_contact', completed: true, completedAt: null, href: '/contacts' },
-      { id: 'first_artifact', completed: false, completedAt: null, href: '/estimates/new' },
-      { id: 'first_send', completed: false, completedAt: null, href: '/estimates' },
-    ],
-  }),
   dismissGetStartedViaGraphql: vi.fn(),
+}))
+vi.mock('@/services/organizationBootstrapGraphql', () => ({
+  organizationBootstrapQueryKey: (organizationId: number) => ['organization-bootstrap', organizationId],
+  getOrganizationBootstrapViaGraphql: vi.fn().mockResolvedValue({
+    billingStatus: {},
+    onboardingProgress: {},
+    getStartedProgress: {
+      dismissed: false,
+      completedCount: 1,
+      totalCount: 3,
+      steps: [
+        { id: 'first_contact', completed: true, completedAt: null, href: '/contacts' },
+        { id: 'first_artifact', completed: false, completedAt: null, href: '/estimates/new' },
+        { id: 'first_send', completed: false, completedAt: null, href: '/estimates' },
+      ],
+    },
+  }),
 }))
 
 describe('GetStartedCard', () => {
