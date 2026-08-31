@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Copy, FileText, FolderOpen, Mail, MoreHorizontal, Pencil, Plus, Send, Trash2, PieChart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
@@ -23,44 +24,40 @@ import { useOrganization } from '@/hooks/useOrganization';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
 import { getCatalogStatusVisual } from '@/pages/campaigns/constants/campaignVisuals';
 import { DRAFT_EMAIL_TEMPLATE_VISUAL } from './constants/emailTemplateVisuals';
-import { deleteEmailTemplate, duplicateEmailTemplate, getEmailTemplates, sendTestEmail, type EmailTemplate } from '@/services/emailApi';
+import { deleteEmailTemplate, duplicateEmailTemplate, sendTestEmail, type EmailTemplate } from '@/services/emailApi';
+import { getEmailTemplatesViaGraphql } from '@/services/emailTemplatesGraphql';
+import { templateCatalogQueryKeys } from '@/services/templateCatalogQueryKeys';
 
 type StatusFilter = 'all' | 'active' | 'inactive';
 
 export function EmailTemplatesPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { currentUser } = useAuthState();
   const onboarding = useRouteOnboarding();
   const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({ onError: () => 'Failed to initialize.' });
-  const [templates, setTemplates] = useState<EmailTemplate[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [templateToDelete, setTemplateToDelete] = useState<EmailTemplate | null>(null);
   const [workingId, setWorkingId] = useState<number | null>(null);
-  const requestRef = useRef(0);
-
-  const fetchTemplates = useCallback(async () => {
-    if (orgLoading) return setLoading(true);
-    if (!organizationId) { setTemplates([]); setLoading(false); return; }
-    const requestId = ++requestRef.current;
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const response = await getEmailTemplates(organizationId);
-      if (requestId === requestRef.current) setTemplates(response.templates ?? []);
-    } catch (error) {
-      console.error('Error fetching email templates:', error);
-      if (requestId === requestRef.current) setLoadError('We could not load your email templates. Existing templates have not been changed.');
-    } finally { if (requestId === requestRef.current) setLoading(false); }
-  }, [organizationId, orgLoading]);
-
-  useEffect(() => { void fetchTemplates(); }, [fetchTemplates]);
+  const templatesQueryKey = templateCatalogQueryKeys.email(organizationId);
+  const templatesQuery = useQuery({
+    queryKey: templatesQueryKey,
+    queryFn: ({ signal }) => getEmailTemplatesViaGraphql({}, organizationId as number, signal),
+    enabled: organizationId !== null,
+    staleTime: QUERY_STALE_TIME_MS,
+    retry: shouldRetryQuery,
+  });
+  const templates = useMemo(() => templatesQuery.data?.templates ?? [], [templatesQuery.data]);
+  const loading = orgLoading || (organizationId !== null && templatesQuery.isPending);
+  const loadError = templatesQuery.error && !templatesQuery.data
+    ? 'We could not load your email templates. Existing templates have not been changed.'
+    : null;
 
   const categories = useMemo(() => Array.from(new Set(templates.map(template => template.category).filter(Boolean))).sort(), [templates]);
   const stats = useMemo(() => ({
@@ -90,7 +87,10 @@ export function EmailTemplatesPage() {
     setWorkingId(template.id);
     try {
       const copy = await duplicateEmailTemplate(template.id, organizationId);
-      setTemplates(current => [copy, ...current]);
+      queryClient.setQueryData<{ templates: EmailTemplate[]; total: number }>(templatesQueryKey, current => current ? {
+        templates: [copy, ...current.templates.filter(item => item.id !== copy.id)],
+        total: current.templates.some(item => item.id === copy.id) ? current.total : current.total + 1,
+      } : current);
       toast({ title: 'Duplicated', description: 'Template duplicated successfully.' });
     } catch { toast({ title: 'Unable to duplicate', description: 'The template was not duplicated.', variant: 'destructive' }); }
     finally { setWorkingId(null); }
@@ -108,7 +108,18 @@ export function EmailTemplatesPage() {
 
   const handleDelete = async (): Promise<boolean> => {
     if (!organizationId || !templateToDelete) return false;
-    try { await deleteEmailTemplate(templateToDelete.id, organizationId); setTemplates(current => current.filter(template => template.id !== templateToDelete.id)); setTemplateToDelete(null); return true; }
+    try {
+      await deleteEmailTemplate(templateToDelete.id, organizationId);
+      queryClient.setQueryData<{ templates: EmailTemplate[]; total: number }>(templatesQueryKey, current => {
+        if (!current?.templates.some(template => template.id === templateToDelete.id)) return current;
+        return {
+          templates: current.templates.filter(template => template.id !== templateToDelete.id),
+          total: Math.max(0, current.total - 1),
+        };
+      });
+      setTemplateToDelete(null);
+      return true;
+    }
     catch { return false; }
   };
 
@@ -136,7 +147,7 @@ export function EmailTemplatesPage() {
       </ResponsiveCardRail>
     </FramedSection>}
     <Card><CardContent className="p-0">{loading ? <div className="space-y-4 p-6">{Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-20 w-full" />)}</div>
-      : loadError ? <ErrorState title="Email templates unavailable" description={loadError} icon={FileText} onAction={() => void fetchTemplates()} className="p-12" />
+      : loadError ? <ErrorState title="Email templates unavailable" description={loadError} icon={FileText} onAction={() => void templatesQuery.refetch()} className="p-12" />
       : filteredTemplates.length === 0 ? <EmptyState icon={FileText} kind={hasQuery ? 'results' : 'collection'} title={hasQuery ? 'No matching email templates' : 'No email templates yet'} description={hasQuery ? undefined : 'Create a reusable template for campaign and automation emails.'} actionLabel={hasQuery ? 'Clear filters' : 'New template'} onAction={hasQuery ? clearQuery : () => navigate('/email-templates/new')} className="p-12" />
       : <div className="divide-y">{filteredTemplates.map(template => {
         const visual = getCatalogStatusVisual(template.is_active);

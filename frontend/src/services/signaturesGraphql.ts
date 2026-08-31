@@ -509,6 +509,7 @@ export const getSignatureAuditViaGraphql = async (
 
 export const listSignatureTemplatesViaGraphql = async (
   organizationId?: number,
+  signal?: AbortSignal,
 ): Promise<SignatureTemplate[]> => {
   const query = (fields: string) =>
     `query SignatureTemplateReads{signatureTemplates{${fields}}}`;
@@ -517,11 +518,13 @@ export const listSignatureTemplatesViaGraphql = async (
       query(templateFields),
       {},
       organizationId,
+      signal,
     ),
     () => graphqlRequest<{ signatureTemplates: GqlTemplate[] }, Record<string, never>>(
       query(legacyTemplateFields),
       {},
       organizationId,
+      signal,
     ),
     'template',
   );

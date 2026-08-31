@@ -1,17 +1,20 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SegmentEditorPage } from './SegmentEditorPage';
 
-const getFilterOptions = vi.fn();
+const getSegmentEditorBootstrap = vi.fn();
 
 vi.mock('@/services/segmentsApi', () => ({
   createSegment: vi.fn(),
-  getSegment: vi.fn(),
-  getFilterOptions: (...args: unknown[]) => getFilterOptions(...args),
   previewSegment: vi.fn(),
   updateSegment: vi.fn(),
+}));
+
+vi.mock('@/services/segmentsGraphql', () => ({
+  getSegmentEditorBootstrapViaGraphql: (...args: unknown[]) => getSegmentEditorBootstrap(...args),
 }));
 
 vi.mock('@/hooks/useOrganization', () => ({
@@ -30,17 +33,23 @@ vi.mock('@/components/layout/DesktopHeaderTools', () => ({
 
 describe('SegmentEditorPage', () => {
   beforeEach(() => {
-    getFilterOptions.mockResolvedValue({
-      fields: [{ id: 'status', label: 'Status', type: 'select', operators: ['equals'], options: ['active', 'inactive'] }],
-      tags: [], users: [], pipelines: [],
+    getSegmentEditorBootstrap.mockResolvedValue({
+      segment: null,
+      filterOptions: {
+        fields: [{ id: 'status', label: 'Status', type: 'select', operators: ['equals'], options: ['active', 'inactive'] }],
+        tags: [], users: [], pipelines: [],
+      },
     });
   });
 
   it('uses a durable full-page editor and expands matching rules inline', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
-      <MemoryRouter initialEntries={['/segments/new']}>
-        <Routes><Route path="/segments/new" element={<SegmentEditorPage />} /></Routes>
-      </MemoryRouter>,
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/segments/new']}>
+          <Routes><Route path="/segments/new" element={<SegmentEditorPage />} /></Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
     );
 
     expect(await screen.findByRole('heading', { name: 'NEW SEGMENT' })).toBeInTheDocument();

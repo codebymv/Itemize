@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Copy, FolderOpen, MessageSquare, MoreHorizontal, Pencil, Plus, Send, Trash2, PieChart } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -25,19 +26,20 @@ import { useOrganization } from '@/hooks/useOrganization';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
 import { getCatalogStatusVisual } from '@/pages/campaigns/constants/campaignVisuals';
-import { deleteSmsTemplate, duplicateSmsTemplate, getSmsTemplates, sendTestSms, type SmsTemplate } from '@/services/smsApi';
+import { deleteSmsTemplate, duplicateSmsTemplate, sendTestSms, type SmsTemplate } from '@/services/smsApi';
+import { getSmsTemplatesViaGraphql } from '@/services/smsTemplatesGraphql';
+import { templateCatalogQueryKeys } from '@/services/templateCatalogQueryKeys';
 
 type StatusFilter = 'all' | 'active' | 'inactive';
 
 export function SMSTemplatesPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const onboarding = useRouteOnboarding();
   const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({ onError: () => 'Failed to initialize.' });
-  const [templates, setTemplates] = useState<SmsTemplate[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -45,24 +47,19 @@ export function SMSTemplatesPage() {
   const [testTemplate, setTestTemplate] = useState<SmsTemplate | null>(null);
   const [testPhone, setTestPhone] = useState('');
   const [workingId, setWorkingId] = useState<number | null>(null);
-  const requestRef = useRef(0);
-
-  const fetchTemplates = useCallback(async () => {
-    if (orgLoading) return setLoading(true);
-    if (!organizationId) { setTemplates([]); setLoading(false); return; }
-    const requestId = ++requestRef.current;
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const response = await getSmsTemplates(organizationId);
-      if (requestId === requestRef.current) setTemplates(response.templates ?? []);
-    } catch (error) {
-      console.error('Error fetching SMS templates:', error);
-      if (requestId === requestRef.current) setLoadError('We could not load your SMS templates. Existing templates have not been changed.');
-    } finally { if (requestId === requestRef.current) setLoading(false); }
-  }, [organizationId, orgLoading]);
-
-  useEffect(() => { void fetchTemplates(); }, [fetchTemplates]);
+  const templatesQueryKey = templateCatalogQueryKeys.sms(organizationId);
+  const templatesQuery = useQuery({
+    queryKey: templatesQueryKey,
+    queryFn: ({ signal }) => getSmsTemplatesViaGraphql({}, organizationId as number, signal),
+    enabled: organizationId !== null,
+    staleTime: QUERY_STALE_TIME_MS,
+    retry: shouldRetryQuery,
+  });
+  const templates = useMemo(() => templatesQuery.data?.templates ?? [], [templatesQuery.data]);
+  const loading = orgLoading || (organizationId !== null && templatesQuery.isPending);
+  const loadError = templatesQuery.error && !templatesQuery.data
+    ? 'We could not load your SMS templates. Existing templates have not been changed.'
+    : null;
 
   const categories = useMemo(() => Array.from(new Set(templates.map(template => template.category).filter(Boolean))).sort(), [templates]);
   const stats = useMemo(() => ({ total: templates.length, active: templates.filter(template => template.is_active).length, inactive: templates.filter(template => !template.is_active).length, categories: categories.length }), [categories.length, templates]);
@@ -84,7 +81,14 @@ export function SMSTemplatesPage() {
   const handleDuplicate = async (template: SmsTemplate) => {
     if (!organizationId) return;
     setWorkingId(template.id);
-    try { const copy = await duplicateSmsTemplate(template.id, organizationId); setTemplates(current => [copy, ...current]); toast({ title: 'Duplicated', description: 'Template duplicated successfully.' }); }
+    try {
+      const copy = await duplicateSmsTemplate(template.id, organizationId);
+      queryClient.setQueryData<{ templates: SmsTemplate[]; total: number }>(templatesQueryKey, current => current ? {
+        templates: [copy, ...current.templates.filter(item => item.id !== copy.id)],
+        total: current.templates.some(item => item.id === copy.id) ? current.total : current.total + 1,
+      } : current);
+      toast({ title: 'Duplicated', description: 'Template duplicated successfully.' });
+    }
     catch { toast({ title: 'Unable to duplicate', description: 'The template was not duplicated.', variant: 'destructive' }); }
     finally { setWorkingId(null); }
   };
@@ -103,7 +107,18 @@ export function SMSTemplatesPage() {
 
   const handleDelete = async (): Promise<boolean> => {
     if (!organizationId || !templateToDelete) return false;
-    try { await deleteSmsTemplate(templateToDelete.id, organizationId); setTemplates(current => current.filter(template => template.id !== templateToDelete.id)); setTemplateToDelete(null); return true; }
+    try {
+      await deleteSmsTemplate(templateToDelete.id, organizationId);
+      queryClient.setQueryData<{ templates: SmsTemplate[]; total: number }>(templatesQueryKey, current => {
+        if (!current?.templates.some(template => template.id === templateToDelete.id)) return current;
+        return {
+          templates: current.templates.filter(template => template.id !== templateToDelete.id),
+          total: Math.max(0, current.total - 1),
+        };
+      });
+      setTemplateToDelete(null);
+      return true;
+    }
     catch { return false; }
   };
 
@@ -131,7 +146,7 @@ export function SMSTemplatesPage() {
       </ResponsiveCardRail>
     </FramedSection>}
     <Card><CardContent className="p-0">{loading ? <div className="space-y-4 p-6">{Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-20 w-full" />)}</div>
-      : loadError ? <ErrorState title="SMS templates unavailable" description={loadError} icon={MessageSquare} onAction={() => void fetchTemplates()} className="p-12" />
+      : loadError ? <ErrorState title="SMS templates unavailable" description={loadError} icon={MessageSquare} onAction={() => void templatesQuery.refetch()} className="p-12" />
       : filteredTemplates.length === 0 ? <EmptyState icon={MessageSquare} kind={hasQuery ? 'results' : 'collection'} title={hasQuery ? 'No matching SMS templates' : 'No SMS templates yet'} description={hasQuery ? undefined : 'Create a reusable template for campaign messages.'} actionLabel={hasQuery ? 'Clear filters' : 'New template'} onAction={hasQuery ? clearQuery : () => navigate('/sms-templates/new')} className="p-12" />
       : <div className="divide-y">{filteredTemplates.map(template => {
         const visual = getCatalogStatusVisual(template.is_active);

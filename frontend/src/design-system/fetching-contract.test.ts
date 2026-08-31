@@ -95,19 +95,29 @@ describe('fetching contract', () => {
 
   it('uses cancellable aggregate reads for both signature editors', () => {
     const documentEditor = read('pages/signatures/SignatureEditorPage.tsx');
+    const templateList = read('pages/signatures/SignatureTemplatesPage.tsx');
     const templateEditor = read('pages/signatures/SignatureTemplateEditorPage.tsx');
     const service = read('services/signaturesGraphql.ts');
+    const keys = read('services/signatureQueryKeys.ts');
 
     expect(documentEditor).toContain('"signature-document-editor",');
     expect(documentEditor).toContain('queryFn: ({ signal })');
     expect(documentEditor).not.toContain('const loadDocument = useCallback');
     expect(documentEditor).not.toContain('await loadDocument()');
-    expect(templateEditor).toContain("'signature-template-editor',");
+    expect(templateList).toContain('signatureQueryKeys.templates(organizationId)');
+    expect(templateList).toContain('signatureQueryKeys.template(organizationId, expandedTemplateId)');
+    expect(templateList.match(/queryFn: \(\{ signal \}\)/g)).toHaveLength(2);
+    expect(templateList).not.toContain('const fetchTemplates = useCallback');
+    expect(templateList).not.toContain('loadExpandedTemplate');
+    expect(templateEditor).toContain('signatureQueryKeys.template(organizationId, templateId)');
+    expect(templateEditor).toContain('signatureQueryKeys.templates(organizationId)');
     expect(templateEditor).toContain('queryFn: ({ signal })');
     expect(templateEditor).not.toContain('const loadTemplate = useCallback');
     expect(service).toContain('query SignatureDocumentRead($id:Int!)');
     expect(service).toContain('query SignatureTemplateRead($id:Int!)');
     expect(service).toContain('resetSignatureReliabilityCapabilities');
+    expect(keys).toContain("['signature-templates', organizationId]");
+    expect(keys).toContain("'signature-template-editor'");
   });
 
   it('uses one cancellable integration-overview read without false disconnected fallbacks', () => {
@@ -179,6 +189,48 @@ describe('fetching contract', () => {
     expect(service).toContain('workspaceWhiteboards(page: $page)');
     expect(service).toContain('workspaceWireframes(page: $page)');
     expect(service).toContain('workspaceVaults(page: $page)');
+  });
+
+  it('shares bounded template catalogs across lists and email composition', () => {
+    const emailList = read('pages/email-templates/EmailTemplatesPage.tsx');
+    const emailEditor = read('pages/email-templates/EmailTemplateEditorPage.tsx');
+    const smsList = read('pages/sms-templates/SMSTemplatesPage.tsx');
+    const smsEditor = read('pages/sms-templates/SMSTemplateEditorPage.tsx');
+    const keys = read('services/templateCatalogQueryKeys.ts');
+
+    expect(emailList).toContain('templateCatalogQueryKeys.email(organizationId)');
+    expect(emailList).toContain('queryFn: ({ signal })');
+    expect(emailList).not.toContain('const fetchTemplates = useCallback');
+    expect(emailList).not.toContain('requestRef');
+    expect(smsList).toContain('templateCatalogQueryKeys.sms(organizationId)');
+    expect(smsList).toContain('queryFn: ({ signal })');
+    expect(smsList).not.toContain('const fetchTemplates = useCallback');
+    expect(smsList).not.toContain('requestRef');
+    expect(emailEditor).toContain('enabled: templateBrowserOpen && organizationId !== null');
+    expect(emailEditor).toContain('templateCatalogQueryKeys.email(organizationId)');
+    expect(smsEditor).toContain('templateCatalogQueryKeys.sms(organizationId)');
+    expect(keys).toContain("['email-templates', organizationId]");
+    expect(keys).toContain("['sms-templates', organizationId]");
+  });
+
+  it('uses one shared segment catalog and one cancellable editor bootstrap', () => {
+    const list = read('pages/segments/SegmentsPage.tsx');
+    const editor = read('pages/segments/SegmentEditorPage.tsx');
+    const service = read('services/segmentsGraphql.ts');
+    const keys = read('services/segmentQueryKeys.ts');
+
+    expect(list).toContain('segmentQueryKeys.catalog(organizationId)');
+    expect(list).toContain('queryFn: ({ signal })');
+    expect(list).not.toContain('const fetchSegments = useCallback');
+    expect(list).not.toContain('requestRef');
+    expect(editor).toContain('segmentQueryKeys.editor(organizationId, validSegmentId)');
+    expect(editor).toContain('queryFn: ({ signal })');
+    expect(editor).toContain('getSegmentEditorBootstrapViaGraphql(');
+    expect(editor).not.toContain('Promise.all([');
+    expect(service).toContain('query SegmentEditorBootstrap($segmentId: Int!)');
+    expect(service).toContain('segmentFilterOptions');
+    expect(keys).toContain("['segment-catalog', organizationId]");
+    expect(keys).toContain("'segment-editor-bootstrap'");
   });
 
   it('allows fresh route and shell data to survive remounts', () => {

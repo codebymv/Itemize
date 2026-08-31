@@ -66,6 +66,7 @@ describe('email-template GraphQL consumer', () => {
   });
 
   it('walks every page and maps filters and legacy field casing', async () => {
+    const controller = new AbortController();
     vi.mocked(fetch)
       .mockResolvedValueOnce(response({ data: { emailTemplates: {
         nodes: [template], pageInfo: { total: 2, hasNextPage: true },
@@ -78,6 +79,7 @@ describe('email-template GraphQL consumer', () => {
     const result = await getEmailTemplatesViaGraphql(
       { category: 'onboarding', is_active: true, search: 'welcome' },
       4,
+      controller.signal,
     );
     expect(result.total).toBe(2);
     expect(result.templates).toHaveLength(2);
@@ -91,6 +93,9 @@ describe('email-template GraphQL consumer', () => {
     expect(bodies[0].variables.filter).toEqual({
       category: 'onboarding', isActive: true, search: 'welcome',
     });
+    expect(vi.mocked(fetch).mock.calls.every((call) =>
+      (call[1] as RequestInit).signal === controller.signal,
+    )).toBe(true);
   });
 
   it('maps detail and category reads without response-envelope drift', async () => {

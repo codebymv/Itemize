@@ -12,14 +12,18 @@ describe('SMS-template GraphQL consumer', () => {
   beforeEach(() => { vi.stubEnv('VITE_GRAPHQL_URL', 'https://graphql.test/graphql'); vi.stubGlobal('fetch', vi.fn()); vi.mocked(fetchCsrfToken).mockResolvedValue('sms-csrf'); });
   afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); });
   it('walks all pages and maps filters plus legacy casing', async () => {
+    const controller = new AbortController();
     vi.mocked(fetch)
       .mockResolvedValueOnce(response({ data: { smsTemplates: { nodes: [template], pageInfo: { total: 2, hasNextPage: true } } } }))
       .mockResolvedValueOnce(response({ data: { smsTemplates: { nodes: [{ ...template, id: 10 }], pageInfo: { total: 2, hasNextPage: false } } } }));
-    const result = await getSmsTemplatesViaGraphql({ category: 'general', is_active: 'true', search: 'reminder' }, 4);
+    const result = await getSmsTemplatesViaGraphql(
+      { category: 'general', is_active: 'true', search: 'reminder' }, 4, controller.signal,
+    );
     expect(result.templates).toHaveLength(2); expect(result.templates[0]).toMatchObject({ organization_id: 4, is_active: true, created_by: 7 });
     const bodies = vi.mocked(fetch).mock.calls.map((call) => JSON.parse(String((call[1] as RequestInit).body)));
     expect(bodies.map((body) => body.variables.page.page)).toEqual([1, 2]);
     expect(bodies[0].variables.filter).toEqual({ category: 'general', isActive: true, search: 'reminder' });
+    expect(vi.mocked(fetch).mock.calls.every((call) => (call[1] as RequestInit).signal === controller.signal)).toBe(true);
   });
   it('uses CSRF and removes organization authority from create input', async () => {
     vi.mocked(fetch).mockResolvedValue(response({ data: { createSmsTemplate: template } }));

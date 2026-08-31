@@ -16,6 +16,7 @@ const map = (value: GraphqlSmsTemplate): SmsTemplate => ({
 
 export const getSmsTemplatesViaGraphql = async (
   filters: { category?: string; is_active?: string; search?: string } = {}, organizationId?: number,
+  signal?: AbortSignal,
 ): Promise<{ templates: SmsTemplate[]; total: number }> => {
   const templates: SmsTemplate[] = []; let page = 1; let total = 0; let hasNextPage = true;
   while (hasNextPage) {
@@ -28,7 +29,7 @@ export const getSmsTemplatesViaGraphql = async (
       ...(filters.category === undefined ? {} : { category: filters.category }),
       ...(filters.is_active === undefined ? {} : { isActive: filters.is_active === 'true' }),
       ...(filters.search === undefined ? {} : { search: filters.search }),
-    }, page: { page, pageSize: 100 } }, organizationId);
+    }, page: { page, pageSize: 100 } }, organizationId, signal);
     templates.push(...data.smsTemplates.nodes.map(map)); total = data.smsTemplates.pageInfo.total;
     hasNextPage = data.smsTemplates.pageInfo.hasNextPage; page += 1;
   }

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { debounce } from "lodash";
 import { Braces, Loader2, MessageSquare, Save, Settings2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -44,6 +45,7 @@ import {
   type MessageInfo,
   type SmsTemplate,
 } from "@/services/smsApi";
+import { templateCatalogQueryKeys } from "@/services/templateCatalogQueryKeys";
 
 interface EditorState {
   name: string;
@@ -112,6 +114,7 @@ export function SMSTemplateEditorPage() {
   const isNew = !id || id === "new";
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const {
     organizationId,
     isLoading: orgLoading,
@@ -209,6 +212,19 @@ export function SMSTemplateEditorPage() {
         : await createSmsTemplate(input);
       const cleanState = stateFromTemplate(saved);
       setTemplate(saved);
+      queryClient.setQueryData<{ templates: SmsTemplate[]; total: number }>(
+        templateCatalogQueryKeys.sms(organizationId),
+        current => {
+          if (!current) return current;
+          const exists = current.templates.some(item => item.id === saved.id);
+          return {
+            templates: exists
+              ? current.templates.map(item => item.id === saved.id ? saved : item)
+              : [saved, ...current.templates],
+            total: exists ? current.total : current.total + 1,
+          };
+        },
+      );
       setState(cleanState);
       markClean(cleanState);
       if (!template) navigate(`/sms-templates/${saved.id}`, { replace: true });

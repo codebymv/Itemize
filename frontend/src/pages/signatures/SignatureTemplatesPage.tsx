@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Eye, Send, FileSignature, CheckCircle, AlertCircle, ChevronDown, MoreVertical, Trash2, PieChart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,7 @@ import { PageLayout } from '@/components/layout/PageLayout';
 import { HeaderAction, HeaderCombinedQuery, HeaderFilters, HeaderSearch } from '@/components/layout/DesktopHeaderTools';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { StatCard } from '@/components/StatCard';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { FramedSection } from '@/components/ui/framed-section';
@@ -16,86 +18,83 @@ import { ListRowSkeleton } from '@/components/ui/loading-skeletons';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { ExpandedRowActionLabel, ExpandedRowActions } from '@/components/ui/expanded-row';
 import { useToast } from '@/hooks/use-toast';
+import { useOrganization } from '@/hooks/useOrganization';
+import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
 import FieldPlacementCanvas from './components/FieldPlacementCanvas';
 import {
   SignatureTemplate,
-  SignatureTemplateField,
-  SignatureTemplateRole,
   listSignatureTemplates,
   getSignatureTemplate,
   createSignatureTemplate,
   instantiateSignatureTemplate,
   deleteSignatureTemplate,
 } from '@/services/signaturesApi';
+import { signatureQueryKeys } from '@/services/signatureQueryKeys';
 import { getTemplateReadinessVisual } from './constants/signatureConstants';
 import { filterTemplates, getTemplateStats, type TemplateReadinessFilter } from './signatureCatalog';
 
 export default function SignatureTemplatesPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [templates, setTemplates] = useState<SignatureTemplate[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const { organizationId, isLoading: organizationLoading, error: organizationError } = useOrganization();
   const [creating, setCreating] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [readinessFilter, setReadinessFilter] = useState<TemplateReadinessFilter>('all');
   const [expandedTemplateId, setExpandedTemplateId] = useState<number | null>(null);
-  const [expandedTemplateData, setExpandedTemplateData] = useState<{
-    template: SignatureTemplate;
-    roles: SignatureTemplateRole[];
-    fields: SignatureTemplateField[];
-  } | null>(null);
-  const [loadingPreview, setLoadingPreview] = useState(false);
-  const [previewError, setPreviewError] = useState(false);
   const [deleteTemplateId, setDeleteTemplateId] = useState<number | null>(null);
 
-  const fetchTemplates = useCallback(async () => {
-    try {
-      setLoading(true);
-      setLoadError(null);
-      const response = await listSignatureTemplates();
-      setTemplates(response || []);
-    } catch (error) {
-      setLoadError('Templates could not be loaded. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const catalogQueryKey = signatureQueryKeys.templates(organizationId);
+  const catalogQuery = useQuery({
+    queryKey: catalogQueryKey,
+    queryFn: ({ signal }) => listSignatureTemplates(organizationId as number, signal),
+    enabled: organizationId !== null,
+    staleTime: QUERY_STALE_TIME_MS,
+    retry: shouldRetryQuery,
+  });
+  const templates = useMemo(() => catalogQuery.data ?? [], [catalogQuery.data]);
+  const loading = organizationLoading || (organizationId !== null && catalogQuery.isPending);
+  const loadError = catalogQuery.error && !catalogQuery.data
+    ? 'Templates could not be loaded. Please try again.'
+    : null;
+  const expandedQuery = useQuery({
+    queryKey: signatureQueryKeys.template(organizationId, expandedTemplateId),
+    queryFn: ({ signal }) => getSignatureTemplate(
+      expandedTemplateId as number,
+      organizationId as number,
+      signal,
+    ),
+    enabled: expandedTemplateId !== null && organizationId !== null,
+    staleTime: QUERY_STALE_TIME_MS,
+    retry: shouldRetryQuery,
+  });
+  const expandedTemplateData = expandedQuery.data ?? null;
+  const loadingPreview = expandedQuery.isPending && expandedQuery.fetchStatus !== 'idle';
+  const previewError = expandedQuery.isError && !expandedQuery.data;
 
-  const handleCreate = useCallback(async () => {
+  const handleCreate = async () => {
+    if (!organizationId) return;
     try {
       setCreating(true);
-      const created = await createSignatureTemplate({ title: 'New Template' });
+      const created = await createSignatureTemplate({ title: 'New Template' }, organizationId);
+      queryClient.setQueryData<SignatureTemplate[]>(catalogQueryKey, current =>
+        current ? [created, ...current.filter(template => template.id !== created.id)] : current,
+      );
       navigate(`/templates/${created.id}`);
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to create template', variant: 'destructive' });
     } finally {
       setCreating(false);
     }
-  }, [navigate, toast]);
+  };
 
-  const handleUseTemplate = useCallback(async (templateId: number) => {
+  const handleUseTemplate = async (templateId: number) => {
+    if (!organizationId) return;
     try {
-      const document = await instantiateSignatureTemplate(templateId, {});
+      const document = await instantiateSignatureTemplate(templateId, {}, organizationId);
       navigate(`/documents/${document.id}`);
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to create document from template', variant: 'destructive' });
-    }
-  }, [navigate, toast]);
-
-  const loadExpandedTemplate = async (templateId: number) => {
-    setExpandedTemplateId(templateId);
-    setExpandedTemplateData(null);
-    setPreviewError(false);
-    setLoadingPreview(true);
-
-    try {
-      const data = await getSignatureTemplate(templateId);
-      setExpandedTemplateData(data);
-    } catch {
-      setPreviewError(true);
-    } finally {
-      setLoadingPreview(false);
     }
   };
 
@@ -103,28 +102,27 @@ export default function SignatureTemplatesPage() {
     e.stopPropagation();
     if (expandedTemplateId === templateId) {
       setExpandedTemplateId(null);
-      setExpandedTemplateData(null);
-      setPreviewError(false);
       return;
     }
-    void loadExpandedTemplate(templateId);
+    setExpandedTemplateId(templateId);
   };
 
-  const handleDelete = useCallback(async (): Promise<boolean> => {
-    if (!deleteTemplateId) return false;
+  const handleDelete = async (): Promise<boolean> => {
+    if (!deleteTemplateId || !organizationId) return false;
     try {
-      await deleteSignatureTemplate(deleteTemplateId);
-      setTemplates((prev) => prev.filter((template) => template.id !== deleteTemplateId));
+      await deleteSignatureTemplate(deleteTemplateId, organizationId);
+      queryClient.setQueryData<SignatureTemplate[]>(catalogQueryKey, current =>
+        current?.filter(template => template.id !== deleteTemplateId),
+      );
+      queryClient.removeQueries({
+        queryKey: signatureQueryKeys.template(organizationId, deleteTemplateId),
+      });
       setDeleteTemplateId(null);
       return true;
     } catch (error) {
       return false;
     }
-  }, [deleteTemplateId]);
-
-  useEffect(() => {
-    fetchTemplates();
-  }, [fetchTemplates]);
+  };
 
   const stats = useMemo(() => getTemplateStats(templates), [templates]);
   const filteredTemplates = useMemo(
@@ -145,6 +143,17 @@ export default function SignatureTemplatesPage() {
   );
   const filterCount = Number(readinessFilter !== 'all');
   const queryCount = filterCount + Number(searchQuery.trim().length > 0);
+
+  if (organizationError) {
+    return (
+      <PageLayout
+        title="TEMPLATES"
+        icon={<FileSignature className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+      >
+        <OrganizationErrorState title="Unable to load templates" icon={FileSignature} />
+      </PageLayout>
+    );
+  }
 
   return (
     <PageLayout
@@ -238,7 +247,7 @@ export default function SignatureTemplatesPage() {
                 <ErrorState
                   title="Templates unavailable"
                   description={loadError}
-                  onAction={() => void fetchTemplates()}
+                  onAction={() => void catalogQuery.refetch()}
                   className="px-6"
                 />
               ) : filteredTemplates.length === 0 ? (
@@ -384,7 +393,7 @@ export default function SignatureTemplatesPage() {
                                 icon={FileSignature}
                                 title="Unable to load template preview"
                                 description="The template is still available to edit."
-                                onRetry={() => void loadExpandedTemplate(template.id)}
+                                onRetry={() => void expandedQuery.refetch()}
                               />
                             ) : expandedTemplateData?.template.id === template.id ? (
                               <div className="space-y-4">

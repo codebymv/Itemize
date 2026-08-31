@@ -3,6 +3,7 @@ import { fetchCsrfToken } from '@/lib/api';
 import {
   createSegmentViaGraphql,
   deleteSegmentViaGraphql,
+  getSegmentEditorBootstrapViaGraphql,
   getSegmentFilterOptionsViaGraphql,
   getSegmentsViaGraphql,
   previewSegmentViaGraphql,
@@ -42,10 +43,13 @@ describe('segments GraphQL consumer', () => {
   });
 
   it('maps bounded list and dynamic filter casing to the REST contract', async () => {
+    const controller = new AbortController();
     vi.mocked(fetch).mockResolvedValueOnce(response({ data: {
       segments: { nodes: [segment], pageInfo: { page: 1, totalPages: 1 } },
     } }));
-    await expect(getSegmentsViaGraphql({ is_active: true, search: 'active' }, 3)).resolves.toEqual([
+    await expect(getSegmentsViaGraphql(
+      { is_active: true, search: 'active' }, 3, controller.signal,
+    )).resolves.toEqual([
       expect.objectContaining({
         id: 7, organization_id: 3, segment_type: 'dynamic', filter_type: 'and',
         contact_count: 2, is_active: true,
@@ -57,6 +61,7 @@ describe('segments GraphQL consumer', () => {
       filter: { isActive: true, search: 'active' }, page: { page: 1, pageSize: 100 },
     });
     expect((init.headers as Record<string, string>)['x-organization-id']).toBe('3');
+    expect(init.signal).toBe(controller.signal);
   });
 
   it('walks every bounded list page so the retained array is never truncated', async () => {
@@ -107,5 +112,42 @@ describe('segments GraphQL consumer', () => {
       fields: [{ id: 'source', label: 'Source', type: 'text', operators: ['equals'] }],
       tags: [], users: [], pipelines: [],
     });
+  });
+
+  it('loads existing editor detail and filter vocabulary in one cancellable operation', async () => {
+    const controller = new AbortController();
+    vi.mocked(fetch).mockResolvedValueOnce(response({ data: {
+      segment,
+      segmentFilterOptions: {
+        fields: [{ id: 'status', label: 'Status', type: 'select', operators: ['equals'], options: ['active'] }],
+        tags: [], users: [], pipelines: [],
+      },
+    } }));
+
+    await expect(getSegmentEditorBootstrapViaGraphql(3, 7, controller.signal)).resolves.toMatchObject({
+      segment: { id: 7, name: 'Active contacts' },
+      filterOptions: { fields: [{ id: 'status', options: ['active'] }] },
+    });
+    expect(fetch).toHaveBeenCalledTimes(1);
+    const init = vi.mocked(fetch).mock.calls[0][1] as RequestInit;
+    const body = JSON.parse(String(init.body));
+    expect(body.query).toContain('query SegmentEditorBootstrap($segmentId: Int!)');
+    expect(body.query).toContain('segmentFilterOptions');
+    expect(body.variables).toEqual({ segmentId: 7 });
+    expect(init.signal).toBe(controller.signal);
+  });
+
+  it('prepares a new segment editor without requesting nonexistent detail', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(response({ data: {
+      segmentFilterOptions: { fields: [], tags: [], users: [], pipelines: [] },
+    } }));
+
+    await expect(getSegmentEditorBootstrapViaGraphql(3, null)).resolves.toEqual({
+      segment: null,
+      filterOptions: { fields: [], tags: [], users: [], pipelines: [] },
+    });
+    const body = JSON.parse(String((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body));
+    expect(body.query).toContain('query SegmentEditorBootstrap');
+    expect(body.query).not.toContain('segment(id:');
   });
 });

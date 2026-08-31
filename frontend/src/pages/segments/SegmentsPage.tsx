@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Filter, MoreHorizontal, Pencil, Plus, RefreshCw, Trash2, Users, PieChart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
@@ -22,43 +23,37 @@ import { useOrganization } from '@/hooks/useOrganization';
 import { useRouteOnboarding } from '@/hooks/useOnboardingTrigger';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
 import { getCatalogStatusVisual } from '@/pages/campaigns/constants/campaignVisuals';
-import { calculateSegment, deleteSegment, getSegments, type Segment } from '@/services/segmentsApi';
+import { calculateSegment, deleteSegment, type Segment } from '@/services/segmentsApi';
+import { segmentQueryKeys } from '@/services/segmentQueryKeys';
+import { getSegmentsViaGraphql } from '@/services/segmentsGraphql';
 
 type StatusFilter = 'all' | 'active' | 'inactive';
 
 export function SegmentsPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const onboarding = useRouteOnboarding();
   const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({ onError: () => 'Failed to initialize.' });
-  const [segments, setSegments] = useState<Segment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [segmentToDelete, setSegmentToDelete] = useState<Segment | null>(null);
   const [workingId, setWorkingId] = useState<number | null>(null);
-  const requestRef = useRef(0);
-
-  const fetchSegments = useCallback(async () => {
-    if (orgLoading) return setLoading(true);
-    if (!organizationId) { setSegments([]); setLoading(false); return; }
-    const requestId = ++requestRef.current;
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const next = await getSegments({}, organizationId);
-      if (requestId === requestRef.current) setSegments(next);
-    } catch (error) {
-      console.error('Error fetching segments:', error);
-      if (requestId === requestRef.current) setLoadError('We could not load your segments. Existing segments have not been changed.');
-    } finally {
-      if (requestId === requestRef.current) setLoading(false);
-    }
-  }, [organizationId, orgLoading]);
-
-  useEffect(() => { void fetchSegments(); }, [fetchSegments]);
+  const catalogQueryKey = segmentQueryKeys.catalog(organizationId);
+  const catalogQuery = useQuery({
+    queryKey: catalogQueryKey,
+    queryFn: ({ signal }) => getSegmentsViaGraphql({}, organizationId as number, signal),
+    enabled: organizationId !== null,
+    staleTime: QUERY_STALE_TIME_MS,
+    retry: shouldRetryQuery,
+  });
+  const segments = useMemo(() => catalogQuery.data ?? [], [catalogQuery.data]);
+  const loading = orgLoading || (organizationId !== null && catalogQuery.isPending);
+  const loadError = catalogQuery.error && !catalogQuery.data
+    ? 'We could not load your segments. Existing segments have not been changed.'
+    : null;
 
   const stats = useMemo(() => ({
     total: segments.length,
@@ -88,7 +83,10 @@ export function SegmentsPage() {
     setWorkingId(segment.id);
     try {
       const updated = await calculateSegment(segment.id, organizationId);
-      setSegments(current => current.map(item => item.id === updated.id ? updated : item));
+      queryClient.setQueryData<Segment[]>(catalogQueryKey, current =>
+        current?.map(item => item.id === updated.id ? updated : item),
+      );
+      void queryClient.invalidateQueries({ queryKey: ['campaign-editor-bootstrap'] });
       toast({ title: 'Recalculated', description: `${updated.contact_count} contacts match this segment.` });
     } catch {
       toast({ title: 'Unable to recalculate', description: 'The saved segment is unchanged.', variant: 'destructive' });
@@ -99,7 +97,10 @@ export function SegmentsPage() {
     if (!organizationId || !segmentToDelete) return false;
     try {
       await deleteSegment(segmentToDelete.id, organizationId);
-      setSegments(current => current.filter(segment => segment.id !== segmentToDelete.id));
+      queryClient.setQueryData<Segment[]>(catalogQueryKey, current =>
+        current?.filter(segment => segment.id !== segmentToDelete.id),
+      );
+      void queryClient.invalidateQueries({ queryKey: ['campaign-editor-bootstrap'] });
       setSegmentToDelete(null);
       return true;
     } catch { return false; }
@@ -132,7 +133,7 @@ export function SegmentsPage() {
 
       <Card><CardContent className="p-0">
         {loading ? <div className="space-y-4 p-6">{Array.from({ length: 4 }, (_, index) => <Skeleton key={index} className="h-20 w-full" />)}</div>
-          : loadError ? <ErrorState title="Segments unavailable" description={loadError} icon={Filter} onAction={() => void fetchSegments()} className="p-12" />
+          : loadError ? <ErrorState title="Segments unavailable" description={loadError} icon={Filter} onAction={() => void catalogQuery.refetch()} className="p-12" />
           : filteredSegments.length === 0 ? <EmptyState icon={Filter} kind={hasQuery ? 'results' : 'collection'} title={hasQuery ? 'No matching segments' : 'No segments yet'} description={hasQuery ? undefined : 'Create a segment to group and target contacts.'} actionLabel={hasQuery ? 'Clear filters' : 'New segment'} onAction={hasQuery ? clearQuery : () => navigate('/segments/new')} className="p-12" />
           : <div className="divide-y">{filteredSegments.map(segment => {
             const visual = getCatalogStatusVisual(segment.is_active);

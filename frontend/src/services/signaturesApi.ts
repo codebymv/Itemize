@@ -330,8 +330,10 @@ export const uploadSignatureTemplate = async (templateId: number, file: File, or
   return unwrapResponse<SignatureTemplate>(response.data);
 };
 
-export const listSignatureTemplates = async () => {
-  return listSignatureTemplatesViaGraphql();
+export const listSignatureTemplates = async (organizationId?: number, signal?: AbortSignal) => {
+  return organizationId === undefined && signal === undefined
+    ? listSignatureTemplatesViaGraphql()
+    : listSignatureTemplatesViaGraphql(organizationId, signal);
 };
 
 export const getSignatureTemplate = async (id: number, organizationId?: number, signal?: AbortSignal) => {
@@ -340,10 +342,14 @@ export const getSignatureTemplate = async (id: number, organizationId?: number, 
     : getSignatureTemplateViaGraphql(id, organizationId, signal);
 };
 
-export const instantiateSignatureTemplate = async (id: number, payload: ApiPayload) => {
-  return instantiateSignatureTemplateViaGraphql(id, payload);
+export const instantiateSignatureTemplate = async (id: number, payload: ApiPayload, organizationId?: number) => {
+  return organizationId === undefined
+    ? instantiateSignatureTemplateViaGraphql(id, payload)
+    : instantiateSignatureTemplateViaGraphql(id, payload, organizationId);
 };
 
-export const deleteSignatureTemplate = async (id: number) => {
-  return deleteSignatureTemplateViaGraphql(id);
+export const deleteSignatureTemplate = async (id: number, organizationId?: number) => {
+  return organizationId === undefined
+    ? deleteSignatureTemplateViaGraphql(id)
+    : deleteSignatureTemplateViaGraphql(id, organizationId);
 };

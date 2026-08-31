@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { FileText, Loader2, Mail, Pencil, Settings2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -42,6 +43,7 @@ import { useOrganization } from "@/hooks/useOrganization";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { QUERY_STALE_TIME_MS, shouldRetryQuery } from "@/lib/queryPolicy";
 import {
   getEmailTemplateCatalogVisual,
   getEmailTemplatePublicationVisual,
@@ -50,13 +52,14 @@ import { toBadgeStatus } from "@/lib/statusVisuals";
 import {
   createEmailTemplateDraft,
   getEmailTemplate,
-  getEmailTemplates,
   publishEmailTemplate,
   saveEmailTemplateDraft,
   sendTestEmail,
   type EmailTemplate,
   type EmailTemplateDraftInput,
 } from "@/services/emailApi";
+import { getEmailTemplatesViaGraphql } from "@/services/emailTemplatesGraphql";
+import { templateCatalogQueryKeys } from "@/services/templateCatalogQueryKeys";
 
 interface EditorState extends EmailContentValue {
   name: string;
@@ -115,6 +118,7 @@ export function EmailTemplateEditorPage() {
   const isNew = !id || id === "new";
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { currentUser } = useAuthState();
   const {
     organizationId,
@@ -132,8 +136,16 @@ export function EmailTemplateEditorPage() {
   const [studioMode, setStudioMode] = useState<"edit" | "preview">("edit");
   const [templateBrowserOpen, setTemplateBrowserOpen] = useState(false);
   const [templateDetailsOpen, setTemplateDetailsOpen] = useState(false);
-  const [templateLibrary, setTemplateLibrary] = useState<EmailTemplate[]>([]);
-  const [templateLibraryLoading, setTemplateLibraryLoading] = useState(false);
+  const catalogQueryKey = templateCatalogQueryKeys.email(organizationId);
+  const catalogQuery = useQuery({
+    queryKey: catalogQueryKey,
+    queryFn: ({ signal }) => getEmailTemplatesViaGraphql({}, organizationId as number, signal),
+    enabled: templateBrowserOpen && organizationId !== null,
+    staleTime: QUERY_STALE_TIME_MS,
+    retry: shouldRetryQuery,
+  });
+  const templateLibrary = catalogQuery.data?.templates ?? [];
+  const templateLibraryLoading = catalogQuery.isPending && templateBrowserOpen;
 
   const loadTemplate = useCallback(async () => {
     if (isNew || !organizationId || !id) {
@@ -163,28 +175,29 @@ export function EmailTemplateEditorPage() {
     setStudioMode("edit");
   }, [id]);
   useEffect(() => {
-    if (!templateBrowserOpen || !organizationId) return;
-    let active = true;
-    setTemplateLibraryLoading(true);
-    getEmailTemplates(organizationId)
-      .then((response) => {
-        if (active) setTemplateLibrary(response.templates || []);
-      })
-      .catch(() => {
-        if (active)
-          toast({
-            title: "Unable to load templates",
-            description: "Your template library is temporarily unavailable.",
-            variant: "destructive",
-          });
-      })
-      .finally(() => {
-        if (active) setTemplateLibraryLoading(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [organizationId, templateBrowserOpen, toast]);
+    if (!templateBrowserOpen || !catalogQuery.error || catalogQuery.data) return;
+    toast({
+      title: "Unable to load templates",
+      description: "Your template library is temporarily unavailable.",
+      variant: "destructive",
+    });
+  }, [catalogQuery.data, catalogQuery.error, templateBrowserOpen, toast]);
+
+  const patchCatalog = useCallback((saved: EmailTemplate) => {
+    queryClient.setQueryData<{ templates: EmailTemplate[]; total: number }>(
+      templateCatalogQueryKeys.email(organizationId),
+      current => {
+        if (!current) return current;
+        const exists = current.templates.some(item => item.id === saved.id);
+        return {
+          templates: exists
+            ? current.templates.map(item => item.id === saved.id ? saved : item)
+            : [saved, ...current.templates],
+          total: exists ? current.total : current.total + 1,
+        };
+      },
+    );
+  }, [organizationId, queryClient]);
 
   const { isDirty, markClean } = useDirtyState({
     value: state,
@@ -235,6 +248,7 @@ export function EmailTemplateEditorPage() {
           ? await saveEmailTemplateDraft(template.id, input, organizationId)
           : await createEmailTemplateDraft(input, organizationId);
         setTemplate(saved);
+        patchCatalog(saved);
         const cleanState = {
           ...stateFromTemplate(saved),
           isActive: state.isActive,
@@ -268,6 +282,7 @@ export function EmailTemplateEditorPage() {
       markClean,
       navigate,
       organizationId,
+      patchCatalog,
       state,
       template,
       toast,
@@ -292,6 +307,7 @@ export function EmailTemplateEditorPage() {
         organizationId,
       );
       setTemplate(published);
+      patchCatalog(published);
       const cleanState = stateFromTemplate(published);
       setState(cleanState);
       markClean(cleanState);
@@ -316,6 +332,7 @@ export function EmailTemplateEditorPage() {
     markClean,
     navigate,
     organizationId,
+    patchCatalog,
     persistDraft,
     state.isActive,
     template,

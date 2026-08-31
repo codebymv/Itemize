@@ -164,6 +164,31 @@ refresh keeps the last complete snapshot visible. The initial snapshot remains
 bounded to 50 rows per type and exposes each type's total/continuation state;
 editor-only detail and vault unlock data remain lazy.
 
+Email and SMS template lists now each own one bounded, organization-scoped,
+cancellable catalog cache. Search, category, and publication-status controls
+are local projections of that complete catalog, so changing them does not
+create server query variants. The email editor's template browser lazily reuses
+the same fresh catalog instead of maintaining an orphaned loader. Duplicate,
+delete, draft, publish, and SMS save mutations patch the authoritative catalog
+entry directly; opening a list or picker after those mutations therefore does
+not require a compensating reload.
+
+Segments follow the same bounded-catalog rule: list search and availability are
+local projections of one cancellable organization cache. Recalculation,
+deletion, and editor saves patch that catalog immediately. Segment editors use
+one cancellable `SegmentEditorBootstrap` operation for the selected definition
+and its matching-rule vocabulary instead of an imperative two-request
+`Promise.all`. Segment mutations narrowly mark campaign-editor bootstraps stale
+because those editors carry a derived copy of the selectable segment catalog.
+
+Reusable signature templates now use one cancellable organization-scoped
+catalog cache with local search and readiness projections. Expanded PDF/field
+previews and the full template editor share one detail key, so opening the same
+template in either surface reuses fresh roles and field placement data. Create,
+delete, settings, and PDF-upload mutations patch or remove the appropriate
+catalog/detail entries. Signature documents remain a separate paginated
+operational queue; they must not be mislabeled as a bounded template catalog.
+
 The current dashboard operation composes existing root fields. It removes HTTP
 fan-out immediately, but it is not a database-atomic snapshot and any GraphQL
 error currently shares the dashboard's route-level error boundary. A future

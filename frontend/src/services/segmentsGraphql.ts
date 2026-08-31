@@ -232,6 +232,18 @@ export type GraphqlSegmentFilterOptions = {
   pipelines: FilterOptions['pipelines'];
 };
 
+export interface SegmentEditorBootstrapData {
+  segment: Segment | null;
+  filterOptions: FilterOptions;
+}
+
+const segmentFilterOptionsFields = `
+  fields { id label type operators options }
+  tags { id name color }
+  users { id name }
+  pipelines { id name stages { id name color } }
+`;
+
 export const mapSegmentFilterOptions = (
   options: GraphqlSegmentFilterOptions,
 ): FilterOptions => ({
@@ -258,4 +270,37 @@ export const getSegmentFilterOptionsViaGraphql = async (
     }
   }`, {}, organizationId, signal);
   return mapSegmentFilterOptions(data.segmentFilterOptions);
+};
+
+export const getSegmentEditorBootstrapViaGraphql = async (
+  organizationId: number,
+  segmentId: number | null,
+  signal?: AbortSignal,
+): Promise<SegmentEditorBootstrapData> => {
+  if (segmentId === null) {
+    const data = await graphqlRequest<{
+      segmentFilterOptions: GraphqlSegmentFilterOptions;
+    }, Record<string, never>>(`query SegmentEditorBootstrap {
+      segmentFilterOptions { ${segmentFilterOptionsFields} }
+    }`, {}, organizationId, signal);
+    return {
+      segment: null,
+      filterOptions: mapSegmentFilterOptions(data.segmentFilterOptions),
+    };
+  }
+
+  const data = await graphqlRequest<{
+    segment: GraphqlSegment;
+    segmentFilterOptions: GraphqlSegmentFilterOptions;
+  }, { segmentId: number }>(`query SegmentEditorBootstrap($segmentId: Int!) {
+    segment(id: $segmentId) {
+      ${segmentFields}
+      history { id segmentId organizationId contactCount calculatedAt contactsAdded contactsRemoved createdAt }
+    }
+    segmentFilterOptions { ${segmentFilterOptionsFields} }
+  }`, { segmentId }, organizationId, signal);
+  return {
+    segment: mapSegment(data.segment),
+    filterOptions: mapSegmentFilterOptions(data.segmentFilterOptions),
+  };
 };

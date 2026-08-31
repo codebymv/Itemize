@@ -33,6 +33,7 @@ import { getTemplateReadinessVisual } from './constants/signatureConstants';
 import { getApiUrl } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
+import { signatureQueryKeys } from '@/services/signatureQueryKeys';
 
 export default function SignatureTemplateEditorPage() {
   const navigate = useNavigate();
@@ -61,11 +62,7 @@ export default function SignatureTemplateEditorPage() {
     ? parsedTemplateId
     : null;
   const invalidTemplateId = templateId === null;
-  const templateQueryKey = [
-    'signature-template-editor',
-    organizationId,
-    templateId,
-  ] as const;
+  const templateQueryKey = signatureQueryKeys.template(organizationId, templateId);
   const templateQuery = useQuery({
     queryKey: templateQueryKey,
     queryFn: ({ signal }) => getSignatureTemplate(
@@ -114,6 +111,18 @@ export default function SignatureTemplateEditorPage() {
     message: 'This signature template has unsaved changes. Leave without saving them?',
   });
 
+  const patchTemplateCatalog = (updated: SignatureTemplate) => {
+    queryClient.setQueryData<SignatureTemplate[]>(
+      signatureQueryKeys.templates(organizationId),
+      current => {
+        if (!current) return current;
+        return current.some(item => item.id === updated.id)
+          ? current.map(item => item.id === updated.id ? updated : item)
+          : [updated, ...current];
+      },
+    );
+  };
+
   const handleSave = async () => {
     if (!template || !organizationId) return;
     try {
@@ -127,10 +136,10 @@ export default function SignatureTemplateEditorPage() {
       }, organizationId);
       setTemplate(updated);
       queryClient.setQueryData(
-        ['signature-template-editor', organizationId, template.id],
+        signatureQueryKeys.template(organizationId, template.id),
         { template: updated, roles, fields },
       );
-      void queryClient.invalidateQueries({ queryKey: ['signature-templates', organizationId] });
+      patchTemplateCatalog(updated);
       markClean();
       toast({ title: 'Template updated' });
     } catch (error) {
@@ -148,9 +157,10 @@ export default function SignatureTemplateEditorPage() {
       setTemplate(updated);
       setFile(null);
       queryClient.setQueryData(
-        ['signature-template-editor', organizationId, template.id],
+        signatureQueryKeys.template(organizationId, template.id),
         { template: updated, roles, fields },
       );
+      patchTemplateCatalog(updated);
       toast({ title: 'File uploaded' });
     } catch (error) {
       toast({ title: 'Upload failed', variant: 'destructive' });

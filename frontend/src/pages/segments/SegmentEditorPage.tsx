@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Check,
@@ -32,12 +33,11 @@ import { AvailabilitySettingRow } from "@/components/settings/SettingsPrimitives
 import { useOrganization } from "@/hooks/useOrganization";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { useToast } from "@/hooks/use-toast";
+import { QUERY_STALE_TIME_MS, shouldRetryQuery } from "@/lib/queryPolicy";
 import { cn } from "@/lib/utils";
 import { getCatalogStatusVisual } from "@/pages/campaigns/constants/campaignVisuals";
 import {
   createSegment,
-  getFilterOptions,
-  getSegment,
   previewSegment,
   updateSegment,
   type FilterOptions,
@@ -45,6 +45,11 @@ import {
   type SegmentFilter,
   type SegmentPreview,
 } from "@/services/segmentsApi";
+import { segmentQueryKeys } from "@/services/segmentQueryKeys";
+import {
+  getSegmentEditorBootstrapViaGraphql,
+  type SegmentEditorBootstrapData,
+} from "@/services/segmentsGraphql";
 import { SegmentFilterRow } from "./SegmentFilterRow";
 
 type SegmentForm = {
@@ -67,6 +72,7 @@ export function SegmentEditorPage() {
   const isNew = !id || id === "new";
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const {
     organizationId,
     isLoading: orgLoading,
@@ -78,50 +84,59 @@ export function SegmentEditorPage() {
   const [savedKey, setSavedKey] = useState(editorKey(EMPTY_FORM, []));
   const [options, setOptions] = useState<FilterOptions | null>(null);
   const [preview, setPreview] = useState<SegmentPreview | null>(null);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [previewing, setPreviewing] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
-
-  const loadEditor = useCallback(async () => {
-    if (orgLoading || !organizationId) return;
-    setLoading(true);
-    setLoadError(null);
-    try {
-      const [filterOptions, loadedSegment] = await Promise.all([
-        getFilterOptions(organizationId),
-        isNew ? Promise.resolve(null) : getSegment(Number(id), organizationId),
-      ]);
-      setOptions(filterOptions);
-      setSegment(loadedSegment);
-      const nextForm = loadedSegment
-        ? {
-            name: loadedSegment.name,
-            description: loadedSegment.description || "",
-            filterType: loadedSegment.filter_type,
-            isActive: loadedSegment.is_active,
-          }
-        : EMPTY_FORM;
-      const nextFilters = loadedSegment?.filters || [];
-      setForm(nextForm);
-      setFilters(nextFilters);
-      setSavedKey(editorKey(nextForm, nextFilters));
-      setPreview(
-        loadedSegment
-          ? { count: loadedSegment.contact_count, sample: [] }
-          : null,
-      );
-    } catch (error) {
-      console.error("Unable to load segment editor:", error);
-      setLoadError("We could not load this segment. No changes were made.");
-    } finally {
-      setLoading(false);
-    }
-  }, [id, isNew, orgLoading, organizationId]);
+  const parsedSegmentId = Number(id);
+  const validSegmentId = !isNew
+    && Number.isSafeInteger(parsedSegmentId)
+    && parsedSegmentId > 0
+    ? parsedSegmentId
+    : null;
+  const invalidSegmentId = !isNew && validSegmentId === null;
+  const bootstrapIdentity = `${organizationId ?? "none"}:${validSegmentId ?? "new"}`;
+  const initializedBootstrapRef = useRef<string | null>(null);
+  const bootstrapQueryKey = segmentQueryKeys.editor(organizationId, validSegmentId);
+  const bootstrapQuery = useQuery({
+    queryKey: bootstrapQueryKey,
+    queryFn: ({ signal }) => getSegmentEditorBootstrapViaGraphql(
+      organizationId as number,
+      validSegmentId,
+      signal,
+    ),
+    enabled: organizationId !== null && !invalidSegmentId,
+    staleTime: QUERY_STALE_TIME_MS,
+    retry: shouldRetryQuery,
+  });
 
   useEffect(() => {
-    void loadEditor();
-  }, [loadEditor]);
+    if (!bootstrapQuery.data || initializedBootstrapRef.current === bootstrapIdentity) return;
+    const { filterOptions, segment: loadedSegment } = bootstrapQuery.data;
+    setOptions(filterOptions);
+    setSegment(loadedSegment);
+    const nextForm = loadedSegment
+      ? {
+          name: loadedSegment.name,
+          description: loadedSegment.description || "",
+          filterType: loadedSegment.filter_type,
+          isActive: loadedSegment.is_active,
+        }
+      : EMPTY_FORM;
+    const nextFilters = loadedSegment?.filters || [];
+    setForm(nextForm);
+    setFilters(nextFilters);
+    setSavedKey(editorKey(nextForm, nextFilters));
+    setPreview(loadedSegment ? { count: loadedSegment.contact_count, sample: [] } : null);
+    initializedBootstrapRef.current = bootstrapIdentity;
+  }, [bootstrapIdentity, bootstrapQuery.data]);
+
+  const loading = orgLoading
+    || (!invalidSegmentId && organizationId !== null && bootstrapQuery.isPending)
+    || (bootstrapQuery.isSuccess && initializedBootstrapRef.current !== bootstrapIdentity);
+  const loadError = invalidSegmentId
+    ? "This segment link is invalid."
+    : bootstrapQuery.isError
+      ? "We could not load this segment. No changes were made."
+      : null;
 
   const isStatic = segment?.segment_type === "static";
   const dirty = editorKey(form, filters) !== savedKey;
@@ -238,6 +253,23 @@ export function SegmentEditorPage() {
       const saved = segment
         ? await updateSegment(segment.id, payload, organizationId)
         : await createSegment(payload, organizationId);
+      queryClient.setQueryData<Segment[]>(
+        segmentQueryKeys.catalog(organizationId),
+        current => {
+          if (!current) return current;
+          const exists = current.some(item => item.id === saved.id);
+          return exists
+            ? current.map(item => item.id === saved.id ? saved : item)
+            : [saved, ...current];
+        },
+      );
+      if (options) {
+        queryClient.setQueryData<SegmentEditorBootstrapData>(
+          segmentQueryKeys.editor(organizationId, saved.id),
+          { segment: saved, filterOptions: options },
+        );
+      }
+      void queryClient.invalidateQueries({ queryKey: ["campaign-editor-bootstrap"] });
       setSegment(saved);
       const nextForm = {
         name: saved.name,
@@ -287,7 +319,7 @@ export function SegmentEditorPage() {
             title="Segment unavailable"
             description={loadError || undefined}
             icon={Filter}
-            onAction={() => void loadEditor()}
+            onAction={() => void bootstrapQuery.refetch()}
           />
         )}
       </PageLayout>
