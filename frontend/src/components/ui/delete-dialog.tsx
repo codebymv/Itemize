@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { 
   Trash2, 
   CheckSquare, 
@@ -336,6 +336,7 @@ export function DeleteDialog({
   showItemPreview,
 }: DeleteDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const isLoadingRef = useRef(false);
   const { toast } = useToast();
 
   const config = ITEM_CONFIGS[itemType];
@@ -353,6 +354,8 @@ export function DeleteDialog({
   const shouldShowPreview = showItemPreview ?? !!itemTitle;
 
   const handleConfirm = async () => {
+    if (isLoadingRef.current) return;
+    isLoadingRef.current = true;
     setIsLoading(true);
     try {
       const result = await onConfirm();
@@ -385,13 +388,14 @@ export function DeleteDialog({
         });
       }
     } finally {
+      isLoadingRef.current = false;
       setIsLoading(false);
     }
   };
 
   const handleOpenChange = (newOpen: boolean) => {
     // Prevent closing while loading
-    if (!newOpen && isLoading) return;
+    if (!newOpen && isLoadingRef.current) return;
     onOpenChange(newOpen);
   };
 

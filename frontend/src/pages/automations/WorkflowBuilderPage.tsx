@@ -63,6 +63,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useDirtyState } from '@/hooks/useDirtyState';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 import {
   getWorkflow,
   createWorkflow,
@@ -210,7 +211,7 @@ export function WorkflowBuilderPage() {
     }
   });
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const { pending: saving, run: runMutation } = useSingleFlightAction();
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadVersion, setLoadVersion] = useState(0);
   
@@ -304,7 +305,7 @@ export function WorkflowBuilderPage() {
     return null;
   }, [nodes]);
 
-  const handleSave = useCallback(async (): Promise<Workflow | null> => {
+  const persistWorkflow = useCallback(async (): Promise<Workflow | null> => {
     if (!organizationId || !name.trim()) {
       toast({
         title: 'Error',
@@ -314,7 +315,6 @@ export function WorkflowBuilderPage() {
       return null;
     }
 
-    setSaving(true);
     try {
       // Convert nodes to steps
       const steps = serializeWorkflowNodes(nodes);
@@ -353,43 +353,48 @@ export function WorkflowBuilderPage() {
         variant: 'destructive',
       });
       return null;
-    } finally {
-      setSaving(false);
     }
     return null;
   }, [organizationId, name, description, triggerType, triggerConfig, nodes, isNewWorkflow, id, navigate, toast, markClean, queryClient]);
 
+  const handleSave = useCallback(
+    async (): Promise<Workflow | null | undefined> => runMutation(persistWorkflow),
+    [persistWorkflow, runMutation],
+  );
+
   const handleToggleActive = useCallback(async () => {
     if (!organizationId || !id) return;
 
-    try {
-      if (isActive) {
-        await deactivateWorkflow(parseInt(id), organizationId);
-        setIsActive(false);
-        toast({ title: 'Deactivated', description: 'Workflow deactivated successfully' });
-      } else {
-        const validationError = validateForActivation();
-        if (validationError) {
-          toast({ title: 'Automation not ready', description: validationError, variant: 'destructive' });
-          return;
+    await runMutation(async () => {
+      try {
+        if (isActive) {
+          await deactivateWorkflow(parseInt(id), organizationId);
+          setIsActive(false);
+          toast({ title: 'Deactivated', description: 'Workflow deactivated successfully' });
+        } else {
+          const validationError = validateForActivation();
+          if (validationError) {
+            toast({ title: 'Automation not ready', description: validationError, variant: 'destructive' });
+            return;
+          }
+          if (isDirty) {
+            const saved = await persistWorkflow();
+            if (!saved) return;
+          }
+          await activateWorkflow(parseInt(id), organizationId);
+          setIsActive(true);
+          toast({ title: 'Activated', description: 'Workflow activated successfully' });
         }
-        if (isDirty) {
-          const saved = await handleSave();
-          if (!saved) return;
-        }
-        await activateWorkflow(parseInt(id), organizationId);
-        setIsActive(true);
-        toast({ title: 'Activated', description: 'Workflow activated successfully' });
+        await queryClient.invalidateQueries({ queryKey: workflowQueryKeys.queues(organizationId) });
+      } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+        toast({
+          title: 'Error',
+          description: error.response?.data?.error || 'Failed to update workflow',
+          variant: 'destructive',
+        });
       }
-      await queryClient.invalidateQueries({ queryKey: workflowQueryKeys.queues(organizationId) });
-    } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-      toast({
-        title: 'Error',
-        description: error.response?.data?.error || 'Failed to update workflow',
-        variant: 'destructive',
-      });
-    }
-  }, [organizationId, id, isActive, isDirty, handleSave, toast, validateForActivation, queryClient]);
+    });
+  }, [organizationId, id, isActive, isDirty, persistWorkflow, toast, validateForActivation, queryClient, runMutation]);
 
   // Fetch workflow. Template discovery is owned by the lazy template browser.
   useEffect(() => {

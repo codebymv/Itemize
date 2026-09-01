@@ -23,6 +23,9 @@ const {
 const {
   runWireframeContactMigration,
 } = require('./db_wireframe_contact_migrations');
+const {
+  runWorkspaceCreationReceiptMigration,
+} = require('./db_workspace_creation_receipt_migrations');
 
 const { runCategoryContractMigration } = require('./db_category_contract_migrations');
 
@@ -537,6 +540,11 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'feature_sharing', runSharingMigration);
     await runMigrationOnce(pool, 'feature_wireframes', runWireframesMigration);
     await runMigrationOnce(pool, 'feature_wireframes_dimensions', runWireframesDimensionsMigration);
+    await runMigrationOnce(
+      pool,
+      'workspace_creation_receipts_v1',
+      runWorkspaceCreationReceiptMigration,
+    );
     await runMigrationOnce(pool, 'feature_onboarding', runOnboardingMigration);
 
     // Module migrations (each module handles its own tables)

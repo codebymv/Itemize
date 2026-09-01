@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 import {
   cancelPublicBooking,
   getAvailableSlots,
@@ -78,12 +79,14 @@ export default function PublicBookingPage() {
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [loading, setLoading] = useState(true);
   const [slotsLoading, setSlotsLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [activeAction, setActiveAction] = useState<'book' | 'cancel' | null>(null);
+  const { pending, run } = useSingleFlightAction();
+  const submitting = pending && activeAction === 'book';
   const [error, setError] = useState('');
   const [slotError, setSlotError] = useState('');
   const [confirmed, setConfirmed] = useState<ConfirmedBooking | null>(null);
   const [cancelled, setCancelled] = useState(false);
-  const [cancelling, setCancelling] = useState(false);
+  const cancelling = pending && activeAction === 'cancel';
   const [attendee, setAttendee] = useState({ name: '', email: '', phone: '', notes: '' });
 
   useEffect(() => {
@@ -135,49 +138,53 @@ export default function PublicBookingPage() {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!identifier || !calendar || !selectedSlot || submitting) return;
-    setSubmitting(true);
+    if (!identifier || !calendar || !selectedSlot) return;
     setError('');
-    try {
-      const result = await submitPublicBooking(identifier, {
-        start_time: selectedSlot.start_time,
-        end_time: selectedSlot.end_time,
-        timezone: calendar.timezone,
-        attendee_name: attendee.name.trim(),
-        attendee_email: attendee.email.trim(),
-        attendee_phone: attendee.phone.trim() || undefined,
-        notes: attendee.notes.trim() || undefined,
-      });
-      setConfirmed(result.booking);
-    } catch (errorValue) {
-      const message = apiError(errorValue, 'Your booking could not be completed. Please try again.');
-      setError(message);
-      if (message.toLowerCase().includes('no longer available')) {
-        setSelectedSlot(null);
-        try {
-          const result = await getAvailableSlots(identifier, selectedDate);
-          setSlots(result.slots);
-        } catch {
-          // The submission error remains the actionable message.
+    await run(async () => {
+      setActiveAction('book');
+      try {
+        const result = await submitPublicBooking(identifier, {
+          start_time: selectedSlot.start_time,
+          end_time: selectedSlot.end_time,
+          timezone: calendar.timezone,
+          attendee_name: attendee.name.trim(),
+          attendee_email: attendee.email.trim(),
+          attendee_phone: attendee.phone.trim() || undefined,
+          notes: attendee.notes.trim() || undefined,
+        });
+        setConfirmed(result.booking);
+      } catch (errorValue) {
+        const message = apiError(errorValue, 'Your booking could not be completed. Please try again.');
+        setError(message);
+        if (message.toLowerCase().includes('no longer available')) {
+          setSelectedSlot(null);
+          try {
+            const result = await getAvailableSlots(identifier, selectedDate);
+            setSlots(result.slots);
+          } catch {
+            // The submission error remains the actionable message.
+          }
         }
+      } finally {
+        setActiveAction(null);
       }
-    } finally {
-      setSubmitting(false);
-    }
+    });
   };
 
   const cancelBooking = async () => {
-    if (!identifier || !confirmed || cancelling) return;
-    setCancelling(true);
+    if (!identifier || !confirmed) return;
     setError('');
-    try {
-      await cancelPublicBooking(identifier, confirmed.cancellation_token);
-      setCancelled(true);
-    } catch (errorValue) {
-      setError(apiError(errorValue, 'Your booking could not be cancelled.'));
-    } finally {
-      setCancelling(false);
-    }
+    await run(async () => {
+      setActiveAction('cancel');
+      try {
+        await cancelPublicBooking(identifier, confirmed.cancellation_token);
+        setCancelled(true);
+      } catch (errorValue) {
+        setError(apiError(errorValue, 'Your booking could not be cancelled.'));
+      } finally {
+        setActiveAction(null);
+      }
+    });
   };
 
   if (loading) {

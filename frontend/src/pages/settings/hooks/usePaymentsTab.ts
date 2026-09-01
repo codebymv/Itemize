@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/hooks/useOrganization';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 import { GraphqlRequestError } from '@/services/graphqlClient';
 import {
   getPaymentSettings,
@@ -68,7 +69,7 @@ interface UsePaymentsTabReturn {
   handleRemoveLogo: () => void;
   
   // Dialog setters
-  setBusinessDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setBusinessDialogOpen: (open: boolean) => void;
   setBusinessFormData: React.Dispatch<React.SetStateAction<BusinessFormData>>;
   setPendingLogoFile: React.Dispatch<React.SetStateAction<File | null>>;
   setDeleteDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -89,9 +90,15 @@ export const usePaymentsTab = ({
 
   // Loading states
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [savingBusiness, setSavingBusiness] = useState(false);
-  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const { pending: saving, run: runSettingsAction } = useSingleFlightAction();
+  const [businessAction, setBusinessAction] = useState<'save' | 'logo' | null>(null);
+  const {
+    pending: businessPending,
+    run: runBusinessAction,
+    dismissIfIdle: dismissBusinessIfIdle,
+  } = useSingleFlightAction();
+  const savingBusiness = businessPending && businessAction === 'save';
+  const uploadingLogo = businessPending && businessAction === 'logo';
 
   // Data
   const [settings, setSettings] = useState<PaymentSettings | null>(null);
@@ -105,7 +112,7 @@ export const usePaymentsTab = ({
   const [loadingMoreBusinesses, setLoadingMoreBusinesses] = useState(false);
 
   // Dialog states
-  const [businessDialogOpen, setBusinessDialogOpen] = useState(false);
+  const [businessDialogOpen, setBusinessDialogOpenState] = useState(false);
   const [editingBusiness, setEditingBusiness] = useState<Business | null>(null);
   const [businessFormData, setBusinessFormData] = useState<BusinessFormData>({
     name: '',
@@ -219,19 +226,18 @@ export const usePaymentsTab = ({
   const handleSaveSettings = useCallback(async () => {
     if (!organizationId || !settings) return;
 
-    setSaving(true);
-    try {
-      const updated = await updatePaymentSettings(settings, organizationId);
-      setSettings(updated);
-      const rate = updated.default_tax_rate;
-      setTaxRateInput(rate === 0 || rate === null || rate === undefined ? '' : String(rate));
-      toast({ title: 'Saved', description: 'Payment settings saved successfully' });
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to save settings', variant: 'destructive' });
-    } finally {
-      setSaving(false);
-    }
-  }, [organizationId, settings, toast]);
+    await runSettingsAction(async () => {
+      try {
+        const updated = await updatePaymentSettings(settings, organizationId);
+        setSettings(updated);
+        const rate = updated.default_tax_rate;
+        setTaxRateInput(rate === 0 || rate === null || rate === undefined ? '' : String(rate));
+        toast({ title: 'Saved', description: 'Payment settings saved successfully' });
+      } catch (error) {
+        toast({ title: 'Error', description: 'Failed to save settings', variant: 'destructive' });
+      }
+    });
+  }, [organizationId, runSettingsAction, settings, toast]);
 
   const updateField = useCallback(<K extends keyof PaymentSettings>(field: K, value: PaymentSettings[K]) => {
     setSettings(prev => prev ? { ...prev, [field]: value } : null);
@@ -265,16 +271,23 @@ export const usePaymentsTab = ({
       });
       setPendingLogoFile(null);
     }
-    setBusinessDialogOpen(true);
+    setBusinessDialogOpenState(true);
   }, [businessFormData.logo_url]);
 
   const closeBusinessDialog = useCallback(() => {
-    if (businessFormData.logo_url?.startsWith('blob:')) {
-      URL.revokeObjectURL(businessFormData.logo_url);
-    }
-    setBusinessDialogOpen(false);
-    setEditingBusiness(null);
-  }, [businessFormData.logo_url]);
+    dismissBusinessIfIdle(() => {
+      if (businessFormData.logo_url?.startsWith('blob:')) {
+        URL.revokeObjectURL(businessFormData.logo_url);
+      }
+      setBusinessDialogOpenState(false);
+      setEditingBusiness(null);
+    });
+  }, [businessFormData.logo_url, dismissBusinessIfIdle]);
+
+  const setBusinessDialogOpen = useCallback((nextOpen: boolean) => {
+    if (nextOpen) setBusinessDialogOpenState(true);
+    else closeBusinessDialog();
+  }, [closeBusinessDialog]);
 
   const handleSaveBusiness = useCallback(async () => {
     if (!organizationId) return;
@@ -283,50 +296,50 @@ export const usePaymentsTab = ({
       return;
     }
 
-    setSavingBusiness(true);
-    try {
-      if (editingBusiness) {
-        const updated = await updateBusiness(editingBusiness.id, businessFormData, organizationId);
-        setBusinesses(prev => prev.map(b => b.id === updated.id ? updated : b));
-        toast({ title: 'Updated', description: 'Business updated successfully' });
-      } else {
-        const created = await createBusiness(businessFormData, organizationId);
-        setBusinesses(prev => [created, ...prev]);
-
-        if (pendingLogoFile) {
-          try {
-            setUploadingLogo(true);
-            const result = await uploadBusinessLogo(created.id, pendingLogoFile, organizationId);
-            const updated = await updateBusiness(created.id, { ...businessFormData, logo_url: result.logo_url }, organizationId);
-            setBusinesses(prev => prev.map(b => b.id === updated.id ? updated : b));
-            if (businessFormData.logo_url?.startsWith('blob:')) {
-              URL.revokeObjectURL(businessFormData.logo_url);
-            }
-            toast({ title: 'Created', description: 'Business created with logo successfully' });
-          } catch (logoError: unknown) {
-            if (businessFormData.logo_url?.startsWith('blob:')) {
-              URL.revokeObjectURL(businessFormData.logo_url);
-            }
-            toast({
-              title: 'Created',
-              description: 'Business saved. Add the failed logo upload later.',
-              variant: 'default'
-            });
-          } finally {
-            setUploadingLogo(false);
-            setPendingLogoFile(null);
-          }
+    await runBusinessAction(async () => {
+      setBusinessAction('save');
+      try {
+        if (editingBusiness) {
+          const updated = await updateBusiness(editingBusiness.id, businessFormData, organizationId);
+          setBusinesses(prev => prev.map(b => b.id === updated.id ? updated : b));
+          toast({ title: 'Updated', description: 'Business updated successfully' });
         } else {
-          toast({ title: 'Created', description: 'Business created successfully' });
+          const created = await createBusiness(businessFormData, organizationId);
+          setBusinesses(prev => [created, ...prev]);
+
+          if (pendingLogoFile) {
+            try {
+              const result = await uploadBusinessLogo(created.id, pendingLogoFile, organizationId);
+              const updated = await updateBusiness(created.id, { ...businessFormData, logo_url: result.logo_url }, organizationId);
+              setBusinesses(prev => prev.map(b => b.id === updated.id ? updated : b));
+              if (businessFormData.logo_url?.startsWith('blob:')) {
+                URL.revokeObjectURL(businessFormData.logo_url);
+              }
+              toast({ title: 'Created', description: 'Business created with logo successfully' });
+            } catch (logoError: unknown) {
+              if (businessFormData.logo_url?.startsWith('blob:')) {
+                URL.revokeObjectURL(businessFormData.logo_url);
+              }
+              toast({
+                title: 'Created',
+                description: 'Business saved. Add the failed logo upload later.',
+                variant: 'default'
+              });
+            } finally {
+              setPendingLogoFile(null);
+            }
+          } else {
+            toast({ title: 'Created', description: 'Business created successfully' });
+          }
         }
+        setBusinessDialogOpenState(false);
+      } catch (error) {
+        toast({ title: 'Error', description: 'Failed to save business', variant: 'destructive' });
+      } finally {
+        setBusinessAction(null);
       }
-      setBusinessDialogOpen(false);
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to save business', variant: 'destructive' });
-    } finally {
-      setSavingBusiness(false);
-    }
-  }, [organizationId, editingBusiness, businessFormData, pendingLogoFile, toast]);
+    });
+  }, [organizationId, editingBusiness, businessFormData, pendingLogoFile, runBusinessAction, toast]);
 
   const handleDeleteClick = useCallback((business: Business) => {
     setBusinessToDelete(business);
@@ -334,16 +347,16 @@ export const usePaymentsTab = ({
   }, []);
 
   const handleDeleteBusiness = useCallback(async () => {
-    if (!editingBusiness) return;
+    if (!businessToDelete) return;
     try {
-      await deleteBusiness(editingBusiness.id, organizationId);
-      setBusinesses(prev => prev.filter(b => b.id !== editingBusiness.id));
+      await deleteBusiness(businessToDelete.id, organizationId);
+      setBusinesses(prev => prev.filter(b => b.id !== businessToDelete.id));
       toast({ title: 'Deleted', description: 'Business deleted successfully' });
       setDeleteDialogOpen(false);
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to delete business', variant: 'destructive' });
     }
-  }, [editingBusiness, organizationId, toast]);
+  }, [businessToDelete, organizationId, toast]);
 
   const handleBusinessLogoUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -361,23 +374,25 @@ export const usePaymentsTab = ({
     }
 
     if (editingBusiness) {
-      setUploadingLogo(true);
-      try {
-        const result = await uploadBusinessLogo(editingBusiness.id, file, organizationId);
-        const updated = await updateBusiness(editingBusiness.id, { ...businessFormData, logo_url: result.logo_url }, organizationId);
-        setBusinesses(prev => prev.map(b => b.id === updated.id ? updated : b));
-        toast({ title: 'Success', description: 'Logo uploaded successfully' });
-      } catch (error) {
-        toast({ title: 'Error', description: 'Failed to upload logo', variant: 'destructive' });
-      } finally {
-        setUploadingLogo(false);
-      }
+      await runBusinessAction(async () => {
+        setBusinessAction('logo');
+        try {
+          const result = await uploadBusinessLogo(editingBusiness.id, file, organizationId);
+          const updated = await updateBusiness(editingBusiness.id, { ...businessFormData, logo_url: result.logo_url }, organizationId);
+          setBusinesses(prev => prev.map(b => b.id === updated.id ? updated : b));
+          toast({ title: 'Success', description: 'Logo uploaded successfully' });
+        } catch (error) {
+          toast({ title: 'Error', description: 'Failed to upload logo', variant: 'destructive' });
+        } finally {
+          setBusinessAction(null);
+        }
+      });
     } else {
       setPendingLogoFile(file);
       const objectUrl = URL.createObjectURL(file);
       setBusinessFormData(prev => ({ ...prev, logo_url: objectUrl }));
     }
-  }, [organizationId, editingBusiness, businessFormData, toast]);
+  }, [organizationId, editingBusiness, businessFormData, runBusinessAction, toast]);
 
   const handleRemoveLogo = useCallback(() => {
     if (businessFormData?.logo_url?.startsWith('blob:')) {

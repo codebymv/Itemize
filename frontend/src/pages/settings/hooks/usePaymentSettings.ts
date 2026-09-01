@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/hooks/useOrganization';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 import {
   getPaymentSettings,
   updatePaymentSettings,
@@ -23,7 +24,7 @@ export const usePaymentSettings = (): UsePaymentSettingsReturn => {
   const { organizationId } = useOrganization();
 
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const { pending: saving, run } = useSingleFlightAction();
   const [settings, setSettings] = useState<PaymentSettings>({
     invoice_prefix: 'INV-',
     next_invoice_number: 1,
@@ -56,19 +57,18 @@ export const usePaymentSettings = (): UsePaymentSettingsReturn => {
   const handleSaveSettings = useCallback(async () => {
     if (!organizationId) return;
 
-    setSaving(true);
-    try {
-      const updated = await updatePaymentSettings(settings, organizationId);
-      setSettings(updated);
-      const rate = updated.default_tax_rate;
-      setTaxRateInput(rate === 0 || rate === null || rate === undefined ? '' : String(rate));
-      toast({ title: 'Saved', description: 'Payment settings saved successfully' });
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to save settings', variant: 'destructive' });
-    } finally {
-      setSaving(false);
-    }
-  }, [organizationId, settings, toast]);
+    await run(async () => {
+      try {
+        const updated = await updatePaymentSettings(settings, organizationId);
+        setSettings(updated);
+        const rate = updated.default_tax_rate;
+        setTaxRateInput(rate === 0 || rate === null || rate === undefined ? '' : String(rate));
+        toast({ title: 'Saved', description: 'Payment settings saved successfully' });
+      } catch (error) {
+        toast({ title: 'Error', description: 'Failed to save settings', variant: 'destructive' });
+      }
+    });
+  }, [organizationId, run, settings, toast]);
 
   const updateField = useCallback(<K extends keyof PaymentSettings>(field: K, value: PaymentSettings[K]) => {
     setSettings(prev => ({ ...prev, [field]: value }));

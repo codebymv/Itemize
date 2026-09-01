@@ -99,6 +99,7 @@ import { StatCard } from "@/components/StatCard";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useToast } from "@/hooks/use-toast";
 import { useStableMutationKey } from "@/hooks/useStableMutationKey";
+import { useSingleFlightAction } from "@/hooks/useSingleFlightAction";
 import { cn } from "@/lib/utils";
 import { defineStatus } from "@/lib/statusVisuals";
 import {
@@ -268,7 +269,7 @@ export function CampaignDetailPage() {
   );
   const [audiencePreview, setAudiencePreview] =
     useState<CampaignPreview | null>(null);
-  const [working, setWorking] = useState(false);
+  const { pending: working, run: runCampaignAction } = useSingleFlightAction();
   const {
     begin: beginCampaignSendAttempt,
     release: releaseCampaignSendAttempt,
@@ -474,9 +475,9 @@ export function CampaignDetailPage() {
       });
       return;
     }
-    setWorking(true);
-    try {
-      const payload = {
+    await runCampaignAction(async () => {
+      try {
+        const payload = {
         name: form.name.trim(),
         subject: form.subject.trim(),
         from_name: form.fromName.trim() || null,
@@ -493,45 +494,44 @@ export function CampaignDetailPage() {
         tag_ids: form.segmentType === "tag" ? form.tagIds : [],
         excluded_tag_ids: form.excludedTagIds,
       };
-      const updated = campaign
-        ? await updateCampaign(campaign.id, payload, organizationId)
-        : await createCampaign(
-            { ...payload, status: "draft", timezone: scheduleTimezone },
-            organizationId,
-          );
-      setCampaign(updated);
-      resetForm(updated);
-      toast({
-        title: campaign ? "Campaign saved" : "Campaign created",
-        description: "The campaign setup is up to date.",
-      });
-      let nextAudiencePreview: CampaignPreview | null = null;
-      try {
-        nextAudiencePreview = await previewCampaign(updated.id, organizationId);
-        setAudiencePreview(nextAudiencePreview);
-      } catch {
-        setAudiencePreview(null);
+        const updated = campaign
+          ? await updateCampaign(campaign.id, payload, organizationId)
+          : await createCampaign(
+              { ...payload, status: "draft", timezone: scheduleTimezone },
+              organizationId,
+            );
+        setCampaign(updated);
+        resetForm(updated);
         toast({
-          title: "Audience preview unavailable",
-          description:
-            "The campaign was saved, but its eligible recipient count could not be refreshed.",
+          title: campaign ? "Campaign saved" : "Campaign created",
+          description: "The campaign setup is up to date.",
+        });
+        let nextAudiencePreview: CampaignPreview | null = null;
+        try {
+          nextAudiencePreview = await previewCampaign(updated.id, organizationId);
+          setAudiencePreview(nextAudiencePreview);
+        } catch {
+          setAudiencePreview(null);
+          toast({
+            title: "Audience preview unavailable",
+            description:
+              "The campaign was saved, but its eligible recipient count could not be refreshed.",
+            variant: "destructive",
+          });
+        }
+        cacheCampaignBootstrap(updated, nextAudiencePreview);
+        if (!campaign) {
+          initializedBootstrapRef.current = `${organizationId}:${updated.id}`;
+          navigate(`/campaigns/${updated.id}`, { replace: true });
+        }
+      } catch (error) {
+        toast({
+          title: "Unable to save campaign",
+          description: "Your changes remain in the editor.",
           variant: "destructive",
         });
       }
-      cacheCampaignBootstrap(updated, nextAudiencePreview);
-      if (!campaign) {
-        initializedBootstrapRef.current = `${organizationId}:${updated.id}`;
-        navigate(`/campaigns/${updated.id}`, { replace: true });
-      }
-    } catch (error) {
-      toast({
-        title: "Unable to save campaign",
-        description: "Your changes remain in the editor.",
-        variant: "destructive",
-      });
-    } finally {
-      setWorking(false);
-    }
+    });
   };
 
   const requireSaved = (): boolean => {
@@ -546,21 +546,20 @@ export function CampaignDetailPage() {
 
   const openSendConfirmation = async () => {
     if (!campaign || !organizationId || !requireSaved()) return;
-    setWorking(true);
-    try {
-      const nextPreview = await previewCampaign(campaign.id, organizationId);
-      setAudiencePreview(nextPreview);
-      cacheCampaignBootstrap(campaign, nextPreview);
-      setSendOpen(true);
-    } catch {
-      toast({
-        title: "Audience unavailable",
-        description: "Recipient eligibility could not be verified.",
-        variant: "destructive",
-      });
-    } finally {
-      setWorking(false);
-    }
+    await runCampaignAction(async () => {
+      try {
+        const nextPreview = await previewCampaign(campaign.id, organizationId);
+        setAudiencePreview(nextPreview);
+        cacheCampaignBootstrap(campaign, nextPreview);
+        setSendOpen(true);
+      } catch {
+        toast({
+          title: "Audience unavailable",
+          description: "Recipient eligibility could not be verified.",
+          variant: "destructive",
+        });
+      }
+    });
   };
 
   const handleSend = async () => {
@@ -571,38 +570,37 @@ export function CampaignDetailPage() {
       audiencePreview.recipientCount < 1
     )
       return;
-    const idempotencyKey = beginCampaignSendAttempt(`${organizationId}:${campaign.id}`);
-    if (!idempotencyKey) return;
-    setWorking(true);
-    try {
-      const result = await sendCampaign(
-        campaign.id,
-        organizationId,
-        idempotencyKey,
-      );
-      resetCampaignSendAttempt();
-      setCampaign(result.campaign);
-      resetForm(result.campaign);
-      setAudiencePreview(null);
-      cacheCampaignBootstrap(result.campaign, null);
-      void queryClient.invalidateQueries({
-        queryKey: campaignQueryKeys.queues(organizationId),
-      });
-      void queryClient.invalidateQueries({
-        queryKey: ["dashboard-snapshot", organizationId],
-      });
-      setSendOpen(false);
-      toast({ title: "Campaign started", description: result.message });
-    } catch {
-      releaseCampaignSendAttempt();
-      toast({
-        title: "Unable to send campaign",
-        description: "Delivery could not be confirmed. Retry to safely reuse the same send request.",
-        variant: "destructive",
-      });
-    } finally {
-      setWorking(false);
-    }
+    await runCampaignAction(async () => {
+      const idempotencyKey = beginCampaignSendAttempt(`${organizationId}:${campaign.id}`);
+      if (!idempotencyKey) return;
+      try {
+        const result = await sendCampaign(
+          campaign.id,
+          organizationId,
+          idempotencyKey,
+        );
+        resetCampaignSendAttempt();
+        setCampaign(result.campaign);
+        resetForm(result.campaign);
+        setAudiencePreview(null);
+        cacheCampaignBootstrap(result.campaign, null);
+        void queryClient.invalidateQueries({
+          queryKey: campaignQueryKeys.queues(organizationId),
+        });
+        void queryClient.invalidateQueries({
+          queryKey: ["dashboard-snapshot", organizationId],
+        });
+        setSendOpen(false);
+        toast({ title: "Campaign started", description: result.message });
+      } catch {
+        releaseCampaignSendAttempt();
+        toast({
+          title: "Unable to send campaign",
+          description: "Delivery could not be confirmed. Retry to safely reuse the same send request.",
+          variant: "destructive",
+        });
+      }
+    });
   };
 
   const handleSchedule = async () => {
@@ -615,171 +613,167 @@ export function CampaignDetailPage() {
       });
       return;
     }
-    setWorking(true);
-    try {
-      const scheduledAt = campaignScheduleToIso(
-        scheduleDate,
-        scheduleTime,
-        scheduleTimezone,
-      );
-      const updated = await scheduleCampaign(
-        campaign.id,
-        scheduledAt,
-        scheduleTimezone,
-        organizationId,
-      );
-      setCampaign(updated);
-      resetForm(updated);
-      cacheCampaignBootstrap(updated, audiencePreview);
-      toast({
-        title: "Campaign scheduled",
-        description: `Delivery is scheduled for ${formatDateTime(updated.scheduled_at)}.`,
-      });
-    } catch (error) {
-      toast({
-        title: "Unable to schedule campaign",
-        description: "Choose a future date and try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setWorking(false);
-    }
+    await runCampaignAction(async () => {
+      try {
+        const scheduledAt = campaignScheduleToIso(
+          scheduleDate,
+          scheduleTime,
+          scheduleTimezone,
+        );
+        const updated = await scheduleCampaign(
+          campaign.id,
+          scheduledAt,
+          scheduleTimezone,
+          organizationId,
+        );
+        setCampaign(updated);
+        resetForm(updated);
+        cacheCampaignBootstrap(updated, audiencePreview);
+        toast({
+          title: "Campaign scheduled",
+          description: `Delivery is scheduled for ${formatDateTime(updated.scheduled_at)}.`,
+        });
+      } catch (error) {
+        toast({
+          title: "Unable to schedule campaign",
+          description: "Choose a future date and try again.",
+          variant: "destructive",
+        });
+      }
+    });
   };
 
   const handleUnschedule = async () => {
     if (!campaign || !organizationId || !requireSaved()) return;
-    setWorking(true);
-    try {
-      const updated = await unscheduleCampaign(campaign.id, organizationId);
-      setCampaign(updated);
-      resetForm(updated);
-      cacheCampaignBootstrap(updated, audiencePreview);
-      toast({
-        title: "Schedule removed",
-        description: "The campaign is a draft again.",
-      });
-    } catch {
-      toast({
-        title: "Unable to remove schedule",
-        description: "The campaign schedule is unchanged.",
-        variant: "destructive",
-      });
-    } finally {
-      setWorking(false);
-    }
+    await runCampaignAction(async () => {
+      try {
+        const updated = await unscheduleCampaign(campaign.id, organizationId);
+        setCampaign(updated);
+        resetForm(updated);
+        cacheCampaignBootstrap(updated, audiencePreview);
+        toast({
+          title: "Schedule removed",
+          description: "The campaign is a draft again.",
+        });
+      } catch {
+        toast({
+          title: "Unable to remove schedule",
+          description: "The campaign schedule is unchanged.",
+          variant: "destructive",
+        });
+      }
+    });
   };
 
   const handlePause = async () => {
     if (!campaign || !organizationId) return;
-    setWorking(true);
-    try {
-      const updated = await pauseCampaign(campaign.id, organizationId);
-      setCampaign(updated);
-      resetForm(updated);
-      cacheCampaignBootstrap(updated, null);
-      toast({
-        title: "Campaign paused",
-        description: "Pending delivery has been parked.",
-      });
-    } catch {
-      toast({
-        title: "Unable to pause campaign",
-        description: "Campaign delivery is unchanged.",
-        variant: "destructive",
-      });
-    } finally {
-      setWorking(false);
-    }
+    await runCampaignAction(async () => {
+      try {
+        const updated = await pauseCampaign(campaign.id, organizationId);
+        setCampaign(updated);
+        resetForm(updated);
+        cacheCampaignBootstrap(updated, null);
+        toast({
+          title: "Campaign paused",
+          description: "Pending delivery has been parked.",
+        });
+      } catch {
+        toast({
+          title: "Unable to pause campaign",
+          description: "Campaign delivery is unchanged.",
+          variant: "destructive",
+        });
+      }
+    });
   };
 
   const handleResume = async () => {
     if (!campaign || !organizationId) return;
-    setWorking(true);
-    try {
-      const result = await resumeCampaign(campaign.id, organizationId);
-      const refreshed = await bootstrapQuery.refetch();
-      if (refreshed.data) {
-        applyBootstrap(refreshed.data);
+    await runCampaignAction(async () => {
+      try {
+        const result = await resumeCampaign(campaign.id, organizationId);
+        const refreshed = await bootstrapQuery.refetch();
+        if (refreshed.data) {
+          applyBootstrap(refreshed.data);
+        }
+        void queryClient.invalidateQueries({
+          queryKey: campaignQueryKeys.recipients(organizationId, campaign.id),
+        });
+        toast({ title: "Campaign resumed", description: result.message });
+      } catch {
+        toast({
+          title: "Unable to resume campaign",
+          description: "Campaign delivery remains paused.",
+          variant: "destructive",
+        });
       }
-      void queryClient.invalidateQueries({
-        queryKey: campaignQueryKeys.recipients(organizationId, campaign.id),
-      });
-      toast({ title: "Campaign resumed", description: result.message });
-    } catch {
-      toast({
-        title: "Unable to resume campaign",
-        description: "Campaign delivery remains paused.",
-        variant: "destructive",
-      });
-    } finally {
-      setWorking(false);
-    }
+    });
   };
 
   const handleDuplicate = async () => {
     if (!campaign || !organizationId) return;
-    setWorking(true);
-    try {
-      const copy = await duplicateCampaign(campaign.id, organizationId);
-      void queryClient.invalidateQueries({ queryKey: campaignQueryKeys.queues(organizationId) });
-      toast({
-        title: "Campaign duplicated",
-        description: "A new draft is ready to edit.",
-      });
-      navigate(`/campaigns/${copy.id}`);
-    } catch {
-      toast({
-        title: "Unable to duplicate campaign",
-        description: "No copy was created.",
-        variant: "destructive",
-      });
-    } finally {
-      setWorking(false);
-    }
+    await runCampaignAction(async () => {
+      try {
+        const copy = await duplicateCampaign(campaign.id, organizationId);
+        void queryClient.invalidateQueries({ queryKey: campaignQueryKeys.queues(organizationId) });
+        toast({
+          title: "Campaign duplicated",
+          description: "A new draft is ready to edit.",
+        });
+        navigate(`/campaigns/${copy.id}`);
+      } catch {
+        toast({
+          title: "Unable to duplicate campaign",
+          description: "No copy was created.",
+          variant: "destructive",
+        });
+      }
+    });
   };
 
   const handleDelete = async (): Promise<boolean> => {
     if (!campaign || !organizationId) return false;
-    try {
-      await deleteCampaign(campaign.id, organizationId);
-      queryClient.removeQueries({ queryKey: campaignEditorQueryKey });
-      void queryClient.invalidateQueries({ queryKey: campaignQueryKeys.queues(organizationId) });
-      navigate("/campaigns");
-      return true;
-    } catch {
-      return false;
-    }
+    return (await runCampaignAction(async () => {
+      try {
+        await deleteCampaign(campaign.id, organizationId);
+        queryClient.removeQueries({ queryKey: campaignEditorQueryKey });
+        void queryClient.invalidateQueries({ queryKey: campaignQueryKeys.queues(organizationId) });
+        navigate("/campaigns");
+        return true;
+      } catch {
+        return false;
+      }
+    })) ?? false;
   };
 
   const handleSendTest = async () => {
     if (!campaign || !organizationId || !testEmail.trim()) return;
-    const idempotencyKey = beginCampaignTestAttempt(JSON.stringify({
-      organizationId,
-      campaignId: campaign.id,
-      testEmail: testEmail.trim().toLowerCase(),
-    }));
-    if (!idempotencyKey) return;
-    setWorking(true);
-    try {
-      const result = await sendTestEmail(
-        campaign.id,
-        testEmail.trim(),
+    await runCampaignAction(async () => {
+      const idempotencyKey = beginCampaignTestAttempt(JSON.stringify({
         organizationId,
-        idempotencyKey,
-      );
-      resetCampaignTestAttempt();
-      setTestOpen(false);
-      toast({ title: "Test email queued", description: result.message });
-    } catch {
-      releaseCampaignTestAttempt();
-      toast({
-        title: "Unable to send test email",
-        description: "Check the destination and content. An unchanged retry is safe.",
-        variant: "destructive",
-      });
-    } finally {
-      setWorking(false);
-    }
+        campaignId: campaign.id,
+        testEmail: testEmail.trim().toLowerCase(),
+      }));
+      if (!idempotencyKey) return;
+      try {
+        const result = await sendTestEmail(
+          campaign.id,
+          testEmail.trim(),
+          organizationId,
+          idempotencyKey,
+        );
+        resetCampaignTestAttempt();
+        setTestOpen(false);
+        toast({ title: "Test email queued", description: result.message });
+      } catch {
+        releaseCampaignTestAttempt();
+        toast({
+          title: "Unable to send test email",
+          description: "Check the destination and content. An unchanged retry is safe.",
+          variant: "destructive",
+        });
+      }
+    });
   };
 
   const scrollToPreview = () =>

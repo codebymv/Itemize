@@ -52,6 +52,7 @@ import { useDirtyState } from "@/hooks/useDirtyState";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useRouteOnboarding } from "@/hooks/useOnboardingTrigger";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
+import { useSingleFlightAction } from "@/hooks/useSingleFlightAction";
 import {
   createChatWidget,
   getChatWidget,
@@ -136,7 +137,7 @@ export function ChatWidgetPage() {
   const [embedCode, setEmbedCode] = useState("");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const { pending: saving, run: runSave } = useSingleFlightAction();
   const [activeTab, setActiveTab] = useState("settings");
   const { isDirty, markClean } = useDirtyState({
     value: config,
@@ -204,8 +205,8 @@ export function ChatWidgetPage() {
       return;
     }
 
-    setSaving(true);
-    try {
+    await runSave(async () => {
+      try {
       const savedConfig = config.id
         ? await updateChatWidget(config, organizationId)
         : await createChatWidget(config, organizationId);
@@ -221,16 +222,15 @@ export function ChatWidgetPage() {
       } catch {
         setEmbedCode("");
       }
-    } catch (error) {
-      toast({
-        title: "Could not save chat widget",
-        description:
-          error instanceof Error ? error.message : "Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setSaving(false);
-    }
+      } catch (error) {
+        toast({
+          title: "Could not save chat widget",
+          description:
+            error instanceof Error ? error.message : "Please try again.",
+          variant: "destructive",
+        });
+      }
+    });
   };
 
   const copyEmbedCode = async () => {

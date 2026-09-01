@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PublicEstimatePage from './PublicEstimatePage';
@@ -133,6 +133,31 @@ describe('PublicEstimatePage', () => {
     expect(within(dialog).getByText(
       'This records that you do not approve estimate EST-00007 and notifies Analytical Studio.',
     )).toBeInTheDocument();
+  });
+
+  it('keeps confirmation owned and submits an estimate response only once', async () => {
+    let resolveAcceptance!: (value: unknown) => void;
+    api.acceptPublicEstimate.mockImplementation(() => new Promise<unknown>((resolve) => {
+      resolveAcceptance = resolve;
+    }));
+    renderPage();
+    await screen.findByText('Analytical Studio');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Accept estimate' }));
+    const dialog = screen.getByRole('alertdialog');
+    const confirm = within(dialog).getByRole('button', { name: 'Accept estimate' });
+    fireEvent.click(confirm);
+    fireEvent.click(confirm);
+
+    expect(api.acceptPublicEstimate).toHaveBeenCalledTimes(1);
+    expect(confirm).toHaveAttribute('aria-busy', 'true');
+    expect(dialog).toBeInTheDocument();
+
+    await act(async () => resolveAcceptance({
+        ...estimate,
+        estimate: { ...estimate.estimate, status: 'accepted' },
+      }));
+    expect(await screen.findByText('Estimate accepted')).toBeInTheDocument();
   });
 
   it('persists dismissal of a recorded-response banner for the estimate status', async () => {

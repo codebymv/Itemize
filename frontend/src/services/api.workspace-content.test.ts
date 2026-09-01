@@ -5,6 +5,7 @@ import {
   getLists,
   getNotes,
   getWireframes,
+  deleteWireframe,
   updateCanvasPositions,
 } from './api';
 import {
@@ -13,7 +14,9 @@ import {
   getWorkspaceNotesViaGraphql,
   getWorkspaceWireframesViaGraphql,
   updateCanvasPositionsViaGraphql,
+  workspaceContentExistsViaGraphql,
 } from './workspaceContentGraphql';
+import { deleteWorkspaceWireframeViaGraphql } from './workspaceWireframeMutationsGraphql';
 
 vi.mock('@/lib/api', () => ({
   default: {
@@ -27,6 +30,7 @@ vi.mock('./workspaceContentGraphql', () => ({
   getWorkspaceNotesViaGraphql: vi.fn(),
   getWorkspaceWireframesViaGraphql: vi.fn(),
   updateCanvasPositionsViaGraphql: vi.fn(),
+  workspaceContentExistsViaGraphql: vi.fn(),
   whiteboardFields: '',
   wireframeFields: '',
 }));
@@ -148,5 +152,25 @@ describe('workspace content API GraphQL transport', () => {
     await expect(getWireframes()).resolves.toMatchObject({ wireframes: [] });
     expect(getWorkspaceWireframesViaGraphql).toHaveBeenCalledOnce();
     expect(api.get).not.toHaveBeenCalled();
+  });
+
+  it('confirms an ambiguous workspace delete against authoritative identity', async () => {
+    const lostResponse = new Error('connection lost');
+    vi.mocked(deleteWorkspaceWireframeViaGraphql)
+      .mockRejectedValueOnce(lostResponse)
+      .mockRejectedValueOnce(lostResponse);
+    vi.mocked(workspaceContentExistsViaGraphql)
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(true);
+
+    await expect(deleteWireframe(7)).resolves.toEqual({
+      message: 'Wireframe deleted successfully',
+    });
+    await expect(deleteWireframe(7)).rejects.toBe(lostResponse);
+    expect(workspaceContentExistsViaGraphql).toHaveBeenNthCalledWith(
+      1,
+      'wireframe',
+      7,
+    );
   });
 });

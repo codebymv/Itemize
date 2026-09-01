@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import PublicBookingPage from './PublicBookingPage';
@@ -36,6 +36,20 @@ const slot = {
   end_time: '2026-09-01T16:30:00.000Z',
 };
 
+const bookingResponse = {
+  success: true,
+  message: 'Booking confirmed',
+  booking: {
+    id: 44,
+    ...slot,
+    timezone: 'America/Phoenix',
+    attendee_name: 'Maya Patel',
+    attendee_email: 'maya@example.com',
+    status: 'confirmed',
+    cancellation_token: 'ab'.repeat(32),
+  },
+};
+
 const renderPage = () => render(
   <MemoryRouter initialEntries={['/book/cal_public']}>
     <Routes>
@@ -58,19 +72,7 @@ describe('PublicBookingPage', () => {
       },
       slots: [slot],
     });
-    api.submitPublicBooking.mockResolvedValue({
-      success: true,
-      message: 'Booking confirmed',
-      booking: {
-        id: 44,
-        ...slot,
-        timezone: 'America/Phoenix',
-        attendee_name: 'Maya Patel',
-        attendee_email: 'maya@example.com',
-        status: 'confirmed',
-        cancellation_token: 'ab'.repeat(32),
-      },
-    });
+    api.submitPublicBooking.mockResolvedValue(bookingResponse);
     api.cancelPublicBooking.mockResolvedValue({ success: true, message: 'Cancelled' });
   });
 
@@ -116,5 +118,26 @@ describe('PublicBookingPage', () => {
 
     await waitFor(() => expect(api.cancelPublicBooking).toHaveBeenCalledWith('cal_public', 'ab'.repeat(32)));
     expect(await screen.findByRole('heading', { name: 'Booking cancelled' })).toBeInTheDocument();
+  });
+
+  it('admits only one booking submission before pending state renders', async () => {
+    let resolveBooking!: (value: typeof bookingResponse) => void;
+    api.submitPublicBooking.mockImplementation(() => new Promise<typeof bookingResponse>((resolve) => {
+      resolveBooking = resolve;
+    }));
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: '9:00 AM' }));
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Maya Patel' } });
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'maya@example.com' } });
+    const form = screen.getByRole('button', { name: 'Confirm booking' }).closest('form');
+    expect(form).not.toBeNull();
+
+    fireEvent.submit(form!);
+    fireEvent.submit(form!);
+
+    expect(api.submitPublicBooking).toHaveBeenCalledTimes(1);
+    await act(async () => resolveBooking(bookingResponse));
+    expect(await screen.findByRole('heading', { name: /booked/i })).toBeInTheDocument();
   });
 });

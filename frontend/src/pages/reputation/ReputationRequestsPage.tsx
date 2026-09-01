@@ -25,6 +25,7 @@ import { getReviewRequestsViaGraphql } from '@/services/reputationRequestsGraphq
 import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
 import { SendReviewRequestModal } from './SendReviewRequestModal';
 import { getReviewRequestStatusVisual } from './constants/reputationVisuals';
+import { useKeyedSingleFlightAction } from '@/hooks/useSingleFlightAction';
 
 const REQUEST_STATUSES: Array<ReviewRequest['status'] | 'all'> = ['all', 'pending', 'sent', 'opened', 'clicked', 'completed', 'failed', 'unsubscribed'];
 
@@ -46,6 +47,7 @@ export function ReputationRequestsPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [showSendModal, setShowSendModal] = useState(searchParams.get('compose') === '1');
   const [requestToDelete, setRequestToDelete] = useState<ReviewRequest | null>(null);
+  const { isPending: isRequestPending, run: runRequestAction } = useKeyedSingleFlightAction<number>();
 
   const requestsQueryKey = ['reputation-requests', organizationId, statusFilter] as const;
   const requestsQuery = useQuery({
@@ -79,43 +81,49 @@ export function ReputationRequestsPage() {
 
   const handleResend = async (request: ReviewRequest) => {
     if (!organizationId) return;
-    try {
-      const result = await resendReviewRequest(request.id, organizationId);
-      toast({
-        title: result.status === 'sent' ? 'Request resent' : result.status === 'failed' ? 'Delivery failed' : 'Resend accepted',
-        variant: result.status === 'failed' ? 'destructive' : 'default',
-      });
-      await queryClient.invalidateQueries({ queryKey: ['reputation-requests', organizationId] });
-    } catch {
-      toast({ title: 'Could not resend request', variant: 'destructive' });
-    }
+    await runRequestAction(request.id, async () => {
+      try {
+        const result = await resendReviewRequest(request.id, organizationId);
+        toast({
+          title: result.status === 'sent' ? 'Request resent' : result.status === 'failed' ? 'Delivery failed' : 'Resend accepted',
+          variant: result.status === 'failed' ? 'destructive' : 'default',
+        });
+        await queryClient.invalidateQueries({ queryKey: ['reputation-requests', organizationId] });
+      } catch {
+        toast({ title: 'Could not resend request', variant: 'destructive' });
+      }
+    });
   };
 
   const handleDelete = async (): Promise<boolean> => {
     if (!organizationId || !requestToDelete) return false;
-    try {
-      await deleteReviewRequest(requestToDelete.id, organizationId);
-      queryClient.setQueriesData<{
-        requests: ReviewRequest[];
-        pagination: { page: number; limit: number; total: number; totalPages: number };
-      }>({ queryKey: ['reputation-requests', organizationId] }, current => {
-        if (!current?.requests.some(request => request.id === requestToDelete.id)) return current;
-        const total = Math.max(0, current.pagination.total - 1);
-        return {
-          ...current,
-          requests: current.requests.filter(request => request.id !== requestToDelete.id),
-          pagination: {
-            ...current.pagination,
-            total,
-            totalPages: Math.ceil(total / current.pagination.limit),
-          },
-        };
-      });
-      setRequestToDelete(null);
-      return true;
-    } catch {
-      return false;
-    }
+    const request = requestToDelete;
+    const result = await runRequestAction(request.id, async () => {
+      try {
+        await deleteReviewRequest(request.id, organizationId);
+        queryClient.setQueriesData<{
+          requests: ReviewRequest[];
+          pagination: { page: number; limit: number; total: number; totalPages: number };
+        }>({ queryKey: ['reputation-requests', organizationId] }, current => {
+          if (!current?.requests.some(item => item.id === request.id)) return current;
+          const total = Math.max(0, current.pagination.total - 1);
+          return {
+            ...current,
+            requests: current.requests.filter(item => item.id !== request.id),
+            pagination: {
+              ...current.pagination,
+              total,
+              totalPages: Math.ceil(total / current.pagination.limit),
+            },
+          };
+        });
+        setRequestToDelete(null);
+        return true;
+      } catch {
+        return false;
+      }
+    });
+    return result === true;
   };
 
   const statusSelect = (className = 'w-36') => (
@@ -179,8 +187,9 @@ export function ReputationRequestsPage() {
                 const StatusIcon = visual.icon;
                 const ChannelIcon = request.channel === 'both' ? MessagesSquare : request.channel === 'sms' ? MessageSquareText : Mail;
                 const activityDate = request.review_submitted_at || request.clicked_at || request.email_opened_at || request.email_sent_at || request.sms_sent_at || request.created_at;
+                const working = isRequestPending(request.id);
                 return (
-                  <article key={request.id} className="flex items-start gap-3 px-3 py-4 sm:px-4">
+                  <article key={request.id} aria-busy={working ? 'true' : undefined} className="flex items-start gap-3 px-3 py-4 sm:px-4">
                     <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full', visual.iconBackgroundClass)}><StatusIcon className={cn('h-5 w-5', visual.iconClass)} aria-hidden="true" /></div>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2"><h3 className="min-w-0 truncate font-medium">{contactName(request)}</h3><Badge className={cn('text-xs', visual.badgeClass)}>{visual.label}</Badge></div>
@@ -192,7 +201,7 @@ export function ReputationRequestsPage() {
                       </div>
                     </div>
                     <DropdownMenu>
-                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" aria-label={`More actions for ${contactName(request)}`}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                      <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" disabled={working} aria-label={`More actions for ${contactName(request)}`}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => void handleResend(request)}><RotateCw className="mr-2 h-4 w-4" />Resend</DropdownMenuItem>
                         <DropdownMenuSeparator />

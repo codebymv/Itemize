@@ -55,6 +55,7 @@ import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { getBookingStatusVisual } from '@/pages/calendars/constants/schedulingVisuals';
 import { cn } from '@/lib/utils';
 import { BookingEditorDialog } from './BookingEditorDialog';
+import { useKeyedSingleFlightAction } from '@/hooks/useSingleFlightAction';
 
 const BOOKING_STATUSES: Array<NonNullable<BookingsQueryParams['status']>> = [
     'pending',
@@ -87,6 +88,7 @@ export function BookingsPage() {
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [expandedBookingId, setExpandedBookingId] = useState<number | null>(null);
+    const { isPending: isBookingPending, run: runBookingAction } = useKeyedSingleFlightAction<number>();
     const [bookingEditorOpen, setBookingEditorOpen] = useState(false);
     const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
     const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, totalPages: 0 });
@@ -146,14 +148,16 @@ export function BookingsPage() {
 
     const handleCancelBooking = async (id: number) => {
         if (!organizationId) return;
-        try {
-            await cancelBooking(id, 'Cancelled by admin', organizationId);
-            toast({ title: 'Booking cancelled' });
-            await fetchBookings();
-        } catch (error) {
-            console.error('Error cancelling booking:', error);
-            toast({ title: 'Unable to cancel booking', description: toastMessages.failedToCancel('booking'), variant: 'destructive' });
-        }
+        await runBookingAction(id, async () => {
+            try {
+                await cancelBooking(id, 'Cancelled by admin', organizationId);
+                toast({ title: 'Booking cancelled' });
+                await fetchBookings();
+            } catch (error) {
+                console.error('Error cancelling booking:', error);
+                toast({ title: 'Unable to cancel booking', description: toastMessages.failedToCancel('booking'), variant: 'destructive' });
+            }
+        });
     };
 
     const changeSearch = (value: string) => {
@@ -244,12 +248,13 @@ export function BookingsPage() {
                                 const visual = getBookingStatusVisual(booking.status);
                                 const StatusIcon = visual.icon;
                                 const isExpanded = expandedBookingId === booking.id;
+                                const working = isBookingPending(booking.id);
                                 const attendee = booking.attendee_name
                                     || [booking.contact_first_name, booking.contact_last_name].filter(Boolean).join(' ')
                                     || booking.attendee_email
                                     || 'Unknown attendee';
                                 return (
-                                    <div key={booking.id}>
+                                    <div key={booking.id} aria-busy={working ? 'true' : undefined}>
                                         <div
                                             role="button"
                                             tabIndex={0}
@@ -298,7 +303,7 @@ export function BookingsPage() {
                                                 {(booking.status === 'confirmed' || booking.status === 'pending') ? (
                                                     <DropdownMenu>
                                                         <DropdownMenuTrigger asChild onClick={event => event.stopPropagation()}>
-                                                            <Button variant="ghost" size="icon" className="h-9 w-9" aria-label={`More actions for ${attendee}`}><MoreHorizontal className="h-4 w-4" /></Button>
+                                                            <Button variant="ghost" size="icon" className="h-9 w-9" disabled={working} aria-label={`More actions for ${attendee}`}><MoreHorizontal className="h-4 w-4" /></Button>
                                                         </DropdownMenuTrigger>
                                                         <DropdownMenuContent align="end" onClick={event => event.stopPropagation()}>
                                                         <DropdownMenuItem onClick={() => openReschedule(booking)}><CalendarClock className="mr-2 h-4 w-4" />Reschedule</DropdownMenuItem>
@@ -317,7 +322,7 @@ export function BookingsPage() {
                                                             <CalendarClock className="mr-2 h-4 w-4" />
                                                             <ExpandedRowActionLabel full="Reschedule booking" compact="Reschedule" />
                                                         </Button>
-                                                        <Button variant="outline" size="sm" className="border-destructive/30 text-destructive interaction-button--destructive-ghost" onClick={() => void handleCancelBooking(booking.id)}>
+                                                        <Button variant="outline" size="sm" disabled={working} className="border-destructive/30 text-destructive interaction-button--destructive-ghost" onClick={() => void handleCancelBooking(booking.id)}>
                                                             <X className="mr-2 h-4 w-4" />
                                                             <ExpandedRowActionLabel full="Cancel booking" compact="Cancel" />
                                                         </Button>

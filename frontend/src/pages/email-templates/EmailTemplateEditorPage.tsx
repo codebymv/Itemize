@@ -41,6 +41,7 @@ import { useAuthState } from "@/contexts/AuthContext";
 import { useDirtyState } from "@/hooks/useDirtyState";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
+import { useSingleFlightAction } from "@/hooks/useSingleFlightAction";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import {
@@ -124,9 +125,11 @@ export function EmailTemplateEditorPage() {
   const [template, setTemplate] = useState<EmailTemplate | null>(null);
   const [state, setState] = useState<EditorState>(EMPTY_STATE);
   const [loading, setLoading] = useState(!isNew);
-  const [saving, setSaving] = useState(false);
-  const [testing, setTesting] = useState(false);
-  const [publishing, setPublishing] = useState(false);
+  const [activeAction, setActiveAction] = useState<"save" | "test" | "publish" | null>(null);
+  const { pending: busy, run: runMutation } = useSingleFlightAction();
+  const saving = busy && activeAction === "save";
+  const testing = busy && activeAction === "test";
+  const publishing = busy && activeAction === "publish";
   const [loadError, setLoadError] = useState<string | null>(null);
   const [studioOpen, setStudioOpen] = useState(true);
   const [studioMode, setStudioMode] = useState<"edit" | "preview">("edit");
@@ -195,7 +198,22 @@ export function EmailTemplateEditorPage() {
     [state],
   );
 
-  const persistDraft = useCallback(
+  const runEditorAction = useCallback(
+    async <T,>(
+      actionName: "save" | "test" | "publish",
+      action: () => Promise<T>,
+    ): Promise<T | undefined> => runMutation(async () => {
+      setActiveAction(actionName);
+      try {
+        return await action();
+      } finally {
+        setActiveAction(null);
+      }
+    }),
+    [runMutation],
+  );
+
+  const persistDraftInternal = useCallback(
     async (
       options: { navigateAfterCreate?: boolean; notify?: boolean } = {},
     ): Promise<EmailTemplate | null> => {
@@ -208,7 +226,6 @@ export function EmailTemplateEditorPage() {
         });
         return null;
       }
-      setSaving(true);
       try {
         const saved = template
           ? await saveEmailTemplateDraft(template.id, input, organizationId)
@@ -239,8 +256,6 @@ export function EmailTemplateEditorPage() {
           variant: "destructive",
         });
         return null;
-      } finally {
-        setSaving(false);
       }
     },
     [
@@ -256,42 +271,51 @@ export function EmailTemplateEditorPage() {
     ],
   );
 
+  const persistDraft = useCallback(
+    async (
+      options: { navigateAfterCreate?: boolean; notify?: boolean } = {},
+    ): Promise<EmailTemplate | null | undefined> => runEditorAction(
+      "save",
+      () => persistDraftInternal(options),
+    ),
+    [persistDraftInternal, runEditorAction],
+  );
+
   const handlePublish = useCallback(async () => {
     if (!organizationId) return;
-    setPublishing(true);
-    try {
-      let target = template;
-      if (!target || isDirty)
-        target = await persistDraft({
-          navigateAfterCreate: false,
-          notify: false,
+    await runEditorAction("publish", async () => {
+      try {
+        let target = template;
+        if (!target || isDirty)
+          target = await persistDraftInternal({
+            navigateAfterCreate: false,
+            notify: false,
+          });
+        if (!target) return;
+        const published = await publishEmailTemplate(
+          target.id,
+          state.isActive,
+          organizationId,
+        );
+        setTemplate(published);
+        patchCatalog(published);
+        const cleanState = stateFromTemplate(published);
+        setState(cleanState);
+        markClean(cleanState);
+        if (isNew)
+          navigate(`/email-templates/${published.id}`, { replace: true });
+        toast({
+          title: "Template published",
+          description: "New sends will use this version.",
         });
-      if (!target) return;
-      const published = await publishEmailTemplate(
-        target.id,
-        state.isActive,
-        organizationId,
-      );
-      setTemplate(published);
-      patchCatalog(published);
-      const cleanState = stateFromTemplate(published);
-      setState(cleanState);
-      markClean(cleanState);
-      if (isNew)
-        navigate(`/email-templates/${published.id}`, { replace: true });
-      toast({
-        title: "Template published",
-        description: "New sends will use this version.",
-      });
-    } catch {
-      toast({
-        title: "Unable to publish",
-        description: "The live version has not changed.",
-        variant: "destructive",
-      });
-    } finally {
-      setPublishing(false);
-    }
+      } catch {
+        toast({
+          title: "Unable to publish",
+          description: "The live version has not changed.",
+          variant: "destructive",
+        });
+      }
+    });
   }, [
     isDirty,
     isNew,
@@ -299,7 +323,8 @@ export function EmailTemplateEditorPage() {
     navigate,
     organizationId,
     patchCatalog,
-    persistDraft,
+    persistDraftInternal,
+    runEditorAction,
     state.isActive,
     template,
     toast,
@@ -314,51 +339,50 @@ export function EmailTemplateEditorPage() {
       });
       return;
     }
-    let target = template;
-    if (!target || isDirty)
-      target = await persistDraft({
-        navigateAfterCreate: false,
-        notify: false,
-      });
-    if (!target) return;
-    if (isNew) navigate(`/email-templates/${target.id}`, { replace: true });
-    setTesting(true);
-    try {
-      const useDraft = Boolean(
-        target.has_unpublished_changes || !target.published_version,
-      );
-      await sendTestEmail(
-        target.id,
-        organizationId,
-        currentUser.email,
-        undefined,
-        useDraft,
-      );
-      toast({
-        title: "Test email queued",
-        description: `Sending this ${useDraft ? "draft" : "published version"} to ${currentUser.email}.`,
-      });
-    } catch {
-      toast({
-        title: "Unable to send test",
-        description: "Your template has not been changed.",
-        variant: "destructive",
-      });
-    } finally {
-      setTesting(false);
-    }
+    await runEditorAction("test", async () => {
+      let target = template;
+      if (!target || isDirty)
+        target = await persistDraftInternal({
+          navigateAfterCreate: false,
+          notify: false,
+        });
+      if (!target) return;
+      if (isNew) navigate(`/email-templates/${target.id}`, { replace: true });
+      try {
+        const useDraft = Boolean(
+          target.has_unpublished_changes || !target.published_version,
+        );
+        await sendTestEmail(
+          target.id,
+          organizationId,
+          currentUser.email,
+          undefined,
+          useDraft,
+        );
+        toast({
+          title: "Test email queued",
+          description: `Sending this ${useDraft ? "draft" : "published version"} to ${currentUser.email}.`,
+        });
+      } catch {
+        toast({
+          title: "Unable to send test",
+          description: "Your template has not been changed.",
+          variant: "destructive",
+        });
+      }
+    });
   }, [
     currentUser?.email,
     isDirty,
     isNew,
     navigate,
     organizationId,
-    persistDraft,
+    persistDraftInternal,
+    runEditorAction,
     template,
     toast,
   ]);
 
-  const busy = saving || testing || publishing;
   const status = getEmailTemplatePublicationVisual({
     exists: Boolean(template),
     hasUnpublishedChanges: Boolean(template?.has_unpublished_changes),

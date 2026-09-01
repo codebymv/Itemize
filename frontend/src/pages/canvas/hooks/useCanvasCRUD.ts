@@ -138,7 +138,9 @@ export function useCanvasCRUD(
       };
 
       const newNote = await apiCreateNote(payloadWithDefaults, token);
-      setNotes((prev) => [newNote, ...prev]);
+      setNotes((prev) => prev.some((note) => note.id === newNote.id)
+        ? prev
+        : [newNote, ...prev]);
 
       return newNote;
     } catch (error) {
@@ -267,7 +269,9 @@ export function useCanvasCRUD(
         payloadWithDefaults,
         token,
       );
-      setWhiteboards((prev) => [newWhiteboard, ...prev]);
+      setWhiteboards((prev) => prev.some(
+        (whiteboard) => whiteboard.id === newWhiteboard.id,
+      ) ? prev : [newWhiteboard, ...prev]);
 
       return newWhiteboard;
     } catch (error) {
@@ -395,7 +399,9 @@ export function useCanvasCRUD(
       logger.log("handleCreateWireframe payload:", payloadWithDefaults);
 
       const newWireframe = await apiCreateWireframe(payloadWithDefaults, token);
-      setWireframes((prev) => [newWireframe, ...prev]);
+      setWireframes((prev) => prev.some(
+        (wireframe) => wireframe.id === newWireframe.id,
+      ) ? prev : [newWireframe, ...prev]);
 
       return newWireframe;
     } catch (error) {
@@ -774,7 +780,9 @@ export function useCanvasCRUD(
         recentlyCreatedListIds.current.delete(newList.id);
       }, 2000);
 
-      setLists((prev) => [newList, ...prev]);
+      setLists((prev) => prev.some(
+        (list) => String(list.id) === String(newList.id),
+      ) ? prev : [newList, ...prev]);
       return newList;
     } catch (error) {
       logger.error("Failed to create list:", error);

@@ -108,4 +108,36 @@ describe('BookingEditorDialog', () => {
       timezone: 'America/Phoenix',
     }, 42));
   });
+
+  it('single-flights creation and blocks dismissal while saving', async () => {
+    let resolveCreate: ((value: typeof booking) => void) | undefined;
+    api.createBooking.mockImplementation(() => new Promise((resolve) => {
+      resolveCreate = resolve;
+    }));
+    const onOpenChange = vi.fn();
+    render(
+      <BookingEditorDialog
+        open
+        onOpenChange={onOpenChange}
+        organizationId={42}
+        calendars={[calendar]}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2026-09-01' } });
+    fireEvent.change(screen.getByLabelText('Time'), { target: { value: '09:30' } });
+    fireEvent.change(screen.getByLabelText('Attendee name'), { target: { value: 'Maya Patel' } });
+    const submit = screen.getByRole('button', { name: 'Create booking' });
+    fireEvent.click(submit);
+    fireEvent.click(submit);
+
+    expect(api.createBooking).toHaveBeenCalledTimes(1);
+    expect(submit).toHaveAttribute('aria-busy', 'true');
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onOpenChange).not.toHaveBeenCalled();
+
+    resolveCreate?.(booking);
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+  });
 });

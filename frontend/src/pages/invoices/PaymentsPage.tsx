@@ -85,6 +85,7 @@ import type { PaymentData } from './components/CreatePaymentModal';
 import { getPaymentStatusVisual } from './constants/paymentConstants';
 import { ExpandedRowActionLabel, ExpandedRowActions } from '@/components/ui/expanded-row';
 import { useRevenueFlowPreferences } from '@/hooks/useRevenueFlowPreferences';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 
 type Payment = InvoicePayment;
 
@@ -165,11 +166,19 @@ export function PaymentsPage() {
     
     // Payment creation state
     const [showCreateModal, setShowCreateModal] = useState(false);
-    const [creating, setCreating] = useState(false);
+    const {
+        pending: creating,
+        run: runCreatePayment,
+        dismissIfIdle: dismissCreateIfIdle,
+    } = useSingleFlightAction();
     const [refundRequest, setRefundRequest] = useState<{ payment: Payment; key: string } | null>(null);
     const [refundAmount, setRefundAmount] = useState('');
     const [refundReason, setRefundReason] = useState('');
-    const [refunding, setRefunding] = useState(false);
+    const {
+        pending: refunding,
+        run: runRefund,
+        dismissIfIdle: dismissRefundIfIdle,
+    } = useSingleFlightAction();
 
     // Expanded payment state
     const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -325,20 +334,19 @@ export function PaymentsPage() {
     const handleCreatePayment = async (paymentData: PaymentData) => {
         if (!organizationId) return;
         
-        try {
-            setCreating(true);
-            await createInvoicePayment(organizationId, {
-                ...paymentData,
-                status: 'succeeded',
-            });
-            toast({ title: 'Payment recorded' });
-            setShowCreateModal(false);
-            fetchPayments();
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to record payment', variant: 'destructive' });
-        } finally {
-            setCreating(false);
-        }
+        await runCreatePayment(async () => {
+            try {
+                await createInvoicePayment(organizationId, {
+                    ...paymentData,
+                    status: 'succeeded',
+                });
+                toast({ title: 'Payment recorded' });
+                setShowCreateModal(false);
+                void fetchPayments();
+            } catch (error) {
+                toast({ title: 'Error', description: 'Failed to record payment', variant: 'destructive' });
+            }
+        });
     };
 
     const openRefund = (payment: Payment) => {
@@ -358,34 +366,33 @@ export function PaymentsPage() {
             });
             return;
         }
-        setRefunding(true);
-        try {
-            const result = await refundInvoicePayment(organizationId, refundRequest.payment.id, {
-                amount,
-                reason: refundReason,
-                idempotencyKey: refundRequest.key,
-            });
-            toast({
-                title: result.refundStatus === 'succeeded'
-                    ? amount === refundRequest.payment.refundable_amount
-                        ? 'Payment refunded'
-                        : 'Partial refund completed'
-                    : 'Refund submitted',
-                description: result.refundStatus === 'succeeded'
-                    ? `${formatCurrency(amount, refundRequest.payment.currency)} was sent back through Stripe.`
-                    : 'Refund processing. Itemize updates after Stripe confirms.',
-            });
-            setRefundRequest(null);
-            await fetchPayments();
-        } catch (error) {
-            toast({
-                title: 'Refund failed',
-                description: error instanceof Error ? error.message : 'Stripe could not complete this refund.',
-                variant: 'destructive',
-            });
-        } finally {
-            setRefunding(false);
-        }
+        await runRefund(async () => {
+            try {
+                const result = await refundInvoicePayment(organizationId, refundRequest.payment.id, {
+                    amount,
+                    reason: refundReason,
+                    idempotencyKey: refundRequest.key,
+                });
+                toast({
+                    title: result.refundStatus === 'succeeded'
+                        ? amount === refundRequest.payment.refundable_amount
+                            ? 'Payment refunded'
+                            : 'Partial refund completed'
+                        : 'Refund submitted',
+                    description: result.refundStatus === 'succeeded'
+                        ? `${formatCurrency(amount, refundRequest.payment.currency)} was sent back through Stripe.`
+                        : 'Refund processing. Itemize updates after Stripe confirms.',
+                });
+                setRefundRequest(null);
+                await fetchPayments();
+            } catch (error) {
+                toast({
+                    title: 'Refund failed',
+                    description: error instanceof Error ? error.message : 'Stripe could not complete this refund.',
+                    variant: 'destructive',
+                });
+            }
+        });
     };
 
     const headerFilterCount = Number(methodFilter !== 'all') + Number(statusFilter !== 'all');
@@ -992,13 +999,18 @@ export function PaymentsPage() {
         
         <CreatePaymentModal
             open={showCreateModal}
-            onOpenChange={setShowCreateModal}
+            onOpenChange={(nextOpen) => {
+                if (nextOpen) setShowCreateModal(true);
+                else dismissCreateIfIdle(() => setShowCreateModal(false));
+            }}
             onConfirm={handleCreatePayment}
             creating={creating}
         />
         <Dialog
             open={refundRequest !== null}
-            onOpenChange={(open) => !open && !refunding && setRefundRequest(null)}
+            onOpenChange={(open) => {
+                if (!open) dismissRefundIfIdle(() => setRefundRequest(null));
+            }}
         >
             <DialogContent>
                 <DialogHeader>
@@ -1040,10 +1052,10 @@ export function PaymentsPage() {
                     </div>
                 )}
                 <DialogFooter>
-                    <Button variant="outline" onClick={() => setRefundRequest(null)} disabled={refunding}>
+                    <Button variant="outline" onClick={() => dismissRefundIfIdle(() => setRefundRequest(null))} disabled={refunding}>
                         Cancel
                     </Button>
-                    <Button onClick={() => void handleRefund()} disabled={refunding}>
+                    <Button onClick={() => void handleRefund()} disabled={refunding} aria-busy={refunding || undefined}>
                         {refunding && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Refund {refundAmount && refundRequest
                             ? formatCurrency(Number(refundAmount), refundRequest.payment.currency)

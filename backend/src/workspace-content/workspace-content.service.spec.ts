@@ -8,6 +8,8 @@ import {
 import { GetStartedService } from '../get-started/get-started.service';
 import { WorkspaceContentService } from './workspace-content.service';
 
+const creationKey = 'e1ccf127-fbea-4c3f-a3d5-c6d6ee993e0c';
+
 const listRow = (
   values: Partial<WorkspaceListRow> = {},
 ): WorkspaceListRow => ({
@@ -113,6 +115,7 @@ describe('WorkspaceContentService', () => {
   beforeEach(() => {
     getStarted = { record: jest.fn().mockResolvedValue(true) };
     repository = {
+      contentExists: jest.fn(),
       createList: jest.fn(),
       createNote: jest.fn(),
       createWhiteboard: jest.fn(),
@@ -130,6 +133,9 @@ describe('WorkspaceContentService', () => {
       enableNoteSharing: jest.fn(),
       enableWhiteboardSharing: jest.fn(),
       enableWireframeSharing: jest.fn(),
+      findNoteById: jest.fn(),
+      findWhiteboardById: jest.fn(),
+      findWireframeById: jest.fn(),
       findLists: jest.fn(),
       findNotes: jest.fn(),
       findWhiteboards: jest.fn(),
@@ -143,6 +149,38 @@ describe('WorkspaceContentService', () => {
       repository,
       getStarted as unknown as GetStartedService,
     );
+  });
+
+  it('checks content identity through an allowlisted user-scoped table', async () => {
+    repository.contentExists.mockResolvedValue(false);
+
+    await expect(service.contentExists(7, 'whiteboard', 4)).resolves.toBe(false);
+    expect(repository.contentExists).toHaveBeenCalledWith(7, 'whiteboard', 4);
+    await expect(service.contentExists(7, 'unknown', 4)).rejects.toMatchObject({
+      extensions: {
+        code: 'BAD_USER_INPUT',
+        field: 'type',
+      },
+    });
+  });
+
+  it('returns exact user-scoped records for mutation reconciliation', async () => {
+    repository.findNoteById.mockResolvedValue(noteRow());
+    repository.findWhiteboardById.mockResolvedValue(whiteboardRow());
+    repository.findWireframeById.mockResolvedValue(null);
+
+    await expect(service.note(7, 3)).resolves.toMatchObject({
+      id: 3,
+      title: 'Plan',
+    });
+    await expect(service.whiteboard(7, 4)).resolves.toMatchObject({
+      id: 4,
+      title: 'Sketch',
+    });
+    await expect(service.wireframe(7, 5)).resolves.toBeNull();
+    expect(repository.findNoteById).toHaveBeenCalledWith(7, 3);
+    expect(repository.findWhiteboardById).toHaveBeenCalledWith(7, 4);
+    expect(repository.findWireframeById).toHaveBeenCalledWith(7, 5);
   });
 
   it('maps list pages and sanitizes malformed JSON items', async () => {
@@ -259,6 +297,7 @@ describe('WorkspaceContentService', () => {
     });
 
     await service.createNote(7, {
+      idempotencyKey: creationKey,
       title: ' Plan ',
       category: ' general ',
       colorValue: '#abcdef',
@@ -274,6 +313,29 @@ describe('WorkspaceContentService', () => {
       width: null,
       height: null,
       zIndex: 0,
+    }, creationKey, expect.any(String));
+  });
+
+  it('rejects creation key reuse with a different normalized payload', async () => {
+    repository.createNote.mockResolvedValue({ kind: 'idempotency_conflict' });
+
+    await expect(service.createNote(7, {
+      idempotencyKey: creationKey,
+      title: 'Different payload',
+    })).rejects.toMatchObject({
+      extensions: {
+        code: 'CONFLICT',
+        reason: 'IDEMPOTENCY_KEY_REUSED',
+      },
+    });
+    await expect(service.createNote(7, {
+      idempotencyKey: 'not-a-uuid',
+      title: 'Invalid attempt',
+    })).rejects.toMatchObject({
+      extensions: {
+        code: 'BAD_USER_INPUT',
+        reason: 'INVALID_IDEMPOTENCY_KEY',
+      },
     });
   });
 
@@ -283,6 +345,7 @@ describe('WorkspaceContentService', () => {
       row: noteRow(),
     });
     await service.createNote(7, {
+      idempotencyKey: creationKey,
       title: 'Safe',
       content: '<p onclick="alert(1)">ok<script>alert(2)</script></p>',
     });
@@ -298,6 +361,7 @@ describe('WorkspaceContentService', () => {
     });
 
     await service.createList(42, 7, {
+      idempotencyKey: creationKey,
       title: ' Tasks ',
       category: ' general ',
       colorValue: '#abcdef',
@@ -315,7 +379,7 @@ describe('WorkspaceContentService', () => {
       positionY: 15.5,
       width: 340,
       height: 265,
-    });
+    }, creationKey, expect.any(String));
   });
 
   it('requires a list revision and surfaces stale updates as conflicts', async () => {
@@ -348,6 +412,7 @@ describe('WorkspaceContentService', () => {
   it('rejects duplicate item identities before writing a list', async () => {
     await expect(
       service.createList(42, 7, {
+        idempotencyKey: creationKey,
         title: 'Tasks',
         items: [
           { id: 'same', text: 'First', completed: false },
@@ -366,6 +431,7 @@ describe('WorkspaceContentService', () => {
   it('rejects an item projection that cannot fit the realtime outbox', async () => {
     await expect(
       service.createList(42, 7, {
+        idempotencyKey: creationKey,
         title: 'Oversized',
         items: Array.from({ length: 81 }, (_, index) => ({
           id: `item-${index}`,
@@ -392,6 +458,7 @@ describe('WorkspaceContentService', () => {
     });
 
     await service.createNote(7, {
+      idempotencyKey: creationKey,
       title: 'Fractional position',
       positionX: 2013.7268237520689,
       positionY: 1987.125,
@@ -403,6 +470,8 @@ describe('WorkspaceContentService', () => {
         positionX: 2013.7268237520689,
         positionY: 1987.125,
       }),
+      creationKey,
+      expect.any(String),
     );
   });
 
@@ -516,6 +585,7 @@ describe('WorkspaceContentService', () => {
       row: whiteboardRow(),
     });
     await service.createWhiteboard(7, {
+      idempotencyKey: creationKey,
       title: ' Sketch ',
       category: ' general ',
       canvasData: ' [ { "paths": [] } ] ',
@@ -533,10 +603,11 @@ describe('WorkspaceContentService', () => {
       positionY: 2000,
       zIndex: 0,
       colorValue: '#3B82F6',
-    });
+    }, creationKey, expect.any(String));
 
     await expect(
       service.createWhiteboard(7, {
+        idempotencyKey: creationKey,
         title: 'Bad',
         canvasData: '"primitive"',
       }),
@@ -554,6 +625,7 @@ describe('WorkspaceContentService', () => {
       row: whiteboardRow(),
     });
     await service.createWhiteboard(7, {
+      idempotencyKey: creationKey,
       title: 'Wrapped',
       canvasData: JSON.stringify({
         paths: [{ drawMode: true, strokeColor: '#000' }],
@@ -565,6 +637,8 @@ describe('WorkspaceContentService', () => {
       expect.objectContaining({
         canvasData: '[{"drawMode":true,"strokeColor":"#000"}]',
       }),
+      creationKey,
+      expect.any(String),
     );
   });
 
@@ -586,6 +660,7 @@ describe('WorkspaceContentService', () => {
       row: wireframeRow(),
     });
     await service.createWireframe(7, {
+      idempotencyKey: creationKey,
       title: ' Flow ',
       category: ' general ',
       flowData:
@@ -605,7 +680,7 @@ describe('WorkspaceContentService', () => {
       height: 600,
       zIndex: 0,
       colorValue: '#ABCDEF',
-    });
+    }, creationKey, expect.any(String));
 
     repository.updateWireframe.mockResolvedValue({
       kind: 'conflict',
@@ -626,6 +701,7 @@ describe('WorkspaceContentService', () => {
 
   it('rejects invalid wireframe flow data and empty updates', async () => {
     await expect(service.createWireframe(7, {
+      idempotencyKey: creationKey,
       flowData: '[]',
     })).rejects.toMatchObject({
       extensions: {

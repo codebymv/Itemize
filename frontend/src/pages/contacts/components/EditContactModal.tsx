@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Contact } from '@/types';
 import { updateContact } from '@/services/contactsApi';
 import { getApiErrorMessage } from '@/lib/error-messages';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 
 interface EditContactModalProps {
   contact: Contact;
@@ -33,7 +34,7 @@ export function EditContactModal({
   onUpdated,
 }: EditContactModalProps) {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const { pending: loading, run, dismissIfIdle } = useSingleFlightAction();
   const [formData, setFormData] = useState({
     first_name: contact.first_name || '',
     last_name: contact.last_name || '',
@@ -79,27 +80,26 @@ export function EditContactModal({
       return;
     }
 
-    setLoading(true);
-    try {
-      const updatedContact = await updateContact(contact.id, {
-        ...formData,
-        organization_id: organizationId,
-      });
-      onUpdated(updatedContact);
-    } catch (error) {
-      console.error('Error updating contact:', error);
-      toast({
-        title: 'Error',
-        description: getApiErrorMessage(error, 'Failed to update contact'),
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
+    await run(async () => {
+      try {
+        const updatedContact = await updateContact(contact.id, {
+          ...formData,
+          organization_id: organizationId,
+        });
+        onUpdated(updatedContact);
+      } catch (error) {
+        console.error('Error updating contact:', error);
+        toast({
+          title: 'Error',
+          description: getApiErrorMessage(error, 'Failed to update contact'),
+          variant: 'destructive',
+        });
+      }
+    });
   };
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
+    <Dialog open onOpenChange={(open) => !open && dismissIfIdle(onClose)}>
       <ModalContent size="lg">
         <ModalHeader
           icon={UserPen}
@@ -227,7 +227,7 @@ export function EditContactModal({
           </ModalBody>
 
           <ModalFooter>
-            <Button type="button" variant="outline" onClick={onClose} style={{ fontFamily: '"Raleway", sans-serif' }} aria-label="Cancel">
+            <Button type="button" variant="outline" onClick={() => dismissIfIdle(onClose)} disabled={loading} style={{ fontFamily: '"Raleway", sans-serif' }} aria-label="Cancel">
               Cancel
             </Button>
             <Button 
@@ -235,6 +235,7 @@ export function EditContactModal({
               disabled={loading}
               className="bg-blue-600 interaction-button--primary text-white"
               style={{ fontFamily: '"Raleway", sans-serif' }}
+              aria-busy={loading || undefined}
             >
               {loading ? 'Saving...' : 'Save Changes'}
             </Button>

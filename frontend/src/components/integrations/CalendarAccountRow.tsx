@@ -14,6 +14,7 @@ interface CalendarAccountRowProps {
   organizationId: number;
   onDisconnect: () => void;
   onSyncConfirmed?: (result: SyncResult) => void | Promise<void>;
+  externalBusy?: boolean;
 }
 
 const formatLastSync = (value: string | null) => {
@@ -26,6 +27,7 @@ export function CalendarAccountRow({
   organizationId,
   onDisconnect,
   onSyncConfirmed,
+  externalBusy = false,
 }: CalendarAccountRowProps) {
   const { toast } = useToast();
   const [syncing, setSyncing] = useState(false);
@@ -85,7 +87,7 @@ export function CalendarAccountRow({
       primaryVariant="outline"
       onPrimary={() => void handleSync()}
       onDisconnect={onDisconnect}
-      busy={syncing}
+      busy={syncing || externalBusy}
     />
   );
 }

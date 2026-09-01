@@ -75,7 +75,7 @@ describe('workspace note GraphQL mutation consumer', () => {
         color_value: '#3B82F6',
         position_x: 20,
         position_y: 30,
-      }),
+      }, mutationId),
     ).resolves.toMatchObject({
       id: 9,
       user_id: 7,
@@ -93,6 +93,7 @@ describe('workspace note GraphQL mutation consumer', () => {
     );
     expect(bodies[0].variables).toEqual({
       input: {
+        idempotencyKey: mutationId,
         title: 'Plan',
         colorValue: '#3B82F6',
         positionX: 20,
@@ -105,5 +106,25 @@ describe('workspace note GraphQL mutation consumer', () => {
     });
     expect(bodies[2].variables).toEqual({ id: 9, mutationId });
     expect(fetchCsrfToken).toHaveBeenCalledTimes(3);
+  });
+
+  it('confirms a lost update response from the exact note record', async () => {
+    const lostResponse = new TypeError('connection lost');
+    vi.mocked(fetch)
+      .mockRejectedValueOnce(lostResponse)
+      .mockResolvedValueOnce(response({
+        data: {
+          workspaceNote: { ...note, title: 'Confirmed' },
+        },
+      }));
+
+    await expect(
+      updateWorkspaceNoteViaGraphql(9, { title: 'Confirmed' }),
+    ).resolves.toMatchObject({ id: 9, title: 'Confirmed' });
+    const reconciliation = JSON.parse(String(
+      (vi.mocked(fetch).mock.calls[1][1] as RequestInit).body,
+    ));
+    expect(reconciliation.variables).toEqual({ id: 9 });
+    expect(reconciliation.query).toContain('workspaceNote(id: $id)');
   });
 });

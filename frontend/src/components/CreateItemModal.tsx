@@ -70,6 +70,7 @@ import {
   prepareNewVaultSecurity,
   type PreparedVaultSecurity,
 } from "@/lib/vaultZkSession";
+import { useSingleFlightAction } from "@/hooks/useSingleFlightAction";
 import {
   getContentPresets,
   isPresetItemType,
@@ -238,7 +239,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
   const isAddingNewCategory = form.watch("isAddingNewCategory");
   const color = form.watch("color") || config.defaultColor;
   const categoryColor = form.watch("categoryColor") || UI_COLORS.neutralGray;
-  const [isLoading, setIsLoading] = useState(false);
+  const { pending: isLoading, run, dismissIfIdle } = useSingleFlightAction();
   const [error, setError] = useState("");
   const [vaultPassword, setVaultPassword] = useState("");
   const [confirmVaultPassword, setConfirmVaultPassword] = useState("");
@@ -278,7 +279,6 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
         categoryColor: UI_COLORS.neutralGray,
       });
       setError("");
-      setIsLoading(false);
       setVaultPassword("");
       setConfirmVaultPassword("");
       setPreparedVaultSecurity(null);
@@ -326,53 +326,55 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
       : values.category?.trim();
     const finalCategory = selectedCategory || "General";
 
-    setIsLoading(true);
     setError("");
 
     const finalTitle =
       values.title.trim() || config.titlePlaceholder.replace("Enter ", "");
 
-    try {
-      if (itemType === "vault") {
-        if (!vaultPasswordComplete) {
-          setVaultValidationAttempted(true);
-          return;
-        }
-        if (vaultPassword !== confirmVaultPassword) {
-          setError("Vault passwords do not match.");
-          return;
-        }
-        const prepared = await prepareNewVaultSecurity(vaultPassword);
-        setPreparedVaultSecurity(prepared);
-        setRecoverySaved(false);
-        setRecoveryCopied(false);
+    if (itemType === "vault") {
+      if (!vaultPasswordComplete) {
+        setVaultValidationAttempted(true);
         return;
       }
+      if (vaultPassword !== confirmVaultPassword) {
+        setError("Vault passwords do not match.");
+        return;
+      }
+    }
 
-      const result = await onCreate(
-        finalTitle,
-        finalCategory,
-        values.color || config.defaultColor,
-        position || undefined,
-        undefined,
-        selectedPreset?.createPayload(),
-      );
+    await run(async () => {
+      try {
+        if (itemType === "vault") {
+          const prepared = await prepareNewVaultSecurity(vaultPassword);
+          setPreparedVaultSecurity(prepared);
+          setRecoverySaved(false);
+          setRecoveryCopied(false);
+          return;
+        }
 
-      if (config.requireResult && !result) {
+        const result = await onCreate(
+          finalTitle,
+          finalCategory,
+          values.color || config.defaultColor,
+          position || undefined,
+          undefined,
+          selectedPreset?.createPayload(),
+        );
+
+        if (config.requireResult && !result) {
+          setError(
+            `Failed to create ${config.label.toLowerCase()}. Please try again.`,
+          );
+          return;
+        }
+
+        handleOpenChange(false);
+      } catch {
         setError(
           `Failed to create ${config.label.toLowerCase()}. Please try again.`,
         );
-        return;
       }
-
-      handleOpenChange(false);
-    } catch (err) {
-      setError(
-        `Failed to create ${config.label.toLowerCase()}. Please try again.`,
-      );
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
 
   const discardPreparedSecurity = () => {
@@ -422,27 +424,26 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
     const finalTitle =
       values.title.trim() || config.titlePlaceholder.replace("Enter ", "");
 
-    setIsLoading(true);
     setError("");
-    try {
-      const result = await onCreate(
-        finalTitle,
-        finalCategory,
-        values.color || config.defaultColor,
-        position || undefined,
-        preparedVaultSecurity,
-      );
-      if (!result) {
+    await run(async () => {
+      try {
+        const result = await onCreate(
+          finalTitle,
+          finalCategory,
+          values.color || config.defaultColor,
+          position || undefined,
+          preparedVaultSecurity,
+        );
+        if (!result) {
+          setError("Failed to create vault. Please try again.");
+          return;
+        }
+        setPreparedVaultSecurity(null);
+        handleOpenChange(false);
+      } catch {
         setError("Failed to create vault. Please try again.");
-        return;
       }
-      setPreparedVaultSecurity(null);
-      handleOpenChange(false);
-    } catch {
-      setError("Failed to create vault. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
 
   if (!resolvedOpen) return null;
@@ -452,7 +453,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
       open={resolvedOpen}
       onOpenChange={(isOpen) => {
         if (!isOpen) {
-          closeModal();
+          dismissIfIdle(closeModal);
         }
       }}
     >
@@ -548,6 +549,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
                 disabled={!recoverySaved || isLoading}
                 onClick={() => void finishVaultCreation()}
                 className="bg-blue-600 text-white interaction-button--primary"
+                aria-busy={isLoading || undefined}
               >
                 {isLoading ? "Creating Vault..." : "Create Vault"}
               </Button>
@@ -1027,7 +1029,8 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={closeModal}
+                  onClick={() => dismissIfIdle(closeModal)}
+                  disabled={isLoading}
                   className="font-raleway"
                 >
                   {UI_LABELS.cancel}
@@ -1036,6 +1039,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
                   type="submit"
                   disabled={!title.trim() || isLoading}
                   className="bg-blue-600 interaction-button--primary text-white font-raleway"
+                  aria-busy={isLoading || undefined}
                 >
                   {isLoading
                     ? itemType === "vault"

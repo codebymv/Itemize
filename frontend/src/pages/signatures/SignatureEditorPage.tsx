@@ -79,6 +79,7 @@ import { useDirtyState } from "@/hooks/useDirtyState";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useToast } from "@/hooks/use-toast";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
+import { useSingleFlightAction } from "@/hooks/useSingleFlightAction";
 import { cn } from "@/lib/utils";
 import { QUERY_STALE_TIME_MS, shouldRetryQuery } from "@/lib/queryPolicy";
 import { getInvoice, getInvoicePdf } from "@/services/invoicesApi";
@@ -156,7 +157,13 @@ export default function SignatureEditorPage() {
   const [routingMode, setRoutingMode] = useState<"parallel" | "sequential">(
     "parallel",
   );
-  const [working, setWorking] = useState(false);
+  const [prefilling, setPrefilling] = useState(false);
+  const {
+    pending: mutationPending,
+    run: runDocumentAction,
+    dismissIfIdle,
+  } = useSingleFlightAction();
+  const working = prefilling || mutationPending;
   const [initialized, setInitialized] = useState(!id);
   const [showSendModal, setShowSendModal] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -249,7 +256,7 @@ export default function SignatureEditorPage() {
     )
       return;
     invoicePrefillStartedRef.current = true;
-    setWorking(true);
+    setPrefilling(true);
     Promise.all([
       getInvoice(invoiceId, organizationId),
       getInvoicePdf(invoiceId, organizationId),
@@ -301,7 +308,7 @@ export default function SignatureEditorPage() {
           variant: "destructive",
         });
       })
-      .finally(() => setWorking(false));
+      .finally(() => setPrefilling(false));
   }, [id, organizationId, searchParams, toast]);
 
   const documentDraft = useMemo(
@@ -382,67 +389,65 @@ export default function SignatureEditorPage() {
 
   const handleCreateOrSave = async () => {
     if (!editable || !organizationId) return;
-    setWorking(true);
-    try {
-      let target = document;
-      const created = !target;
-      if (!target)
-        target = await createSignatureDocument({
+    await runDocumentAction(async () => {
+      try {
+        let target = document;
+        const created = !target;
+        if (!target)
+          target = await createSignatureDocument({
+            title: title.trim() || "Untitled document",
+            description,
+            message,
+            routing_mode: routingMode,
+          }, organizationId);
+        if (file) target = await uploadSignatureDocument(target.id, file, organizationId);
+        const updated = await updateSignatureDocument(target.id, {
           title: title.trim() || "Untitled document",
           description,
           message,
+          sender_name: currentUser?.name || target.sender_name || undefined,
+          sender_email: currentUser?.email || target.sender_email || undefined,
           routing_mode: routingMode,
+          recipients,
+          fields,
         }, organizationId);
-      if (file) target = await uploadSignatureDocument(target.id, file, organizationId);
-      const updated = await updateSignatureDocument(target.id, {
-        title: title.trim() || "Untitled document",
-        description,
-        message,
-        sender_name: currentUser?.name || target.sender_name || undefined,
-        sender_email: currentUser?.email || target.sender_email || undefined,
-        routing_mode: routingMode,
-        recipients,
-        fields,
-      }, organizationId);
-      setDocument(updated);
-      setTitle(updated.title || title);
-      setFile(null);
-      cacheDocumentDetails(updated, { recipients, fields });
-      markClean({
-        ...documentDraft,
-        title: updated.title || title,
-        pendingFile: null,
-      });
-      toast({ title: created ? "Draft created" : "Document updated" });
-      if (created) {
-        initializedDocumentKeyRef.current = `${organizationId}:${updated.id}`;
-        navigate(`/documents/${updated.id}`, { replace: true });
+        setDocument(updated);
+        setTitle(updated.title || title);
+        setFile(null);
+        cacheDocumentDetails(updated, { recipients, fields });
+        markClean({
+          ...documentDraft,
+          title: updated.title || title,
+          pendingFile: null,
+        });
+        toast({ title: created ? "Draft created" : "Document updated" });
+        if (created) {
+          initializedDocumentKeyRef.current = `${organizationId}:${updated.id}`;
+          navigate(`/documents/${updated.id}`, { replace: true });
+        }
+      } catch {
+        toast({
+          title: "Document could not be saved",
+          description: "Review the draft and try again.",
+          variant: "destructive",
+        });
       }
-    } catch {
-      toast({
-        title: "Document could not be saved",
-        description: "Review the draft and try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setWorking(false);
-    }
+    });
   };
 
   const handleClearFile = async () => {
     if (!editable || !organizationId) return;
     if (document?.id && document.file_url && !file) {
-      setWorking(true);
-      try {
-        const updated = await deleteSignatureDocumentFile(document.id, organizationId);
-        setDocument(updated);
-        cacheDocumentDetails(updated);
-        toast({ title: "PDF removed" });
-      } catch {
-        toast({ title: "PDF could not be removed", variant: "destructive" });
-      } finally {
-        setWorking(false);
-      }
+      await runDocumentAction(async () => {
+        try {
+          const updated = await deleteSignatureDocumentFile(document.id, organizationId);
+          setDocument(updated);
+          cacheDocumentDetails(updated);
+          toast({ title: "PDF removed" });
+        } catch {
+          toast({ title: "PDF could not be removed", variant: "destructive" });
+        }
+      });
       return;
     }
     setFile(null);
@@ -450,82 +455,78 @@ export default function SignatureEditorPage() {
 
   const handleSend = async (options: { message: string }) => {
     if (!document || !organizationId || !readiness.ready || isDirty) return;
-    setWorking(true);
-    try {
-      setMessage(options.message);
-      const updated = await updateSignatureDocument(document.id, {
-        recipients,
-        fields,
-        routing_mode: routingMode,
-        message: options.message,
-        sender_name: currentUser?.name || document.sender_name || undefined,
-        sender_email: currentUser?.email || document.sender_email || undefined,
-      }, organizationId);
-      cacheDocumentDetails(updated, { recipients, fields });
-      await sendSignatureDocument(document.id, organizationId);
-      void queryClient.invalidateQueries({ queryKey: signatureQueryKeys.documents(organizationId) });
-      toast({ title: "Signature request sent" });
-      setShowSendModal(false);
-      navigate("/documents");
-    } catch {
-      toast({
-        title: "Signature request could not be sent",
-        variant: "destructive",
-      });
-    } finally {
-      setWorking(false);
-    }
+    await runDocumentAction(async () => {
+      try {
+        setMessage(options.message);
+        const updated = await updateSignatureDocument(document.id, {
+          recipients,
+          fields,
+          routing_mode: routingMode,
+          message: options.message,
+          sender_name: currentUser?.name || document.sender_name || undefined,
+          sender_email: currentUser?.email || document.sender_email || undefined,
+        }, organizationId);
+        cacheDocumentDetails(updated, { recipients, fields });
+        await sendSignatureDocument(document.id, organizationId);
+        void queryClient.invalidateQueries({ queryKey: signatureQueryKeys.documents(organizationId) });
+        toast({ title: "Signature request sent" });
+        setShowSendModal(false);
+        navigate("/documents");
+      } catch {
+        toast({
+          title: "Signature request could not be sent",
+          variant: "destructive",
+        });
+      }
+    });
   };
 
   const handleRemind = async () => {
     if (!document || !organizationId) return;
-    setWorking(true);
-    try {
-      const updated = await remindSignatureDocument(document.id, organizationId);
-      setDocument(updated);
-      cacheDocumentDetails(updated);
-      toast({ title: "Signature reminder queued" });
-      refreshOperationalState();
-    } catch {
-      toast({ title: "Reminder could not be sent", variant: "destructive" });
-    } finally {
-      setWorking(false);
-    }
+    await runDocumentAction(async () => {
+      try {
+        const updated = await remindSignatureDocument(document.id, organizationId);
+        setDocument(updated);
+        cacheDocumentDetails(updated);
+        toast({ title: "Signature reminder queued" });
+        refreshOperationalState();
+      } catch {
+        toast({ title: "Reminder could not be sent", variant: "destructive" });
+      }
+    });
   };
 
   const handleRetry = async () => {
     if (!document || !organizationId) return;
-    setWorking(true);
-    try {
-      const updated = await retrySignatureDocument(document.id, organizationId);
-      setDocument(updated);
-      cacheDocumentDetails(updated);
-      toast({ title: "Failed step queued for retry" });
-      refreshOperationalState();
-    } catch {
-      toast({ title: "Retry unavailable", variant: "destructive" });
-    } finally {
-      setWorking(false);
-    }
+    await runDocumentAction(async () => {
+      try {
+        const updated = await retrySignatureDocument(document.id, organizationId);
+        setDocument(updated);
+        cacheDocumentDetails(updated);
+        toast({ title: "Failed step queued for retry" });
+        refreshOperationalState();
+      } catch {
+        toast({ title: "Retry unavailable", variant: "destructive" });
+      }
+    });
   };
 
   const handleCancel = async () => {
     if (!document || !organizationId) return;
-    setWorking(true);
-    try {
-      const updated = await cancelSignatureDocument(document.id, organizationId);
-      setDocument(updated);
-      cacheDocumentDetails(updated);
-      toast({ title: "Signature request cancelled" });
-      refreshOperationalState();
-    } catch {
-      toast({
-        title: "Request could not be cancelled",
-        variant: "destructive",
-      });
-    } finally {
-      setWorking(false);
-    }
+    await runDocumentAction(async () => {
+      try {
+        const updated = await cancelSignatureDocument(document.id, organizationId);
+        setDocument(updated);
+        cacheDocumentDetails(updated);
+        toast({ title: "Signature request cancelled" });
+        refreshOperationalState();
+      } catch {
+        toast({
+          title: "Request could not be cancelled",
+          variant: "destructive",
+        });
+      }
+    });
   };
 
   const handleDownload = () => {
@@ -538,17 +539,19 @@ export default function SignatureEditorPage() {
   };
   const handleDelete = async (): Promise<boolean> => {
     if (!document || !organizationId) return false;
-    try {
-      await deleteSignatureDocument(document.id, organizationId);
-      queryClient.removeQueries({
-        queryKey: signatureQueryKeys.document(organizationId, document.id),
-      });
-      void queryClient.invalidateQueries({ queryKey: signatureQueryKeys.documents(organizationId) });
-      navigate("/documents");
-      return true;
-    } catch {
-      return false;
-    }
+    return (await runDocumentAction(async () => {
+      try {
+        await deleteSignatureDocument(document.id, organizationId);
+        queryClient.removeQueries({
+          queryKey: signatureQueryKeys.document(organizationId, document.id),
+        });
+        void queryClient.invalidateQueries({ queryKey: signatureQueryKeys.documents(organizationId) });
+        navigate("/documents");
+        return true;
+      } catch {
+        return false;
+      }
+    })) ?? false;
   };
 
   const addRecipient = () =>
@@ -793,7 +796,10 @@ export default function SignatureEditorPage() {
           {document && editable && (
             <SendSignatureModal
               open={showSendModal}
-              onOpenChange={setShowSendModal}
+              onOpenChange={(nextOpen) => {
+                if (nextOpen) setShowSendModal(true);
+                else dismissIfIdle(() => setShowSendModal(false));
+              }}
               onSend={handleSend}
               sending={working}
               documentTitle={title}
@@ -813,7 +819,10 @@ export default function SignatureEditorPage() {
           {document && (
             <DeleteDialog
               open={deleteOpen}
-              onOpenChange={setDeleteOpen}
+              onOpenChange={(nextOpen) => {
+                if (nextOpen) setDeleteOpen(true);
+                else dismissIfIdle(() => setDeleteOpen(false));
+              }}
               onConfirm={handleDelete}
               itemType="document"
               itemTitle={document.title}

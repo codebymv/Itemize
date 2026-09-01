@@ -69,7 +69,7 @@ describe('workspace list API GraphQL mutations', () => {
       title: 'Tasks',
       items: [],
       width: 320,
-    });
+    }, expect.any(String));
     expect(updateWorkspaceListViaGraphql).toHaveBeenCalledWith(update);
     expect(deleteWorkspaceListViaGraphql).toHaveBeenCalledWith('9');
     expect(api.post).not.toHaveBeenCalled();
@@ -91,7 +91,7 @@ describe('workspace list API GraphQL mutations', () => {
       items: [],
       width: 420,
       height: 622,
-    });
+    }, expect.any(String));
     expect(created).toEqual(expect.objectContaining({ width: 420, height: 622 }));
   });
 });

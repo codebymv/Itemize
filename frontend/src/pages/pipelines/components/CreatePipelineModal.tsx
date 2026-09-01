@@ -30,6 +30,7 @@ import {
   createPipelineFormSchema,
   type CreatePipelineFormValues,
 } from '@/lib/formSchemas';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 
 const getApiErrorMessage = (error: unknown, fallback: string): string => {
   const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
@@ -52,6 +53,7 @@ export function CreatePipelineModal({
   onUpdated,
 }: CreatePipelineModalProps) {
   const { toast } = useToast();
+  const { pending: loading, run, dismissIfIdle } = useSingleFlightAction();
   const isEditing = Boolean(pipeline);
   const form = useForm<CreatePipelineFormValues>({
     resolver: zodResolver(createPipelineFormSchema),
@@ -63,7 +65,6 @@ export function CreatePipelineModal({
     },
   });
   const stages = form.watch('stages');
-  const loading = form.formState.isSubmitting;
 
   const addStage = () => {
     form.setValue('stages', [
@@ -87,43 +88,45 @@ export function CreatePipelineModal({
   };
 
   const handleSubmit = async (values: CreatePipelineFormValues) => {
-    try {
-      const payload = {
-        name: values.name.trim(),
-        description: values.description.trim() || (isEditing ? null : undefined),
-        is_default: values.is_default,
-        organization_id: organizationId,
-      };
-      if (pipeline) {
-        const updatedPipeline = await updatePipeline(pipeline.id, {
-          ...payload,
-          stages: values.stages.map((stage, order) => ({
-            ...stage,
-            name: stage.name.trim(),
-            color: stage.color.toUpperCase(),
-            order,
-          })),
+    await run(async () => {
+      try {
+        const payload = {
+          name: values.name.trim(),
+          description: values.description.trim() || (isEditing ? null : undefined),
+          is_default: values.is_default,
+          organization_id: organizationId,
+        };
+        if (pipeline) {
+          const updatedPipeline = await updatePipeline(pipeline.id, {
+            ...payload,
+            stages: values.stages.map((stage, order) => ({
+              ...stage,
+              name: stage.name.trim(),
+              color: stage.color.toUpperCase(),
+              order,
+            })),
+          });
+          onUpdated?.(updatedPipeline);
+        } else {
+          const createdPipeline = await createPipeline(payload);
+          onCreated(createdPipeline);
+        }
+      } catch (error) {
+        console.error(`Error ${isEditing ? 'updating' : 'creating'} pipeline:`, error);
+        toast({
+          title: 'Error',
+          description: getApiErrorMessage(
+            error,
+            `Failed to ${isEditing ? 'update' : 'create'} pipeline`,
+          ),
+          variant: 'destructive',
         });
-        onUpdated?.(updatedPipeline);
-      } else {
-        const createdPipeline = await createPipeline(payload);
-        onCreated(createdPipeline);
       }
-    } catch (error) {
-      console.error(`Error ${isEditing ? 'updating' : 'creating'} pipeline:`, error);
-      toast({
-        title: 'Error',
-        description: getApiErrorMessage(
-          error,
-          `Failed to ${isEditing ? 'update' : 'create'} pipeline`,
-        ),
-        variant: 'destructive',
-      });
-    }
+    });
   };
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
+    <Dialog open onOpenChange={(open) => !open && dismissIfIdle(onClose)}>
       <DialogContent className="sm:max-w-[450px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -279,7 +282,7 @@ export function CreatePipelineModal({
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} style={{ fontFamily: '"Raleway", sans-serif' }} aria-label="Cancel">
+            <Button type="button" variant="outline" onClick={() => dismissIfIdle(onClose)} disabled={loading} style={{ fontFamily: '"Raleway", sans-serif' }} aria-label="Cancel">
               Cancel
             </Button>
             <Button 
@@ -290,6 +293,7 @@ export function CreatePipelineModal({
               aria-label={loading
                 ? `${isEditing ? 'Saving' : 'Creating'} pipeline...`
                 : `${isEditing ? 'Save' : 'Create'} pipeline`}
+              aria-busy={loading || undefined}
             >
               {loading
                 ? (isEditing ? 'Saving...' : 'Creating...')

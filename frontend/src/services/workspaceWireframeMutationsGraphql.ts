@@ -4,11 +4,13 @@ import type {
 } from './api';
 import { graphqlMutationRequest } from './graphqlClient';
 import {
+  getWorkspaceWireframeViaGraphql,
   mapWireframe,
   type GraphqlWorkspaceWireframe,
   type LegacyWorkspaceWireframe,
   wireframeFields,
 } from './workspaceContentGraphql';
+import { reconcileWorkspaceUpdate } from './workspaceMutationReconciliation';
 import {
   enqueueWorkspaceWireframeUpdate,
   forgetWorkspaceWireframeRevision,
@@ -85,8 +87,9 @@ const mapInput = (
 
 export const createWorkspaceWireframeViaGraphql = async (
   input: CreateWireframePayload,
+  idempotencyKey: string,
 ): Promise<LegacyWorkspaceWireframe> => {
-  const variables = { input: mapInput(input) };
+  const variables = { input: { idempotencyKey, ...mapInput(input) } };
   const data = await graphqlMutationRequest<{
     createWorkspaceWireframe: GraphqlWorkspaceWireframe;
   }, typeof variables>(createWireframeMutation, variables);
@@ -106,10 +109,18 @@ export const updateWorkspaceWireframeViaGraphql = async (
         ...mapInput(input),
       },
     };
-    const data = await graphqlMutationRequest<{
-      updateWorkspaceWireframe: GraphqlWorkspaceWireframe;
-    }, typeof variables>(updateWireframeMutation, variables);
-    return mapWireframe(data.updateWorkspaceWireframe);
+    try {
+      const data = await graphqlMutationRequest<{
+        updateWorkspaceWireframe: GraphqlWorkspaceWireframe;
+      }, typeof variables>(updateWireframeMutation, variables);
+      return mapWireframe(data.updateWorkspaceWireframe);
+    } catch (error) {
+      return reconcileWorkspaceUpdate(
+        error,
+        () => getWorkspaceWireframeViaGraphql(id),
+        input,
+      );
+    }
   });
 
 export const deleteWorkspaceWireframeViaGraphql = async (

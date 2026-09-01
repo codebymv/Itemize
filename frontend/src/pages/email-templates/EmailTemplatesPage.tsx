@@ -30,6 +30,7 @@ import { DRAFT_EMAIL_TEMPLATE_VISUAL } from './constants/emailTemplateVisuals';
 import { deleteEmailTemplate, duplicateEmailTemplate, sendTestEmail, type EmailTemplate } from '@/services/emailApi';
 import { getEmailTemplatesViaGraphql } from '@/services/emailTemplatesGraphql';
 import { templateCatalogQueryKeys } from '@/services/templateCatalogQueryKeys';
+import { useKeyedSingleFlightAction } from '@/hooks/useSingleFlightAction';
 
 type StatusFilter = 'all' | 'active' | 'inactive';
 const PAGE_SIZE = 20;
@@ -47,7 +48,7 @@ export function EmailTemplatesPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [page, setPage] = useState(1);
   const [templateToDelete, setTemplateToDelete] = useState<EmailTemplate | null>(null);
-  const [workingId, setWorkingId] = useState<number | null>(null);
+  const { isPending: isTemplatePending, run: runTemplateAction } = useKeyedSingleFlightAction<number>();
   useEffect(() => {
     const timeout = window.setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
     return () => window.clearTimeout(timeout);
@@ -103,23 +104,23 @@ export function EmailTemplatesPage() {
 
   const handleDuplicate = async (template: EmailTemplate) => {
     if (!organizationId) return;
-    setWorkingId(template.id);
-    try {
-      await duplicateEmailTemplate(template.id, organizationId);
-      await queryClient.invalidateQueries({ queryKey: templateCatalogQueryKeys.email(organizationId) });
-      toast({ title: 'Duplicated', description: 'Template duplicated successfully.' });
-    } catch { toast({ title: 'Unable to duplicate', description: 'The template was not duplicated.', variant: 'destructive' }); }
-    finally { setWorkingId(null); }
+    await runTemplateAction(template.id, async () => {
+      try {
+        await duplicateEmailTemplate(template.id, organizationId);
+        await queryClient.invalidateQueries({ queryKey: templateCatalogQueryKeys.email(organizationId) });
+        toast({ title: 'Duplicated', description: 'Template duplicated successfully.' });
+      } catch { toast({ title: 'Unable to duplicate', description: 'The template was not duplicated.', variant: 'destructive' }); }
+    });
   };
 
   const handleSendTest = async (template: EmailTemplate) => {
     if (!organizationId || !currentUser?.email) return;
-    setWorkingId(template.id);
-    try {
-      await sendTestEmail(template.id, organizationId, currentUser.email);
-      toast({ title: 'Test email queued', description: `Sending to ${currentUser.email}.` });
-    } catch { toast({ title: 'Unable to send test', description: 'The test email was not queued.', variant: 'destructive' }); }
-    finally { setWorkingId(null); }
+    await runTemplateAction(template.id, async () => {
+      try {
+        await sendTestEmail(template.id, organizationId, currentUser.email);
+        toast({ title: 'Test email queued', description: `Sending to ${currentUser.email}.` });
+      } catch { toast({ title: 'Unable to send test', description: 'The test email was not queued.', variant: 'destructive' }); }
+    });
   };
 
   const handleDelete = async (): Promise<boolean> => {
@@ -161,7 +162,8 @@ export function EmailTemplatesPage() {
       : templates.length === 0 ? <EmptyState icon={FileText} kind={hasQuery ? 'results' : 'collection'} title={hasQuery ? 'No matching email templates' : 'No email templates yet'} description={hasQuery ? undefined : 'Create a reusable template for campaign and automation emails.'} actionLabel={hasQuery ? 'Clear filters' : 'New template'} onAction={hasQuery ? clearQuery : () => navigate('/email-templates/new')} className="p-12" />
       : <div className="divide-y">{templates.map(template => {
         const visual = getCatalogStatusVisual(template.is_active);
-        return <div key={template.id} role="link" tabIndex={0} aria-label={`Edit ${template.name}`} className="group flex cursor-pointer items-center gap-3 px-3 py-4 interaction-row focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-4" onClick={() => navigate(`/email-templates/${template.id}`)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); navigate(`/email-templates/${template.id}`); } }}><div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full', visual.iconBackgroundClass)}><Mail className={cn('h-5 w-5', visual.iconClass)} /></div><div className="min-w-0 flex-1"><div className="flex min-w-0 items-center gap-2"><h3 className="truncate text-sm font-medium md:text-base">{template.name}</h3><Badge className={cn('shrink-0 text-xs', visual.badgeClass)}>{visual.label}</Badge>{template.has_unpublished_changes && <Badge className={cn('shrink-0 text-xs', DRAFT_EMAIL_TEMPLATE_VISUAL.badgeClass)}>{DRAFT_EMAIL_TEMPLATE_VISUAL.label}</Badge>}</div><p className="mt-1 truncate text-sm text-muted-foreground">{template.subject}</p><div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">{template.category && <span>{template.category}</span>}<span>{template.variables.length} variable{template.variables.length === 1 ? '' : 's'}</span></div></div><DropdownMenu><DropdownMenuTrigger asChild onClick={event => event.stopPropagation()}><Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" disabled={workingId === template.id} aria-label={`More actions for ${template.name}`}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end" onClick={event => event.stopPropagation()}><DropdownMenuItem onClick={() => navigate(`/email-templates/${template.id}`)} className="group/menu"><Pencil className="mr-2 h-4 w-4" />Edit template</DropdownMenuItem><DropdownMenuItem onClick={() => void handleSendTest(template)} disabled={!template.published_version || Boolean(template.has_unpublished_changes)}><Send className="mr-2 h-4 w-4" />Send published test</DropdownMenuItem><DropdownMenuItem onClick={() => void handleDuplicate(template)}><Copy className="mr-2 h-4 w-4" />Duplicate</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setTemplateToDelete(template)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div>;
+        const working = isTemplatePending(template.id);
+        return <div key={template.id} role="link" tabIndex={0} aria-busy={working ? 'true' : undefined} aria-label={`Edit ${template.name}`} className="group flex cursor-pointer items-center gap-3 px-3 py-4 interaction-row focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-4" onClick={() => navigate(`/email-templates/${template.id}`)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); navigate(`/email-templates/${template.id}`); } }}><div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full', visual.iconBackgroundClass)}><Mail className={cn('h-5 w-5', visual.iconClass)} /></div><div className="min-w-0 flex-1"><div className="flex min-w-0 items-center gap-2"><h3 className="truncate text-sm font-medium md:text-base">{template.name}</h3><Badge className={cn('shrink-0 text-xs', visual.badgeClass)}>{visual.label}</Badge>{template.has_unpublished_changes && <Badge className={cn('shrink-0 text-xs', DRAFT_EMAIL_TEMPLATE_VISUAL.badgeClass)}>{DRAFT_EMAIL_TEMPLATE_VISUAL.label}</Badge>}</div><p className="mt-1 truncate text-sm text-muted-foreground">{template.subject}</p><div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">{template.category && <span>{template.category}</span>}<span>{template.variables.length} variable{template.variables.length === 1 ? '' : 's'}</span></div></div><DropdownMenu><DropdownMenuTrigger asChild onClick={event => event.stopPropagation()}><Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" disabled={working} aria-label={`More actions for ${template.name}`}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end" onClick={event => event.stopPropagation()}><DropdownMenuItem onClick={() => navigate(`/email-templates/${template.id}`)} className="group/menu"><Pencil className="mr-2 h-4 w-4" />Edit template</DropdownMenuItem><DropdownMenuItem onClick={() => void handleSendTest(template)} disabled={!template.published_version || Boolean(template.has_unpublished_changes)}><Send className="mr-2 h-4 w-4" />Send published test</DropdownMenuItem><DropdownMenuItem onClick={() => void handleDuplicate(template)}><Copy className="mr-2 h-4 w-4" />Duplicate</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setTemplateToDelete(template)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div>;
       })}</div>}
     </CardContent></Card>
     {pagination.totalPages > 1 && <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

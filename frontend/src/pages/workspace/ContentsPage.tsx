@@ -1008,7 +1008,9 @@ export function ContentsPage() {
       },
       token,
     );
-    setNotes((current) => [created as Note, ...current]);
+    setNotes((current) => current.some((note) => note.id === created.id)
+      ? current
+      : [created as Note, ...current]);
     return created;
   };
 
@@ -1041,7 +1043,9 @@ export function ContentsPage() {
       },
       token,
     );
-    setLists((current) => [created, ...current]);
+    setLists((current) => current.some(
+      (list) => String(list.id) === String(created.id),
+    ) ? current : [created, ...current]);
     return created;
   };
 
@@ -1065,7 +1069,9 @@ export function ContentsPage() {
       },
       token,
     );
-    setWhiteboards((current) => [created as Whiteboard, ...current]);
+    setWhiteboards((current) => current.some(
+      (whiteboard) => whiteboard.id === created.id,
+    ) ? current : [created as Whiteboard, ...current]);
     return created;
   };
 
@@ -1099,7 +1105,9 @@ export function ContentsPage() {
       },
       token,
     );
-    setWireframes((current) => [created as Wireframe, ...current]);
+    setWireframes((current) => current.some(
+      (wireframe) => wireframe.id === created.id,
+    ) ? current : [created as Wireframe, ...current]);
     return created;
   };
 

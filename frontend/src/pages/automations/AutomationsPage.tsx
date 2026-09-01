@@ -60,6 +60,7 @@ import { getWorkflowStatusVisual } from './constants/workflowConstants';
 import { cn } from '@/lib/utils';
 import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
 import { workflowQueryKeys } from '@/services/workflowQueryKeys';
+import { useKeyedSingleFlightAction } from '@/hooks/useSingleFlightAction';
 
 const TRIGGER_TYPE_ICONS: Partial<Record<WorkflowTriggerType, LucideIcon>> = {
   contact_added: Users,
@@ -92,7 +93,7 @@ export function AutomationsPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
   const [workflowToDelete, setWorkflowToDelete] = useState<Workflow | null>(null);
-  const [workingWorkflowId, setWorkingWorkflowId] = useState<number | null>(null);
+  const { isPending: isWorkflowPending, run: runWorkflowAction } = useKeyedSingleFlightAction<number>();
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setDebouncedSearchQuery(searchQuery.trim()), 250);
@@ -159,25 +160,24 @@ export function AutomationsPage() {
   const handleToggleWorkflow = async (workflow: Workflow) => {
     if (!organizationId) return;
 
-    setWorkingWorkflowId(workflow.id);
-    try {
-      if (workflow.is_active) {
-        await deactivateWorkflow(workflow.id, organizationId);
-        toast({ title: 'Deactivated', description: 'Workflow deactivated successfully' });
-      } else {
-        await activateWorkflow(workflow.id, organizationId);
-        toast({ title: 'Activated', description: 'Workflow activated successfully' });
+    await runWorkflowAction(workflow.id, async () => {
+      try {
+        if (workflow.is_active) {
+          await deactivateWorkflow(workflow.id, organizationId);
+          toast({ title: 'Deactivated', description: 'Workflow deactivated successfully' });
+        } else {
+          await activateWorkflow(workflow.id, organizationId);
+          toast({ title: 'Activated', description: 'Workflow activated successfully' });
+        }
+        await refreshQueue();
+      } catch (error: unknown) {
+        toast({
+          title: 'Error',
+          description: getApiErrorMessage(error, 'Failed to update workflow'),
+          variant: 'destructive',
+        });
       }
-      await refreshQueue();
-    } catch (error: unknown) {
-      toast({
-        title: 'Error',
-        description: getApiErrorMessage(error, 'Failed to update workflow'),
-        variant: 'destructive',
-      });
-    } finally {
-      setWorkingWorkflowId(null);
-    }
+    });
   };
 
   // Handle delete
@@ -204,20 +204,19 @@ export function AutomationsPage() {
   const handleDuplicateWorkflow = async (workflow: Workflow) => {
     if (!organizationId) return;
 
-    setWorkingWorkflowId(workflow.id);
-    try {
-      await duplicateWorkflow(workflow.id, organizationId);
-      toast({ title: 'Duplicated', description: 'Workflow duplicated successfully' });
-      await refreshQueue();
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to duplicate workflow',
-        variant: 'destructive',
-      });
-    } finally {
-      setWorkingWorkflowId(null);
-    }
+    await runWorkflowAction(workflow.id, async () => {
+      try {
+        await duplicateWorkflow(workflow.id, organizationId);
+        toast({ title: 'Duplicated', description: 'Workflow duplicated successfully' });
+        await refreshQueue();
+      } catch (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to duplicate workflow',
+          variant: 'destructive',
+        });
+      }
+    });
   };
 
   // Show error state
@@ -425,9 +424,9 @@ export function AutomationsPage() {
               {workflows.map((workflow) => {
                 const statusVisual = getWorkflowStatusVisual(workflow.is_active);
                 const TriggerIcon = TRIGGER_TYPE_ICONS[workflow.trigger_type] ?? Zap;
-                const working = workingWorkflowId === workflow.id;
+                const working = isWorkflowPending(workflow.id);
                 return (
-                <div key={workflow.id} className="flex items-center gap-2 px-3 interaction-row sm:px-4">
+                <div key={workflow.id} aria-busy={working ? 'true' : undefined} className="flex items-center gap-2 px-3 interaction-row sm:px-4">
                   <button
                     type="button"
                     className="flex min-w-0 flex-1 items-center gap-3 py-4 text-left sm:gap-4"

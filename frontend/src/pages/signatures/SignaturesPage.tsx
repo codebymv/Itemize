@@ -37,6 +37,7 @@ import {
   downloadSignedDocument
 } from '@/services/signaturesApi';
 import { signatureQueryKeys } from '@/services/signatureQueryKeys';
+import { useKeyedSingleFlightAction } from '@/hooks/useSingleFlightAction';
 
 const PAGE_SIZE = 20;
 
@@ -59,6 +60,7 @@ export function SignaturesPage() {
   const [statusFilter, setStatusFilter] = useState<DocumentStatusFilter>('all');
   const [page, setPage] = useState(1);
   const [deleteDocumentId, setDeleteDocumentId] = useState<number | null>(null);
+  const { isPending: isDocumentPending, run: runDocumentAction } = useKeyedSingleFlightAction<number>();
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
@@ -148,46 +150,54 @@ export function SignaturesPage() {
 
   const handleSend = async (id: number) => {
     if (!organizationId) return;
-    try {
-      const updated = await sendSignatureDocument(id, organizationId);
-      toast({ title: 'Signature request queued' });
-      await refreshQueue(updated);
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to send signature request', variant: 'destructive' });
-    }
+    await runDocumentAction(id, async () => {
+      try {
+        const updated = await sendSignatureDocument(id, organizationId);
+        toast({ title: 'Signature request queued' });
+        await refreshQueue(updated);
+      } catch (error) {
+        toast({ title: 'Error', description: 'Failed to send signature request', variant: 'destructive' });
+      }
+    });
   };
 
   const handleResend = async (id: number) => {
     if (!organizationId) return;
-    try {
-      const updated = await remindSignatureDocument(id, organizationId);
-      toast({ title: 'Signature reminder queued' });
-      await refreshQueue(updated);
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to resend signature request', variant: 'destructive' });
-    }
+    await runDocumentAction(id, async () => {
+      try {
+        const updated = await remindSignatureDocument(id, organizationId);
+        toast({ title: 'Signature reminder queued' });
+        await refreshQueue(updated);
+      } catch (error) {
+        toast({ title: 'Error', description: 'Failed to resend signature request', variant: 'destructive' });
+      }
+    });
   };
 
   const handleRetry = async (id: number) => {
     if (!organizationId) return;
-    try {
-      const updated = await retrySignatureDocument(id, organizationId);
-      toast({ title: 'Failed processing queued for retry' });
-      await refreshQueue(updated);
-    } catch (error) {
-      toast({ title: 'Retry unavailable', description: 'The failed step could not be retried.', variant: 'destructive' });
-    }
+    await runDocumentAction(id, async () => {
+      try {
+        const updated = await retrySignatureDocument(id, organizationId);
+        toast({ title: 'Failed processing queued for retry' });
+        await refreshQueue(updated);
+      } catch (error) {
+        toast({ title: 'Retry unavailable', description: 'The failed step could not be retried.', variant: 'destructive' });
+      }
+    });
   };
 
   const handleCancel = async (id: number) => {
     if (!organizationId) return;
-    try {
-      const updated = await cancelSignatureDocument(id, organizationId);
-      toast({ title: 'Signature request cancelled' });
-      await refreshQueue(updated);
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to cancel request', variant: 'destructive' });
-    }
+    await runDocumentAction(id, async () => {
+      try {
+        const updated = await cancelSignatureDocument(id, organizationId);
+        toast({ title: 'Signature request cancelled' });
+        await refreshQueue(updated);
+      } catch (error) {
+        toast({ title: 'Error', description: 'Failed to cancel request', variant: 'destructive' });
+      }
+    });
   };
 
   const handleDownload = async (id: number) => {
@@ -203,17 +213,21 @@ export function SignaturesPage() {
 
   const handleDelete = async (): Promise<boolean> => {
     if (!deleteDocumentId || !organizationId) return false;
-    try {
-      await deleteSignatureDocument(deleteDocumentId, organizationId);
-      queryClient.removeQueries({
-        queryKey: signatureQueryKeys.document(organizationId, deleteDocumentId),
-      });
-      await queryClient.invalidateQueries({ queryKey: signatureQueryKeys.documents(organizationId) });
-      setDeleteDocumentId(null);
-      return true;
-    } catch (error) {
-      return false;
-    }
+    const documentId = deleteDocumentId;
+    const result = await runDocumentAction(documentId, async () => {
+      try {
+        await deleteSignatureDocument(documentId, organizationId);
+        queryClient.removeQueries({
+          queryKey: signatureQueryKeys.document(organizationId, documentId),
+        });
+        await queryClient.invalidateQueries({ queryKey: signatureQueryKeys.documents(organizationId) });
+        setDeleteDocumentId(null);
+        return true;
+      } catch (error) {
+        return false;
+      }
+    });
+    return result === true;
   };
 
   const handleToggleExpand = (documentId: number, e: React.MouseEvent) => {
@@ -362,8 +376,9 @@ export function SignaturesPage() {
                     const StatusIcon = statusVisual.icon;
                     const hasProcessingFailure = doc.delivery_state === 'failed'
                       || doc.completion_state === 'dead_letter';
+                    const working = isDocumentPending(doc.id);
                     return (
-                      <div key={doc.id}>
+                      <div key={doc.id} aria-busy={working ? 'true' : undefined}>
                         <div
                           className="p-4 interaction-row cursor-pointer group"
                           onClick={(e) => handleToggleExpand(doc.id, e)}
@@ -393,7 +408,7 @@ export function SignaturesPage() {
                               </Button>
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                  <Button variant="ghost" className="h-8 w-8 p-0" aria-label={`Actions for ${doc.title}`}>
+                                  <Button variant="ghost" className="h-8 w-8 p-0" disabled={working} aria-label={`Actions for ${doc.title}`}>
                                     <MoreVertical className="h-4 w-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
@@ -512,6 +527,7 @@ export function SignaturesPage() {
                               {doc.status === 'draft' && (
                                 <Button
                                   size="sm"
+                                  disabled={working}
                                   className="bg-blue-600 interaction-button--primary text-white text-xs sm:text-sm"
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -525,6 +541,7 @@ export function SignaturesPage() {
                               {hasProcessingFailure && (
                                 <Button
                                   size="sm"
+                                  disabled={working}
                                   className="bg-blue-600 interaction-button--primary text-white text-xs sm:text-sm"
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -538,6 +555,7 @@ export function SignaturesPage() {
                               {!hasProcessingFailure && (doc.status === 'sent' || doc.status === 'in_progress') && (
                                 <Button
                                   size="sm"
+                                  disabled={working}
                                   className="bg-blue-600 interaction-button--primary text-white text-xs sm:text-sm"
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -552,6 +570,7 @@ export function SignaturesPage() {
                                 <Button
                                   size="sm"
                                   variant="outline"
+                                  disabled={working}
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleCancel(doc.id);
@@ -579,6 +598,7 @@ export function SignaturesPage() {
                                 <Button
                                   size="sm"
                                   variant="outline"
+                                  disabled={working}
                                   className="text-destructive border-destructive/30 interaction-button--destructive-ghost focus:text-destructive text-xs sm:text-sm"
                                   onClick={(e) => {
                                     e.stopPropagation();

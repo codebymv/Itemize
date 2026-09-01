@@ -4,11 +4,13 @@ import type {
 } from './api';
 import { graphqlMutationRequest } from './graphqlClient';
 import {
+  getWorkspaceWhiteboardViaGraphql,
   mapWhiteboard,
   type GraphqlWorkspaceWhiteboard,
   type LegacyWorkspaceWhiteboard,
   whiteboardFields,
 } from './workspaceContentGraphql';
+import { reconcileWorkspaceUpdate } from './workspaceMutationReconciliation';
 import {
   enqueueWorkspaceWhiteboardUpdate,
   forgetWorkspaceWhiteboardRevision,
@@ -75,8 +77,9 @@ const mapInput = (
 
 export const createWorkspaceWhiteboardViaGraphql = async (
   input: CreateWhiteboardPayload,
+  idempotencyKey: string,
 ): Promise<LegacyWorkspaceWhiteboard> => {
-  const variables = { input: mapInput(input) };
+  const variables = { input: { idempotencyKey, ...mapInput(input) } };
   const data = await graphqlMutationRequest<{
     createWorkspaceWhiteboard: GraphqlWorkspaceWhiteboard;
   }, typeof variables>(createWhiteboardMutation, variables);
@@ -96,10 +99,18 @@ export const updateWorkspaceWhiteboardViaGraphql = async (
         ...mapInput(input),
       },
     };
-    const data = await graphqlMutationRequest<{
-      updateWorkspaceWhiteboard: GraphqlWorkspaceWhiteboard;
-    }, typeof variables>(updateWhiteboardMutation, variables);
-    return mapWhiteboard(data.updateWorkspaceWhiteboard);
+    try {
+      const data = await graphqlMutationRequest<{
+        updateWorkspaceWhiteboard: GraphqlWorkspaceWhiteboard;
+      }, typeof variables>(updateWhiteboardMutation, variables);
+      return mapWhiteboard(data.updateWorkspaceWhiteboard);
+    } catch (error) {
+      return reconcileWorkspaceUpdate(
+        error,
+        () => getWorkspaceWhiteboardViaGraphql(id),
+        input,
+      );
+    }
   });
 
 export const deleteWorkspaceWhiteboardViaGraphql = async (

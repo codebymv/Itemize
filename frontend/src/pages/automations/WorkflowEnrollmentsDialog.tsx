@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 import {
   cancelEnrollment, enrollContact, getWorkflowEnrollments, pauseEnrollment, resumeEnrollment,
   retryEnrollment, type WorkflowEnrollment,
@@ -57,7 +58,8 @@ export function WorkflowEnrollmentsDialog({ open, onOpenChange, organizationId, 
   const [selectedContactId, setSelectedContactId] = useState('');
   const [search, setSearch] = useState('');
   const [submittedSearch, setSubmittedSearch] = useState('');
-  const [working, setWorking] = useState<string | null>(null);
+  const [activeAction, setActiveAction] = useState<string | null>(null);
+  const { pending, run, dismissIfIdle } = useSingleFlightAction();
   const [page, setPage] = useState(1);
   const [enrollmentToCancel, setEnrollmentToCancel] = useState<WorkflowEnrollment | null>(null);
 
@@ -125,49 +127,61 @@ export function WorkflowEnrollmentsDialog({ open, onOpenChange, organizationId, 
     else setSubmittedSearch(nextSearch);
   };
 
+  const runWorkflowAction = async (actionKey: string, action: () => Promise<void>) => {
+    await run(async () => {
+      setActiveAction(actionKey);
+      try {
+        await action();
+      } finally {
+        setActiveAction(null);
+      }
+    });
+  };
+
   const enroll = async () => {
     const contactId = Number(selectedContactId);
     if (!Number.isInteger(contactId) || contactId < 1) return;
-    setWorking('enroll');
-    try {
-      await enrollContact(workflowId, contactId, organizationId, { source: 'manual' });
-      setSelectedContactId('');
-      setPage(1);
-      await refreshData();
-      toast({ title: 'Enrolled', description: 'Contact enrolled successfully' });
-    } catch (error) {
-      toast({ title: 'Error', description: errorMessage(error, 'Failed to enroll contact'), variant: 'destructive' });
-    } finally {
-      setWorking(null);
-    }
+    await runWorkflowAction('enroll', async () => {
+      try {
+        await enrollContact(workflowId, contactId, organizationId, { source: 'manual' });
+        setSelectedContactId('');
+        setPage(1);
+        await refreshData();
+        toast({ title: 'Enrolled', description: 'Contact enrolled successfully' });
+      } catch (error) {
+        toast({ title: 'Error', description: errorMessage(error, 'Failed to enroll contact'), variant: 'destructive' });
+      }
+    });
   };
 
   const changeState = async (enrollment: WorkflowEnrollment, action: 'pause' | 'resume' | 'retry' | 'cancel') => {
-    setWorking(`${action}-${enrollment.id}`);
-    try {
-      if (action === 'pause') await pauseEnrollment(workflowId, enrollment.id, organizationId);
-      else if (action === 'resume') await resumeEnrollment(workflowId, enrollment.id, organizationId);
-      else if (action === 'retry') await retryEnrollment(workflowId, enrollment.id, organizationId);
-      else await cancelEnrollment(workflowId, enrollment.id, organizationId);
-      await refreshData();
-      const pastTense = { pause: 'paused', resume: 'resumed', retry: 'retried', cancel: 'cancelled' }[action];
-      toast({ title: 'Updated', description: `Run ${pastTense} successfully` });
-    } catch (error) {
-      toast({ title: 'Error', description: errorMessage(error, `Failed to ${action} run`), variant: 'destructive' });
-    } finally {
-      setWorking(null);
-    }
+    await runWorkflowAction(`${action}-${enrollment.id}`, async () => {
+      try {
+        if (action === 'pause') await pauseEnrollment(workflowId, enrollment.id, organizationId);
+        else if (action === 'resume') await resumeEnrollment(workflowId, enrollment.id, organizationId);
+        else if (action === 'retry') await retryEnrollment(workflowId, enrollment.id, organizationId);
+        else await cancelEnrollment(workflowId, enrollment.id, organizationId);
+        await refreshData();
+        const pastTense = { pause: 'paused', resume: 'resumed', retry: 'retried', cancel: 'cancelled' }[action];
+        toast({ title: 'Updated', description: `Run ${pastTense} successfully` });
+      } catch (error) {
+        toast({ title: 'Error', description: errorMessage(error, `Failed to ${action} run`), variant: 'destructive' });
+      }
+    });
   };
 
   const cancelSelectedEnrollment = async () => {
     if (!enrollmentToCancel) return;
     const target = enrollmentToCancel;
-    setEnrollmentToCancel(null);
     await changeState(target, 'cancel');
+    setEnrollmentToCancel(null);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(nextOpen) => {
+      if (nextOpen) onOpenChange(true);
+      else dismissIfIdle(() => onOpenChange(false));
+    }}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle>Automation runs</DialogTitle>
@@ -198,9 +212,9 @@ export function WorkflowEnrollmentsDialog({ open, onOpenChange, organizationId, 
               </SelectContent>
             </Select>
           </div>
-          <Button className="self-end" onClick={() => void enroll()} disabled={!selectedContactId || working !== null}>
+          <Button className="self-end" onClick={() => void enroll()} disabled={!selectedContactId || pending} aria-busy={activeAction === 'enroll' || undefined}>
             <UserPlus className="mr-2 h-4 w-4" />
-            {working === 'enroll' ? 'Enrolling…' : 'Enroll'}
+            {activeAction === 'enroll' ? 'Enrolling…' : 'Enroll'}
           </Button>
         </div>
 
@@ -227,7 +241,7 @@ export function WorkflowEnrollmentsDialog({ open, onOpenChange, organizationId, 
             <EmptyState icon={UserPlus} kind="inline" title="No runs yet" />
           )}
           {enrollments.map((enrollment) => {
-            const busy = working?.endsWith(`-${enrollment.id}`) ?? false;
+            const busy = activeAction?.endsWith(`-${enrollment.id}`) ?? false;
             const statusVisual = getWorkflowEnrollmentStatusVisual(enrollment.status);
             const started = formatDateTime(enrollment.enrolled_at);
             const nextAction = formatDateTime(enrollment.next_action_at);
@@ -252,22 +266,22 @@ export function WorkflowEnrollmentsDialog({ open, onOpenChange, organizationId, 
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {enrollment.status === 'active' && (
-                    <Button size="sm" variant="outline" disabled={busy} onClick={() => void changeState(enrollment, 'pause')}>
+                    <Button size="sm" variant="outline" disabled={pending} aria-busy={busy || undefined} onClick={() => void changeState(enrollment, 'pause')}>
                       <Pause className="mr-1 h-3.5 w-3.5" /> Pause
                     </Button>
                   )}
                   {enrollment.status === 'paused' && (
-                    <Button size="sm" variant="outline" disabled={busy} onClick={() => void changeState(enrollment, 'resume')}>
+                    <Button size="sm" variant="outline" disabled={pending} aria-busy={busy || undefined} onClick={() => void changeState(enrollment, 'resume')}>
                       <Play className="mr-1 h-3.5 w-3.5" /> Resume
                     </Button>
                   )}
                   {enrollment.status === 'failed' && (
-                    <Button size="sm" variant="outline" disabled={busy} onClick={() => void changeState(enrollment, 'retry')}>
+                    <Button size="sm" variant="outline" disabled={pending} aria-busy={busy || undefined} onClick={() => void changeState(enrollment, 'retry')}>
                       <RotateCcw className="mr-1 h-3.5 w-3.5" /> Retry
                     </Button>
                   )}
                   {!['completed', 'cancelled'].includes(enrollment.status) && (
-                    <Button size="sm" variant="ghost" className="text-destructive" disabled={busy}
+                    <Button size="sm" variant="ghost" className="text-destructive" disabled={pending}
                       onClick={() => setEnrollmentToCancel(enrollment)}>
                       <XCircle className="mr-1 h-3.5 w-3.5" /> Cancel
                     </Button>
@@ -295,7 +309,9 @@ export function WorkflowEnrollmentsDialog({ open, onOpenChange, organizationId, 
         )}
       </DialogContent>
 
-      <AlertDialog open={Boolean(enrollmentToCancel)} onOpenChange={(nextOpen) => !nextOpen && setEnrollmentToCancel(null)}>
+      <AlertDialog open={Boolean(enrollmentToCancel)} onOpenChange={(nextOpen) => {
+        if (!nextOpen) dismissIfIdle(() => setEnrollmentToCancel(null));
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Cancel this run?</AlertDialogTitle>
@@ -306,8 +322,10 @@ export function WorkflowEnrollmentsDialog({ open, onOpenChange, organizationId, 
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Keep running</AlertDialogCancel>
+            <AlertDialogCancel disabled={pending}>Keep running</AlertDialogCancel>
             <AlertDialogAction className="bg-destructive text-destructive-foreground interaction-button--destructive"
+              disabled={pending}
+              aria-busy={activeAction?.startsWith('cancel-') || undefined}
               onClick={() => void cancelSelectedEnrollment()}>
               Cancel run
             </AlertDialogAction>

@@ -39,6 +39,7 @@ import {
 import { STATUS_THEME_CLASSES } from '@/lib/statusVisuals';
 import { ErrorState } from '@/components/ErrorState';
 import { useSubscriptionFeatures } from '@/contexts/SubscriptionContext';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 
 // Plan icons
 const PLAN_ICONS: Record<Plan, typeof Zap> = {
@@ -58,7 +59,7 @@ export function BillingPanel() {
     const [loadError, setLoadError] = useState(false);
     const [status, setStatus] = useState<BillingStatus | null>(null);
     const [usage, setUsage] = useState<UsageStats | null>(null);
-    const [processing, setProcessing] = useState(false);
+    const { pending: processing, run } = useSingleFlightAction();
     const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
 
     useEffect(() => {
@@ -92,32 +93,32 @@ export function BillingPanel() {
     };
 
     const handlePortal = async () => {
-        setProcessing(true);
-        try {
-            await openBillingPortal();
-        } catch (error) {
-            toast({
-                title: 'Error',
-                description: getErrorMessage(error, 'Failed to open billing portal'),
-                variant: 'destructive',
-            });
-            setProcessing(false);
-        }
+        await run(async () => {
+            try {
+                await openBillingPortal();
+            } catch (error) {
+                toast({
+                    title: 'Error',
+                    description: getErrorMessage(error, 'Failed to open billing portal'),
+                    variant: 'destructive',
+                });
+            }
+        });
     };
 
     const handleUpgrade = async (planId: Plan) => {
         if (planId === 'free') return;
-        setProcessing(true);
-        try {
-            await startCheckout(planId, billingPeriod);
-        } catch (error) {
-            toast({
-                title: 'Error',
-                description: getErrorMessage(error, 'Failed to start checkout'),
-                variant: 'destructive',
-            });
-            setProcessing(false);
-        }
+        await run(async () => {
+            try {
+                await startCheckout(planId, billingPeriod);
+            } catch (error) {
+                toast({
+                    title: 'Error',
+                    description: getErrorMessage(error, 'Failed to start checkout'),
+                    variant: 'destructive',
+                });
+            }
+        });
     };
 
     // Loading state

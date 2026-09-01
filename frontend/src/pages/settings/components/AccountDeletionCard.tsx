@@ -21,6 +21,7 @@ import {
   deleteViewerAccountViaGraphql,
   getViewerAccountDeletionPreflightViaGraphql,
 } from '@/services/authGraphql';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 
 const blockerMessage = (
   blocker: AccountDeletionPreflight['blockers'][number],
@@ -44,7 +45,7 @@ export function AccountDeletionAction() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [preflight, setPreflight] = useState<AccountDeletionPreflight | null>(null);
   const [checking, setChecking] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const { pending: deleting, run, dismissIfIdle } = useSingleFlightAction();
 
   const email = currentUser?.email ?? '';
   const needsPassword = currentUser?.provider !== 'google';
@@ -78,28 +79,27 @@ export function AccountDeletionAction() {
 
   const deleteAccount = async () => {
     if (!canDelete) return;
-    setDeleting(true);
-    try {
-      const result = await deleteViewerAccountViaGraphql(
-        confirmation,
-        needsPassword ? currentPassword : undefined,
-      );
-      logout();
-      toast({
-        title: 'Account deletion scheduled',
-        description: `Your account is locked until deletion on ${new Date(result.scheduledAt).toLocaleDateString()}. Check your email if you want to recover it.`,
-      });
-      navigate('/', { replace: true });
-    } catch (error) {
-      toast({
-        title: 'Could not schedule account deletion',
-        description: error instanceof Error ? error.message : 'Please try again.',
-        variant: 'destructive',
-      });
-      await loadPreflight();
-    } finally {
-      setDeleting(false);
-    }
+    await run(async () => {
+      try {
+        const result = await deleteViewerAccountViaGraphql(
+          confirmation,
+          needsPassword ? currentPassword : undefined,
+        );
+        logout();
+        toast({
+          title: 'Account deletion scheduled',
+          description: `Your account is locked until deletion on ${new Date(result.scheduledAt).toLocaleDateString()}. Check your email if you want to recover it.`,
+        });
+        navigate('/', { replace: true });
+      } catch (error) {
+        toast({
+          title: 'Could not schedule account deletion',
+          description: error instanceof Error ? error.message : 'Please try again.',
+          variant: 'destructive',
+        });
+        await loadPreflight();
+      }
+    });
   };
 
   return (
@@ -113,10 +113,15 @@ export function AccountDeletionAction() {
       <AlertDialog
         open={open}
         onOpenChange={(nextOpen) => {
-          if (deleting) return;
-          setOpen(nextOpen);
-          if (nextOpen) void loadPreflight();
-          else reset();
+          if (nextOpen) {
+            setOpen(true);
+            void loadPreflight();
+          } else {
+            dismissIfIdle(() => {
+              setOpen(false);
+              reset();
+            });
+          }
         }}
       >
         <AlertDialogTrigger asChild>
@@ -219,6 +224,7 @@ export function AccountDeletionAction() {
                   variant="destructive"
                   onClick={() => void deleteAccount()}
                   disabled={!canDelete || deleting || checking}
+                  aria-busy={deleting || undefined}
                 >
                   {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {deleting ? 'Scheduling deletion...' : 'Schedule account deletion'}

@@ -71,7 +71,7 @@ describe('workspace note API GraphQL mutations', () => {
     expect(createWorkspaceNoteViaGraphql).toHaveBeenCalledWith({
       title: 'Plan',
       color_value: '#3B82F6',
-    });
+    }, expect.any(String));
     expect(updateWorkspaceNoteViaGraphql).toHaveBeenNthCalledWith(
       1,
       9,

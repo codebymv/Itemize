@@ -29,6 +29,7 @@ import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { cn } from '@/lib/utils';
 import { getCommunicationAvailabilityVisual } from '@/pages/communications/constants/communicationVisuals';
 import { IntegrationProviderMark } from '@/components/brand/IntegrationProviderMark';
+import { useKeyedSingleFlightAction, useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 
 export function SocialPage() {
     const { toast } = useToast();
@@ -44,6 +45,8 @@ export function SocialPage() {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [loadError, setLoadError] = useState('');
+    const { pending: connectPending, run: runConnect } = useSingleFlightAction();
+    const { isPending: isChannelPending, run: runChannelAction } = useKeyedSingleFlightAction<number>();
 
     const fetchData = useCallback(async () => {
         if (!organizationId) return;
@@ -68,23 +71,27 @@ export function SocialPage() {
 
     const handleConnectFacebook = async () => {
         if (!organizationId) return;
-        try {
-            const { auth_url } = await getFacebookConnectUrl(organizationId);
-            window.location.href = auth_url;
-        } catch {
-            toast({ title: 'Connection unavailable', description: 'Try connecting the account again.', variant: 'destructive' });
-        }
+        await runConnect(async () => {
+            try {
+                const { auth_url } = await getFacebookConnectUrl(organizationId);
+                window.location.href = auth_url;
+            } catch {
+                toast({ title: 'Connection unavailable', description: 'Try connecting the account again.', variant: 'destructive' });
+            }
+        });
     };
 
     const handleDisconnect = async (id: number) => {
         if (!organizationId) return;
-        try {
-            await disconnectChannel(id, organizationId);
-            await fetchData();
-            toast({ title: 'Account disconnected' });
-        } catch {
-            toast({ title: 'Account not disconnected', description: 'Try again.', variant: 'destructive' });
-        }
+        await runChannelAction(id, async () => {
+            try {
+                await disconnectChannel(id, organizationId);
+                await fetchData();
+                toast({ title: 'Account disconnected' });
+            } catch {
+                toast({ title: 'Account not disconnected', description: 'Try again.', variant: 'destructive' });
+            }
+        });
     };
 
     const filteredChannels = channels.filter((channel) => {
@@ -115,6 +122,7 @@ export function SocialPage() {
                         label="Connect account"
                         icon={<Plus className="h-4 w-4" />}
                         onClick={() => void handleConnectFacebook()}
+                        busy={connectPending}
                     />
                 ),
             }}
@@ -157,7 +165,7 @@ export function SocialPage() {
                                 actionLabel={searchQuery ? 'Clear search' : undefined}
                                 onAction={searchQuery ? () => setSearchQuery('') : undefined}
                                 action={!searchQuery ? (
-                                    <Button onClick={() => void handleConnectFacebook()} className="bg-blue-600 text-white interaction-button--primary">
+                                    <Button onClick={() => void handleConnectFacebook()} disabled={connectPending} aria-busy={connectPending ? 'true' : undefined} className="bg-blue-600 text-white interaction-button--primary">
                                         <IntegrationProviderMark provider="facebook" className="mr-2 h-4 w-4" />
                                         Connect Facebook
                                     </Button>
@@ -170,8 +178,9 @@ export function SocialPage() {
                                     const available = channel.is_active && channel.is_connected;
                                     const statusVisual = getCommunicationAvailabilityVisual(available);
                                     const provider = channel.channel_type === 'instagram' ? 'instagram' : 'facebook';
+                                    const working = isChannelPending(channel.id);
                                     return (
-                                        <div key={channel.id} className="flex items-center justify-between gap-3 p-4">
+                                        <div key={channel.id} aria-busy={working ? 'true' : undefined} className="flex items-center justify-between gap-3 p-4">
                                             <div className="flex min-w-0 items-center gap-4">
                                                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted">
                                                     <IntegrationProviderMark provider={provider} className="h-5 w-5" />
@@ -190,7 +199,7 @@ export function SocialPage() {
                                                 </Badge>
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" aria-label={`Actions for ${channel.name}`}>
+                                                        <Button variant="ghost" size="icon" disabled={working} aria-label={`Actions for ${channel.name}`}>
                                                             <MoreHorizontal className="h-4 w-4" />
                                                         </Button>
                                                     </DropdownMenuTrigger>

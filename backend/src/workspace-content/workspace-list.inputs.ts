@@ -21,6 +21,9 @@ export class WorkspaceListItemInput {
 @InputType()
 export class CreateWorkspaceListInput {
   @Field()
+  idempotencyKey: string;
+
+  @Field()
   title: string;
 
   @Field(() => String, { nullable: true })

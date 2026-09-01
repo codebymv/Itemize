@@ -7,6 +7,7 @@ import {
   enableWorkspaceWireframeSharingViaGraphql,
   updateWorkspaceWireframeViaGraphql,
 } from './workspaceWireframeMutationsGraphql';
+import { rememberWorkspaceWireframeRevision } from './workspaceWireframeRevision';
 
 vi.mock('@/lib/api', () => ({
   fetchCsrfToken: vi.fn(),
@@ -105,7 +106,7 @@ describe('workspace wireframe GraphQL mutation consumer', () => {
         edges: [],
         viewport: { x: 0, y: 0, zoom: 1 },
       },
-    });
+    }, mutationId);
     await Promise.all([
       updateWorkspaceWireframeViaGraphql(10, { title: 'First' }),
       updateWorkspaceWireframeViaGraphql(10, { title: 'Second' }),
@@ -128,6 +129,7 @@ describe('workspace wireframe GraphQL mutation consumer', () => {
       JSON.parse(String((call[1] as RequestInit).body)),
     );
     expect(bodies[0].variables.input).toMatchObject({
+      idempotencyKey: mutationId,
       title: 'Flow',
       flowData: expect.stringContaining('"viewport"'),
     });
@@ -145,5 +147,25 @@ describe('workspace wireframe GraphQL mutation consumer', () => {
     expect(bodies[4].variables).toEqual({ id: 10 });
     expect(bodies[5].variables).toEqual({ id: 10, mutationId });
     expect(fetchCsrfToken).toHaveBeenCalledTimes(6);
+  });
+
+  it('confirms a lost update response using the exact flow record', async () => {
+    rememberWorkspaceWireframeRevision(10, wireframe.updatedAt);
+    const lostResponse = new TypeError('connection lost');
+    vi.mocked(fetch)
+      .mockRejectedValueOnce(lostResponse)
+      .mockResolvedValueOnce(response({
+        data: {
+          workspaceWireframe: {
+            ...wireframe,
+            title: 'Confirmed flow',
+            updatedAt: '2026-07-18T12:02:00.000Z',
+          },
+        },
+      }));
+
+    await expect(updateWorkspaceWireframeViaGraphql(10, {
+      title: 'Confirmed flow',
+    })).resolves.toMatchObject({ id: 10, title: 'Confirmed flow' });
   });
 });

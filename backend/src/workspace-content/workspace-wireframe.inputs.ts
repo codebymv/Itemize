@@ -8,6 +8,9 @@ import {
 
 @InputType()
 export class CreateWorkspaceWireframeInput {
+  @Field()
+  idempotencyKey: string;
+
   @Field(() => String, { nullable: true })
   title?: string | null;
 

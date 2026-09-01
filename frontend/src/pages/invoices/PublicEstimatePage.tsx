@@ -32,6 +32,7 @@ import {
   getPublicEstimate,
   PublicEstimateData,
 } from '@/services/publicEstimatesApi';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 
 const date = (value: string): string => {
   const parsed = new Date(`${value.slice(0, 10)}T00:00:00`);
@@ -51,7 +52,9 @@ export default function PublicEstimatePage() {
   const [data, setData] = useState<PublicEstimateData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState<'accept' | 'decline' | null>(null);
+  const [activeAction, setActiveAction] = useState<'accept' | 'decline' | null>(null);
+  const { pending: actionPending, run, dismissIfIdle } = useSingleFlightAction();
+  const pending = actionPending ? activeAction : null;
   const [confirming, setConfirming] = useState<'accept' | 'decline' | null>(null);
   const [dismissedResponseKey, setDismissedResponseKey] = useState<string | null>(null);
 
@@ -77,24 +80,26 @@ export default function PublicEstimatePage() {
   }), [data?.estimate.currency]);
 
   const respond = async (action: 'accept' | 'decline') => {
-    if (!token || pending) return;
-    setConfirming(null);
-    setPending(action);
+    if (!token) return;
     setError(null);
-    try {
-      const response = action === 'accept'
-        ? await acceptPublicEstimate(token)
-        : await declinePublicEstimate(token);
-      localStorage.removeItem(responseBannerStorageKey(token, response.estimate.status));
-      setDismissedResponseKey(null);
-      setData(response);
-    } catch (requestError) {
-      setError(requestError instanceof Error
-        ? requestError.message
-        : 'Your response could not be saved. Please try again.');
-    } finally {
-      setPending(null);
-    }
+    await run(async () => {
+      setActiveAction(action);
+      try {
+        const response = action === 'accept'
+          ? await acceptPublicEstimate(token)
+          : await declinePublicEstimate(token);
+        localStorage.removeItem(responseBannerStorageKey(token, response.estimate.status));
+        setDismissedResponseKey(null);
+        setData(response);
+      } catch (requestError) {
+        setError(requestError instanceof Error
+          ? requestError.message
+          : 'Your response could not be saved. Please try again.');
+      } finally {
+        setActiveAction(null);
+        setConfirming(null);
+      }
+    });
   };
 
   if (loading) {
@@ -345,7 +350,9 @@ export default function PublicEstimatePage() {
         <PublicPrivateLinkNotice contentLabel="estimate" />
       </BrandedPublicContainer>
 
-      <AlertDialog open={confirming !== null} onOpenChange={(open) => !open && setConfirming(null)}>
+      <AlertDialog open={confirming !== null} onOpenChange={(open) => {
+        if (!open) dismissIfIdle(() => setConfirming(null));
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
@@ -358,11 +365,13 @@ export default function PublicEstimatePage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={actionPending}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className={confirming === 'decline'
                 ? 'bg-destructive text-destructive-foreground interaction-button--destructive'
                 : undefined}
+              disabled={actionPending}
+              aria-busy={actionPending || undefined}
               onClick={() => confirming && void respond(confirming)}
             >
               {confirming === 'accept' ? 'Accept estimate' : 'Decline estimate'}

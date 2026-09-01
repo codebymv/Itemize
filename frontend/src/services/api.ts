@@ -15,6 +15,7 @@ import {
   getWorkspaceWhiteboardsViaGraphql,
   getWorkspaceWireframesViaGraphql,
   updateCanvasPositionsViaGraphql,
+  workspaceContentExistsViaGraphql,
 } from "./workspaceContentGraphql";
 import {
   createWorkspaceNoteViaGraphql,
@@ -45,6 +46,7 @@ import {
   enableWhiteboardSharingViaGraphql,
 } from "./workspaceSharingMutationsGraphql";
 import { rememberWorkspaceWhiteboardRevision } from "./workspaceWhiteboardRevision";
+import { runWorkspaceCreationAttempt } from "./workspaceMutationReconciliation";
 import {
   addVaultItemsViaGraphql,
   addVaultItemViaGraphql,
@@ -82,6 +84,29 @@ export type CanvasPositionUpdate = {
   position_y: number;
   width?: number;
   height?: number;
+};
+
+const deleteWorkspaceContentWithReconciliation = async <T>(
+  type: CanvasPositionUpdate["type"],
+  id: number | string,
+  remove: () => Promise<T>,
+  reconciledResult: () => T,
+): Promise<T> => {
+  try {
+    return await remove();
+  } catch (error) {
+    try {
+      const stillExists = await workspaceContentExistsViaGraphql(type, Number(id));
+      if (!stillExists) return reconciledResult();
+    } catch (reconciliationError) {
+      logger.warn("Workspace deletion reconciliation was unavailable", {
+        type,
+        id,
+        reconciliationError,
+      });
+    }
+    throw error;
+  }
 };
 
 export interface CanvasPath {
@@ -224,10 +249,18 @@ export const getLists = async (token?: string) => {
 export const createList = async (listData: ListPayload, token?: string) => {
   try {
     void token;
-    const response = await createWorkspaceListViaGraphql({
+    const createInput = {
       ...listData,
       width: listData.width ?? MIN_LIST_WIDTH,
-    });
+    };
+    const response = await runWorkspaceCreationAttempt(
+      "list",
+      createInput,
+      (idempotencyKey) => createWorkspaceListViaGraphql(
+        createInput,
+        idempotencyKey,
+      ),
+    );
     return {
       id: response.id,
       title: response.title,
@@ -278,7 +311,12 @@ export const updateList = async (
 
 export const deleteList = async (listId: string, token?: string) => {
   void token;
-  return deleteWorkspaceListViaGraphql(listId);
+  return deleteWorkspaceContentWithReconciliation(
+    "list",
+    listId,
+    () => deleteWorkspaceListViaGraphql(listId),
+    () => ({ message: "List deleted successfully" }),
+  );
 };
 
 export const updateCanvasPositions = async (
@@ -301,7 +339,14 @@ export const createNote = async (
   token?: string,
 ) => {
   void token;
-  return createWorkspaceNoteViaGraphql(noteData);
+  return runWorkspaceCreationAttempt(
+    "note",
+    noteData,
+    (idempotencyKey) => createWorkspaceNoteViaGraphql(
+      noteData,
+      idempotencyKey,
+    ),
+  );
 };
 
 export const updateNote = async (
@@ -343,7 +388,12 @@ export const updateNoteCategory = async (
 
 export const deleteNote = async (noteId: number, token?: string) => {
   void token;
-  return deleteWorkspaceNoteViaGraphql(noteId);
+  return deleteWorkspaceContentWithReconciliation(
+    "note",
+    noteId,
+    () => deleteWorkspaceNoteViaGraphql(noteId),
+    () => ({ message: "Note deleted successfully" }),
+  );
 };
 
 // Whiteboard API functions
@@ -367,7 +417,14 @@ export const createWhiteboard = async (
   token?: string,
 ) => {
   void token;
-  return createWorkspaceWhiteboardViaGraphql(whiteboardData);
+  return runWorkspaceCreationAttempt(
+    "whiteboard",
+    whiteboardData,
+    (idempotencyKey) => createWorkspaceWhiteboardViaGraphql(
+      whiteboardData,
+      idempotencyKey,
+    ),
+  );
 };
 
 export const updateWhiteboard = async (
@@ -388,7 +445,12 @@ export const deleteWhiteboard = async (
   token?: string,
 ) => {
   void token;
-  return deleteWorkspaceWhiteboardViaGraphql(whiteboardId);
+  return deleteWorkspaceContentWithReconciliation(
+    "whiteboard",
+    whiteboardId,
+    () => deleteWorkspaceWhiteboardViaGraphql(whiteboardId),
+    () => ({ message: "Whiteboard deleted successfully" }),
+  );
 };
 
 // Wireframe types and API functions
@@ -446,7 +508,14 @@ export const createWireframe = async (
   token?: string,
 ) => {
   void token;
-  return createWorkspaceWireframeViaGraphql(wireframeData);
+  return runWorkspaceCreationAttempt(
+    "wireframe",
+    wireframeData,
+    (idempotencyKey) => createWorkspaceWireframeViaGraphql(
+      wireframeData,
+      idempotencyKey,
+    ),
+  );
 };
 
 export const updateWireframe = async (
@@ -464,7 +533,12 @@ export const updateWireframe = async (
 
 export const deleteWireframe = async (wireframeId: number, token?: string) => {
   void token;
-  return deleteWorkspaceWireframeViaGraphql(wireframeId);
+  return deleteWorkspaceContentWithReconciliation(
+    "wireframe",
+    wireframeId,
+    () => deleteWorkspaceWireframeViaGraphql(wireframeId),
+    () => ({ message: "Wireframe deleted successfully" }),
+  );
 };
 
 export const updateWireframePosition = async (
@@ -604,7 +678,15 @@ export const updateVaultPosition = async (
 // Delete a vault
 export const deleteVault = async (vaultId: number, token?: string) => {
   void token;
-  return deleteVaultViaGraphql(vaultId);
+  return deleteWorkspaceContentWithReconciliation(
+    "vault",
+    vaultId,
+    () => deleteVaultViaGraphql(vaultId),
+    () => ({
+      message: "Vault deleted successfully",
+      deletedId: vaultId,
+    }),
+  );
 };
 
 // Add item to vault

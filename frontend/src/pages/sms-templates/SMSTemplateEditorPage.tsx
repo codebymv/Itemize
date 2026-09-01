@@ -34,6 +34,7 @@ import { AvailabilitySettingRow } from "@/components/settings/SettingsPrimitives
 import { useDirtyState } from "@/hooks/useDirtyState";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
+import { useSingleFlightAction } from "@/hooks/useSingleFlightAction";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { getCatalogStatusVisual } from "@/pages/campaigns/constants/campaignVisuals";
@@ -125,7 +126,7 @@ export function SMSTemplateEditorPage() {
   const [state, setState] = useState<EditorState>(EMPTY_STATE);
   const [messageInfo, setMessageInfo] = useState<MessageInfo>(EMPTY_INFO);
   const [loading, setLoading] = useState(!isNew);
-  const [saving, setSaving] = useState(false);
+  const { pending: saving, run: runSave } = useSingleFlightAction();
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadTemplate = useCallback(async () => {
@@ -198,8 +199,8 @@ export function SMSTemplateEditorPage() {
         });
       return;
     }
-    setSaving(true);
-    try {
+    await runSave(async () => {
+      try {
       const input = {
         organization_id: organizationId,
         name: state.name.trim(),
@@ -229,15 +230,14 @@ export function SMSTemplateEditorPage() {
       markClean(cleanState);
       if (!template) navigate(`/sms-templates/${saved.id}`, { replace: true });
       toast({ title: template ? "Template updated" : "Template created" });
-    } catch {
-      toast({
-        title: "Unable to save template",
-        description: "Your changes were not saved. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setSaving(false);
-    }
+      } catch {
+        toast({
+          title: "Unable to save template",
+          description: "Your changes were not saved. Please try again.",
+          variant: "destructive",
+        });
+      }
+    });
   };
 
   const insertVariable = (variable: string) => {

@@ -181,6 +181,12 @@ export type WorkspaceNoteMutationOutcome =
   | { kind: 'not_found' }
   | { kind: 'category_not_found' };
 
+export type WorkspaceCreationOutcome<TRow> =
+  | { kind: 'completed'; row: TRow }
+  | { kind: 'category_not_found' }
+  | { kind: 'idempotency_conflict' }
+  | { kind: 'receipt_inconsistent' };
+
 export type DeleteWorkspaceNoteOutcome =
   | { kind: 'deleted'; deletedId: number }
   | { kind: 'not_found' };
@@ -229,6 +235,14 @@ export type CanvasPositionKind =
   | 'whiteboard'
   | 'wireframe'
   | 'vault';
+
+type WorkspaceCreationKind = Exclude<CanvasPositionKind, 'vault'>;
+
+type WorkspaceCreationReceiptClaim =
+  | { kind: 'claimed' }
+  | { kind: 'replay'; entityId: number }
+  | { kind: 'conflict' }
+  | { kind: 'inconsistent' };
 
 export type CanvasPositionUpdateValues = {
   type: CanvasPositionKind;
@@ -336,6 +350,70 @@ export class WorkspaceContentRepository {
     @Inject(PG_POOL) private readonly pool: Pool,
     private readonly realtimeOutbox: RealtimeOutboxService,
   ) {}
+
+  async contentExists(
+    userId: number,
+    type: CanvasPositionKind,
+    id: number,
+  ): Promise<boolean> {
+    const table = this.canvasTable(type);
+    const result = await this.pool.query<{ exists: boolean }>(
+      `SELECT EXISTS(
+         SELECT 1 FROM ${table} WHERE id = $1 AND user_id = $2
+       ) AS exists`,
+      [id, userId],
+    );
+    return result.rows[0]?.exists === true;
+  }
+
+  async findNoteById(
+    userId: number,
+    noteId: number,
+  ): Promise<WorkspaceNoteRow | null> {
+    const result = await this.pool.query<WorkspaceNoteRow>(
+      `SELECT ${noteMutationSelection}
+       FROM notes
+       WHERE id = $1 AND user_id = $2`,
+      [noteId, userId],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  async findWhiteboardById(
+    userId: number,
+    whiteboardId: number,
+  ): Promise<WorkspaceWhiteboardRow | null> {
+    const result = await this.pool.query<WorkspaceWhiteboardRow>(
+      `SELECT ${whiteboardMutationSelection},
+              (SELECT category.id
+                 FROM categories category
+                WHERE category.user_id = whiteboards.user_id
+                  AND LOWER(category.name) = LOWER(whiteboards.category)
+                LIMIT 1) AS category_id
+       FROM whiteboards
+       WHERE id = $1 AND user_id = $2`,
+      [whiteboardId, userId],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  async findWireframeById(
+    userId: number,
+    wireframeId: number,
+  ): Promise<WorkspaceWireframeRow | null> {
+    const result = await this.pool.query<WorkspaceWireframeRow>(
+      `SELECT ${wireframeMutationSelection},
+              (SELECT category.id
+                 FROM categories category
+                WHERE category.user_id = wireframes.user_id
+                  AND LOWER(category.name) = LOWER(wireframes.category)
+                LIMIT 1) AS category_id
+       FROM wireframes
+       WHERE id = $1 AND user_id = $2`,
+      [wireframeId, userId],
+    );
+    return result.rows[0] ?? null;
+  }
 
   async batchCanvasPositions(
     userId: number,
@@ -589,12 +667,88 @@ export class WorkspaceContentRepository {
     return { rows: rows.rows, total: count.rows[0]?.total ?? 0 };
   }
 
+  private async claimCreationReceipt(
+    client: PoolClient,
+    userId: number,
+    entityType: WorkspaceCreationKind,
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<WorkspaceCreationReceiptClaim> {
+    await client.query(
+      `INSERT INTO workspace_creation_receipts (
+         user_id, idempotency_key, entity_type, request_fingerprint
+       ) VALUES ($1, $2, $3, $4)
+       ON CONFLICT (user_id, idempotency_key) DO NOTHING`,
+      [userId, idempotencyKey, entityType, requestFingerprint],
+    );
+    const result = await client.query<{
+      entity_type: string;
+      request_fingerprint: string;
+      entity_id: number | null;
+    }>(
+      `SELECT entity_type, request_fingerprint, entity_id
+       FROM workspace_creation_receipts
+       WHERE user_id = $1 AND idempotency_key = $2
+       FOR UPDATE`,
+      [userId, idempotencyKey],
+    );
+    const receipt = result.rows[0];
+    if (!receipt) return { kind: 'inconsistent' };
+    if (
+      receipt.entity_type !== entityType
+      || receipt.request_fingerprint !== requestFingerprint
+    ) {
+      return { kind: 'conflict' };
+    }
+    return receipt.entity_id === null
+      ? { kind: 'claimed' }
+      : { kind: 'replay', entityId: Number(receipt.entity_id) };
+  }
+
+  private async completeCreationReceipt(
+    client: PoolClient,
+    userId: number,
+    idempotencyKey: string,
+    entityId: number,
+  ): Promise<void> {
+    const result = await client.query(
+      `UPDATE workspace_creation_receipts
+       SET entity_id = $3, completed_at = CURRENT_TIMESTAMP
+       WHERE user_id = $1 AND idempotency_key = $2 AND entity_id IS NULL`,
+      [userId, idempotencyKey, entityId],
+    );
+    if (result.rowCount !== 1) {
+      throw new Error('Workspace creation receipt could not be completed');
+    }
+  }
+
   async createList(
     organizationId: number,
     userId: number,
     values: CreateWorkspaceListValues,
-  ): Promise<WorkspaceListMutationOutcome> {
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<WorkspaceCreationOutcome<WorkspaceListRow>> {
     return this.transaction(async (client) => {
+      const receipt = await this.claimCreationReceipt(
+        client,
+        userId,
+        'list',
+        idempotencyKey,
+        requestFingerprint,
+      );
+      if (receipt.kind === 'conflict') return { kind: 'idempotency_conflict' };
+      if (receipt.kind === 'inconsistent') return { kind: 'receipt_inconsistent' };
+      if (receipt.kind === 'replay') {
+        const replay = await client.query<WorkspaceListRow>(
+          `SELECT ${listMutationSelection}
+           FROM lists WHERE id = $1 AND user_id = $2`,
+          [receipt.entityId, userId],
+        );
+        return replay.rows[0]
+          ? { kind: 'completed', row: replay.rows[0] }
+          : { kind: 'receipt_inconsistent' };
+      }
       const category = await this.categoryForCreate(
         client,
         userId,
@@ -622,6 +776,12 @@ export class WorkspaceContentRepository {
           values.width,
           values.height,
         ],
+      );
+      await this.completeCreationReceipt(
+        client,
+        userId,
+        idempotencyKey,
+        Number(result.rows[0].id),
       );
       return { kind: 'completed', row: result.rows[0] };
     });
@@ -778,8 +938,29 @@ export class WorkspaceContentRepository {
   async createNote(
     userId: number,
     values: CreateWorkspaceNoteValues,
-  ): Promise<WorkspaceNoteMutationOutcome> {
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<WorkspaceCreationOutcome<WorkspaceNoteRow>> {
     return this.transaction(async (client) => {
+      const receipt = await this.claimCreationReceipt(
+        client,
+        userId,
+        'note',
+        idempotencyKey,
+        requestFingerprint,
+      );
+      if (receipt.kind === 'conflict') return { kind: 'idempotency_conflict' };
+      if (receipt.kind === 'inconsistent') return { kind: 'receipt_inconsistent' };
+      if (receipt.kind === 'replay') {
+        const replay = await client.query<WorkspaceNoteRow>(
+          `SELECT ${noteMutationSelection}
+           FROM notes WHERE id = $1 AND user_id = $2`,
+          [receipt.entityId, userId],
+        );
+        return replay.rows[0]
+          ? { kind: 'completed', row: replay.rows[0] }
+          : { kind: 'receipt_inconsistent' };
+      }
       const category = await this.categoryForCreate(
         client,
         userId,
@@ -807,6 +988,12 @@ export class WorkspaceContentRepository {
           values.height,
           values.zIndex,
         ],
+      );
+      await this.completeCreationReceipt(
+        client,
+        userId,
+        idempotencyKey,
+        Number(result.rows[0].id),
       );
       return { kind: 'completed', row: result.rows[0] };
     });
@@ -948,8 +1135,33 @@ export class WorkspaceContentRepository {
   async createWhiteboard(
     userId: number,
     values: CreateWorkspaceWhiteboardValues,
-  ): Promise<WorkspaceWhiteboardMutationOutcome> {
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<WorkspaceCreationOutcome<WorkspaceWhiteboardRow>> {
     return this.transaction(async (client) => {
+      const receipt = await this.claimCreationReceipt(
+        client,
+        userId,
+        'whiteboard',
+        idempotencyKey,
+        requestFingerprint,
+      );
+      if (receipt.kind === 'conflict') return { kind: 'idempotency_conflict' };
+      if (receipt.kind === 'inconsistent') return { kind: 'receipt_inconsistent' };
+      if (receipt.kind === 'replay') {
+        const replay = await client.query<WorkspaceWhiteboardRow>(
+          `SELECT ${whiteboardMutationSelection},
+                  (SELECT category.id FROM categories category
+                   WHERE category.user_id = whiteboards.user_id
+                     AND LOWER(category.name) = LOWER(whiteboards.category)
+                   LIMIT 1) AS category_id
+           FROM whiteboards WHERE id = $1 AND user_id = $2`,
+          [receipt.entityId, userId],
+        );
+        return replay.rows[0]
+          ? { kind: 'completed', row: replay.rows[0] }
+          : { kind: 'receipt_inconsistent' };
+      }
       const category = await this.categoryForCreate(
         client,
         userId,
@@ -977,6 +1189,12 @@ export class WorkspaceContentRepository {
           values.zIndex,
           values.colorValue,
         ],
+      );
+      await this.completeCreationReceipt(
+        client,
+        userId,
+        idempotencyKey,
+        Number(result.rows[0].id),
       );
       return {
         kind: 'completed',
@@ -1125,8 +1343,33 @@ export class WorkspaceContentRepository {
   async createWireframe(
     userId: number,
     values: CreateWorkspaceWireframeValues,
-  ): Promise<WorkspaceWireframeMutationOutcome> {
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<WorkspaceCreationOutcome<WorkspaceWireframeRow>> {
     return this.transaction(async (client) => {
+      const receipt = await this.claimCreationReceipt(
+        client,
+        userId,
+        'wireframe',
+        idempotencyKey,
+        requestFingerprint,
+      );
+      if (receipt.kind === 'conflict') return { kind: 'idempotency_conflict' };
+      if (receipt.kind === 'inconsistent') return { kind: 'receipt_inconsistent' };
+      if (receipt.kind === 'replay') {
+        const replay = await client.query<WorkspaceWireframeRow>(
+          `SELECT ${wireframeMutationSelection},
+                  (SELECT category.id FROM categories category
+                   WHERE category.user_id = wireframes.user_id
+                     AND LOWER(category.name) = LOWER(wireframes.category)
+                   LIMIT 1) AS category_id
+           FROM wireframes WHERE id = $1 AND user_id = $2`,
+          [receipt.entityId, userId],
+        );
+        return replay.rows[0]
+          ? { kind: 'completed', row: replay.rows[0] }
+          : { kind: 'receipt_inconsistent' };
+      }
       const category = await this.categoryForCreate(
         client,
         userId,
@@ -1153,6 +1396,12 @@ export class WorkspaceContentRepository {
           values.zIndex,
           values.colorValue,
         ],
+      );
+      await this.completeCreationReceipt(
+        client,
+        userId,
+        idempotencyKey,
+        Number(result.rows[0].id),
       );
       return {
         kind: 'completed',

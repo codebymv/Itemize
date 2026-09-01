@@ -43,6 +43,7 @@ import { LandingPagePreviewFrame } from '@/components/LandingPagePreviewFrame';
 import { PagePreviewDialog } from '@/components/PagePreviewDialog';
 import { landingPageQueryKeys } from '@/services/landingPageQueryKeys';
 import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
+import { useKeyedSingleFlightAction, useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 
 type LandingPage = Page & {
     conversions: number;
@@ -58,6 +59,8 @@ export function LandingPagesPage() {
     const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('pages');
 
     const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({ onError: () => 'Failed to initialize.' });
+    const { pending: createPending, run: runCreate } = useSingleFlightAction();
+    const { isPending: isRowPending, run: runRowAction } = useKeyedSingleFlightAction<number>();
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -120,40 +123,46 @@ export function LandingPagesPage() {
 
     const handleCreatePage = async () => {
         if (!organizationId) return;
-        try {
-            const newPage = await createPage({ name: 'New Page' }, organizationId);
-            navigate(`/pages/${newPage.id}`);
-        } catch (error) {
-            toast({ title: 'Error', description: toastMessages.failedToCreate('page'), variant: 'destructive' });
-        }
+        await runCreate(async () => {
+            try {
+                const newPage = await createPage({ name: 'New Page' }, organizationId);
+                navigate(`/pages/${newPage.id}`);
+            } catch (error) {
+                toast({ title: 'Error', description: toastMessages.failedToCreate('page'), variant: 'destructive' });
+            }
+        });
     };
 
     const handleToggleStatus = async (page: LandingPage, newStatus: 'published' | 'draft') => {
         if (!organizationId) return;
-        try {
-            await updatePage(page.id, { status: newStatus }, organizationId);
-            await queryClient.invalidateQueries({
-                queryKey: landingPageQueryKeys.pages(organizationId),
-            });
-            setExpandedPageData(current => current?.id === page.id ? { ...current, status: newStatus } : current);
-            setPreviewPage(current => current?.id === page.id ? { ...current, status: newStatus } : current);
-            toast({ title: newStatus === 'published' ? 'Page published' : 'Page unpublished' });
-        } catch (error) {
-            toast({ title: 'Error', description: toastMessages.failedToUpdate('page'), variant: 'destructive' });
-        }
+        await runRowAction(page.id, async () => {
+            try {
+                await updatePage(page.id, { status: newStatus }, organizationId);
+                await queryClient.invalidateQueries({
+                    queryKey: landingPageQueryKeys.pages(organizationId),
+                });
+                setExpandedPageData(current => current?.id === page.id ? { ...current, status: newStatus } : current);
+                setPreviewPage(current => current?.id === page.id ? { ...current, status: newStatus } : current);
+                toast({ title: newStatus === 'published' ? 'Page published' : 'Page unpublished' });
+            } catch (error) {
+                toast({ title: 'Error', description: toastMessages.failedToUpdate('page'), variant: 'destructive' });
+            }
+        });
     };
 
-const handleDuplicate = async (id: number) => {
+    const handleDuplicate = async (id: number) => {
         if (!organizationId) return;
-        try {
-            await duplicatePage(id, organizationId);
-            await queryClient.invalidateQueries({
-                queryKey: landingPageQueryKeys.pages(organizationId),
-            });
-            toast({ title: 'Duplicated', description: toastMessages.duplicated('page') });
-        } catch (error) {
-            toast({ title: 'Error', description: toastMessages.failedToDuplicate('page'), variant: 'destructive' });
-        }
+        await runRowAction(id, async () => {
+            try {
+                await duplicatePage(id, organizationId);
+                await queryClient.invalidateQueries({
+                    queryKey: landingPageQueryKeys.pages(organizationId),
+                });
+                toast({ title: 'Duplicated', description: toastMessages.duplicated('page') });
+            } catch (error) {
+                toast({ title: 'Error', description: toastMessages.failedToDuplicate('page'), variant: 'destructive' });
+            }
+        });
     };
 
     const handleDelete = async (): Promise<boolean> => {
@@ -260,7 +269,7 @@ const handleDuplicate = async (id: number) => {
                 search: <HeaderSearch label="Search pages" placeholder="Search pages..." value={searchQuery} onChange={setSearchQuery} width="wide" />,
                 filters: <HeaderFilters label="Filter pages by status" activeCount={Number(statusFilter !== 'all')} compactChildren={statusSelect(true)} preferExpanded="when-roomy">{statusSelect()}</HeaderFilters>,
                 combinedQuery: <HeaderCombinedQuery label="Search and filter pages" placeholder="Search pages..." value={searchQuery} onChange={setSearchQuery} activeCount={Number(Boolean(normalizedQuery)) + Number(statusFilter !== 'all')}>{statusSelect(true)}</HeaderCombinedQuery>,
-                primaryAction: <HeaderAction label="New page" icon={<Plus className="h-4 w-4" />} onClick={handleCreatePage} />,
+                primaryAction: <HeaderAction label="New page" icon={<Plus className="h-4 w-4" />} onClick={handleCreatePage} busy={createPending} />,
             }}
         >
             <OnboardingModal
@@ -304,8 +313,9 @@ const handleDuplicate = async (id: number) => {
                                 const StatusIcon = visual.icon;
                                 const isExpanded = expandedPageId === page.id;
                                 const previewData = isExpanded && expandedPageData?.id === page.id ? expandedPageData : null;
+                                const rowPending = isRowPending(page.id);
                                 return (
-                                <div key={page.id}>
+                                <div key={page.id} aria-busy={rowPending ? 'true' : undefined}>
                                     <div
                                         role="button"
                                         tabIndex={0}
@@ -337,7 +347,7 @@ const handleDuplicate = async (id: number) => {
                                             </Button>
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-9 w-9" aria-label={`More actions for ${page.name}`}>
+                                                    <Button variant="ghost" size="icon" className="h-9 w-9" disabled={rowPending} aria-label={`More actions for ${page.name}`}>
                                                         <MoreHorizontal className="h-4 w-4" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
@@ -380,14 +390,14 @@ const handleDuplicate = async (id: number) => {
                                                 <Button size="sm" className="bg-blue-600 text-white interaction-button--primary" disabled={!previewData} onClick={() => previewData && setPreviewPage(previewData)}>
                                                     <Maximize2 className="h-4 w-4" /><ExpandedRowActionLabel full="Full preview" compact="Preview" />
                                                 </Button>
-                                                <Button size="sm" className="bg-blue-600 text-white interaction-button--primary" onClick={() => handleToggleStatus(page, page.status === 'published' ? 'draft' : 'published')}>
+                                                <Button size="sm" className="bg-blue-600 text-white interaction-button--primary" disabled={rowPending} onClick={() => handleToggleStatus(page, page.status === 'published' ? 'draft' : 'published')}>
                                                     {page.status === 'published' ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                                     <ExpandedRowActionLabel full={page.status === 'published' ? 'Unpublish page' : 'Publish page'} compact={page.status === 'published' ? 'Unpublish' : 'Publish'} />
                                                 </Button>
                                                 {page.status === 'published' && <Button size="sm" className="bg-blue-600 text-white interaction-button--primary" onClick={() => copyPageLink(page.slug)}>
                                                     <Copy className="h-4 w-4" /><ExpandedRowActionLabel full="Copy public link" compact="Copy" />
                                                 </Button>}
-                                                <Button size="sm" className="bg-blue-600 text-white interaction-button--primary" onClick={() => handleDuplicate(page.id)}>
+                                                <Button size="sm" className="bg-blue-600 text-white interaction-button--primary" disabled={rowPending} onClick={() => handleDuplicate(page.id)}>
                                                     <Copy className="h-4 w-4" /><ExpandedRowActionLabel full="Duplicate page" compact="Duplicate" />
                                                 </Button>
                                                 <Button size="sm" variant="outline" className="border-destructive/30 text-destructive interaction-button--destructive-ghost" onClick={() => setPageToDelete(page)}>

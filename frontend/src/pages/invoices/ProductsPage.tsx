@@ -39,6 +39,7 @@ import { Switch } from '@/components/ui/switch';
 import { AvailabilitySettingRow } from '@/components/settings/SettingsPrimitives';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/hooks/useOrganization';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 import { PageLayout } from '@/components/layout/PageLayout';
 import {
     HeaderAction,
@@ -133,7 +134,7 @@ export function ProductsPage() {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
     const [formData, setFormData] = useState<ProductFormData>(defaultFormData);
-    const [saving, setSaving] = useState(false);
+    const { pending: saving, run: runSave, dismissIfIdle } = useSingleFlightAction();
     const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
     useEffect(() => {
@@ -209,22 +210,21 @@ export function ProductsPage() {
     const handleSave = async () => {
         if (!organizationId || !formData.name) return;
 
-        setSaving(true);
-        try {
-            if (editingProduct) {
-                await updateProduct(editingProduct.id, formData, organizationId);
-                toast({ title: 'Updated', description: 'Product updated successfully' });
-            } else {
-                await createProduct(formData, organizationId);
-                toast({ title: 'Created', description: 'Product created successfully' });
+        await runSave(async () => {
+            try {
+                if (editingProduct) {
+                    await updateProduct(editingProduct.id, formData, organizationId);
+                    toast({ title: 'Updated', description: 'Product updated successfully' });
+                } else {
+                    await createProduct(formData, organizationId);
+                    toast({ title: 'Created', description: 'Product created successfully' });
+                }
+                setDialogOpen(false);
+                await queryClient.invalidateQueries({ queryKey: productQueryKeys.all(organizationId) });
+            } catch {
+                toast({ title: 'Error', description: 'Failed to save product', variant: 'destructive' });
             }
-            setDialogOpen(false);
-            await queryClient.invalidateQueries({ queryKey: productQueryKeys.all(organizationId) });
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to save product', variant: 'destructive' });
-        } finally {
-            setSaving(false);
-        }
+        });
     };
 
     const handleDelete = async (): Promise<boolean> => {
@@ -514,7 +514,10 @@ export function ProductsPage() {
                 </div>
             )}
 
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <Dialog open={dialogOpen} onOpenChange={(open) => {
+                if (open) setDialogOpen(true);
+                else dismissIfIdle(() => setDialogOpen(false));
+            }}>
                 <ModalContent size="md">
                     <ModalHeader
                         icon={Package}
@@ -632,13 +635,14 @@ export function ProductsPage() {
                         </div>
                     </ModalBody>
                     <ModalFooter>
-                        <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                        <Button variant="outline" onClick={() => dismissIfIdle(() => setDialogOpen(false))} disabled={saving}>
                             Cancel
                         </Button>
                         <Button
                             onClick={handleSave}
                             disabled={saving || !formData.name}
                             className="bg-blue-600 interaction-button--primary text-white"
+                            aria-busy={saving || undefined}
                         >
                             {saving ? 'Saving...' : editingProduct ? 'Save Changes' : 'Create Product'}
                         </Button>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +23,7 @@ import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '
 import { createContactFormSchema, type CreateContactFormValues } from '@/lib/formSchemas';
 import { getApiErrorMessage } from '@/lib/error-messages';
 import logger from '@/lib/logger';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 
 interface CreateContactModalProps {
   organizationId: number;
@@ -39,7 +40,7 @@ export function CreateContactModal({
   createContactAsync,
 }: CreateContactModalProps) {
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const { pending: loading, run, dismissIfIdle } = useSingleFlightAction();
 
   const form = useForm<CreateContactFormValues>({
     resolver: zodResolver(createContactFormSchema),
@@ -56,30 +57,29 @@ export function CreateContactModal({
   });
 
   const handleSubmit = async (values: CreateContactFormValues) => {
-    setLoading(true);
-    try {
-      const contactData: CreateContactData = {
-        ...values,
-        organization_id: organizationId,
-      };
-      const doCreate = createContactAsync ?? createContact;
-      const contact = await doCreate(contactData);
-      onCreated(contact);
-      form.reset();
-    } catch (error) {
-      logger.error('Error creating contact:', error);
-      toast({
-        title: 'Error',
-        description: getApiErrorMessage(error, 'Failed to create contact'),
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
+    await run(async () => {
+      try {
+        const contactData: CreateContactData = {
+          ...values,
+          organization_id: organizationId,
+        };
+        const doCreate = createContactAsync ?? createContact;
+        const contact = await doCreate(contactData);
+        onCreated(contact);
+        form.reset();
+      } catch (error) {
+        logger.error('Error creating contact:', error);
+        toast({
+          title: 'Error',
+          description: getApiErrorMessage(error, 'Failed to create contact'),
+          variant: 'destructive',
+        });
+      }
+    });
   };
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
+    <Dialog open onOpenChange={(open) => !open && dismissIfIdle(onClose)}>
       <ModalContent size="md">
         <ModalHeader
           icon={UserPlus}
@@ -247,7 +247,7 @@ export function CreateContactModal({
 
             </ModalBody>
             <ModalFooter>
-              <Button type="button" variant="outline" onClick={onClose} style={{ fontFamily: '"Raleway", sans-serif' }} aria-label="Cancel">
+              <Button type="button" variant="outline" onClick={() => dismissIfIdle(onClose)} disabled={loading} style={{ fontFamily: '"Raleway", sans-serif' }} aria-label="Cancel">
                 Cancel
               </Button>
               <Button
@@ -256,6 +256,7 @@ export function CreateContactModal({
                 className="bg-blue-600 interaction-button--primary text-white"
                 style={{ fontFamily: '"Raleway", sans-serif' }}
                 aria-label={loading ? 'Creating contact' : 'Create contact'}
+                aria-busy={loading || undefined}
               >
                 {loading ? 'Creating...' : 'Create Contact'}
               </Button>

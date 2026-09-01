@@ -126,4 +126,39 @@ describe('AccountDeletionAction', () => {
     expect(screen.getByRole('button', { name: 'Review organization settings' })).toBeEnabled();
     expect(mocks.deleteAccount).not.toHaveBeenCalled();
   });
+
+  it('single-flights deletion and keeps the confirmation open while unresolved', async () => {
+    let resolveDeletion: ((value: {
+      success: boolean;
+      scheduledAt: string;
+      recoveryDays: number;
+    }) => void) | undefined;
+    mocks.deleteAccount.mockImplementation(() => new Promise((resolve) => {
+      resolveDeletion = resolve;
+    }));
+    render(<AccountDeletionAction />);
+    fireEvent.click(screen.getByRole('button', { name: 'Delete my account' }));
+    await screen.findByLabelText('Type member@example.com to confirm');
+    fireEvent.change(screen.getByLabelText('Type member@example.com to confirm'), {
+      target: { value: 'member@example.com' },
+    });
+    fireEvent.change(screen.getByLabelText('Current password'), {
+      target: { value: 'StrongPass1' },
+    });
+    const submit = screen.getByRole('button', { name: 'Schedule account deletion' });
+    fireEvent.click(submit);
+    fireEvent.click(submit);
+
+    expect(mocks.deleteAccount).toHaveBeenCalledTimes(1);
+    expect(submit).toHaveAttribute('aria-busy', 'true');
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.getByRole('alertdialog')).toBeInTheDocument();
+
+    resolveDeletion?.({
+      success: true,
+      scheduledAt: '2026-09-03T12:00:00.000Z',
+      recoveryDays: 7,
+    });
+    await waitFor(() => expect(mocks.logout).toHaveBeenCalledTimes(1));
+  });
 });

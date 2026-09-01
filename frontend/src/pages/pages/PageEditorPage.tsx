@@ -69,6 +69,7 @@ import { SectionCardTitle } from '@/components/ui/section-card-title';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useDirtyState } from '@/hooks/useDirtyState';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 import {
     getPage,
     updatePage,
@@ -128,7 +129,7 @@ export function PageEditorPage() {
     const [page, setPage] = useState<Page | null>(null);
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState<string | null>(null);
-    const [saving, setSaving] = useState(false);
+    const { pending: saving, run: runMutation } = useSingleFlightAction();
     const { organizationId, error: organizationError } = useOrganization();
 
     // Edit states
@@ -196,39 +197,37 @@ export function PageEditorPage() {
     // Save page changes
     const handleSave = async () => {
         if (!page || !organizationId) return;
-        setSaving(true);
-        try {
-            await updatePage(page.id, {
-                name: editedName,
-                slug: editedSlug,
-                description: editedDescription || undefined,
-                seo_title: editedSeoTitle || undefined,
-                seo_description: editedSeoDescription || undefined,
-            }, organizationId);
-            markClean();
-            toast({ title: 'Saved', description: 'Page updated successfully' });
-            loadPage();
-        } catch (error: unknown) {
-            toast({ title: 'Error', description: getErrorMessage(error, 'Failed to save'), variant: 'destructive' });
-        } finally {
-            setSaving(false);
-        }
+        await runMutation(async () => {
+            try {
+                await updatePage(page.id, {
+                    name: editedName,
+                    slug: editedSlug,
+                    description: editedDescription || undefined,
+                    seo_title: editedSeoTitle || undefined,
+                    seo_description: editedSeoDescription || undefined,
+                }, organizationId);
+                markClean();
+                toast({ title: 'Saved', description: 'Page updated successfully' });
+                void loadPage();
+            } catch (error: unknown) {
+                toast({ title: 'Error', description: getErrorMessage(error, 'Failed to save'), variant: 'destructive' });
+            }
+        });
     };
 
     // Toggle publish status
     const handleTogglePublish = async () => {
         if (!page || !organizationId) return;
-        setSaving(true);
-        try {
-            const newStatus = page.status === 'published' ? 'draft' : 'published';
-            await updatePage(page.id, { status: newStatus }, organizationId);
-            toast({ title: newStatus === 'published' ? 'Published' : 'Unpublished', description: `Page is now ${newStatus}` });
-            loadPage();
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to update status', variant: 'destructive' });
-        } finally {
-            setSaving(false);
-        }
+        await runMutation(async () => {
+            try {
+                const newStatus = page.status === 'published' ? 'draft' : 'published';
+                await updatePage(page.id, { status: newStatus }, organizationId);
+                toast({ title: newStatus === 'published' ? 'Published' : 'Unpublished', description: `Page is now ${newStatus}` });
+                void loadPage();
+            } catch {
+                toast({ title: 'Error', description: 'Failed to update status', variant: 'destructive' });
+            }
+        });
     };
 
     // Add section
@@ -381,7 +380,7 @@ export function PageEditorPage() {
         </DropdownMenu>
     );
     const publishAction = (
-        <Button variant="outline" className="h-11 min-w-11 gap-2 px-3 font-light" onClick={handleTogglePublish} disabled={saving || isDirty} aria-label={page.status === 'published' ? 'Unpublish page' : 'Publish page'}>
+        <Button variant="outline" className="h-11 min-w-11 gap-2 px-3 font-light" onClick={handleTogglePublish} disabled={saving || isDirty} aria-busy={saving || undefined} aria-label={page.status === 'published' ? 'Unpublish page' : 'Publish page'}>
             {page.status === 'published' ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             <span className="hidden xl:inline">{page.status === 'published' ? 'Unpublish' : 'Publish'}</span>
         </Button>

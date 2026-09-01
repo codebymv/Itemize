@@ -18,6 +18,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { Calendar as CalendarType } from '@/types';
 import { createCalendar, CalendarCreateData } from '@/services/calendarsApi';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 
 const getApiErrorMessage = (error: unknown, fallback: string): string => {
     const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
@@ -69,7 +70,7 @@ export function CreateCalendarModal({
     onCreated,
 }: CreateCalendarModalProps) {
     const { toast } = useToast();
-    const [loading, setLoading] = useState(false);
+    const { pending: loading, run, dismissIfIdle } = useSingleFlightAction();
     const [formData, setFormData] = useState<CalendarCreateData>({
         name: '',
         description: '',
@@ -95,24 +96,23 @@ export function CreateCalendarModal({
             return;
         }
 
-        setLoading(true);
-        try {
-            const calendar = await createCalendar(formData);
-            onCreated(calendar);
-        } catch (error) {
-            console.error('Error creating calendar:', error);
-            toast({
-                title: 'Error',
-                description: getApiErrorMessage(error, 'Failed to create calendar'),
-                variant: 'destructive',
-            });
-        } finally {
-            setLoading(false);
-        }
+        await run(async () => {
+            try {
+                const calendar = await createCalendar(formData);
+                onCreated(calendar);
+            } catch (error) {
+                console.error('Error creating calendar:', error);
+                toast({
+                    title: 'Error',
+                    description: getApiErrorMessage(error, 'Failed to create calendar'),
+                    variant: 'destructive',
+                });
+            }
+        });
     };
 
     return (
-        <Dialog open onOpenChange={onClose}>
+        <Dialog open onOpenChange={(open) => !open && dismissIfIdle(onClose)}>
             <ModalContent size="md">
                 <ModalHeader
                     icon={CalendarDays}
@@ -262,7 +262,7 @@ export function CreateCalendarModal({
                     </ModalBody>
 
                     <ModalFooter>
-                        <Button type="button" variant="outline" onClick={onClose}>
+                        <Button type="button" variant="outline" onClick={() => dismissIfIdle(onClose)} disabled={loading}>
                             Cancel
                         </Button>
                         <Button
@@ -270,6 +270,7 @@ export function CreateCalendarModal({
                             disabled={loading}
                             className="bg-blue-600 interaction-button--primary text-white"
                             aria-label={loading ? 'Creating calendar...' : 'Create calendar'}
+                            aria-busy={loading || undefined}
                         >
                             {loading ? 'Creating...' : 'Create calendar'}
                         </Button>

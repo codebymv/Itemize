@@ -46,6 +46,7 @@ import {
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { OrganizationErrorState } from '@/components/OrganizationErrorState';
+import { useKeyedSingleFlightAction } from '@/hooks/useSingleFlightAction';
 
 const getApiStatus = (error: unknown): number | undefined =>
   (error as { response?: { status?: number } })?.response?.status;
@@ -76,6 +77,7 @@ export function PipelinesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [stackedPipelineIds, setStackedPipelineIds] = useState<number[]>([]);
   const [stackedPipelinesHydratedFor, setStackedPipelinesHydratedFor] = useState<number | null>(null);
+  const { isPending: isDealPending, run: runDealAction } = useKeyedSingleFlightAction<number>();
 
   const pipelineWorkspaceQueryKey = useMemo(
     () => ['pipeline-workspace', organizationId, selectedPipelineId] as const,
@@ -156,54 +158,55 @@ export function PipelinesPage() {
   // Handle deal stage change (drag and drop)
   const handleDealMove = async (pipelineId: number, dealId: number, newStageId: string) => {
     if (!organizationId) return;
-
-    const isPrimaryPipeline = currentPipeline?.id === pipelineId;
-    const targetPipelineQueryKey = ['pipeline', organizationId, pipelineId] as const;
-    const previousPipeline = isPrimaryPipeline
-      ? queryClient.getQueryData<PipelineWorkspace>(pipelineWorkspaceQueryKey)
-      : queryClient.getQueryData<PipelineWithDeals>(targetPipelineQueryKey);
-    if (isPrimaryPipeline) {
-      queryClient.setQueryData<PipelineWorkspace>(pipelineWorkspaceQueryKey, (workspace) => {
-        if (!workspace?.selectedPipeline) return workspace;
-        return {
-          ...workspace,
-          selectedPipeline: {
-            ...workspace.selectedPipeline,
-            deals: workspace.selectedPipeline.deals.map((deal) => (
+    await runDealAction(dealId, async () => {
+      const isPrimaryPipeline = currentPipeline?.id === pipelineId;
+      const targetPipelineQueryKey = ['pipeline', organizationId, pipelineId] as const;
+      const previousPipeline = isPrimaryPipeline
+        ? queryClient.getQueryData<PipelineWorkspace>(pipelineWorkspaceQueryKey)
+        : queryClient.getQueryData<PipelineWithDeals>(targetPipelineQueryKey);
+      if (isPrimaryPipeline) {
+        queryClient.setQueryData<PipelineWorkspace>(pipelineWorkspaceQueryKey, (workspace) => {
+          if (!workspace?.selectedPipeline) return workspace;
+          return {
+            ...workspace,
+            selectedPipeline: {
+              ...workspace.selectedPipeline,
+              deals: workspace.selectedPipeline.deals.map((deal) => (
+                deal.id === dealId ? { ...deal, stage_id: newStageId } : deal
+              )),
+            },
+          };
+        });
+      } else {
+        queryClient.setQueryData<PipelineWithDeals>(targetPipelineQueryKey, (pipeline) => {
+          if (!pipeline) return pipeline;
+          return {
+            ...pipeline,
+            deals: pipeline.deals.map((deal) => (
               deal.id === dealId ? { ...deal, stage_id: newStageId } : deal
             )),
-          },
-        };
-      });
-    } else {
-      queryClient.setQueryData<PipelineWithDeals>(targetPipelineQueryKey, (pipeline) => {
-        if (!pipeline) return pipeline;
-        return {
-          ...pipeline,
-          deals: pipeline.deals.map((deal) => (
-            deal.id === dealId ? { ...deal, stage_id: newStageId } : deal
-          )),
-        };
-      });
-    }
-
-    try {
-      await moveDealToStage(dealId, newStageId, organizationId);
-    } catch (error) {
-      if (previousPipeline) {
-        if (isPrimaryPipeline) {
-          queryClient.setQueryData(pipelineWorkspaceQueryKey, previousPipeline);
-        } else {
-          queryClient.setQueryData(targetPipelineQueryKey, previousPipeline);
-        }
+          };
+        });
       }
-      console.error('Error moving deal:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to move deal',
-        variant: 'destructive',
-      });
-    }
+
+      try {
+        await moveDealToStage(dealId, newStageId, organizationId);
+      } catch (error) {
+        if (previousPipeline) {
+          if (isPrimaryPipeline) {
+            queryClient.setQueryData(pipelineWorkspaceQueryKey, previousPipeline);
+          } else {
+            queryClient.setQueryData(targetPipelineQueryKey, previousPipeline);
+          }
+        }
+        console.error('Error moving deal:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to move deal',
+          variant: 'destructive',
+        });
+      }
+    });
   };
 
   // Handle deal created
@@ -449,6 +452,8 @@ export function PipelinesPage() {
       onAddDeal={(stageId) => openCreateDeal(pipeline.id, stageId)}
       onRefresh={() => refreshPipeline(pipeline.id)}
       organizationId={organizationId!}
+      isDealPending={isDealPending}
+      runDealAction={runDealAction}
       onRemove={stacked ? () => removeStackedPipeline(pipeline.id) : undefined}
     />
   );

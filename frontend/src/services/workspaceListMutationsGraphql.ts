@@ -87,8 +87,9 @@ const mapInput = (input: ListPayload) => ({
 
 export const createWorkspaceListViaGraphql = async (
   input: ListPayload,
+  idempotencyKey: string,
 ): Promise<LegacyWorkspaceList> => {
-  const variables = { input: mapInput(input) };
+  const variables = { input: { idempotencyKey, ...mapInput(input) } };
   const data = await graphqlMutationRequest<
     { createWorkspaceList: GraphqlWorkspaceList },
     typeof variables

@@ -23,6 +23,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { createSmsTemplate, getMessageInfo, MessageInfo, updateSmsTemplate, type SmsTemplate } from '@/services/smsApi';
 import { debounce } from 'lodash';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 
 interface CreateSMSTemplateModalProps {
   organizationId: number;
@@ -61,7 +62,7 @@ export function CreateSMSTemplateModal({
 }: CreateSMSTemplateModalProps) {
   const isEditing = Boolean(template);
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const { pending: loading, run, dismissIfIdle } = useSingleFlightAction();
   const [formData, setFormData] = useState({
     name: template?.name ?? '',
     message: template?.message ?? '',
@@ -141,34 +142,33 @@ export function CreateSMSTemplateModal({
       return;
     }
 
-    setLoading(true);
-    try {
-      const values = {
-        organization_id: organizationId,
-        name: formData.name.trim(),
-        message: formData.message,
-        category: formData.category || undefined,
-        is_active: formData.is_active,
-      };
-      const savedTemplate = template
-        ? await updateSmsTemplate(template.id, values)
-        : await createSmsTemplate(values);
-      toast({
-        title: isEditing ? 'Template updated' : 'Template created',
-        description: isEditing ? 'Your SMS template changes have been saved.' : 'SMS template has been created successfully',
-      });
-      if (isEditing) onUpdated?.(savedTemplate);
-      else onCreated(savedTemplate);
-    } catch (error) {
-      console.error(`Error ${isEditing ? 'updating' : 'creating'} template:`, error);
-      toast({
-        title: 'Error',
-        description: getApiErrorMessage(error, `Failed to ${isEditing ? 'update' : 'create'} template`),
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
+    await run(async () => {
+      try {
+        const values = {
+          organization_id: organizationId,
+          name: formData.name.trim(),
+          message: formData.message,
+          category: formData.category || undefined,
+          is_active: formData.is_active,
+        };
+        const savedTemplate = template
+          ? await updateSmsTemplate(template.id, values)
+          : await createSmsTemplate(values);
+        toast({
+          title: isEditing ? 'Template updated' : 'Template created',
+          description: isEditing ? 'Your SMS template changes have been saved.' : 'SMS template has been created successfully',
+        });
+        if (isEditing) onUpdated?.(savedTemplate);
+        else onCreated(savedTemplate);
+      } catch (error) {
+        console.error(`Error ${isEditing ? 'updating' : 'creating'} template:`, error);
+        toast({
+          title: 'Error',
+          description: getApiErrorMessage(error, `Failed to ${isEditing ? 'update' : 'create'} template`),
+          variant: 'destructive',
+        });
+      }
+    });
   };
 
   const getSegmentColor = () => {
@@ -179,7 +179,7 @@ export function CreateSMSTemplateModal({
   };
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
+    <Dialog open onOpenChange={(open) => !open && dismissIfIdle(onClose)}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -289,7 +289,8 @@ export function CreateSMSTemplateModal({
             <Button
               type="button"
               variant="outline"
-              onClick={onClose}
+              onClick={() => dismissIfIdle(onClose)}
+              disabled={loading}
               style={{ fontFamily: '"Raleway", sans-serif' }}
               aria-label="Cancel"
             >
@@ -301,6 +302,7 @@ export function CreateSMSTemplateModal({
               className="bg-blue-600 interaction-button--primary text-white"
               style={{ fontFamily: '"Raleway", sans-serif' }}
               aria-label={loading ? `${isEditing ? 'Saving' : 'Creating'} template...` : isEditing ? 'Save template changes' : 'Create template'}
+              aria-busy={loading || undefined}
             >
               {loading ? (isEditing ? 'Saving...' : 'Creating...') : (isEditing ? 'Save Changes' : 'Create Template')}
             </Button>

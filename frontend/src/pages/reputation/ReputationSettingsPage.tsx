@@ -23,6 +23,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { useDirtyState } from '@/hooks/useDirtyState';
 import { useOrganization } from '@/hooks/useOrganization';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 import { useToast } from '@/hooks/use-toast';
 import {
   addPlatform,
@@ -56,10 +57,14 @@ export function ReputationSettingsPage() {
   const { organizationId, isLoading: organizationLoading, error: initError } = useOrganization({ onError: () => 'Failed to initialize.' });
   const [mode, setMode] = useState<SettingsMode>('platforms');
   const [settings, setSettings] = useState<ReputationSettings | null>(null);
-  const [saving, setSaving] = useState(false);
+  const { pending: saving, run: runSettingsSave } = useSingleFlightAction();
   const [platformDialogOpen, setPlatformDialogOpen] = useState(false);
   const [platformDraft, setPlatformDraft] = useState<PlatformDraft>(EMPTY_PLATFORM);
-  const [savingPlatform, setSavingPlatform] = useState(false);
+  const {
+    pending: savingPlatform,
+    run: runPlatformSave,
+    dismissIfIdle: dismissPlatformIfIdle,
+  } = useSingleFlightAction();
   const [platformToDelete, setPlatformToDelete] = useState<ReviewPlatform | null>(null);
   const bootstrapQueryKey = ['reputation-configuration', organizationId] as const;
   const bootstrapQuery = useQuery({
@@ -94,22 +99,21 @@ export function ReputationSettingsPage() {
   };
 
   const saveSettings = async () => {
-    if (!organizationId || !settings || saving) return;
-    setSaving(true);
-    try {
-      const saved = await updateReputationSettings(settings, organizationId);
-      setSettings(saved);
-      queryClient.setQueryData<ReputationConfigurationBootstrap>(
-        bootstrapQueryKey,
-        current => current ? { ...current, settings: saved } : current,
-      );
-      markClean(saved);
-      toast({ title: 'Reputation settings saved' });
-    } catch {
-      toast({ title: 'Could not save reputation settings', variant: 'destructive' });
-    } finally {
-      setSaving(false);
-    }
+    if (!organizationId || !settings) return;
+    await runSettingsSave(async () => {
+      try {
+        const saved = await updateReputationSettings(settings, organizationId);
+        setSettings(saved);
+        queryClient.setQueryData<ReputationConfigurationBootstrap>(
+          bootstrapQueryKey,
+          current => current ? { ...current, settings: saved } : current,
+        );
+        markClean(saved);
+        toast({ title: 'Reputation settings saved' });
+      } catch {
+        toast({ title: 'Could not save reputation settings', variant: 'destructive' });
+      }
+    });
   };
 
   const openPlatform = (platform?: ReviewPlatform) => {
@@ -125,22 +129,21 @@ export function ReputationSettingsPage() {
   };
 
   const savePlatform = async () => {
-    if (!organizationId || savingPlatform) return;
-    setSavingPlatform(true);
-    try {
-      const saved = await addPlatform(platformDraft, organizationId);
-      queryClient.setQueryData<ReputationConfigurationBootstrap>(bootstrapQueryKey, current => current ? {
-        ...current,
-        platforms: [...current.platforms.filter(item => item.id !== saved.id && !(item.platform === saved.platform && item.place_id === saved.place_id)), saved]
-          .sort((left, right) => getReputationPlatformLabel(left.platform).localeCompare(getReputationPlatformLabel(right.platform))),
-      } : current);
-      setPlatformDialogOpen(false);
-      toast({ title: 'Review platform saved' });
-    } catch {
-      toast({ title: 'Could not save review platform', variant: 'destructive' });
-    } finally {
-      setSavingPlatform(false);
-    }
+    if (!organizationId) return;
+    await runPlatformSave(async () => {
+      try {
+        const saved = await addPlatform(platformDraft, organizationId);
+        queryClient.setQueryData<ReputationConfigurationBootstrap>(bootstrapQueryKey, current => current ? {
+          ...current,
+          platforms: [...current.platforms.filter(item => item.id !== saved.id && !(item.platform === saved.platform && item.place_id === saved.place_id)), saved]
+            .sort((left, right) => getReputationPlatformLabel(left.platform).localeCompare(getReputationPlatformLabel(right.platform))),
+        } : current);
+        setPlatformDialogOpen(false);
+        toast({ title: 'Review platform saved' });
+      } catch {
+        toast({ title: 'Could not save review platform', variant: 'destructive' });
+      }
+    });
   };
 
   const deletePlatform = async (): Promise<boolean> => {
@@ -242,7 +245,10 @@ export function ReputationSettingsPage() {
         </TabsContent>
       </Tabs>
 
-      <Dialog open={platformDialogOpen} onOpenChange={setPlatformDialogOpen}>
+      <Dialog open={platformDialogOpen} onOpenChange={open => {
+        if (open) setPlatformDialogOpen(true);
+        else dismissPlatformIfIdle(() => setPlatformDialogOpen(false));
+      }}>
         <ModalContent size="md">
           <ModalHeader
             icon={Link2}
@@ -257,7 +263,7 @@ export function ReputationSettingsPage() {
             <div className="grid gap-2 sm:col-span-2"><Label htmlFor="platform-review-url">Review URL</Label><Input id="platform-review-url" type="url" placeholder="https://..." value={platformDraft.review_url ?? ''} onChange={event => setPlatformDraft(current => ({ ...current, review_url: event.target.value || null }))} /></div>
             <div className="grid gap-2 sm:col-span-2"><Label htmlFor="platform-business-url">Business URL</Label><Input id="platform-business-url" type="url" placeholder="https://..." value={platformDraft.business_url ?? ''} onChange={event => setPlatformDraft(current => ({ ...current, business_url: event.target.value || null }))} /></div>
           </ModalBody>
-          <ModalFooter><Button variant="outline" onClick={() => setPlatformDialogOpen(false)} disabled={savingPlatform}>Cancel</Button><Button onClick={() => void savePlatform()} disabled={savingPlatform}>{savingPlatform ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}Save platform</Button></ModalFooter>
+          <ModalFooter><Button variant="outline" onClick={() => dismissPlatformIfIdle(() => setPlatformDialogOpen(false))} disabled={savingPlatform}>Cancel</Button><Button onClick={() => void savePlatform()} disabled={savingPlatform} aria-busy={savingPlatform || undefined}>{savingPlatform ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Link2 className="mr-2 h-4 w-4" />}Save platform</Button></ModalFooter>
         </ModalContent>
       </Dialog>
       <DeleteDialog open={Boolean(platformToDelete)} onOpenChange={open => { if (!open) setPlatformToDelete(null); }} onConfirm={deletePlatform} itemType="generic" itemTitle={platformToDelete ? getReputationPlatformLabel(platformToDelete.platform) : undefined} title="Disconnect review platform?" description="This removes the platform connection from Reputation. Existing reviews are retained." confirmText="Disconnect" successTitle="Review platform disconnected" errorDescription="Could not disconnect the review platform. Please try again." />

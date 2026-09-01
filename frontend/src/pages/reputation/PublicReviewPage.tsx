@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { getPublicReviewRequest, submitPublicReview, type PublicReviewRequest } from '@/services/reputationApi';
 import { safePublicReviewRedirect } from './publicReviewBehavior';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 
 export default function PublicReviewPage() {
   const { token } = useParams<{ token: string }>();
@@ -13,7 +14,7 @@ export default function PublicReviewPage() {
   const [rating, setRating] = useState(0);
   const [reviewText, setReviewText] = useState('');
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+  const { pending: submitting, run } = useSingleFlightAction();
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState('');
 
@@ -33,23 +34,22 @@ export default function PublicReviewPage() {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!token || submitting || rating < 1 || rating > 5) return;
-    setSubmitting(true);
+    if (!token || rating < 1 || rating > 5) return;
     setError('');
-    try {
-      const result = await submitPublicReview(token, {
-        rating,
-        review_text: reviewText.trim() || undefined,
-        platform: request?.preferred_platform || undefined,
-      });
-      setSubmitted(true);
-      const redirect = safePublicReviewRedirect(result.redirect_url);
-      if (redirect) window.location.assign(redirect);
-    } catch {
-      setError('We could not save your feedback. Please try again.');
-    } finally {
-      setSubmitting(false);
-    }
+    await run(async () => {
+      try {
+        const result = await submitPublicReview(token, {
+          rating,
+          review_text: reviewText.trim() || undefined,
+          platform: request?.preferred_platform || undefined,
+        });
+        setSubmitted(true);
+        const redirect = safePublicReviewRedirect(result.redirect_url);
+        if (redirect) window.location.assign(redirect);
+      } catch {
+        setError('We could not save your feedback. Please try again.');
+      }
+    });
   };
 
   if (loading) {

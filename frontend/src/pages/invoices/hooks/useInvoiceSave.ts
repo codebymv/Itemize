@@ -2,10 +2,10 @@
  * Hook for invoice save and send operations
  */
 
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useStableMutationKey } from '@/hooks/useStableMutationKey';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 import { toastMessages } from '@/constants/toastMessages';
 import {
   createInvoice,
@@ -74,7 +74,7 @@ export function useInvoiceSave({
   isNew,
   invoiceId,
 }: UseInvoiceSaveParams): UseInvoiceSaveReturn {
-  const [saving, setSaving] = useState(false);
+  const { pending: saving, run } = useSingleFlightAction();
   const navigate = useNavigate();
   const { toast } = useToast();
   const {
@@ -96,9 +96,9 @@ export function useInvoiceSave({
       return;
     }
 
-    setSaving(true);
-    try {
-      const invoiceData = {
+    await run(async () => {
+      try {
+        const invoiceData = {
         ...data,
         payment_terms: String(data.payment_terms ?? ''),
         items: validItems.map((item) => ({
@@ -111,27 +111,26 @@ export function useInvoiceSave({
         })),
       };
 
-      if (isNew) {
-        await createInvoice(invoiceData, organizationId);
+        if (isNew) {
+          await createInvoice(invoiceData, organizationId);
+          toast({
+            title: 'Created',
+            description: toastMessages.created('invoice'),
+          });
+          navigate('/invoices');
+        } else if (invoiceId) {
+          await updateInvoice(parseInt(invoiceId), invoiceData, organizationId);
+          toast({ title: 'Saved', description: toastMessages.saved('invoice') });
+          navigate('/invoices');
+        }
+      } catch (error) {
         toast({
-          title: 'Created',
-          description: toastMessages.created('invoice'),
+          title: 'Error',
+          description: toastMessages.failedToSave('invoice'),
+          variant: 'destructive',
         });
-        navigate('/invoices');
-      } else if (invoiceId) {
-        await updateInvoice(parseInt(invoiceId), invoiceData, organizationId);
-        toast({ title: 'Saved', description: toastMessages.saved('invoice') });
-        navigate('/invoices');
       }
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: toastMessages.failedToSave('invoice'),
-        variant: 'destructive',
-      });
-    } finally {
-      setSaving(false);
-    }
+    });
   };
 
   const handleSendInvoice = async (options: SendOptions) => {
@@ -141,18 +140,18 @@ export function useInvoiceSave({
       message: options.message,
       ccEmails: options.ccEmails,
     };
-    const idempotencyKey = beginInvoiceSend(JSON.stringify({
-      organizationId,
-      invoiceId,
-      payload,
-    }));
-    if (!idempotencyKey) return;
-    setSaving(true);
-    try {
-      const result = await sendInvoice(
-        parseInt(invoiceId), organizationId, payload, idempotencyKey,
-      );
-      resetInvoiceSend();
+    await run(async () => {
+      const idempotencyKey = beginInvoiceSend(JSON.stringify({
+        organizationId,
+        invoiceId,
+        payload,
+      }));
+      if (!idempotencyKey) return;
+      try {
+        const result = await sendInvoice(
+          parseInt(invoiceId), organizationId, payload, idempotencyKey,
+        );
+        resetInvoiceSend();
 
       // Show appropriate toast based on email status
       if (result.emailSent) {
@@ -174,14 +173,13 @@ export function useInvoiceSave({
         });
       }
 
-      navigate('/invoices');
-    } catch (error: unknown) {
-      releaseInvoiceSend();
-      const errorMessage = getApiErrorMessage(error, toastMessages.failedToSend('invoice'));
-      toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
-    } finally {
-      setSaving(false);
-    }
+        navigate('/invoices');
+      } catch (error: unknown) {
+        releaseInvoiceSend();
+        const errorMessage = getApiErrorMessage(error, toastMessages.failedToSend('invoice'));
+        toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
+      }
+    });
   };
 
   return {

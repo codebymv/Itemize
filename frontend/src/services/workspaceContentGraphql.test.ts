@@ -2,10 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   getCanvasListsViaGraphql,
   getWorkspaceListsViaGraphql,
+  getWorkspaceNoteViaGraphql,
   getWorkspaceNotesViaGraphql,
+  getWorkspaceWhiteboardViaGraphql,
   getWorkspaceWhiteboardsViaGraphql,
+  getWorkspaceWireframeViaGraphql,
   getWorkspaceWireframesViaGraphql,
   updateCanvasPositionsViaGraphql,
+  workspaceContentExistsViaGraphql,
 } from './workspaceContentGraphql';
 
 vi.mock('@/lib/api', () => ({
@@ -318,5 +322,51 @@ describe('workspace content GraphQL consumer', () => {
       (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body,
     ));
     expect(body.variables.input.mutationId).toBe('position-attempt-1');
+  });
+
+  it('checks one user-scoped workspace identity for delete reconciliation', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(response({
+      data: { workspaceContentExists: false },
+    }));
+
+    await expect(
+      workspaceContentExistsViaGraphql('wireframe', 7),
+    ).resolves.toBe(false);
+    const body = JSON.parse(String(
+      (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body,
+    ));
+    expect(body.variables).toEqual({ type: 'wireframe', id: 7 });
+  });
+
+  it('reads exact records for ambiguous update reconciliation', async () => {
+    vi.mocked(fetch)
+      .mockResolvedValueOnce(response({ data: { workspaceNote: note } }))
+      .mockResolvedValueOnce(response({
+        data: { workspaceWhiteboard: whiteboard },
+      }))
+      .mockResolvedValueOnce(response({
+        data: { workspaceWireframe: wireframe },
+      }));
+
+    await expect(getWorkspaceNoteViaGraphql(5)).resolves.toMatchObject({
+      id: 5,
+      content: 'Details',
+    });
+    await expect(getWorkspaceWhiteboardViaGraphql(6)).resolves.toMatchObject({
+      id: 6,
+      canvas_data: [{ drawMode: true, paths: [] }],
+    });
+    await expect(getWorkspaceWireframeViaGraphql(7)).resolves.toMatchObject({
+      id: 7,
+      flow_data: { nodes: [], edges: [] },
+    });
+    const bodies = vi.mocked(fetch).mock.calls.map((call) =>
+      JSON.parse(String((call[1] as RequestInit).body)),
+    );
+    expect(bodies.map((body) => body.variables)).toEqual([
+      { id: 5 },
+      { id: 6 },
+      { id: 7 },
+    ]);
   });
 });

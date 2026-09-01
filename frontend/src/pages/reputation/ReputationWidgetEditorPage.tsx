@@ -46,6 +46,7 @@ import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useDirtyState } from "@/hooks/useDirtyState";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
+import { useSingleFlightAction } from "@/hooks/useSingleFlightAction";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { QUERY_STALE_TIME_MS, shouldRetryQuery } from "@/lib/queryPolicy";
@@ -125,7 +126,7 @@ export function ReputationWidgetEditorPage() {
   const [draft, setDraft] = useState<WidgetDraft>(DEFAULT_DRAFT);
   const [widget, setWidget] = useState<ReviewWidget | null>(null);
   const [mode, setMode] = useState<EditorMode>("settings");
-  const [saving, setSaving] = useState(false);
+  const { pending: saving, run: runSave } = useSingleFlightAction();
   const validWidgetId = Number.isSafeInteger(widgetId) && (widgetId ?? 0) > 0;
   const widgetQueryKey = ["reputation-widget", organizationId, widgetId] as const;
   const widgetQuery = useQuery({
@@ -207,7 +208,7 @@ export function ReputationWidgetEditorPage() {
   };
 
   const save = async () => {
-    if (!organizationId || saving) return;
+    if (!organizationId) return;
     if (!draft.name.trim()) {
       toast({ title: "Enter a widget name", variant: "destructive" });
       return;
@@ -224,8 +225,8 @@ export function ReputationWidgetEditorPage() {
       });
       return;
     }
-    setSaving(true);
-    try {
+    await runSave(async () => {
+      try {
       const payload = { ...draft, name: draft.name.trim() };
       const saved = widget
         ? await updateReviewWidget(widget.id, payload, organizationId)
@@ -257,11 +258,10 @@ export function ReputationWidgetEditorPage() {
       });
       toast({ title: "Review widget saved" });
       if (isNew) navigate(`/review-widgets/${saved.id}`, { replace: true });
-    } catch {
-      toast({ title: "Could not save widget", variant: "destructive" });
-    } finally {
-      setSaving(false);
-    }
+      } catch {
+        toast({ title: "Could not save widget", variant: "destructive" });
+      }
+    });
   };
 
   const copyEmbedCode = async () => {

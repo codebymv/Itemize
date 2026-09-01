@@ -397,4 +397,37 @@ describe("CreateItemModal preset flow", () => {
     ).not.toBeInTheDocument();
     expect(screen.getByLabelText("Title")).toBeInTheDocument();
   });
+
+  it("single-flights creation and guards dismissal while pending", async () => {
+    let resolveCreate: ((value: { id: string }) => void) | undefined;
+    const onCreate = vi.fn(() => new Promise<{ id: string }>((resolve) => {
+      resolveCreate = resolve;
+    }));
+    const onOpenChange = vi.fn();
+    render(
+      <CreateItemModal
+        open
+        onOpenChange={onOpenChange}
+        itemType="whiteboard"
+        onCreate={onCreate}
+        existingCategories={[]}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Title"), {
+      target: { value: "Launch map" },
+    });
+    const createButton = screen.getByRole("button", { name: "Create Whiteboard" });
+    fireEvent.click(createButton);
+    await waitFor(() => expect(onCreate).toHaveBeenCalledTimes(1));
+    fireEvent.click(createButton);
+
+    expect(onCreate).toHaveBeenCalledTimes(1);
+    expect(createButton).toHaveAttribute("aria-busy", "true");
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(onOpenChange).not.toHaveBeenCalled();
+
+    resolveCreate?.({ id: "whiteboard-1" });
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+  });
 });

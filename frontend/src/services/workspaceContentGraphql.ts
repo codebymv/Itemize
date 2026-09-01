@@ -12,6 +12,25 @@ export type GraphqlPageInfo = {
   hasPreviousPage: boolean;
 };
 
+export type WorkspaceContentIdentityType = CanvasPositionUpdate['type'];
+
+export const workspaceContentExistsViaGraphql = async (
+  type: WorkspaceContentIdentityType,
+  id: number,
+): Promise<boolean> => {
+  const variables = { type, id };
+  const data = await graphqlRequest<
+    { workspaceContentExists: boolean },
+    typeof variables
+  >(
+    `query WorkspaceContentExists($type: String!, $id: Int!) {
+      workspaceContentExists(type: $type, id: $id)
+    }`,
+    variables,
+  );
+  return data.workspaceContentExists;
+};
+
 export type GraphqlWorkspaceList = {
   id: number;
   userId: number;
@@ -254,6 +273,24 @@ const wireframesQuery = `
   }
 `;
 
+const noteQuery = `
+  query WorkspaceNote($id: Int!) {
+    workspaceNote(id: $id) { ${noteFields} }
+  }
+`;
+
+const whiteboardQuery = `
+  query WorkspaceWhiteboard($id: Int!) {
+    workspaceWhiteboard(id: $id) { ${whiteboardFields} }
+  }
+`;
+
+const wireframeQuery = `
+  query WorkspaceWireframe($id: Int!) {
+    workspaceWireframe(id: $id) { ${wireframeFields} }
+  }
+`;
+
 const mapPage = (page: GraphqlPageInfo): LegacyPageInfo => ({
   page: page.page,
   limit: page.pageSize,
@@ -372,6 +409,36 @@ export const mapWireframe = (
     created_at: wireframe.createdAt,
     updated_at: wireframe.updatedAt,
   };
+};
+
+export const getWorkspaceNoteViaGraphql = async (
+  id: number,
+): Promise<LegacyWorkspaceNote | null> => {
+  const variables = { id };
+  const data = await graphqlRequest<{
+    workspaceNote: GraphqlWorkspaceNote | null;
+  }, typeof variables>(noteQuery, variables);
+  return data.workspaceNote ? mapNote(data.workspaceNote) : null;
+};
+
+export const getWorkspaceWhiteboardViaGraphql = async (
+  id: number,
+): Promise<LegacyWorkspaceWhiteboard | null> => {
+  const variables = { id };
+  const data = await graphqlRequest<{
+    workspaceWhiteboard: GraphqlWorkspaceWhiteboard | null;
+  }, typeof variables>(whiteboardQuery, variables);
+  return data.workspaceWhiteboard ? mapWhiteboard(data.workspaceWhiteboard) : null;
+};
+
+export const getWorkspaceWireframeViaGraphql = async (
+  id: number,
+): Promise<LegacyWorkspaceWireframe | null> => {
+  const variables = { id };
+  const data = await graphqlRequest<{
+    workspaceWireframe: GraphqlWorkspaceWireframe | null;
+  }, typeof variables>(wireframeQuery, variables);
+  return data.workspaceWireframe ? mapWireframe(data.workspaceWireframe) : null;
 };
 
 const listPage = async (page: number, pageSize: number) => {

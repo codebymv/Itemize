@@ -77,6 +77,7 @@ import {
 } from '@/services/campaignsApi';
 import type { Campaign } from '@/types/campaigns';
 import { CAMPAIGN_SUMMARY_VISUALS, getCampaignStatusVisual } from './constants/campaignVisuals';
+import { useKeyedSingleFlightAction } from '@/hooks/useSingleFlightAction';
 
 const CAMPAIGN_STATUSES: Array<{ value: Campaign['status']; label: string }> = [
   { value: 'draft', label: 'Draft' },
@@ -130,7 +131,7 @@ export function CampaignsPage() {
   const [page, setPage] = useState(1);
   const [campaignToDelete, setCampaignToDelete] = useState<Campaign | null>(null);
   const [campaignToSend, setCampaignToSend] = useState<Campaign | null>(null);
-  const [workingCampaignId, setWorkingCampaignId] = useState<number | null>(null);
+  const { isPending: isCampaignPending, run: runCampaignAction } = useKeyedSingleFlightAction<number>();
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
@@ -219,44 +220,41 @@ export function CampaignsPage() {
 
   const handleDuplicate = async (campaign: Campaign) => {
     if (!organizationId) return;
-    setWorkingCampaignId(campaign.id);
-    try {
-      await duplicateCampaign(campaign.id, organizationId);
-      await refreshQueue();
-      toast({ title: 'Duplicated', description: 'Campaign duplicated as a draft.' });
-    } catch (error) {
-      toast({ title: 'Unable to duplicate', description: 'The campaign was not duplicated.', variant: 'destructive' });
-    } finally {
-      setWorkingCampaignId(null);
-    }
+    await runCampaignAction(campaign.id, async () => {
+      try {
+        await duplicateCampaign(campaign.id, organizationId);
+        await refreshQueue();
+        toast({ title: 'Duplicated', description: 'Campaign duplicated as a draft.' });
+      } catch (error) {
+        toast({ title: 'Unable to duplicate', description: 'The campaign was not duplicated.', variant: 'destructive' });
+      }
+    });
   };
 
   const handlePause = async (campaign: Campaign) => {
     if (!organizationId) return;
-    setWorkingCampaignId(campaign.id);
-    try {
-      await pauseCampaign(campaign.id, organizationId);
-      await refreshQueue();
-      toast({ title: 'Paused', description: 'Campaign delivery has been paused.' });
-    } catch (error) {
-      toast({ title: 'Unable to pause', description: 'Campaign delivery is unchanged.', variant: 'destructive' });
-    } finally {
-      setWorkingCampaignId(null);
-    }
+    await runCampaignAction(campaign.id, async () => {
+      try {
+        await pauseCampaign(campaign.id, organizationId);
+        await refreshQueue();
+        toast({ title: 'Paused', description: 'Campaign delivery has been paused.' });
+      } catch (error) {
+        toast({ title: 'Unable to pause', description: 'Campaign delivery is unchanged.', variant: 'destructive' });
+      }
+    });
   };
 
   const handleResume = async (campaign: Campaign) => {
     if (!organizationId) return;
-    setWorkingCampaignId(campaign.id);
-    try {
-      await resumeCampaign(campaign.id, organizationId);
-      await refreshQueue();
-      toast({ title: 'Resumed', description: 'Campaign delivery has resumed.' });
-    } catch (error) {
-      toast({ title: 'Unable to resume', description: 'Campaign delivery remains paused.', variant: 'destructive' });
-    } finally {
-      setWorkingCampaignId(null);
-    }
+    await runCampaignAction(campaign.id, async () => {
+      try {
+        await resumeCampaign(campaign.id, organizationId);
+        await refreshQueue();
+        toast({ title: 'Resumed', description: 'Campaign delivery has resumed.' });
+      } catch (error) {
+        toast({ title: 'Unable to resume', description: 'Campaign delivery remains paused.', variant: 'destructive' });
+      }
+    });
   };
 
   const requestSend = async (campaign: Campaign) => {
@@ -267,23 +265,22 @@ export function CampaignsPage() {
   const confirmSend = async () => {
     if (!organizationId || !campaignToSend || !sendPreview || sendPreview.recipientCount < 1) return;
     const campaign = campaignToSend;
-    setWorkingCampaignId(campaign.id);
-    try {
-      const result = await sendCampaign(campaign.id, organizationId);
-      queryClient.removeQueries({
-        queryKey: campaignQueryKeys.audiencePreview(organizationId, campaign.id),
-      });
-      await refreshQueue();
-      setCampaignToSend(null);
-      toast({
-        title: 'Campaign started',
-        description: `Sending to ${result.recipientCount} eligible recipient${result.recipientCount === 1 ? '' : 's'}.`,
-      });
-    } catch (error) {
-      toast({ title: 'Unable to send', description: 'The campaign remains unchanged.', variant: 'destructive' });
-    } finally {
-      setWorkingCampaignId(null);
-    }
+    await runCampaignAction(campaign.id, async () => {
+      try {
+        const result = await sendCampaign(campaign.id, organizationId);
+        queryClient.removeQueries({
+          queryKey: campaignQueryKeys.audiencePreview(organizationId, campaign.id),
+        });
+        await refreshQueue();
+        setCampaignToSend(null);
+        toast({
+          title: 'Campaign started',
+          description: `Sending to ${result.recipientCount} eligible recipient${result.recipientCount === 1 ? '' : 's'}.`,
+        });
+      } catch (error) {
+        toast({ title: 'Unable to send', description: 'The campaign remains unchanged.', variant: 'destructive' });
+      }
+    });
   };
 
   const handleDelete = async (): Promise<boolean> => {
@@ -376,12 +373,13 @@ export function CampaignsPage() {
               {campaigns.map(campaign => {
                 const visual = getCampaignStatusVisual(campaign.status);
                 const StatusIcon = visual.icon;
-                const working = workingCampaignId === campaign.id;
+                const working = isCampaignPending(campaign.id);
                 const scheduledDate = formatCampaignDate(campaign.scheduled_at);
                 const sentDate = formatCampaignDate(campaign.sent_at);
                 return (
                   <div
                     key={campaign.id}
+                    aria-busy={working ? 'true' : undefined}
                     role="link"
                     tabIndex={0}
                     aria-label={`${campaign.status === 'draft' || campaign.status === 'scheduled' ? 'Edit' : 'View'} ${campaign.name}`}
@@ -485,7 +483,9 @@ export function CampaignsPage() {
         </div>
       )}
 
-      <AlertDialog open={Boolean(campaignToSend)} onOpenChange={open => !open && setCampaignToSend(null)}>
+      <AlertDialog open={Boolean(campaignToSend)} onOpenChange={open => {
+        if (!open && (!campaignToSend || !isCampaignPending(campaignToSend.id))) setCampaignToSend(null);
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Send {campaignToSend?.name} now?</AlertDialogTitle>
@@ -500,9 +500,9 @@ export function CampaignsPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={workingCampaignId === campaignToSend?.id}>Keep draft</AlertDialogCancel>
+            <AlertDialogCancel disabled={campaignToSend ? isCampaignPending(campaignToSend.id) : false}>Keep draft</AlertDialogCancel>
             <AlertDialogAction
-              disabled={sendPreviewLoading || Boolean(sendPreviewError) || !sendPreview || sendPreview.recipientCount < 1 || workingCampaignId === campaignToSend?.id}
+              disabled={sendPreviewLoading || Boolean(sendPreviewError) || !sendPreview || sendPreview.recipientCount < 1 || (campaignToSend ? isCampaignPending(campaignToSend.id) : false)}
               onClick={event => {
                 event.preventDefault();
                 void confirmSend();

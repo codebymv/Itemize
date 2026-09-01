@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/hooks/useOrganization';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 import { useSubscriptionState } from '@/contexts/SubscriptionContext';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { ErrorState } from '@/components/ErrorState';
@@ -44,7 +45,11 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
         isLoading: organizationLoading,
         error: initError,
     } = useOrganization({ onError: () => 'Failed to initialize.' });
-    const [connecting, setConnecting] = useState<'google' | 'facebook' | 'stripe' | null>(null);
+    const [activeIntegrationAction, setActiveIntegrationAction] = useState<string | null>(null);
+    const { pending: integrationPending, run: runIntegration } = useSingleFlightAction();
+    const connecting = integrationPending && activeIntegrationAction?.startsWith('connect-')
+        ? activeIntegrationAction.slice('connect-'.length) as 'google' | 'facebook' | 'stripe'
+        : null;
     const overviewQueryKey = ['integration-overview', organizationId] as const;
     const overviewQuery = useQuery({
         queryKey: overviewQueryKey,
@@ -65,41 +70,52 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
         || (isSubscribed && overviewQuery.isPending);
     const loadError = Boolean(overviewQuery.error && !overviewQuery.data);
 
+    const runIntegrationAction = useCallback(async (actionKey: string, action: () => Promise<void>) => {
+        await runIntegration(async () => {
+            setActiveIntegrationAction(actionKey);
+            try {
+                await action();
+            } finally {
+                setActiveIntegrationAction(null);
+            }
+        });
+    }, [runIntegration]);
+
     const handleConnectGoogle = useCallback(async () => {
         if (!organizationId) return;
-        setConnecting('google');
-        try {
-            const { authUrl } = await initiateGoogleAuth(organizationId, INTEGRATIONS_PATH);
-            window.location.href = authUrl;
-        } catch {
-            toast({ title: 'Error', description: 'Failed to start Google Calendar connection', variant: 'destructive' });
-            setConnecting(null);
-        }
-    }, [organizationId, toast]);
+        await runIntegrationAction('connect-google', async () => {
+            try {
+                const { authUrl } = await initiateGoogleAuth(organizationId, INTEGRATIONS_PATH);
+                window.location.href = authUrl;
+            } catch {
+                toast({ title: 'Error', description: 'Failed to start Google Calendar connection', variant: 'destructive' });
+            }
+        });
+    }, [organizationId, runIntegrationAction, toast]);
 
     const handleConnectFacebook = useCallback(async () => {
         if (!organizationId) return;
-        setConnecting('facebook');
-        try {
-            const { auth_url } = await getFacebookConnectUrl(organizationId);
-            window.location.href = auth_url;
-        } catch {
-            toast({ title: 'Error', description: 'Failed to start Facebook connection', variant: 'destructive' });
-            setConnecting(null);
-        }
-    }, [organizationId, toast]);
+        await runIntegrationAction('connect-facebook', async () => {
+            try {
+                const { auth_url } = await getFacebookConnectUrl(organizationId);
+                window.location.href = auth_url;
+            } catch {
+                toast({ title: 'Error', description: 'Failed to start Facebook connection', variant: 'destructive' });
+            }
+        });
+    }, [organizationId, runIntegrationAction, toast]);
 
     const handleConnectStripe = useCallback(async () => {
         if (!organizationId) return;
-        setConnecting('stripe');
-        try {
-            const { authUrl } = await initiateStripeConnect(organizationId, INTEGRATIONS_PATH);
-            window.location.href = authUrl;
-        } catch {
-            toast({ title: 'Error', description: 'Failed to start Stripe connection', variant: 'destructive' });
-            setConnecting(null);
-        }
-    }, [organizationId, toast]);
+        await runIntegrationAction('connect-stripe', async () => {
+            try {
+                const { authUrl } = await initiateStripeConnect(organizationId, INTEGRATIONS_PATH);
+                window.location.href = authUrl;
+            } catch {
+                toast({ title: 'Error', description: 'Failed to start Stripe connection', variant: 'destructive' });
+            }
+        });
+    }, [organizationId, runIntegrationAction, toast]);
 
     useEffect(() => {
         const result = readIntegrationOAuthResult(location.search);
@@ -110,55 +126,61 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
 
     const handleDisconnect = async (id: number) => {
         if (!organizationId) return;
-        try {
-            await disconnectCalendar(id, organizationId);
-            queryClient.setQueryData<IntegrationOverview>(
-                overviewQueryKey,
-                (current) => current
-                    ? {
-                        ...current,
-                        calendarConnections: current.calendarConnections.filter(
-                            (connection) => connection.id !== id,
-                        ),
-                    }
-                    : current,
-            );
-            toast({ title: 'Disconnected', description: 'Calendar disconnected successfully' });
-        } catch {
-            toast({ title: 'Error', description: 'Failed to disconnect', variant: 'destructive' });
-        }
+        await runIntegrationAction(`disconnect-calendar-${id}`, async () => {
+            try {
+                await disconnectCalendar(id, organizationId);
+                queryClient.setQueryData<IntegrationOverview>(
+                    overviewQueryKey,
+                    (current) => current
+                        ? {
+                            ...current,
+                            calendarConnections: current.calendarConnections.filter(
+                                (connection) => connection.id !== id,
+                            ),
+                        }
+                        : current,
+                );
+                toast({ title: 'Disconnected', description: 'Calendar disconnected successfully' });
+            } catch {
+                toast({ title: 'Error', description: 'Failed to disconnect', variant: 'destructive' });
+            }
+        });
     };
 
     const handleDisconnectFacebook = async () => {
         if (!organizationId || !facebookChannel) return;
-        try {
-            await disconnectChannel(facebookChannel.id, organizationId);
-            queryClient.setQueryData<IntegrationOverview>(
-                overviewQueryKey,
-                (current) => current
-                    ? { ...current, facebookChannel: null, facebookStatusAvailable: true }
-                    : current,
-            );
-            toast({ title: 'Disconnected', description: 'Facebook disconnected successfully' });
-        } catch {
-            toast({ title: 'Error', description: 'Failed to disconnect Facebook', variant: 'destructive' });
-        }
+        await runIntegrationAction('disconnect-facebook', async () => {
+            try {
+                await disconnectChannel(facebookChannel.id, organizationId);
+                queryClient.setQueryData<IntegrationOverview>(
+                    overviewQueryKey,
+                    (current) => current
+                        ? { ...current, facebookChannel: null, facebookStatusAvailable: true }
+                        : current,
+                );
+                toast({ title: 'Disconnected', description: 'Facebook disconnected successfully' });
+            } catch {
+                toast({ title: 'Error', description: 'Failed to disconnect Facebook', variant: 'destructive' });
+            }
+        });
     };
 
     const handleDisconnectStripe = async () => {
         if (!organizationId) return;
-        try {
-            await disconnectStripeConnect(organizationId);
-            queryClient.setQueryData<IntegrationOverview>(
-                overviewQueryKey,
-                (current) => current
-                    ? { ...current, stripeConnected: false, stripeStatusAvailable: true }
-                    : current,
-            );
-            toast({ title: 'Disconnected', description: 'Stripe is no longer connected for invoice payments.' });
-        } catch {
-            toast({ title: 'Error', description: 'Failed to disconnect Stripe', variant: 'destructive' });
-        }
+        await runIntegrationAction('disconnect-stripe', async () => {
+            try {
+                await disconnectStripeConnect(organizationId);
+                queryClient.setQueryData<IntegrationOverview>(
+                    overviewQueryKey,
+                    (current) => current
+                        ? { ...current, stripeConnected: false, stripeStatusAvailable: true }
+                        : current,
+                );
+                toast({ title: 'Disconnected', description: 'Stripe is no longer connected for invoice payments.' });
+            } catch {
+                toast({ title: 'Error', description: 'Failed to disconnect Stripe', variant: 'destructive' });
+            }
+        });
     };
 
     const googleConnection = connections.find((connection) => connection.provider === 'google' && connection.is_active);
@@ -259,7 +281,7 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
                                     : () => void handleConnectFacebook()}
                                 onSecondary={() => navigate('/social')}
                                 onDisconnect={facebookChannel ? () => void handleDisconnectFacebook() : undefined}
-                                busy={connecting === 'facebook'}
+                                busy={connecting === 'facebook' || activeIntegrationAction === 'disconnect-facebook'}
                             />
                             <IntegrationStatusRow
                                 name="Stripe"
@@ -277,7 +299,7 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
                                     : () => void handleConnectStripe()}
                                 onSecondary={() => navigate('/payment-settings')}
                                 onDisconnect={stripeConnected ? () => void handleDisconnectStripe() : undefined}
-                                busy={connecting === 'stripe'}
+                                busy={connecting === 'stripe' || activeIntegrationAction === 'disconnect-stripe'}
                             />
                             <IntegrationStatusRow
                                 name="Webhooks"
@@ -312,6 +334,7 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
                                     connection={connection}
                                     organizationId={organizationId as number}
                                     onDisconnect={() => void handleDisconnect(connection.id)}
+                                    externalBusy={integrationPending && activeIntegrationAction === `disconnect-calendar-${connection.id}`}
                                 />
                             ))}
                         </div>

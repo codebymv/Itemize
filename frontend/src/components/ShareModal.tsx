@@ -20,6 +20,7 @@ import { Label } from './ui/label';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { useToast } from '../hooks/use-toast';
 import { useStableMutationKey } from '../hooks/useStableMutationKey';
+import { useSingleFlightAction } from '../hooks/useSingleFlightAction';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 type ShareItemType = 'note' | 'list' | 'whiteboard' | 'wireframe' | 'vault';
@@ -129,7 +130,7 @@ export const ShareModal = <TId extends string | number>({
   const [shareData, setShareData] = useState<{ shareToken: string; shareUrl: string } | null>(
     existingShareData || null
   );
-  const [isLoading, setIsLoading] = useState(false);
+  const { pending: isLoading, run, dismissIfIdle } = useSingleFlightAction();
   const [copied, setCopied] = useState(false);
   const [showWarningState, setShowWarningState] = useState(showWarning);
   const { toast } = useToast();
@@ -147,55 +148,51 @@ export const ShareModal = <TId extends string | number>({
       return;
     }
 
-    const mutationId = begin(`enable:${itemType}:${itemId}`);
-    if (!mutationId) return;
-
-    setIsLoading(true);
-    try {
-      const result = await onShare(itemId);
-      setShareData(result);
-      setShowWarningState(false);
-      reset();
-      toast({
-        title: config.shareSuccessTitle,
-        description: config.shareSuccessDescription
-      });
-    } catch (error) {
-      release();
-      toast({
-        title: 'Error',
-        description: `Failed to share ${config.label.toLowerCase()}. Please try again.`,
-        variant: 'destructive'
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    await run(async () => {
+      const mutationId = begin(`enable:${itemType}:${itemId}`);
+      if (!mutationId) return;
+      try {
+        const result = await onShare(itemId);
+        setShareData(result);
+        setShowWarningState(false);
+        reset();
+        toast({
+          title: config.shareSuccessTitle,
+          description: config.shareSuccessDescription
+        });
+      } catch (error) {
+        release();
+        toast({
+          title: 'Error',
+          description: `Failed to share ${config.label.toLowerCase()}. Please try again.`,
+          variant: 'destructive'
+        });
+      }
+    });
   };
 
   const handleUnshare = async () => {
-    const mutationId = begin(`disable:${itemType}:${itemId}`);
-    if (!mutationId) return;
-
-    setIsLoading(true);
-    try {
-      await onUnshare(itemId, mutationId);
-      setShareData(null);
-      setShowWarningState(showWarning);
-      reset();
-      toast({
-        title: 'Sharing revoked',
-        description: config.revokeDescription
-      });
-    } catch (error) {
-      release();
-      toast({
-        title: 'Error',
-        description: 'Failed to revoke sharing. Please try again.',
-        variant: 'destructive'
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    await run(async () => {
+      const mutationId = begin(`disable:${itemType}:${itemId}`);
+      if (!mutationId) return;
+      try {
+        await onUnshare(itemId, mutationId);
+        setShareData(null);
+        setShowWarningState(showWarning);
+        reset();
+        toast({
+          title: 'Sharing revoked',
+          description: config.revokeDescription
+        });
+      } catch (error) {
+        release();
+        toast({
+          title: 'Error',
+          description: 'Failed to revoke sharing. Please try again.',
+          variant: 'destructive'
+        });
+      }
+    });
   };
 
   const handleCopyLink = async () => {
@@ -233,9 +230,14 @@ export const ShareModal = <TId extends string | number>({
   }, [open, existingShareData, showWarning]);
 
   const handleOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen && isLoading) return;
-    if (!nextOpen) reset();
-    onOpenChange(nextOpen);
+    if (nextOpen) {
+      onOpenChange(true);
+      return;
+    }
+    dismissIfIdle(() => {
+      reset();
+      onOpenChange(false);
+    });
   };
 
   if (!open) return null;

@@ -20,6 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useDirtyState } from '@/hooks/useDirtyState';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 import {
   SignatureTemplate,
   SignatureTemplateRole,
@@ -53,7 +54,7 @@ export default function SignatureTemplateEditorPage() {
   const [file, setFile] = useState<File | null>(null);
   const [roles, setRoles] = useState<SignatureTemplateRole[]>([]);
   const [fields, setFields] = useState<SignatureTemplateField[]>([]);
-  const [working, setWorking] = useState(false);
+  const { pending: working, run } = useSingleFlightAction();
   const initializedTemplateKeyRef = useRef<string | null>(null);
   const parsedTemplateId = id ? Number(id) : null;
   const templateId = parsedTemplateId !== null
@@ -125,48 +126,46 @@ export default function SignatureTemplateEditorPage() {
 
   const handleSave = async () => {
     if (!template || !organizationId) return;
-    try {
-      setWorking(true);
-      const updated = await updateSignatureTemplate(template.id, {
-        title,
-        description,
-        message,
-        roles,
-        fields,
-      }, organizationId);
-      setTemplate(updated);
-      queryClient.setQueryData(
-        signatureQueryKeys.template(organizationId, template.id),
-        { template: updated, roles, fields },
-      );
-      patchTemplateCatalog(updated);
-      markClean();
-      toast({ title: 'Template updated' });
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to save template', variant: 'destructive' });
-    } finally {
-      setWorking(false);
-    }
+    await run(async () => {
+      try {
+        const updated = await updateSignatureTemplate(template.id, {
+          title,
+          description,
+          message,
+          roles,
+          fields,
+        }, organizationId);
+        setTemplate(updated);
+        queryClient.setQueryData(
+          signatureQueryKeys.template(organizationId, template.id),
+          { template: updated, roles, fields },
+        );
+        patchTemplateCatalog(updated);
+        markClean();
+        toast({ title: 'Template updated' });
+      } catch (error) {
+        toast({ title: 'Error', description: 'Failed to save template', variant: 'destructive' });
+      }
+    });
   };
 
   const handleUpload = async () => {
     if (!template || !file || !organizationId) return;
-    try {
-      setWorking(true);
-      const updated = await uploadSignatureTemplate(template.id, file, organizationId);
-      setTemplate(updated);
-      setFile(null);
-      queryClient.setQueryData(
-        signatureQueryKeys.template(organizationId, template.id),
-        { template: updated, roles, fields },
-      );
-      patchTemplateCatalog(updated);
-      toast({ title: 'File uploaded' });
-    } catch (error) {
-      toast({ title: 'Upload failed', variant: 'destructive' });
-    } finally {
-      setWorking(false);
-    }
+    await run(async () => {
+      try {
+        const updated = await uploadSignatureTemplate(template.id, file, organizationId);
+        setTemplate(updated);
+        setFile(null);
+        queryClient.setQueryData(
+          signatureQueryKeys.template(organizationId, template.id),
+          { template: updated, roles, fields },
+        );
+        patchTemplateCatalog(updated);
+        toast({ title: 'File uploaded' });
+      } catch (error) {
+        toast({ title: 'Upload failed', variant: 'destructive' });
+      }
+    });
   };
 
   const addRole = () => {
@@ -276,7 +275,7 @@ export default function SignatureTemplateEditorPage() {
                     accept="application/pdf"
                     onChange={(e) => setFile(e.target.files?.[0] || null)}
                   />
-                  <Button variant="outline" onClick={handleUpload} disabled={!file || working}>
+                  <Button variant="outline" onClick={handleUpload} disabled={!file || working} aria-busy={working || undefined}>
                     <UploadCloud className="h-4 w-4 mr-2" />
                     Upload
                   </Button>

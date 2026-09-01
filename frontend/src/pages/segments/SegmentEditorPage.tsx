@@ -32,6 +32,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { AvailabilitySettingRow } from "@/components/settings/SettingsPrimitives";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
+import { useSingleFlightAction } from "@/hooks/useSingleFlightAction";
 import { useToast } from "@/hooks/use-toast";
 import { QUERY_STALE_TIME_MS, shouldRetryQuery } from "@/lib/queryPolicy";
 import { cn } from "@/lib/utils";
@@ -84,7 +85,7 @@ export function SegmentEditorPage() {
   const [savedKey, setSavedKey] = useState(editorKey(EMPTY_FORM, []));
   const [options, setOptions] = useState<FilterOptions | null>(null);
   const [preview, setPreview] = useState<SegmentPreview | null>(null);
-  const [saving, setSaving] = useState(false);
+  const { pending: saving, run: runSave } = useSingleFlightAction();
   const [previewing, setPreviewing] = useState(false);
   const parsedSegmentId = Number(id);
   const validSegmentId = !isNew
@@ -234,8 +235,8 @@ export function SegmentEditorPage() {
       });
       return;
     }
-    setSaving(true);
-    try {
+    await runSave(async () => {
+      try {
       const payload: Partial<Segment> = isStatic
         ? {
             name: form.name.trim(),
@@ -286,15 +287,14 @@ export function SegmentEditorPage() {
         title: segment ? "Segment saved" : "Segment created",
         description: "The audience definition is up to date.",
       });
-    } catch {
-      toast({
-        title: "Unable to save segment",
-        description: "Your changes remain in the editor.",
-        variant: "destructive",
-      });
-    } finally {
-      setSaving(false);
-    }
+      } catch {
+        toast({
+          title: "Unable to save segment",
+          description: "Your changes remain in the editor.",
+          variant: "destructive",
+        });
+      }
+    });
   };
 
   const visual = getCatalogStatusVisual(segment?.is_active ?? true);

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { createHash } from 'node:crypto';
 import { GraphQLError } from 'graphql';
 import { itemizeGraphqlError } from '../common/graphql-error';
 import { GetStartedService } from '../get-started/get-started.service';
@@ -85,6 +86,72 @@ export class WorkspaceContentService {
     private readonly content: WorkspaceContentRepository,
     private readonly getStarted: GetStartedService,
   ) {}
+
+  async contentExists(
+    userId: number,
+    typeValue: string,
+    id: number,
+  ): Promise<boolean> {
+    const type = typeValue?.trim().toLowerCase() as CanvasPositionKind;
+    if (!CANVAS_POSITION_TYPES.has(type)) {
+      throw itemizeGraphqlError(
+        'Unknown workspace content type',
+        'BAD_USER_INPUT',
+        { field: 'type', reason: 'INVALID_WORKSPACE_CONTENT_TYPE' },
+      );
+    }
+    this.id(id);
+    try {
+      return await this.content.contentExists(userId, type, id);
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  async note(
+    userId: number,
+    noteId: number,
+  ): Promise<WorkspaceNote | null> {
+    this.id(noteId);
+    try {
+      const row = await this.content.findNoteById(userId, noteId);
+      return row ? this.mapNote(row) : null;
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  async whiteboard(
+    userId: number,
+    whiteboardId: number,
+  ): Promise<WorkspaceWhiteboard | null> {
+    this.whiteboardId(whiteboardId);
+    try {
+      const row = await this.content.findWhiteboardById(
+        userId,
+        whiteboardId,
+      );
+      return row ? this.mapWhiteboard(row) : null;
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
+
+  async wireframe(
+    userId: number,
+    wireframeId: number,
+  ): Promise<WorkspaceWireframe | null> {
+    this.wireframeId(wireframeId);
+    try {
+      const row = await this.content.findWireframeById(
+        userId,
+        wireframeId,
+      );
+      return row ? this.mapWireframe(row) : null;
+    } catch (error) {
+      this.rethrow(error);
+    }
+  }
 
   async lists(
     userId: number,
@@ -224,7 +291,17 @@ export class WorkspaceContentService {
         : this.listDimension(input.height, 'height'),
     };
     try {
-      const outcome = await this.content.createList(organizationId, userId, values);
+      const idempotencyKey = this.creationKey(input.idempotencyKey);
+      const outcome = await this.content.createList(
+        organizationId,
+        userId,
+        values,
+        idempotencyKey,
+        this.creationFingerprint('list', values),
+      );
+      if (outcome.kind === 'idempotency_conflict') {
+        throw this.creationKeyConflict();
+      }
       if (outcome.kind === 'category_not_found') {
         throw this.listCategoryNotFound();
       }
@@ -375,7 +452,16 @@ export class WorkspaceContentService {
         : this.integer(input.zIndex, 'zIndex'),
     };
     try {
-      const outcome = await this.content.createNote(userId, values);
+      const idempotencyKey = this.creationKey(input.idempotencyKey);
+      const outcome = await this.content.createNote(
+        userId,
+        values,
+        idempotencyKey,
+        this.creationFingerprint('note', values),
+      );
+      if (outcome.kind === 'idempotency_conflict') {
+        throw this.creationKeyConflict();
+      }
       if (outcome.kind === 'category_not_found') {
         throw this.categoryNotFound();
       }
@@ -524,7 +610,16 @@ export class WorkspaceContentService {
         : this.whiteboardOptionalColor(input.colorValue),
     };
     try {
-      const outcome = await this.content.createWhiteboard(userId, values);
+      const idempotencyKey = this.creationKey(input.idempotencyKey);
+      const outcome = await this.content.createWhiteboard(
+        userId,
+        values,
+        idempotencyKey,
+        this.creationFingerprint('whiteboard', values),
+      );
+      if (outcome.kind === 'idempotency_conflict') {
+        throw this.creationKeyConflict();
+      }
       if (outcome.kind === 'category_not_found') {
         throw this.whiteboardCategoryNotFound();
       }
@@ -687,7 +782,16 @@ export class WorkspaceContentService {
         : this.wireframeColor(input.colorValue),
     };
     try {
-      const outcome = await this.content.createWireframe(userId, values);
+      const idempotencyKey = this.creationKey(input.idempotencyKey);
+      const outcome = await this.content.createWireframe(
+        userId,
+        values,
+        idempotencyKey,
+        this.creationFingerprint('wireframe', values),
+      );
+      if (outcome.kind === 'idempotency_conflict') {
+        throw this.creationKeyConflict();
+      }
       if (outcome.kind === 'category_not_found') {
         throw this.wireframeCategoryNotFound();
       }
@@ -1216,6 +1320,41 @@ export class WorkspaceContentService {
       );
     }
     return mutationId.toLowerCase();
+  }
+
+  private creationKey(value: string): string {
+    const key = value?.trim();
+    if (!MUTATION_ID_PATTERN.test(key)) {
+      throw itemizeGraphqlError(
+        'idempotencyKey must be a UUID',
+        'BAD_USER_INPUT',
+        {
+          field: 'idempotencyKey',
+          reason: 'INVALID_IDEMPOTENCY_KEY',
+        },
+      );
+    }
+    return key.toLowerCase();
+  }
+
+  private creationFingerprint(
+    entityType: Exclude<CanvasPositionKind, 'vault'>,
+    values: object,
+  ): string {
+    return createHash('sha256')
+      .update(JSON.stringify({ entityType, values }))
+      .digest('hex');
+  }
+
+  private creationKeyConflict(): GraphQLError {
+    return itemizeGraphqlError(
+      'idempotencyKey was already used for different workspace content',
+      'CONFLICT',
+      {
+        field: 'idempotencyKey',
+        reason: 'IDEMPOTENCY_KEY_REUSED',
+      },
+    );
   }
 
   private canvasTypeLabel(type: CanvasPositionKind): string {

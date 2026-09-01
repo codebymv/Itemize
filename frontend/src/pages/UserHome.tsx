@@ -111,7 +111,9 @@ const UserHome = () => {
         color_value: response.color_value || '#808080'
       };
       
-      setLists(prev => [newList, ...prev]);
+      setLists(prev => prev.some((list) => list.id === newList.id)
+        ? prev
+        : [newList, ...prev]);
       setShowCreateModal(false);
       
       toast({

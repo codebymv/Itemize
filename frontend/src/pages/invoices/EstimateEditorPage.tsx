@@ -59,6 +59,7 @@ import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useDirtyState } from '@/hooks/useDirtyState';
 import { useStableMutationKey } from '@/hooks/useStableMutationKey';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { Product } from '@/services/invoicesApi';
 import {
@@ -129,7 +130,7 @@ export function EstimateEditorPage() {
     const isNew = id === 'new' || !id;
 
     const [initialized, setInitialized] = useState(false);
-    const [saving, setSaving] = useState(false);
+    const { pending: saving, run: runMutation } = useSingleFlightAction();
     const { organizationId, error: organizationError } = useOrganization();
     const [contacts, setContacts] = useState<Contact[]>([]);
     const initializedBootstrapRef = useRef<string | null>(null);
@@ -390,9 +391,9 @@ export function EstimateEditorPage() {
             return;
         }
 
-        setSaving(true);
-        try {
-            const estimateData = {
+        await runMutation(async () => {
+            try {
+                const estimateData = {
                 contact_id: contactId,
                 customer_name: customerName || undefined,
                 customer_email: customerEmail || undefined,
@@ -413,55 +414,52 @@ export function EstimateEditorPage() {
                 terms_and_conditions: termsAndConditions || undefined,
             };
 
-            if (isNew) {
-                const response = await createEstimate(estimateData, organizationId);
-                toast({ title: 'Created', description: toastMessages.created('estimate') });
-                navigate(`/estimates/${response.id}`);
-            } else if (id) {
-                await updateEstimate(Number(id), estimateData, organizationId);
-                markClean();
-                toast({ title: 'Saved', description: toastMessages.saved('estimate') });
+                if (isNew) {
+                    const response = await createEstimate(estimateData, organizationId);
+                    toast({ title: 'Created', description: toastMessages.created('estimate') });
+                    navigate(`/estimates/${response.id}`);
+                } else if (id) {
+                    await updateEstimate(Number(id), estimateData, organizationId);
+                    markClean();
+                    toast({ title: 'Saved', description: toastMessages.saved('estimate') });
+                }
+            } catch {
+                toast({ title: 'Error', description: toastMessages.failedToSave('estimate'), variant: 'destructive' });
             }
-        } catch (error) {
-            toast({ title: 'Error', description: toastMessages.failedToSave('estimate'), variant: 'destructive' });
-        } finally {
-            setSaving(false);
-        }
+        });
     };
 
     // Send estimate
     const handleSendEstimate = async () => {
         if (!organizationId || !id || isNew) return;
-        const idempotencyKey = beginEstimateSend(`${organizationId}:${id}`);
-        if (!idempotencyKey) return;
-        setSaving(true);
-        try {
-            await sendEstimate(Number(id), organizationId, idempotencyKey);
-            resetEstimateSend();
-            setStatus('sent');
-            toast({ title: 'Sent', description: 'Estimate sent successfully' });
-        } catch (error) {
-            releaseEstimateSend();
-            toast({ title: 'Error', description: 'Estimate delivery could not be confirmed. An unchanged retry is safe.', variant: 'destructive' });
-        } finally {
-            setSaving(false);
-        }
+        await runMutation(async () => {
+            const idempotencyKey = beginEstimateSend(`${organizationId}:${id}`);
+            if (!idempotencyKey) return;
+            try {
+                await sendEstimate(Number(id), organizationId, idempotencyKey);
+                resetEstimateSend();
+                setStatus('sent');
+                toast({ title: 'Sent', description: 'Estimate sent successfully' });
+            } catch {
+                releaseEstimateSend();
+                toast({ title: 'Error', description: 'Estimate delivery could not be confirmed. An unchanged retry is safe.', variant: 'destructive' });
+            }
+        });
     };
 
     // Convert to invoice
     const handleConvertToInvoice = async () => {
         if (!organizationId || !id || isNew) return;
 
-        setSaving(true);
-        try {
-            const response = await convertEstimateToInvoice(Number(id), organizationId);
-            toast({ title: 'Converted', description: 'Estimate converted to invoice successfully' });
-            navigate(`/invoices/${response.invoice_id}`);
-        } catch (error) {
-            toast({ title: 'Error', description: toastMessages.failedToConvert('estimate'), variant: 'destructive' });
-        } finally {
-            setSaving(false);
-        }
+        await runMutation(async () => {
+            try {
+                const response = await convertEstimateToInvoice(Number(id), organizationId);
+                toast({ title: 'Converted', description: 'Estimate converted to invoice successfully' });
+                navigate(`/invoices/${response.invoice_id}`);
+            } catch {
+                toast({ title: 'Error', description: toastMessages.failedToConvert('estimate'), variant: 'destructive' });
+            }
+        });
     };
 
     if (organizationError) {
@@ -848,6 +846,7 @@ export function EstimateEditorPage() {
                         onClick={handleSave}
                         disabled={!canSave}
                         className="bg-blue-600 text-white interaction-button--primary"
+                        aria-busy={saving || undefined}
                     >
                         <Save className="mr-2 h-4 w-4" />
                         {primaryActionLabel}

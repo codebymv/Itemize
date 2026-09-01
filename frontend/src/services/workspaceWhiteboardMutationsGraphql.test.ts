@@ -5,6 +5,7 @@ import {
   deleteWorkspaceWhiteboardViaGraphql,
   updateWorkspaceWhiteboardViaGraphql,
 } from './workspaceWhiteboardMutationsGraphql';
+import { rememberWorkspaceWhiteboardRevision } from './workspaceWhiteboardRevision';
 
 vi.mock('@/lib/api', () => ({
   fetchCsrfToken: vi.fn(),
@@ -85,7 +86,7 @@ describe('workspace whiteboard GraphQL mutation consumer', () => {
     await createWorkspaceWhiteboardViaGraphql({
       title: 'Sketch',
       canvas_data: [{ drawMode: true, strokeColor: '#000000', strokeWidth: 2, paths: [] }],
-    });
+    }, mutationId);
     await Promise.all([
       updateWorkspaceWhiteboardViaGraphql(9, { title: 'First' }),
       updateWorkspaceWhiteboardViaGraphql(9, { title: 'Second' }),
@@ -98,6 +99,7 @@ describe('workspace whiteboard GraphQL mutation consumer', () => {
       JSON.parse(String((call[1] as RequestInit).body)),
     );
     expect(bodies[0].variables.input).toMatchObject({
+      idempotencyKey: mutationId,
       title: 'Sketch',
       canvasData: expect.stringContaining('"drawMode":true'),
     });
@@ -113,5 +115,28 @@ describe('workspace whiteboard GraphQL mutation consumer', () => {
     });
     expect(bodies[3].variables).toEqual({ id: 9, mutationId });
     expect(fetchCsrfToken).toHaveBeenCalledTimes(4);
+  });
+
+  it('confirms a lost update response using canonical canvas content', async () => {
+    rememberWorkspaceWhiteboardRevision(9, whiteboard.updatedAt);
+    const lostResponse = new TypeError('connection lost');
+    vi.mocked(fetch)
+      .mockRejectedValueOnce(lostResponse)
+      .mockResolvedValueOnce(response({
+        data: {
+          workspaceWhiteboard: {
+            ...whiteboard,
+            canvasData: '{"paths":[],"shapes":[]}',
+            updatedAt: '2026-07-18T12:02:00.000Z',
+          },
+        },
+      }));
+
+    await expect(updateWorkspaceWhiteboardViaGraphql(9, {
+      canvas_data: { paths: [], shapes: [] },
+    })).resolves.toMatchObject({
+      id: 9,
+      canvas_data: { paths: [], shapes: [] },
+    });
   });
 });

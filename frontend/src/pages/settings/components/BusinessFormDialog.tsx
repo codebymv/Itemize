@@ -56,11 +56,6 @@ export const BusinessFormDialog: React.FC<BusinessFormDialogProps> = ({
   const businessFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleClose = (newOpen: boolean) => {
-    if (!newOpen) {
-      if (formData.logo_url?.startsWith('blob:')) {
-        URL.revokeObjectURL(formData.logo_url);
-      }
-    }
     onOpenChange(newOpen);
   };
 
@@ -211,12 +206,13 @@ export const BusinessFormDialog: React.FC<BusinessFormDialogProps> = ({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onCancel}>
+          <Button variant="outline" onClick={onCancel} disabled={saving || uploadingLogo}>
             Cancel
           </Button>
           <Button
             onClick={onSave}
             disabled={saving || uploadingLogo}
+            aria-busy={saving || uploadingLogo || undefined}
             className="bg-blue-600 interaction-button--primary text-white"
           >
             {saving ? (

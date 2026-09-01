@@ -7,6 +7,8 @@ import { usePaymentsTab } from './usePaymentsTab';
 const mocks = vi.hoisted(() => ({
   getPaymentSettings: vi.fn(),
   getBusinessPage: vi.fn(),
+  updatePaymentSettings: vi.fn(),
+  deleteBusiness: vi.fn(),
   useOrganization: vi.fn(),
   toast: vi.fn(),
 }));
@@ -22,10 +24,10 @@ vi.mock('@/hooks/use-toast', () => ({
 vi.mock('@/services/invoicesApi', () => ({
   getPaymentSettings: mocks.getPaymentSettings,
   getBusinessPage: mocks.getBusinessPage,
-  updatePaymentSettings: vi.fn(),
+  updatePaymentSettings: mocks.updatePaymentSettings,
   createBusiness: vi.fn(),
   updateBusiness: vi.fn(),
-  deleteBusiness: vi.fn(),
+  deleteBusiness: mocks.deleteBusiness,
   uploadBusinessLogo: vi.fn(),
 }));
 
@@ -54,6 +56,8 @@ describe('usePaymentsTab', () => {
       businesses: [],
       pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
     });
+    mocks.updatePaymentSettings.mockResolvedValue(settings);
+    mocks.deleteBusiness.mockResolvedValue(undefined);
   });
 
   it('keeps payment settings usable when business profiles fail to load', async () => {
@@ -172,5 +176,44 @@ describe('usePaymentsTab', () => {
     expect(mocks.getBusinessPage).toHaveBeenLastCalledWith(2, 20, 42);
     expect(result.current.businesses.map((item) => item.name)).toEqual(['Primary', 'Secondary']);
     expect(result.current.hasMoreBusinesses).toBe(false);
+  });
+
+  it('admits only one settings save before pending state renders', async () => {
+    let resolveSave!: (value: PaymentSettings) => void;
+    mocks.updatePaymentSettings.mockImplementation(() => new Promise<PaymentSettings>((resolve) => {
+      resolveSave = resolve;
+    }));
+    const { result } = renderHook(() => usePaymentsTab());
+    await waitFor(() => expect(result.current.initialLoad).toBe(false));
+
+    let first!: Promise<void>;
+    let second!: Promise<void>;
+    act(() => {
+      first = result.current.handleSaveSettings();
+      second = result.current.handleSaveSettings();
+    });
+
+    expect(mocks.updatePaymentSettings).toHaveBeenCalledTimes(1);
+    resolveSave(settings);
+    await act(async () => Promise.all([first, second]));
+  });
+
+  it('deletes the business selected for deletion rather than the last edited profile', async () => {
+    const business = {
+      id: 7, organization_id: 42, name: 'Selected business', is_active: true,
+      created_at: '2026-08-01T00:00:00Z', updated_at: '2026-08-01T00:00:00Z',
+    };
+    mocks.getBusinessPage.mockResolvedValue({
+      businesses: [business],
+      pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+    });
+    const { result } = renderHook(() => usePaymentsTab());
+    await waitFor(() => expect(result.current.businesses).toHaveLength(1));
+
+    act(() => result.current.handleDeleteClick(business));
+    await act(async () => result.current.handleDeleteBusiness());
+
+    expect(mocks.deleteBusiness).toHaveBeenCalledWith(7, 42);
+    expect(result.current.businesses).toEqual([]);
   });
 });

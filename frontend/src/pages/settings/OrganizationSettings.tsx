@@ -61,6 +61,7 @@ import { useAuthState } from '@/contexts/AuthContext';
 import { useOrganizationContext } from '@/contexts/organization-context';
 import { useSubscriptionFeatures, useSubscriptionState } from '@/contexts/SubscriptionContext';
 import { useToast } from '@/hooks/use-toast';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 import {
   createOrganization,
   deleteOrganization,
@@ -193,7 +194,7 @@ export function OrganizationSettings({
   const [businessProfilesAvailable, setBusinessProfilesAvailable] = useState(true);
   const [loading, setLoading] = useState(true);
   const [detailsLoadError, setDetailsLoadError] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const { pending: saving, run: runSave } = useSingleFlightAction();
   const [memberSaving, setMemberSaving] = useState(false);
   const [memberActionId, setMemberActionId] = useState<number | null>(null);
   const [invitationActionId, setInvitationActionId] = useState<number | null>(null);
@@ -323,27 +324,26 @@ export function OrganizationSettings({
       toast({ title: 'Organization name required', variant: 'destructive' });
       return;
     }
-    setSaving(true);
-    try {
-      const settings: JsonRecord = {
-        ...organization.settings,
-        timezone,
-        locale,
-        defaultBusinessId,
-      };
-      await updateOrganization(organizationId, { name: name.trim(), settings });
-      await refresh();
-      toast({ title: 'Organization saved' });
-    } catch (error) {
-      toast({
-        title: 'Could not save organization',
-        description: error instanceof Error ? error.message : 'Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setSaving(false);
-    }
-  }, [canManage, defaultBusinessId, locale, name, organization, organizationId, refresh, timezone, toast]);
+    await runSave(async () => {
+      try {
+        const settings: JsonRecord = {
+          ...organization.settings,
+          timezone,
+          locale,
+          defaultBusinessId,
+        };
+        await updateOrganization(organizationId, { name: name.trim(), settings });
+        await refresh();
+        toast({ title: 'Organization saved' });
+      } catch (error) {
+        toast({
+          title: 'Could not save organization',
+          description: error instanceof Error ? error.message : 'Please try again.',
+          variant: 'destructive',
+        });
+      }
+    });
+  }, [canManage, defaultBusinessId, locale, name, organization, organizationId, refresh, runSave, timezone, toast]);
 
   useEffect(() => {
     if (!setSaveButton) return;
@@ -691,7 +691,7 @@ export function OrganizationSettings({
 
           {canManage && !setSaveButton && (
             <div className="flex justify-end">
-              <Button onClick={() => void handleSave()} disabled={saving}>
+              <Button onClick={() => void handleSave()} disabled={saving} aria-busy={saving || undefined}>
                 {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                 Save changes
               </Button>

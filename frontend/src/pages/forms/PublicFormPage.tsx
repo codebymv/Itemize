@@ -5,6 +5,7 @@ import { LoadingState } from '@/components/LoadingState';
 import { getPublicForm, PublicFormData, submitPublicForm } from '@/services/formsApi';
 import type { FormField, JsonRecord, JsonValue } from '@/types';
 import { publicFormFieldState, safePublicFormRedirect } from './publicFormBehavior';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 
 const fieldKey = (field: FormField) => String(field.id);
 
@@ -155,7 +156,7 @@ export default function PublicFormPage() {
     const [form, setForm] = useState<PublicFormData | null>(null);
     const [values, setValues] = useState<JsonRecord>({});
     const [loading, setLoading] = useState(true);
-    const [submitting, setSubmitting] = useState(false);
+    const { pending: submitting, run } = useSingleFlightAction();
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
 
@@ -183,19 +184,18 @@ export default function PublicFormPage() {
 
     const submit = async (event: FormEvent) => {
         event.preventDefault();
-        if (!identifier || submitting) return;
-        setSubmitting(true);
+        if (!identifier) return;
         setError('');
-        try {
-            const result = await submitPublicForm(identifier, values);
-            setSuccessMessage(result.message || 'Thank you for your submission.');
-            const redirect = safePublicFormRedirect(result.redirect_url);
-            if (redirect) window.location.assign(redirect);
-        } catch {
-            setError('Please review your answers and try again.');
-        } finally {
-            setSubmitting(false);
-        }
+        await run(async () => {
+            try {
+                const result = await submitPublicForm(identifier, values);
+                setSuccessMessage(result.message || 'Thank you for your submission.');
+                const redirect = safePublicFormRedirect(result.redirect_url);
+                if (redirect) window.location.assign(redirect);
+            } catch {
+                setError('Please review your answers and try again.');
+            }
+        });
     };
 
     if (loading) {

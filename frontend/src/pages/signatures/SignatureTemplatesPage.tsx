@@ -19,6 +19,7 @@ import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { ExpandedRowActionLabel, ExpandedRowActions } from '@/components/ui/expanded-row';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/hooks/useOrganization';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
 import FieldPlacementCanvas from './components/FieldPlacementCanvas';
 import {
@@ -38,7 +39,7 @@ export default function SignatureTemplatesPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { organizationId, isLoading: organizationLoading, error: organizationError } = useOrganization();
-  const [creating, setCreating] = useState(false);
+  const { pending: creating, run } = useSingleFlightAction();
   const [searchQuery, setSearchQuery] = useState('');
   const [readinessFilter, setReadinessFilter] = useState<TemplateReadinessFilter>('all');
   const [expandedTemplateId, setExpandedTemplateId] = useState<number | null>(null);
@@ -74,28 +75,29 @@ export default function SignatureTemplatesPage() {
 
   const handleCreate = async () => {
     if (!organizationId) return;
-    try {
-      setCreating(true);
-      const created = await createSignatureTemplate({ title: 'New Template' }, organizationId);
-      queryClient.setQueryData<SignatureTemplate[]>(catalogQueryKey, current =>
-        current ? [created, ...current.filter(template => template.id !== created.id)] : current,
-      );
-      navigate(`/templates/${created.id}`);
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to create template', variant: 'destructive' });
-    } finally {
-      setCreating(false);
-    }
+    await run(async () => {
+      try {
+        const created = await createSignatureTemplate({ title: 'New Template' }, organizationId);
+        queryClient.setQueryData<SignatureTemplate[]>(catalogQueryKey, current =>
+          current ? [created, ...current.filter(template => template.id !== created.id)] : current,
+        );
+        navigate(`/templates/${created.id}`);
+      } catch (error) {
+        toast({ title: 'Error', description: 'Failed to create template', variant: 'destructive' });
+      }
+    });
   };
 
   const handleUseTemplate = async (templateId: number) => {
     if (!organizationId) return;
-    try {
-      const document = await instantiateSignatureTemplate(templateId, {}, organizationId);
-      navigate(`/documents/${document.id}`);
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to create document from template', variant: 'destructive' });
-    }
+    await run(async () => {
+      try {
+        const document = await instantiateSignatureTemplate(templateId, {}, organizationId);
+        navigate(`/documents/${document.id}`);
+      } catch (error) {
+        toast({ title: 'Error', description: 'Failed to create document from template', variant: 'destructive' });
+      }
+    });
   };
 
   const handleToggleExpand = (templateId: number, e: React.MouseEvent) => {
@@ -196,6 +198,7 @@ export default function SignatureTemplatesPage() {
             icon={<Plus className="h-4 w-4" />}
             onClick={() => void handleCreate()}
             disabled={creating}
+            busy={creating}
           />
         ),
       }}
@@ -308,7 +311,7 @@ export default function SignatureTemplatesPage() {
                                     <Eye className="h-4 w-4 mr-2" />View
                                   </DropdownMenuItem>
                                   {template.is_ready ? (
-                                    <DropdownMenuItem onClick={() => handleUseTemplate(template.id)}>
+                                    <DropdownMenuItem disabled={creating} onClick={() => handleUseTemplate(template.id)}>
                                       <Send className="h-4 w-4 mr-2" />Use
                                     </DropdownMenuItem>
                                   ) : (
@@ -354,6 +357,8 @@ export default function SignatureTemplatesPage() {
                               <Button
                                 size="sm"
                                 className="bg-blue-600 interaction-button--primary text-white text-xs sm:text-sm"
+                                disabled={creating}
+                                aria-busy={creating || undefined}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   if (template.is_ready) handleUseTemplate(template.id);

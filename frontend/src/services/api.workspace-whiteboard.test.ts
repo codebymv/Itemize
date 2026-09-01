@@ -29,6 +29,7 @@ vi.mock('./workspaceContentGraphql', () => ({
   getWorkspaceWhiteboardsViaGraphql: vi.fn(),
   getWorkspaceWireframesViaGraphql: vi.fn(),
   updateCanvasPositionsViaGraphql: vi.fn(),
+  workspaceContentExistsViaGraphql: vi.fn(),
   wireframeFields: '',
 }));
 
@@ -91,7 +92,7 @@ describe('workspace whiteboard API GraphQL transport', () => {
     expect(getWorkspaceWhiteboardsViaGraphql).toHaveBeenCalled();
     expect(createWorkspaceWhiteboardViaGraphql).toHaveBeenCalledWith({
       title: 'Sketch',
-    });
+    }, expect.any(String));
     expect(updateWorkspaceWhiteboardViaGraphql).toHaveBeenCalledWith(
       9,
       { title: 'Changed' },

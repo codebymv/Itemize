@@ -2,6 +2,9 @@ import { Field, Float, InputType, Int } from '@nestjs/graphql';
 
 @InputType()
 export class CreateWorkspaceNoteInput {
+  @Field()
+  idempotencyKey: string;
+
   @Field(() => String, { nullable: true })
   title?: string | null;
 

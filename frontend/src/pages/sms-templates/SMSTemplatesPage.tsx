@@ -31,6 +31,7 @@ import { getCatalogStatusVisual } from '@/pages/campaigns/constants/campaignVisu
 import { deleteSmsTemplate, duplicateSmsTemplate, sendTestSms, type SmsTemplate } from '@/services/smsApi';
 import { getSmsTemplatesViaGraphql } from '@/services/smsTemplatesGraphql';
 import { templateCatalogQueryKeys } from '@/services/templateCatalogQueryKeys';
+import { useKeyedSingleFlightAction } from '@/hooks/useSingleFlightAction';
 
 type StatusFilter = 'all' | 'active' | 'inactive';
 const PAGE_SIZE = 20;
@@ -49,7 +50,7 @@ export function SMSTemplatesPage() {
   const [templateToDelete, setTemplateToDelete] = useState<SmsTemplate | null>(null);
   const [testTemplate, setTestTemplate] = useState<SmsTemplate | null>(null);
   const [testPhone, setTestPhone] = useState('');
-  const [workingId, setWorkingId] = useState<number | null>(null);
+  const { isPending: isTemplatePending, run: runTemplateAction } = useKeyedSingleFlightAction<number>();
   useEffect(() => {
     const timeout = window.setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
     return () => window.clearTimeout(timeout);
@@ -105,26 +106,27 @@ export function SMSTemplatesPage() {
 
   const handleDuplicate = async (template: SmsTemplate) => {
     if (!organizationId) return;
-    setWorkingId(template.id);
-    try {
-      await duplicateSmsTemplate(template.id, organizationId);
-      await queryClient.invalidateQueries({ queryKey: templateCatalogQueryKeys.sms(organizationId) });
-      toast({ title: 'Duplicated', description: 'Template duplicated successfully.' });
-    }
-    catch { toast({ title: 'Unable to duplicate', description: 'The template was not duplicated.', variant: 'destructive' }); }
-    finally { setWorkingId(null); }
+    await runTemplateAction(template.id, async () => {
+      try {
+        await duplicateSmsTemplate(template.id, organizationId);
+        await queryClient.invalidateQueries({ queryKey: templateCatalogQueryKeys.sms(organizationId) });
+        toast({ title: 'Duplicated', description: 'Template duplicated successfully.' });
+      }
+      catch { toast({ title: 'Unable to duplicate', description: 'The template was not duplicated.', variant: 'destructive' }); }
+    });
   };
 
   const handleSendTest = async () => {
     if (!organizationId || !testTemplate || !testPhone.trim()) return;
-    setWorkingId(testTemplate.id);
-    try {
-      await sendTestSms(testTemplate.id, testPhone.trim(), organizationId);
-      toast({ title: 'Test SMS queued', description: `Sending to ${testPhone.trim()}.` });
-      setTestTemplate(null);
-      setTestPhone('');
-    } catch { toast({ title: 'Unable to send test', description: 'The test SMS was not queued.', variant: 'destructive' }); }
-    finally { setWorkingId(null); }
+    const template = testTemplate;
+    await runTemplateAction(template.id, async () => {
+      try {
+        await sendTestSms(template.id, testPhone.trim(), organizationId);
+        toast({ title: 'Test SMS queued', description: `Sending to ${testPhone.trim()}.` });
+        setTestTemplate(null);
+        setTestPhone('');
+      } catch { toast({ title: 'Unable to send test', description: 'The test SMS was not queued.', variant: 'destructive' }); }
+    });
   };
 
   const handleDelete = async (): Promise<boolean> => {
@@ -168,7 +170,8 @@ export function SMSTemplatesPage() {
         const visual = getCatalogStatusVisual(template.is_active);
         const characterCount = template.message.length;
         const segmentCount = Math.max(1, Math.ceil(characterCount / 160));
-        return <div key={template.id} role="link" tabIndex={0} aria-label={`Open ${template.name}`} className="group flex cursor-pointer items-center gap-3 px-3 py-4 interaction-row focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-4" onClick={() => navigate(`/sms-templates/${template.id}`)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); navigate(`/sms-templates/${template.id}`); } }}><div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full', visual.iconBackgroundClass)}><MessageSquare className={cn('h-5 w-5', visual.iconClass)} /></div><div className="min-w-0 flex-1"><div className="flex min-w-0 items-center gap-2"><h3 className="truncate text-sm font-medium md:text-base">{template.name}</h3><Badge className={cn('shrink-0 text-xs', visual.badgeClass)}>{visual.label}</Badge></div><p className="mt-1 truncate text-sm text-muted-foreground">{template.message}</p><div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">{template.category && <span>{template.category}</span>}<span>{characterCount} characters</span><span>{segmentCount} SMS segment{segmentCount === 1 ? '' : 's'}</span></div></div><DropdownMenu><DropdownMenuTrigger asChild onClick={event => event.stopPropagation()}><Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" disabled={workingId === template.id} aria-label={`More actions for ${template.name}`}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end" onClick={event => event.stopPropagation()}><DropdownMenuItem onClick={() => navigate(`/sms-templates/${template.id}`)} className="group/menu"><Pencil className="mr-2 h-4 w-4" />Edit template</DropdownMenuItem><DropdownMenuItem onClick={() => { setTestTemplate(template); setTestPhone(''); }}><Send className="mr-2 h-4 w-4" />Send test</DropdownMenuItem><DropdownMenuItem onClick={() => void handleDuplicate(template)}><Copy className="mr-2 h-4 w-4" />Duplicate</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setTemplateToDelete(template)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div>;
+        const working = isTemplatePending(template.id);
+        return <div key={template.id} role="link" tabIndex={0} aria-busy={working ? 'true' : undefined} aria-label={`Open ${template.name}`} className="group flex cursor-pointer items-center gap-3 px-3 py-4 interaction-row focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-4" onClick={() => navigate(`/sms-templates/${template.id}`)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); navigate(`/sms-templates/${template.id}`); } }}><div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full', visual.iconBackgroundClass)}><MessageSquare className={cn('h-5 w-5', visual.iconClass)} /></div><div className="min-w-0 flex-1"><div className="flex min-w-0 items-center gap-2"><h3 className="truncate text-sm font-medium md:text-base">{template.name}</h3><Badge className={cn('shrink-0 text-xs', visual.badgeClass)}>{visual.label}</Badge></div><p className="mt-1 truncate text-sm text-muted-foreground">{template.message}</p><div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">{template.category && <span>{template.category}</span>}<span>{characterCount} characters</span><span>{segmentCount} SMS segment{segmentCount === 1 ? '' : 's'}</span></div></div><DropdownMenu><DropdownMenuTrigger asChild onClick={event => event.stopPropagation()}><Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" disabled={working} aria-label={`More actions for ${template.name}`}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger><DropdownMenuContent align="end" onClick={event => event.stopPropagation()}><DropdownMenuItem onClick={() => navigate(`/sms-templates/${template.id}`)} className="group/menu"><Pencil className="mr-2 h-4 w-4" />Edit template</DropdownMenuItem><DropdownMenuItem onClick={() => { setTestTemplate(template); setTestPhone(''); }}><Send className="mr-2 h-4 w-4" />Send test</DropdownMenuItem><DropdownMenuItem onClick={() => void handleDuplicate(template)}><Copy className="mr-2 h-4 w-4" />Duplicate</DropdownMenuItem><DropdownMenuSeparator /><DropdownMenuItem onClick={() => setTemplateToDelete(template)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Delete</DropdownMenuItem></DropdownMenuContent></DropdownMenu></div>;
       })}</div>}
     </CardContent></Card>
     {pagination.totalPages > 1 && <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -180,7 +183,7 @@ export function SMSTemplatesPage() {
       </div>
     </div>}
     {onboarding.featureKey && ONBOARDING_CONTENT[onboarding.featureKey] && <OnboardingModal isOpen={onboarding.showModal} onClose={onboarding.handleClose} onComplete={onboarding.handleComplete} onDismiss={onboarding.handleDismiss} content={ONBOARDING_CONTENT[onboarding.featureKey]} />}
-    <Dialog open={Boolean(testTemplate)} onOpenChange={open => { if (!open && workingId !== testTemplate?.id) { setTestTemplate(null); setTestPhone(''); } }}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>Send a test SMS</DialogTitle><DialogDescription>Send {testTemplate?.name} to a phone number before using it in a campaign.</DialogDescription></DialogHeader><div className="space-y-2"><Label htmlFor="test-sms-phone">Destination phone number</Label><Input id="test-sms-phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="+1 555 555 0100" value={testPhone} onChange={event => setTestPhone(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') void handleSendTest(); }} /></div><DialogFooter><Button variant="outline" onClick={() => { setTestTemplate(null); setTestPhone(''); }} disabled={workingId === testTemplate?.id}>Cancel</Button><Button className="bg-blue-600 text-white interaction-button--primary" onClick={() => void handleSendTest()} disabled={!testPhone.trim() || workingId === testTemplate?.id}><Send className="mr-2 h-4 w-4" />Send test</Button></DialogFooter></DialogContent></Dialog>
+    <Dialog open={Boolean(testTemplate)} onOpenChange={open => { if (!open && (!testTemplate || !isTemplatePending(testTemplate.id))) { setTestTemplate(null); setTestPhone(''); } }}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>Send a test SMS</DialogTitle><DialogDescription>Send {testTemplate?.name} to a phone number before using it in a campaign.</DialogDescription></DialogHeader><div className="space-y-2"><Label htmlFor="test-sms-phone">Destination phone number</Label><Input id="test-sms-phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="+1 555 555 0100" value={testPhone} onChange={event => setTestPhone(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') void handleSendTest(); }} /></div><DialogFooter><Button variant="outline" onClick={() => { if (!testTemplate || !isTemplatePending(testTemplate.id)) { setTestTemplate(null); setTestPhone(''); } }} disabled={testTemplate ? isTemplatePending(testTemplate.id) : false}>Cancel</Button><Button className="bg-blue-600 text-white interaction-button--primary" onClick={() => void handleSendTest()} disabled={!testPhone.trim() || (testTemplate ? isTemplatePending(testTemplate.id) : false)}><Send className="mr-2 h-4 w-4" />Send test</Button></DialogFooter></DialogContent></Dialog>
     <DeleteDialog open={Boolean(templateToDelete)} onOpenChange={open => !open && setTemplateToDelete(null)} onConfirm={handleDelete} itemType="sms-template" itemTitle={templateToDelete?.name} />
   </PageLayout>;
 }

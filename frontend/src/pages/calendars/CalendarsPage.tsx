@@ -43,6 +43,7 @@ import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { StatCard } from '@/components/StatCard';
 import { cn } from '@/lib/utils';
+import { useKeyedSingleFlightAction } from '@/hooks/useSingleFlightAction';
 
 export function CalendarsPage() {
     const navigate = useNavigate();
@@ -55,6 +56,7 @@ export function CalendarsPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [calendarToDelete, setCalendarToDelete] = useState<Calendar | null>(null);
+    const { isPending: isCalendarPending, run: runCalendarAction } = useKeyedSingleFlightAction<number>();
 
     const fetchCalendars = useCallback(async () => {
         if (!organizationId) return;
@@ -95,16 +97,18 @@ export function CalendarsPage() {
 
     const handleToggleActive = async (calendar: Calendar) => {
         if (!organizationId) return;
-        try {
-            await updateCalendar(calendar.id, { is_active: !calendar.is_active }, organizationId);
-            setCalendars(previous => previous.map(item => item.id === calendar.id
-                ? { ...item, is_active: !item.is_active }
-                : item));
-            toast({ title: calendar.is_active ? 'Calendar paused' : 'Calendar activated', description: calendar.name });
-        } catch (error) {
-            console.error('Error toggling calendar:', error);
-            toast({ title: 'Unable to update calendar', variant: 'destructive' });
-        }
+        await runCalendarAction(calendar.id, async () => {
+            try {
+                await updateCalendar(calendar.id, { is_active: !calendar.is_active }, organizationId);
+                setCalendars(previous => previous.map(item => item.id === calendar.id
+                    ? { ...item, is_active: !item.is_active }
+                    : item));
+                toast({ title: calendar.is_active ? 'Calendar paused' : 'Calendar activated', description: calendar.name });
+            } catch (error) {
+                console.error('Error toggling calendar:', error);
+                toast({ title: 'Unable to update calendar', variant: 'destructive' });
+            }
+        });
     };
 
     const handleDeleteCalendar = async (): Promise<boolean> => {
@@ -183,9 +187,11 @@ export function CalendarsPage() {
                             {filteredCalendars.map(calendar => {
                                 const visual = getCalendarStatusVisual(calendar.is_active);
                                 const StatusIcon = visual.icon;
+                                const working = isCalendarPending(calendar.id);
                                 return (
                                     <div
                                         key={calendar.id}
+                                        aria-busy={working ? 'true' : undefined}
                                         role="link"
                                         tabIndex={0}
                                         aria-label={`Open ${calendar.name}`}
@@ -217,7 +223,7 @@ export function CalendarsPage() {
                                         </div>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild onClick={event => event.stopPropagation()}>
-                                                <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" aria-label={`More actions for ${calendar.name}`}><MoreHorizontal className="h-4 w-4" /></Button>
+                                                <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" disabled={working} aria-label={`More actions for ${calendar.name}`}><MoreHorizontal className="h-4 w-4" /></Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end" onClick={event => event.stopPropagation()}>
                                                 <DropdownMenuItem onClick={() => navigate(`/calendars/${calendar.id}`)}><Settings2 className="mr-2 h-4 w-4" />Edit calendar</DropdownMenuItem>

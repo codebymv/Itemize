@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { bulkUpdateContacts } from '@/services/contactsApi';
 import { useToast } from '@/hooks/use-toast';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 
 const getApiErrorMessage = (error: unknown, fallback: string): string => {
     const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
@@ -37,7 +38,7 @@ export function BulkTagModal({
     const [tagInput, setTagInput] = useState('');
     const [tags, setTags] = useState<string[]>([]);
     const [mode, setMode] = useState<'add' | 'remove'>('add');
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const { pending: isSubmitting, run, dismissIfIdle } = useSingleFlightAction();
 
     const handleAddTag = () => {
         const newTag = tagInput.trim();
@@ -68,37 +69,38 @@ export function BulkTagModal({
             return;
         }
 
-        setIsSubmitting(true);
-        try {
-            await bulkUpdateContacts({
-                contact_ids: selectedContactIds,
-                updates: {
-                    tags,
-                    tags_mode: mode,
-                },
-                organization_id: organizationId,
-            });
+        await run(async () => {
+            try {
+                await bulkUpdateContacts({
+                    contact_ids: selectedContactIds,
+                    updates: {
+                        tags,
+                        tags_mode: mode,
+                    },
+                    organization_id: organizationId,
+                });
 
-            toast({
-                title: mode === 'add' ? 'Tags Added' : 'Tags Removed',
-                description: `${mode === 'add' ? 'Added' : 'Removed'} ${tags.length} tag${tags.length > 1 ? 's' : ''} ${mode === 'add' ? 'to' : 'from'} ${selectedContactIds.length} contact${selectedContactIds.length > 1 ? 's' : ''}`,
-            });
+                toast({
+                    title: mode === 'add' ? 'Tags Added' : 'Tags Removed',
+                    description: `${mode === 'add' ? 'Added' : 'Removed'} ${tags.length} tag${tags.length > 1 ? 's' : ''} ${mode === 'add' ? 'to' : 'from'} ${selectedContactIds.length} contact${selectedContactIds.length > 1 ? 's' : ''}`,
+                });
 
-            onCompleted();
-            onClose();
-        } catch (error) {
-            toast({
-                title: 'Error',
-                description: getApiErrorMessage(error, 'Failed to update tags'),
-                variant: 'destructive',
-            });
-        } finally {
-            setIsSubmitting(false);
-        }
+                onCompleted();
+                onClose();
+            } catch (error) {
+                toast({
+                    title: 'Error',
+                    description: getApiErrorMessage(error, 'Failed to update tags'),
+                    variant: 'destructive',
+                });
+            }
+        });
     };
 
     return (
-        <Dialog open onOpenChange={onClose}>
+        <Dialog open onOpenChange={(open) => {
+            if (!open) dismissIfIdle(onClose);
+        }}>
             <DialogContent className="max-w-md">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
@@ -178,6 +180,7 @@ export function BulkTagModal({
                     <Button
                         onClick={handleSubmit}
                         disabled={tags.length === 0 || isSubmitting}
+                        aria-busy={isSubmitting || undefined}
                         className="bg-blue-600 interaction-button--primary text-white"
                         style={{ fontFamily: '"Raleway", sans-serif' }}
                         aria-label={isSubmitting ? 'Updating tags...' : `${mode === 'add' ? 'Add' : 'Remove'} tags`}

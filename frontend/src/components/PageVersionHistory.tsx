@@ -37,6 +37,7 @@ import { useOrganization } from '@/hooks/useOrganization';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { defineStatus } from '@/lib/statusVisuals';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 
 const CURRENT_VERSION_VISUAL = defineStatus('Current', 'blue', Play);
 const PUBLISHED_VERSION_VISUAL = defineStatus('Published', 'green', Eye);
@@ -56,8 +57,8 @@ export function PageVersionHistory({ pageId, pageName, open, onOpenChange, onPre
     const [currentVersionId, setCurrentVersionId] = useState<number | null>(null);
     const [loading, setLoading] = useState(false);
     const [loadError, setLoadError] = useState(false);
-    const [selectedVersion, setSelectedVersion] = useState<PageVersion | null>(null);
     const [deleteVersionId, setDeleteVersionId] = useState<number | null>(null);
+    const { pending: mutationPending, run: runMutation } = useSingleFlightAction();
 
     const loadVersions = useCallback(async () => {
         if (!organizationId) return;
@@ -83,49 +84,60 @@ export function PageVersionHistory({ pageId, pageName, open, onOpenChange, onPre
 
     const handleCreateVersion = async () => {
         if (!organizationId) return;
-        try {
-            await createPageVersion(pageId, `Version from ${new Date().toLocaleDateString()}`, organizationId);
-            toast({ title: 'Version Created', description: 'New version saved successfully' });
-            loadVersions();
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to create version', variant: 'destructive' });
-        }
+        await runMutation(async () => {
+            try {
+                await createPageVersion(pageId, `Version from ${new Date().toLocaleDateString()}`, organizationId);
+                toast({ title: 'Version Created', description: 'New version saved successfully' });
+                await loadVersions();
+            } catch (error) {
+                toast({ title: 'Error', description: 'Failed to create version', variant: 'destructive' });
+            }
+        });
     };
 
     const handlePublish = async (versionId: number) => {
         if (!organizationId) return;
-        try {
-            await publishPageVersion(pageId, versionId, organizationId);
-            toast({ title: 'Published', description: 'Version published to production' });
-            loadVersions();
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to publish version', variant: 'destructive' });
-        }
+        await runMutation(async () => {
+            try {
+                await publishPageVersion(pageId, versionId, organizationId);
+                toast({ title: 'Published', description: 'Version published to production' });
+                await loadVersions();
+            } catch (error) {
+                toast({ title: 'Error', description: 'Failed to publish version', variant: 'destructive' });
+            }
+        });
     };
 
-    const handleDelete = async () => {
-        if (!organizationId || !deleteVersionId) return;
-        try {
-            await deletePageVersion(pageId, deleteVersionId, organizationId);
-            toast({ title: 'Deleted', description: 'Version deleted successfully' });
-            loadVersions();
-        } catch (error) {
-            toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to delete version', variant: 'destructive' });
-        } finally {
-            setDeleteVersionId(null);
-        }
+    const handleDelete = async (): Promise<boolean> => {
+        if (!organizationId || !deleteVersionId) return false;
+        const versionId = deleteVersionId;
+        const result = await runMutation(async () => {
+            try {
+                await deletePageVersion(pageId, versionId, organizationId);
+                toast({ title: 'Deleted', description: 'Version deleted successfully' });
+                await loadVersions();
+                setDeleteVersionId(null);
+                return true;
+            } catch (error) {
+                toast({ title: 'Error', description: error instanceof Error ? error.message : 'Failed to delete version', variant: 'destructive' });
+                return false;
+            }
+        });
+        return result === true;
     };
 
     const handleRestore = async (versionId: number) => {
         if (!organizationId) return;
         if (!confirm('This will create a new version from the selected one. Continue?')) return;
-        try {
-            await restorePageVersion(pageId, versionId, organizationId);
-            toast({ title: 'Restored', description: 'Version restored successfully as new version' });
-            loadVersions();
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to restore version', variant: 'destructive' });
-        }
+        await runMutation(async () => {
+            try {
+                await restorePageVersion(pageId, versionId, organizationId);
+                toast({ title: 'Restored', description: 'Version restored successfully as new version' });
+                await loadVersions();
+            } catch (error) {
+                toast({ title: 'Error', description: 'Failed to restore version', variant: 'destructive' });
+            }
+        });
     };
 
     const formatDate = (dateString: string) => {
@@ -137,7 +149,9 @@ export function PageVersionHistory({ pageId, pageName, open, onOpenChange, onPre
     };
 
     return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={open} onOpenChange={nextOpen => {
+            if (nextOpen || !mutationPending) onOpenChange(nextOpen);
+        }}>
             <DialogContent className="max-w-4xl h-[80vh] p-0 flex flex-col">
                 <DialogHeader className="border-b px-6 py-4 pr-12">
                     <div className="flex items-center justify-between">
@@ -148,7 +162,7 @@ export function PageVersionHistory({ pageId, pageName, open, onOpenChange, onPre
                         <DialogDescription className="sr-only">
                             Browse, save, preview, and restore versions of {pageName}.
                         </DialogDescription>
-                        <Button onClick={handleCreateVersion} disabled={loading || !organizationId} size="sm">
+                        <Button onClick={handleCreateVersion} disabled={loading || !organizationId || mutationPending} aria-busy={mutationPending ? 'true' : undefined} size="sm">
                             <Clock className="h-4 w-4 mr-2" />
                             Save New Version
                         </Button>
@@ -178,9 +192,10 @@ export function PageVersionHistory({ pageId, pageName, open, onOpenChange, onPre
                         />
                     ) : (
                         <div className="space-y-3">
-                            {versions.map((version, index) => (
+                            {versions.map((version) => (
                                 <div
                                     key={version.id}
+                                    aria-busy={mutationPending ? 'true' : undefined}
                                     className={`flex items-center gap-4 p-4 rounded-lg border ${
                                         currentVersionId === version.id
                                             ? 'border-primary/30 bg-accent'
@@ -214,6 +229,7 @@ export function PageVersionHistory({ pageId, pageName, open, onOpenChange, onPre
                                             <Button
                                                 variant="outline"
                                                 size="sm"
+                                                disabled={mutationPending}
                                                 onClick={() => handlePublish(version.id)}
                                             >
                                                 <Play className="h-4 w-4 mr-1" />
@@ -222,7 +238,7 @@ export function PageVersionHistory({ pageId, pageName, open, onOpenChange, onPre
                                         )}
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon">
+                                                <Button variant="ghost" size="icon" disabled={mutationPending}>
                                                     <HistoryIcon className="h-4 w-4" />
                                                 </Button>
                                             </DropdownMenuTrigger>

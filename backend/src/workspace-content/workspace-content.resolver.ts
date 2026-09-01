@@ -48,6 +48,35 @@ export class WorkspaceContentResolver {
     private readonly requestContext: RequestContextService,
   ) {}
 
+  @Query(() => Boolean)
+  workspaceContentExists(
+    @Args('type') type: string,
+    @Args('id', { type: () => Int }) id: number,
+  ): Promise<boolean> {
+    return this.content.contentExists(this.userId(), type, id);
+  }
+
+  @Query(() => WorkspaceNote, { nullable: true })
+  workspaceNote(
+    @Args('id', { type: () => Int }) id: number,
+  ): Promise<WorkspaceNote | null> {
+    return this.content.note(this.userId(), id);
+  }
+
+  @Query(() => WorkspaceWhiteboard, { nullable: true })
+  workspaceWhiteboard(
+    @Args('id', { type: () => Int }) id: number,
+  ): Promise<WorkspaceWhiteboard | null> {
+    return this.content.whiteboard(this.userId(), id);
+  }
+
+  @Query(() => WorkspaceWireframe, { nullable: true })
+  workspaceWireframe(
+    @Args('id', { type: () => Int }) id: number,
+  ): Promise<WorkspaceWireframe | null> {
+    return this.content.wireframe(this.userId(), id);
+  }
+
   @Query(() => WorkspaceListPage)
   workspaceLists(
     @Args('filter', { nullable: true }) filter?: WorkspaceContentFilterInput,

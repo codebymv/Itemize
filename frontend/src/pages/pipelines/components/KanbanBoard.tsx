@@ -41,6 +41,8 @@ interface KanbanBoardProps {
   onAddDeal: (stageId: string) => void;
   onRefresh: () => void;
   organizationId: number;
+  isDealPending: (dealId: number) => boolean;
+  runDealAction: (dealId: number, action: () => Promise<unknown>) => Promise<unknown>;
   onRemove?: () => void;
 }
 
@@ -71,6 +73,8 @@ export function KanbanBoard({
   onAddDeal,
   onRefresh,
   organizationId,
+  isDealPending,
+  runDealAction,
   onRemove,
 }: KanbanBoardProps) {
   const { toast } = useToast();
@@ -194,37 +198,45 @@ export function KanbanBoard({
 
   // Deal actions
   const handleMarkWon = async (dealId: number) => {
-    try {
-      await markDealWon(dealId, organizationId);
-      toast({ title: 'Deal Won', description: 'Deal has been marked as won' });
-      onRefresh();
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to update deal', variant: 'destructive' });
-    }
+    await runDealAction(dealId, async () => {
+      try {
+        await markDealWon(dealId, organizationId);
+        toast({ title: 'Deal Won', description: 'Deal has been marked as won' });
+        onRefresh();
+      } catch (error) {
+        toast({ title: 'Error', description: 'Failed to update deal', variant: 'destructive' });
+      }
+    });
   };
 
   const handleMarkLost = async (dealId: number) => {
-    try {
-      await markDealLost(dealId, undefined, organizationId);
-      toast({ title: 'Deal Lost', description: 'Deal has been marked as lost' });
-      onRefresh();
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to update deal', variant: 'destructive' });
-    }
+    await runDealAction(dealId, async () => {
+      try {
+        await markDealLost(dealId, undefined, organizationId);
+        toast({ title: 'Deal Lost', description: 'Deal has been marked as lost' });
+        onRefresh();
+      } catch (error) {
+        toast({ title: 'Error', description: 'Failed to update deal', variant: 'destructive' });
+      }
+    });
   };
 
   const handleDeleteDeal = async () => {
     if (!deleteDealId) return;
-    
-    try {
-      await deleteDeal(deleteDealId, organizationId);
-      toast({ title: 'Deleted', description: 'Deal deleted successfully' });
-      onRefresh();
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to delete deal', variant: 'destructive' });
-    } finally {
-      setDeleteDealId(null);
-    }
+    const dealId = deleteDealId;
+    const result = await runDealAction(dealId, async () => {
+      try {
+        await deleteDeal(dealId, organizationId);
+        toast({ title: 'Deleted', description: 'Deal deleted successfully' });
+        onRefresh();
+        setDeleteDealId(null);
+        return true;
+      } catch (error) {
+        toast({ title: 'Error', description: 'Failed to delete deal', variant: 'destructive' });
+        return false;
+      }
+    });
+    return result === true;
   };
 
   const formatCurrency = (value: number) => {
@@ -379,10 +391,11 @@ export function KanbanBoard({
                   {stageDeals.map((deal) => (
                     <Card
                       key={deal.id}
+                      aria-busy={isDealPending(deal.id) ? 'true' : undefined}
                       className={`cursor-grab touch-pan-y active:cursor-grabbing transition-shadow hover:shadow-md ${
                         draggedDealId === deal.id ? 'opacity-50' : ''
                       }`}
-                      draggable={!isMobile}
+                      draggable={!isMobile && !isDealPending(deal.id)}
                       onDragStart={(e) => handleDragStart(e, deal.id)}
                       onDragEnd={handleDragEnd}
                     >
@@ -393,7 +406,7 @@ export function KanbanBoard({
                           </h4>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="-mr-1 -mt-1 h-9 w-9" aria-label={`More actions for ${deal.title}`}>
+                              <Button variant="ghost" size="icon" className="-mr-1 -mt-1 h-9 w-9" disabled={isDealPending(deal.id)} aria-label={`More actions for ${deal.title}`}>
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>

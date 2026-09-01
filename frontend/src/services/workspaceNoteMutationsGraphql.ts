@@ -1,6 +1,8 @@
 import type { CreateNotePayload, NotePayload } from './api';
 import { graphqlMutationRequest } from './graphqlClient';
 import type { LegacyWorkspaceNote } from './workspaceContentGraphql';
+import { getWorkspaceNoteViaGraphql } from './workspaceContentGraphql';
+import { reconcileWorkspaceUpdate } from './workspaceMutationReconciliation';
 
 type GraphqlWorkspaceNote = {
   id: number;
@@ -86,8 +88,9 @@ const mapInput = (input: CreateNotePayload | NotePayload) => ({
 
 export const createWorkspaceNoteViaGraphql = async (
   input: CreateNotePayload,
+  idempotencyKey: string,
 ): Promise<LegacyWorkspaceNote> => {
-  const variables = { input: mapInput(input) };
+  const variables = { input: { idempotencyKey, ...mapInput(input) } };
   const data = await graphqlMutationRequest<
     { createWorkspaceNote: GraphqlWorkspaceNote },
     typeof variables
@@ -106,11 +109,19 @@ export const updateWorkspaceNoteViaGraphql = async (
       ...mapInput(input),
     },
   };
-  const data = await graphqlMutationRequest<
-    { updateWorkspaceNote: GraphqlWorkspaceNote },
-    typeof variables
-  >(updateNoteMutation, variables);
-  return mapNote(data.updateWorkspaceNote);
+  try {
+    const data = await graphqlMutationRequest<
+      { updateWorkspaceNote: GraphqlWorkspaceNote },
+      typeof variables
+    >(updateNoteMutation, variables);
+    return mapNote(data.updateWorkspaceNote);
+  } catch (error) {
+    return reconcileWorkspaceUpdate(
+      error,
+      () => getWorkspaceNoteViaGraphql(id),
+      input,
+    );
+  }
 };
 
 export const deleteWorkspaceNoteViaGraphql = async (

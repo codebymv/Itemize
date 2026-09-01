@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 import { getPublicSigningData, submitPublicSignature, declinePublicSignature } from '@/services/signaturesApi';
 import type { PublicSigningData } from '@/services/signaturesApi';
 import { getAssetUrl, getApiUrl } from '@/lib/api';
@@ -135,8 +136,9 @@ export default function SignPage() {
   const [selectedFont, setSelectedFont] = useState(SIGNATURE_FONTS[0].value);
   const [uploadValue, setUploadValue] = useState<string | null>(null);
   const [terminalState, setTerminalState] = useState<'signed' | 'declined' | null>(null);
-  const [pendingAction, setPendingAction] = useState<'sign' | 'decline' | null>(null);
-  const submitting = pendingAction !== null;
+  const [activeAction, setActiveAction] = useState<'sign' | 'decline' | null>(null);
+  const { pending: submitting, run } = useSingleFlightAction();
+  const pendingAction = submitting ? activeAction : null;
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const pageRefs = useRef<Array<HTMLDivElement | null>>([]);
@@ -236,46 +238,50 @@ export default function SignPage() {
   };
 
   const handleSubmit = async () => {
-    if (!token || submitting) return;
-    try {
-      const requiredFields = fields.filter((field) => field.is_required);
-      const missing = requiredFields.filter((field) => !fieldValues[field.id]);
-      if (missing.length > 0) {
-        toast({ title: 'Please complete all required fields', variant: 'destructive' });
-        return;
-      }
-      setPendingAction('sign');
-      await submitPublicSignature(token, {
-        fields: fields.map((field) => ({
-          id: field.id,
-          value: fieldValues[field.id] || ''
-        })),
-        consent: {
-          agreed: true,
-          version: data?.consent.version || ''
-        }
-      });
-      setTerminalState('signed');
-      toast({ title: 'Signature submitted' });
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to submit signature', variant: 'destructive' });
-    } finally {
-      setPendingAction(null);
+    if (!token) return;
+    const requiredFields = fields.filter((field) => field.is_required);
+    const missing = requiredFields.filter((field) => !fieldValues[field.id]);
+    if (missing.length > 0) {
+      toast({ title: 'Please complete all required fields', variant: 'destructive' });
+      return;
     }
+    await run(async () => {
+      setActiveAction('sign');
+      try {
+        await submitPublicSignature(token, {
+          fields: fields.map((field) => ({
+            id: field.id,
+            value: fieldValues[field.id] || ''
+          })),
+          consent: {
+            agreed: true,
+            version: data?.consent.version || ''
+          }
+        });
+        setTerminalState('signed');
+        toast({ title: 'Signature submitted' });
+      } catch (error) {
+        toast({ title: 'Error', description: 'Failed to submit signature', variant: 'destructive' });
+      } finally {
+        setActiveAction(null);
+      }
+    });
   };
 
   const handleDecline = async () => {
-    if (!token || submitting) return;
-    try {
-      setPendingAction('decline');
-      await declinePublicSignature(token, 'Recipient declined');
-      setTerminalState('declined');
-      toast({ title: 'Signature declined' });
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to decline', variant: 'destructive' });
-    } finally {
-      setPendingAction(null);
-    }
+    if (!token) return;
+    await run(async () => {
+      setActiveAction('decline');
+      try {
+        await declinePublicSignature(token, 'Recipient declined');
+        setTerminalState('declined');
+        toast({ title: 'Signature declined' });
+      } catch (error) {
+        toast({ title: 'Error', description: 'Failed to decline', variant: 'destructive' });
+      } finally {
+        setActiveAction(null);
+      }
+    });
   };
 
   if (loading) {

@@ -79,7 +79,7 @@ describe('workspace list GraphQL mutation consumer', () => {
         type: 'General',
         color_value: '#3B82F6',
         items: list.items,
-      }),
+      }, mutationId),
     ).resolves.toMatchObject({
       id: 9,
       user_id: 7,
@@ -102,6 +102,7 @@ describe('workspace list GraphQL mutation consumer', () => {
     );
     expect(bodies[0].variables).toEqual({
       input: {
+        idempotencyKey: mutationId,
         title: 'Tasks',
         category: 'General',
         items: list.items,

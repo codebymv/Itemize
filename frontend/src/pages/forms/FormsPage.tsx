@@ -45,6 +45,7 @@ import { FormPreviewDialog } from '@/components/forms/FormPreviewDialog';
 import { publicFormPath } from '@/lib/publicContentRoutes';
 import { formQueryKeys } from '@/services/formQueryKeys';
 import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
+import { useKeyedSingleFlightAction, useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 
 const PAGE_SIZE = 20;
 
@@ -63,6 +64,8 @@ export function FormsPage() {
     } = useRouteOnboarding();
 
     const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({ onError: () => 'Failed to initialize.' });
+    const { pending: createPending, run: runCreate } = useSingleFlightAction();
+    const { isPending: isRowPending, run: runRowAction } = useKeyedSingleFlightAction<number>();
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -76,13 +79,15 @@ export function FormsPage() {
 
     const handleCreateForm = useCallback(async () => {
         if (!organizationId) return;
-        try {
-            const newForm = await createForm({ name: 'New Form', organization_id: organizationId });
-            navigate(`/forms/${newForm.id}`);
-        } catch (error) {
-            toast({ title: 'Error', description: toastMessages.failedToCreate('form'), variant: 'destructive' });
-        }
-    }, [navigate, organizationId, toast]);
+        await runCreate(async () => {
+            try {
+                const newForm = await createForm({ name: 'New Form', organization_id: organizationId });
+                navigate(`/forms/${newForm.id}`);
+            } catch (error) {
+                toast({ title: 'Error', description: toastMessages.failedToCreate('form'), variant: 'destructive' });
+            }
+        });
+    }, [navigate, organizationId, runCreate, toast]);
 
     useEffect(() => {
         const timeout = window.setTimeout(() => setDebouncedSearch(searchQuery.trim()), 250);
@@ -132,30 +137,34 @@ export function FormsPage() {
 
     const handleToggleStatus = async (form: Form, newStatus: 'published' | 'draft') => {
         if (!organizationId) return;
-        try {
-            await updateForm(form.id, { status: newStatus }, organizationId);
-            await queryClient.invalidateQueries({
-                queryKey: formQueryKeys.pages(organizationId),
-            });
-            setExpandedFormData(current => current?.id === form.id ? { ...current, status: newStatus } : current);
-            setPreviewForm(current => current?.id === form.id ? { ...current, status: newStatus } : current);
-            toast({ title: newStatus === 'published' ? 'Form published' : 'Form unpublished' });
-        } catch (error) {
-            toast({ title: 'Error', description: toastMessages.failedToUpdate('form'), variant: 'destructive' });
-        }
+        await runRowAction(form.id, async () => {
+            try {
+                await updateForm(form.id, { status: newStatus }, organizationId);
+                await queryClient.invalidateQueries({
+                    queryKey: formQueryKeys.pages(organizationId),
+                });
+                setExpandedFormData(current => current?.id === form.id ? { ...current, status: newStatus } : current);
+                setPreviewForm(current => current?.id === form.id ? { ...current, status: newStatus } : current);
+                toast({ title: newStatus === 'published' ? 'Form published' : 'Form unpublished' });
+            } catch (error) {
+                toast({ title: 'Error', description: toastMessages.failedToUpdate('form'), variant: 'destructive' });
+            }
+        });
     };
 
     const handleDuplicate = async (id: number) => {
         if (!organizationId) return;
-        try {
-            await duplicateForm(id, organizationId);
-            await queryClient.invalidateQueries({
-                queryKey: formQueryKeys.pages(organizationId),
-            });
-            toast({ title: 'Duplicated', description: toastMessages.duplicated('form') });
-        } catch (error) {
-            toast({ title: 'Error', description: toastMessages.failedToDuplicate('form'), variant: 'destructive' });
-        }
+        await runRowAction(id, async () => {
+            try {
+                await duplicateForm(id, organizationId);
+                await queryClient.invalidateQueries({
+                    queryKey: formQueryKeys.pages(organizationId),
+                });
+                toast({ title: 'Duplicated', description: toastMessages.duplicated('form') });
+            } catch (error) {
+                toast({ title: 'Error', description: toastMessages.failedToDuplicate('form'), variant: 'destructive' });
+            }
+        });
     };
 
     const handleDelete = async (): Promise<boolean> => {
@@ -257,7 +266,7 @@ export function FormsPage() {
                 search: <HeaderSearch label="Search forms" placeholder="Search forms..." value={searchQuery} onChange={setSearchQuery} width="wide" />,
                 filters: <HeaderFilters label="Filter forms by status" activeCount={Number(statusFilter !== 'all')} compactChildren={statusSelect(true)} preferExpanded="when-roomy">{statusSelect()}</HeaderFilters>,
                 combinedQuery: <HeaderCombinedQuery label="Search and filter forms" placeholder="Search forms..." value={searchQuery} onChange={setSearchQuery} activeCount={Number(Boolean(normalizedQuery)) + Number(statusFilter !== 'all')}>{statusSelect(true)}</HeaderCombinedQuery>,
-                primaryAction: <HeaderAction label="New form" icon={<Plus className="h-4 w-4" />} onClick={handleCreateForm} />,
+                primaryAction: <HeaderAction label="New form" icon={<Plus className="h-4 w-4" />} onClick={handleCreateForm} busy={createPending} />,
             }}
         >
             {onboardingFeatureKey && ONBOARDING_CONTENT[onboardingFeatureKey] && (
@@ -303,8 +312,9 @@ export function FormsPage() {
                                 const StatusIcon = visual.icon;
                                 const isExpanded = expandedFormId === form.id;
                                 const previewData = isExpanded && expandedFormData?.id === form.id ? expandedFormData : null;
+                                const rowPending = isRowPending(form.id);
                                 return (
-                                    <div key={form.id}>
+                                    <div key={form.id} aria-busy={rowPending ? 'true' : undefined}>
                                         <div role="button" tabIndex={0} aria-expanded={isExpanded} aria-controls={`form-preview-${form.id}`} aria-label={`${isExpanded ? 'Collapse' : 'Preview'} ${form.name}`} className="group flex cursor-pointer items-center gap-3 px-3 py-4 interaction-row focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-4" onClick={() => void toggleExpanded(form)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); void toggleExpanded(form); } }}>
                                             <div className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full', visual.iconBackgroundClass)}>
                                                 <StatusIcon className={cn('h-5 w-5', visual.iconClass)} aria-hidden="true" />
@@ -328,7 +338,7 @@ export function FormsPage() {
                                                 </Button>
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" aria-label={`More actions for ${form.name}`}>
+                                                        <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" disabled={rowPending} aria-label={`More actions for ${form.name}`}>
                                                             <MoreHorizontal className="h-4 w-4" />
                                                         </Button>
                                                     </DropdownMenuTrigger>
@@ -371,14 +381,14 @@ export function FormsPage() {
                                                     <Button size="sm" className="bg-blue-600 text-white interaction-button--primary" disabled={!previewData} onClick={() => previewData && setPreviewForm(previewData)}>
                                                         <Maximize2 className="h-4 w-4" /><ExpandedRowActionLabel full="Full preview" compact="Preview" />
                                                     </Button>
-                                                    <Button size="sm" className="bg-blue-600 text-white interaction-button--primary" onClick={() => handleToggleStatus(form, form.status === 'published' ? 'draft' : 'published')}>
+                                                    <Button size="sm" className="bg-blue-600 text-white interaction-button--primary" disabled={rowPending} onClick={() => handleToggleStatus(form, form.status === 'published' ? 'draft' : 'published')}>
                                                         {form.status === 'published' ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                                         <ExpandedRowActionLabel full={form.status === 'published' ? 'Unpublish form' : 'Publish form'} compact={form.status === 'published' ? 'Unpublish' : 'Publish'} />
                                                     </Button>
                                                     {form.status === 'published' && <Button size="sm" className="bg-blue-600 text-white interaction-button--primary" onClick={() => copyFormLink(form.public_id || form.slug)}>
                                                         <Copy className="h-4 w-4" /><ExpandedRowActionLabel full="Copy public link" compact="Copy" />
                                                     </Button>}
-                                                    <Button size="sm" className="bg-blue-600 text-white interaction-button--primary" onClick={() => handleDuplicate(form.id)}>
+                                                    <Button size="sm" className="bg-blue-600 text-white interaction-button--primary" disabled={rowPending} onClick={() => handleDuplicate(form.id)}>
                                                         <Copy className="h-4 w-4" /><ExpandedRowActionLabel full="Duplicate form" compact="Duplicate" />
                                                     </Button>
                                                     <Button size="sm" variant="outline" className="border-destructive/30 text-destructive interaction-button--destructive-ghost" onClick={() => setFormToDelete(form)}>

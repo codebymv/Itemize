@@ -50,6 +50,7 @@ import { Separator } from '@/components/ui/separator';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useStableMutationKey } from '@/hooks/useStableMutationKey';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 import {
     createRecurringInvoice,
     deleteRecurringInvoice,
@@ -162,7 +163,7 @@ export function RecurringInvoicesPage() {
 
     // Create dialog state
     const [dialogOpen, setDialogOpen] = useState(false);
-    const [saving, setSaving] = useState(false);
+    const { pending: saving, run: runSave, dismissIfIdle } = useSingleFlightAction();
 
     // Form state
     const [templateName, setTemplateName] = useState('');
@@ -326,31 +327,30 @@ export function RecurringInvoicesPage() {
             return;
         }
 
-        setSaving(true);
-        try {
-            const created = await createRecurringInvoice({
-                template_name: templateName,
-                contact_id: contactId,
-                customer_name: customerName || undefined,
-                frequency,
-                start_date: startDate,
-                end_date: endDate || undefined,
-                items: validItems.map(item => ({
-                    name: item.name,
-                    description: item.description,
-                    quantity: item.quantity,
-                    unit_price: item.unit_price,
-                    tax_rate: item.tax_rate,
-                })),
-            }, organizationId);
-            cacheRecurringInvoice(created);
-            toast({ title: 'Created', description: 'Recurring invoice created successfully' });
-            setDialogOpen(false);
-        } catch (error) {
-            toast({ title: 'Error', description: 'Failed to create recurring schedule', variant: 'destructive' });
-        } finally {
-            setSaving(false);
-        }
+        await runSave(async () => {
+            try {
+                const created = await createRecurringInvoice({
+                    template_name: templateName,
+                    contact_id: contactId,
+                    customer_name: customerName || undefined,
+                    frequency,
+                    start_date: startDate,
+                    end_date: endDate || undefined,
+                    items: validItems.map(item => ({
+                        name: item.name,
+                        description: item.description,
+                        quantity: item.quantity,
+                        unit_price: item.unit_price,
+                        tax_rate: item.tax_rate,
+                    })),
+                }, organizationId);
+                cacheRecurringInvoice(created);
+                toast({ title: 'Created', description: 'Recurring invoice created successfully' });
+                setDialogOpen(false);
+            } catch {
+                toast({ title: 'Error', description: 'Failed to create recurring schedule', variant: 'destructive' });
+            }
+        });
     };
 
     const handlePause = async (id: number) => {
@@ -1005,7 +1005,10 @@ export function RecurringInvoicesPage() {
             )}
 
             {/* Create Recurring Dialog */}
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <Dialog open={dialogOpen} onOpenChange={(open) => {
+                if (open) setDialogOpen(true);
+                else dismissIfIdle(() => setDialogOpen(false));
+            }}>
                 <ModalContent size="lg">
                     <ModalHeader
                         icon={RefreshCw}
@@ -1133,13 +1136,14 @@ export function RecurringInvoicesPage() {
                         </div>
                     </ModalBody>
                     <ModalFooter>
-                        <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                        <Button variant="outline" onClick={() => dismissIfIdle(() => setDialogOpen(false))} disabled={saving}>
                             Cancel
                         </Button>
                         <Button
                             onClick={handleSaveRecurring}
                             disabled={saving || !templateName || lineItems.filter(i => i.name).length === 0}
                             className="bg-blue-600 interaction-button--primary text-white"
+                            aria-busy={saving || undefined}
                         >
                             {saving ? 'Creating...' : 'Create schedule'}
                         </Button>

@@ -17,6 +17,7 @@ import { Textarea } from '@/components/ui/textarea';
 import type { Booking, Calendar } from '@/types';
 import { createBooking, rescheduleBooking } from '@/services/calendarsApi';
 import { zonedDateTimeInput, zonedDateTimeToIso } from '@/lib/zonedDateTime';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 
 const errorMessage = (error: unknown) => {
   const response = (error as { response?: { data?: { error?: unknown; message?: unknown } } })?.response?.data;
@@ -53,7 +54,7 @@ export function BookingEditorDialog({
   const [email, setEmail] = useState(booking?.attendee_email ?? '');
   const [phone, setPhone] = useState(booking?.attendee_phone ?? '');
   const [notes, setNotes] = useState(booking?.notes ?? '');
-  const [saving, setSaving] = useState(false);
+  const { pending: saving, run, dismissIfIdle } = useSingleFlightAction();
   const [error, setError] = useState('');
   const selectedCalendar = useMemo(() => calendars.find(calendar => calendar.id === Number(calendarId)), [calendarId, calendars]);
 
@@ -77,43 +78,45 @@ export function BookingEditorDialog({
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!selectedCalendar || saving) return;
-    setSaving(true);
+    if (!selectedCalendar) return;
     setError('');
-    try {
-      const timezone = booking?.timezone ?? selectedCalendar.timezone;
-      const startTime = zonedDateTimeToIso(date, time, timezone);
-      const duration = booking
-        ? Math.max(1, (new Date(booking.end_time).getTime() - new Date(booking.start_time).getTime()) / 60000)
-        : selectedCalendar.duration_minutes;
-      const endTime = new Date(new Date(startTime).getTime() + duration * 60000).toISOString();
-      if (booking) {
-        await rescheduleBooking(booking.id, { start_time: startTime, end_time: endTime, timezone }, organizationId);
-      } else {
-        await createBooking({
-          organization_id: organizationId,
-          calendar_id: selectedCalendar.id,
-          start_time: startTime,
-          end_time: endTime,
-          timezone,
-          title: title.trim() || undefined,
-          attendee_name: name.trim(),
-          attendee_email: email.trim() || undefined,
-          attendee_phone: phone.trim() || undefined,
-          notes: notes.trim() || undefined,
-        });
+    await run(async () => {
+      try {
+        const timezone = booking?.timezone ?? selectedCalendar.timezone;
+        const startTime = zonedDateTimeToIso(date, time, timezone);
+        const duration = booking
+          ? Math.max(1, (new Date(booking.end_time).getTime() - new Date(booking.start_time).getTime()) / 60000)
+          : selectedCalendar.duration_minutes;
+        const endTime = new Date(new Date(startTime).getTime() + duration * 60000).toISOString();
+        if (booking) {
+          await rescheduleBooking(booking.id, { start_time: startTime, end_time: endTime, timezone }, organizationId);
+        } else {
+          await createBooking({
+            organization_id: organizationId,
+            calendar_id: selectedCalendar.id,
+            start_time: startTime,
+            end_time: endTime,
+            timezone,
+            title: title.trim() || undefined,
+            attendee_name: name.trim(),
+            attendee_email: email.trim() || undefined,
+            attendee_phone: phone.trim() || undefined,
+            notes: notes.trim() || undefined,
+          });
+        }
+        onOpenChange(false);
+        onSaved();
+      } catch (errorValue) {
+        setError(errorMessage(errorValue));
       }
-      onOpenChange(false);
-      onSaved();
-    } catch (errorValue) {
-      setError(errorMessage(errorValue));
-    } finally {
-      setSaving(false);
-    }
+    });
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(nextOpen) => {
+      if (nextOpen) onOpenChange(true);
+      else dismissIfIdle(() => onOpenChange(false));
+    }}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><CalendarCheck2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />{booking ? 'Reschedule booking' : 'New booking'}</DialogTitle>
@@ -145,8 +148,8 @@ export function BookingEditorDialog({
           ) : null}
           {error ? <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert> : null}
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" disabled={saving || !selectedCalendar} className="bg-blue-600 text-white interaction-button--primary">{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{booking ? 'Reschedule' : 'Create booking'}</Button>
+            <Button type="button" variant="outline" onClick={() => dismissIfIdle(() => onOpenChange(false))} disabled={saving}>Cancel</Button>
+            <Button type="submit" disabled={saving || !selectedCalendar} aria-busy={saving || undefined} className="bg-blue-600 text-white interaction-button--primary">{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{booking ? 'Reschedule' : 'Create booking'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>
