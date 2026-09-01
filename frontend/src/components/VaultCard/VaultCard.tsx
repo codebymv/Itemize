@@ -153,6 +153,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
     setShowNewCategoryInput,
     newCategory,
     setNewCategory,
+    isSavingCategory,
     handleEditCategory,
     handleAddCustomCategory,
     handleUpdateCategoryColor,
@@ -192,6 +193,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
 
     // Bulk operations
     handleBulkAddItems,
+    bulkImportPending,
     handleReorderItems,
     parseEnvFormat,
 
@@ -534,6 +536,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
           isEditingCategory={isEditingCategory}
           showNewCategoryInput={showNewCategoryInput}
           newCategory={newCategory}
+          isSavingCategory={isSavingCategory}
           setNewCategory={setNewCategory}
           setIsEditingCategory={setIsEditingCategory}
           setShowNewCategoryInput={setShowNewCategoryInput}
@@ -578,6 +581,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                 <div className="mb-4 p-3 rounded-lg border bg-muted/30">
                   <div className="flex items-center gap-2 mb-2">
                     <select
+                      disabled={bulkImportPending}
                       value={newItemType}
                       onChange={(e) =>
                         setNewItemType(
@@ -608,6 +612,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                       autoCorrect="off"
                       spellCheck={false}
                       autoFocus
+                      disabled={bulkImportPending}
                     />
                   </div>
                   {newItemType === "key_value" ? (
@@ -619,6 +624,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                       autoComplete="off"
                       autoCorrect="off"
                       spellCheck={false}
+                      disabled={bulkImportPending}
                     />
                   ) : (
                     <textarea
@@ -629,6 +635,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                       autoComplete="off"
                       autoCorrect="off"
                       spellCheck={false}
+                      disabled={bulkImportPending}
                     />
                   )}
                   <div className="flex justify-end gap-1">
@@ -640,6 +647,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                         setNewItemLabel("");
                         setNewItemValue("");
                       }}
+                      disabled={bulkImportPending}
                     >
                       Cancel
                     </Button>
@@ -647,6 +655,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                       size="sm"
                       onClick={handleAddItem}
                       className="bg-blue-600 interaction-button--primary text-white"
+                      disabled={bulkImportPending}
                     >
                       Add
                     </Button>

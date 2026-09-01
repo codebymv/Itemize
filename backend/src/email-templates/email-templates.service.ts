@@ -19,6 +19,7 @@ import {
 } from './email-template-content';
 import { renderEmailTemplateDocument } from './email-template-renderer';
 import {
+  EmailTemplatePublishIdempotencyConflictError,
   EmailTemplateRow,
   EmailTemplatesRepository,
   EmailTemplateUpdates,
@@ -155,10 +156,30 @@ export class EmailTemplatesService {
     organizationId: number,
     id: number,
     userId: number,
+    idempotencyKey: string,
     isActive?: boolean,
   ): Promise<EmailTemplate> {
     this.id(id);
-    const row = await this.templates.publishDraft(organizationId, id, userId, isActive);
+    const key = this.idempotencyKey(idempotencyKey);
+    let row: EmailTemplateRow | null;
+    try {
+      row = await this.templates.publishDraft(
+        organizationId,
+        id,
+        userId,
+        key,
+        isActive,
+      );
+    } catch (error) {
+      if (error instanceof EmailTemplatePublishIdempotencyConflictError) {
+        throw itemizeGraphqlError(
+          'idempotencyKey was already used for a different publish request',
+          'CONFLICT',
+          { field: 'idempotencyKey', reason: 'IDEMPOTENCY_KEY_REUSED' },
+        );
+      }
+      throw error;
+    }
     if (!row) {
       throw itemizeGraphqlError('Email template has no draft to publish', 'CONFLICT', {
         field: 'id', reason: 'EMAIL_TEMPLATE_DRAFT_REQUIRED',
@@ -223,6 +244,18 @@ export class EmailTemplatesService {
         field: 'id', reason: 'INVALID_EMAIL_TEMPLATE_ID',
       });
     }
+  }
+
+  private idempotencyKey(value: string): string {
+    const key = String(value ?? '').trim();
+    if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(key)) {
+      throw itemizeGraphqlError(
+        'idempotencyKey must be 1-128 safe ASCII characters',
+        'BAD_USER_INPUT',
+        { field: 'idempotencyKey', reason: 'INVALID_IDEMPOTENCY_KEY' },
+      );
+    }
+    return key;
   }
 
   private required(value: string, field: string, max: number, trim = true): string {

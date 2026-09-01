@@ -61,7 +61,8 @@ const WireframeCard: React.FC<WireframeCardProps> = ({
     isEditingCategory, setIsEditingCategory,
     showNewCategoryInput, setShowNewCategoryInput,
     newCategory, setNewCategory, 
-    handleEditCategory, handleAddCustomCategory,
+    isSavingCategory,
+    handleEditCategory, handleAddCustomCategory, handleUpdateCategoryColor,
     handleFlowDataSave,
     titleEditRef
   } = useWireframeCardLogic({ wireframe, onUpdate, onDelete, isCollapsed, onToggleCollapsed, updateCategory });
@@ -96,12 +97,6 @@ const WireframeCard: React.FC<WireframeCardProps> = ({
     }
     return wireframe.flow_data || { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } };
   }, [wireframe.flow_data]);
-
-  const handleUpdateCategoryColor = async (categoryName: string, newColor: string) => {
-    if (updateCategory) {
-      await updateCategory(categoryName, { color_value: newColor });
-    }
-  };
 
   return (
     <Collapsible
@@ -247,6 +242,7 @@ const WireframeCard: React.FC<WireframeCardProps> = ({
           isEditingCategory={isEditingCategory}
           showNewCategoryInput={showNewCategoryInput}
           newCategory={newCategory}
+          isSavingCategory={isSavingCategory}
           setNewCategory={setNewCategory}
           setIsEditingCategory={setIsEditingCategory}
           setShowNewCategoryInput={setShowNewCategoryInput}

@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 
 type CategoryAction = 'update' | 'add' | 'color';
 
@@ -20,6 +21,7 @@ export const useCardCategoryManagement = ({
   const [isEditingCategory, setIsEditingCategory] = useState(false);
   const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
   const [newCategory, setNewCategory] = useState('');
+  const { pending: isSavingCategory, run } = useSingleFlightAction();
 
   const handleEditCategory = useCallback(async (category: string) => {
     if (category === '__custom__') {
@@ -27,14 +29,16 @@ export const useCardCategoryManagement = ({
       return;
     }
 
-    try {
-      await onUpdateCategory(category);
-      setIsEditingCategory(false);
-      setShowNewCategoryInput(false);
-    } catch (error) {
-      onError?.(error, 'update');
-    }
-  }, [onError, onUpdateCategory]);
+    await run(async () => {
+      try {
+        await onUpdateCategory(category);
+        setIsEditingCategory(false);
+        setShowNewCategoryInput(false);
+      } catch (error) {
+        onError?.(error, 'update');
+      }
+    });
+  }, [onError, onUpdateCategory, run]);
 
   const handleAddCustomCategory = useCallback(async () => {
     const trimmedCategory = newCategory.trim();
@@ -47,25 +51,29 @@ export const useCardCategoryManagement = ({
       return;
     }
 
-    try {
-      await onAddCustomCategory(trimmedCategory);
-      setIsEditingCategory(false);
-      setShowNewCategoryInput(false);
-      setNewCategory('');
-    } catch (error) {
-      onError?.(error, 'add');
-    }
-  }, [newCategory, onAddCustomCategory, onEmptyCategory, onError]);
+    await run(async () => {
+      try {
+        await onAddCustomCategory(trimmedCategory);
+        setIsEditingCategory(false);
+        setShowNewCategoryInput(false);
+        setNewCategory('');
+      } catch (error) {
+        onError?.(error, 'add');
+      }
+    });
+  }, [newCategory, onAddCustomCategory, onEmptyCategory, onError, run]);
 
   const handleUpdateCategoryColor = useCallback(async (categoryName: string, newColor: string) => {
     if (!onUpdateCategoryColor) return;
 
-    try {
-      await onUpdateCategoryColor(categoryName, newColor);
-    } catch (error) {
-      onError?.(error, 'color');
-    }
-  }, [onError, onUpdateCategoryColor]);
+    await run(async () => {
+      try {
+        await onUpdateCategoryColor(categoryName, newColor);
+      } catch (error) {
+        onError?.(error, 'color');
+      }
+    });
+  }, [onError, onUpdateCategoryColor, run]);
 
   return {
     isEditingCategory,
@@ -74,6 +82,7 @@ export const useCardCategoryManagement = ({
     setShowNewCategoryInput,
     newCategory,
     setNewCategory,
+    isSavingCategory,
     handleEditCategory,
     handleAddCustomCategory,
     handleUpdateCategoryColor

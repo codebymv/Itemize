@@ -64,6 +64,9 @@ export class UpdateEmailTemplateInput {
 export class PublishEmailTemplateInput {
   @Field(() => Boolean, { nullable: true })
   isActive?: boolean;
+
+  @Field(() => String)
+  idempotencyKey: string;
 }
 
 @InputType()

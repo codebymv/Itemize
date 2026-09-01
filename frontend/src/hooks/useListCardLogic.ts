@@ -116,6 +116,7 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
     setShowNewCategoryInput,
     newCategory,
     setNewCategory,
+    isSavingCategory,
     handleEditCategory,
     handleAddCustomCategory,
     handleUpdateCategoryColor
@@ -327,6 +328,7 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
     setShowNewCategoryInput,
     newCategory,
     setNewCategory,
+    isSavingCategory,
     handleEditCategory,
     handleAddCustomCategory,
     handleUpdateCategoryColor,

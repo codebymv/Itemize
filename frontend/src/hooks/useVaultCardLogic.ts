@@ -23,6 +23,7 @@ import {
   rewrapZkeVault,
   unlockZkeVault,
 } from "@/lib/vaultZkSession";
+import { useSingleFlightAction } from "@/hooks/useSingleFlightAction";
 
 export type VaultSecurityDialogMode =
   "unlock" | "set-password" | "change-password" | "remove-password";
@@ -68,6 +69,7 @@ export const useVaultCardLogic = ({
 }: UseVaultCardLogicProps) => {
   const { toast } = useToast();
   const { token } = useAuth();
+  const { pending: bulkImportPending, run: runBulkImport } = useSingleFlightAction();
 
   // Collapsible state - use external collapsible state if provided, otherwise use internal state
   const [internalCollapsibleOpen, setInternalCollapsibleOpen] = useState(true);
@@ -481,6 +483,7 @@ export const useVaultCardLogic = ({
     setShowNewCategoryInput,
     newCategory,
     setNewCategory,
+    isSavingCategory,
     handleEditCategory,
     handleAddCustomCategory,
     handleUpdateCategoryColor,
@@ -780,49 +783,52 @@ export const useVaultCardLogic = ({
         value: string;
       }>,
     ) => {
-      try {
-        const masterPassword = sessionWritePassword();
-        if (
-          (isVaultLocked || isZke || needsEnrollment) &&
-          !isUnlockedForSession
-        )
+      const result = await runBulkImport(async () => {
+        try {
+          const masterPassword = sessionWritePassword();
+          if (
+            (isVaultLocked || isZke || needsEnrollment) &&
+            !isUnlockedForSession
+          )
+            return [];
+          const payloads = isZke
+            ? await Promise.all(
+                itemsToAdd.map(async (item) => ({
+                  ...item,
+                  ...(await encryptZkeItem(vault.id, item)),
+                })),
+              )
+            : itemsToAdd;
+          const response = await bulkAddVaultItems(
+            vault.id,
+            payloads,
+            token || undefined,
+            masterPassword,
+          );
+          const merged = response.items.map((item, index) => ({
+            ...item,
+            label: itemsToAdd[index].label,
+            value: itemsToAdd[index].value,
+          }));
+          setItems((prev) => [...prev, ...merged]);
+          toast({
+            title: "Items imported",
+            description: `${response.count} items added to vault`,
+          });
+          return response.items;
+        } catch (error) {
+          console.error("Failed to bulk add vault items:", error);
+          toast({
+            title: "Error",
+            description: "Failed to import items",
+            variant: "destructive",
+          });
           return [];
-        const payloads = isZke
-          ? await Promise.all(
-              itemsToAdd.map(async (item) => ({
-                ...item,
-                ...(await encryptZkeItem(vault.id, item)),
-              })),
-            )
-          : itemsToAdd;
-        const result = await bulkAddVaultItems(
-          vault.id,
-          payloads,
-          token || undefined,
-          masterPassword,
-        );
-        const merged = result.items.map((item, index) => ({
-          ...item,
-          label: itemsToAdd[index].label,
-          value: itemsToAdd[index].value,
-        }));
-        setItems((prev) => [...prev, ...merged]);
-        toast({
-          title: "Items imported",
-          description: `${result.count} items added to vault`,
-        });
-        return result.items;
-      } catch (error) {
-        console.error("Failed to bulk add vault items:", error);
-        toast({
-          title: "Error",
-          description: "Failed to import items",
-          variant: "destructive",
-        });
-        return [];
-      }
+        }
+      });
+      return result ?? [];
     },
-    [vault.id, token, toast, isVaultLocked, sessionWritePassword],
+    [vault.id, token, toast, isVaultLocked, isZke, needsEnrollment, isUnlockedForSession, runBulkImport, sessionWritePassword],
   );
 
   // Reorder items
@@ -937,6 +943,7 @@ export const useVaultCardLogic = ({
     setShowNewCategoryInput,
     newCategory,
     setNewCategory,
+    isSavingCategory,
     handleEditCategory,
     handleAddCustomCategory,
     handleUpdateCategoryColor,
@@ -977,6 +984,7 @@ export const useVaultCardLogic = ({
 
     // Bulk operations
     handleBulkAddItems,
+    bulkImportPending,
     handleReorderItems,
     parseEnvFormat,
 

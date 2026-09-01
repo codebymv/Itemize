@@ -76,9 +76,15 @@ export class EmailTemplatesResolver {
   @Mutation(() => EmailTemplate)
   publishEmailTemplate(
     @Args('id', { type: () => Int }) id: number,
-    @Args('input', { nullable: true }) input?: PublishEmailTemplateInput,
+    @Args('input') input: PublishEmailTemplateInput,
   ): Promise<EmailTemplate> {
-    return this.templates.publishDraft(this.organizationId(), id, this.userId(), input?.isActive);
+    return this.templates.publishDraft(
+      this.organizationId(),
+      id,
+      this.userId(),
+      input.idempotencyKey,
+      input.isActive,
+    );
   }
 
   @CsrfProtected()

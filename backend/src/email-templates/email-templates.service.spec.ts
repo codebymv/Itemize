@@ -1,5 +1,8 @@
 import { PageInput } from '../common/pagination';
-import { EmailTemplatesRepository } from './email-templates.repository';
+import {
+  EmailTemplatePublishIdempotencyConflictError,
+  EmailTemplatesRepository,
+} from './email-templates.repository';
 import { EmailTemplatesService } from './email-templates.service';
 
 const row = (extra: Record<string, unknown> = {}) => ({
@@ -130,9 +133,32 @@ describe('EmailTemplatesService', () => {
     expect(repository.createDraft).toHaveBeenCalledWith(4, 7, expect.objectContaining({
       variables: ['first_name', 'company'], isActive: true,
     }));
-    await expect(service.publishDraft(4, 9, 7, true)).resolves.toMatchObject({
+    await expect(service.publishDraft(4, 9, 7, 'publish-key-9', true)).resolves.toMatchObject({
       draftVersion: null, publishedVersion: 1, hasUnpublishedChanges: false,
     });
+    expect(repository.publishDraft).toHaveBeenCalledWith(
+      4,
+      9,
+      7,
+      'publish-key-9',
+      true,
+    );
+  });
+
+  it('rejects invalid or conflicting publish idempotency keys', async () => {
+    await expect(service.publishDraft(4, 9, 7, 'unsafe key', true))
+      .rejects.toMatchObject({
+        extensions: { reason: 'INVALID_IDEMPOTENCY_KEY' },
+      });
+    expect(repository.publishDraft).not.toHaveBeenCalled();
+
+    repository.publishDraft.mockRejectedValue(
+      new EmailTemplatePublishIdempotencyConflictError(),
+    );
+    await expect(service.publishDraft(4, 9, 7, 'publish-key-9', true))
+      .rejects.toMatchObject({
+        extensions: { reason: 'IDEMPOTENCY_KEY_REUSED' },
+      });
   });
 
   it('renders a sanitized branded preview with escaped sample variables', () => {

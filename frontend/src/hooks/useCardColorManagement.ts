@@ -1,4 +1,5 @@
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 
 interface UseCardColorManagementOptions {
   onSave: (newColor: string) => Promise<void> | void;
@@ -11,21 +12,20 @@ export const useCardColorManagement = ({
   onError,
   rethrowOnError = true
 }: UseCardColorManagementOptions) => {
-  const [isSavingColor, setIsSavingColor] = useState(false);
+  const { pending: isSavingColor, run } = useSingleFlightAction();
 
   const saveColor = useCallback(async (newColor: string) => {
-    setIsSavingColor(true);
-    try {
-      await onSave(newColor);
-    } catch (error) {
-      onError?.(error);
-      if (rethrowOnError) {
-        throw error;
+    await run(async () => {
+      try {
+        await onSave(newColor);
+      } catch (error) {
+        onError?.(error);
+        if (rethrowOnError) {
+          throw error;
+        }
       }
-    } finally {
-      setIsSavingColor(false);
-    }
-  }, [onError, onSave, rethrowOnError]);
+    });
+  }, [onError, onSave, rethrowOnError, run]);
 
   return {
     isSavingColor,

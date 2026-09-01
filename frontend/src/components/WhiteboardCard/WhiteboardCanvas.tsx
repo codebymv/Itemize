@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { ReactSketchCanvas, ReactSketchCanvasRef } from 'react-sketch-canvas';
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -23,6 +23,7 @@ import { debounce } from 'lodash';
 import { normalizeWhiteboardCanvasData, sanitizeWhiteboardPaths } from '@/lib/whiteboardCanvasData';
 import { attachSketchCanvasPointerFix } from '@/utils/sketchCanvasPointer';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 // TODO: Integrate coordinate normalization for mobile canvas support
 // import { processCanvasDataForLoad, processCanvasDataForSave } from '@/utils/canvasCoordinates';
 
@@ -81,6 +82,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   const [isIntentionalClear, setIsIntentionalClear] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>('idle');
+  const { pending: clearPending, run: runClear, dismissIfIdle: dismissClearIfIdle } = useSingleFlightAction();
 
   // Mobile touch state
   const [isMultiTouch, setIsMultiTouch] = useState(false);
@@ -171,7 +173,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     } else if (!isMobile) {
       setContentScale(1); // Reset scale for desktop
     }
-  }, [isMobile, whiteboard.canvas_width]);
+  }, [isMobile, onScaledHeightChange, whiteboard.canvas_height, whiteboard.canvas_width]);
 
   // Layout size only — getBoundingClientRect is post-zoom and would desync the SVG bitmap.
   useEffect(() => {
@@ -236,8 +238,8 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   }, [onSave, toast]);
 
   // Debounced auto-save function (reduced delay for faster saves)
-  const debouncedAutoSave = useCallback(
-    debounce((canvasData: unknown[]) => {
+  const debouncedAutoSave = useMemo(
+    () => debounce((canvasData: unknown[]) => {
       void persistCanvasData(canvasData);
     }, 500),
     [persistCanvasData]
@@ -411,22 +413,26 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
 
   const handleClear = async () => {
     if (!canvasRef.current) return;
-    setIsIntentionalClear(true);
-    canvasRef.current.clearCanvas();
-    pendingPathsRef.current = [];
-    try {
-      setSaveState('saving');
-      await onSave({ canvas_data: [], updated_at: new Date().toISOString() });
-      pendingPathsRef.current = null;
-      setLastLoadedData([]);
-      setSaveState('saved');
-    } catch (error) {
-      logger.error('Failed to save cleared canvas:', error);
-      setSaveState('error');
-    } finally {
-      setShowClearConfirm(false);
-      window.setTimeout(() => setIsIntentionalClear(false), 1000);
-    }
+    await runClear(async () => {
+      // A debounced pre-clear snapshot must never run after the explicit clear.
+      debouncedAutoSave.cancel();
+      setIsIntentionalClear(true);
+      canvasRef.current?.clearCanvas();
+      pendingPathsRef.current = [];
+      try {
+        setSaveState('saving');
+        await onSave({ canvas_data: [], updated_at: new Date().toISOString() });
+        pendingPathsRef.current = null;
+        setLastLoadedData([]);
+        setSaveState('saved');
+      } catch (error) {
+        logger.error('Failed to save cleared canvas:', error);
+        setSaveState('error');
+      } finally {
+        setShowClearConfirm(false);
+        window.setTimeout(() => setIsIntentionalClear(false), 1000);
+      }
+    });
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -697,6 +703,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowClearConfirm(true)}
+                disabled={clearPending}
                 aria-label="Clear canvas"
                 title="Clear canvas"
                 className="h-8 w-8 p-0 text-foreground"
@@ -796,8 +803,11 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
           </div>
         )}
       </div>
-      <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
-        <AlertDialogContent>
+      <AlertDialog open={showClearConfirm} onOpenChange={open => {
+        if (open) setShowClearConfirm(true);
+        else dismissClearIfIdle(() => setShowClearConfirm(false));
+      }}>
+        <AlertDialogContent aria-busy={clearPending ? 'true' : undefined}>
           <AlertDialogHeader>
             <AlertDialogTitle>Clear this whiteboard?</AlertDialogTitle>
             <AlertDialogDescription>
@@ -805,8 +815,14 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => { void handleClear(); }}>
+            <AlertDialogCancel disabled={clearPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={clearPending}
+              onClick={event => {
+                event.preventDefault();
+                void handleClear();
+              }}
+            >
               Clear
             </AlertDialogAction>
           </AlertDialogFooter>

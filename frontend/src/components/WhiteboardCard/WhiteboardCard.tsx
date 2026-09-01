@@ -77,6 +77,7 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
     isEditingCategory, setIsEditingCategory,
     showNewCategoryInput, setShowNewCategoryInput,
     newCategory, setNewCategory, 
+    isSavingCategory,
     handleEditCategory, handleAddCustomCategory, handleUpdateCategoryColor,
     
     // Canvas
@@ -255,6 +256,7 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
           isEditingCategory={isEditingCategory}
           showNewCategoryInput={showNewCategoryInput}
           newCategory={newCategory}
+          isSavingCategory={isSavingCategory}
           setNewCategory={setNewCategory}
           setIsEditingCategory={setIsEditingCategory}
           setShowNewCategoryInput={setShowNewCategoryInput}

@@ -72,6 +72,7 @@ export const useWireframeCardLogic = ({ wireframe, onUpdate, onDelete, isCollaps
     setShowNewCategoryInput,
     newCategory,
     setNewCategory,
+    isSavingCategory,
     handleEditCategory,
     handleAddCustomCategory,
     handleUpdateCategoryColor
@@ -131,7 +132,7 @@ export const useWireframeCardLogic = ({ wireframe, onUpdate, onDelete, isCollaps
       logger.error('Failed to save flow data:', error);
       throw error;
     }
-  }, [wireframe.id, onUpdate, toast]);
+  }, [wireframe.id, onUpdate]);
   
   return {
     // Title for display
@@ -162,6 +163,7 @@ export const useWireframeCardLogic = ({ wireframe, onUpdate, onDelete, isCollaps
     setShowNewCategoryInput,
     newCategory,
     setNewCategory,
+    isSavingCategory,
     handleEditCategory,
     handleAddCustomCategory,
     handleUpdateCategoryColor,

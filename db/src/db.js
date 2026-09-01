@@ -44,6 +44,9 @@ const { runAllAutomationMigrations } = require('./db_automation_migrations');
 const {
   runEmailTemplateVersionsMigration,
 } = require('./db_email_template_versions_migrations');
+const {
+  runEmailTemplatePublishReceiptMigration,
+} = require('./db_email_template_publish_receipt_migrations');
 const { runWorkflowRegistryMigration } = require('./db_workflow_registry_migrations');
 const { runWorkflowWebhookIdempotencyMigration } = require('./db_workflow_webhook_migrations');
 const { runWorkflowTriggerQueueMigration } = require('./db_workflow_trigger_queue_migrations');
@@ -221,6 +224,9 @@ const {
   runCanonicalContactEmailIdentityMigration,
 } = require('./db_contact_email_identity_migrations');
 const { runPublicFormContractMigration } = require('./db_public_form_contract_migrations');
+const {
+  runPublicFormSubmissionIdempotencyMigration,
+} = require('./db_public_form_submission_idempotency_migrations');
 const { runDealActivityMigration } = require('./db_deal_activity_migrations');
 
 // Import Subscription migrations (feature gating and billing)
@@ -568,6 +574,11 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'activation_events_v1', runActivationEventsMigration);
     await runMigrationOnce(pool, 'module_automation', runAllAutomationMigrations);
     await runMigrationOnce(pool, 'email_template_versions_v1', runEmailTemplateVersionsMigration);
+    await runMigrationOnce(
+      pool,
+      'email_template_publish_receipts_v1',
+      runEmailTemplatePublishReceiptMigration,
+    );
     await runMigrationOnce(pool, 'workflow_registry', runWorkflowRegistryMigration);
     await runMigrationOnce(pool, 'workflow_webhook_secrets', async (p) => {
       await p.query(`CREATE EXTENSION IF NOT EXISTS pgcrypto;`);
@@ -767,6 +778,11 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'canonical_pipeline_stage_model_v1', runCanonicalPipelineStageModelMigration);
     await runMigrationOnce(pool, 'canonical_contact_email_identity_v1', runCanonicalContactEmailIdentityMigration);
     await runMigrationOnce(pool, 'public_form_contract_v1', runPublicFormContractMigration);
+    await runMigrationOnce(
+      pool,
+      'public_form_submission_idempotency_v1',
+      runPublicFormSubmissionIdempotencyMigration,
+    );
     await runMigrationOnce(pool, 'deal_activity_contract_v1', runDealActivityMigration);
     
     // Billing and features

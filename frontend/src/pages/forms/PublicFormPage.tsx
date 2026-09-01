@@ -6,6 +6,7 @@ import { getPublicForm, PublicFormData, submitPublicForm } from '@/services/form
 import type { FormField, JsonRecord, JsonValue } from '@/types';
 import { publicFormFieldState, safePublicFormRedirect } from './publicFormBehavior';
 import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
+import { useStableMutationKey } from '@/hooks/useStableMutationKey';
 
 const fieldKey = (field: FormField) => String(field.id);
 
@@ -157,6 +158,7 @@ export default function PublicFormPage() {
     const [values, setValues] = useState<JsonRecord>({});
     const [loading, setLoading] = useState(true);
     const { pending: submitting, run } = useSingleFlightAction();
+    const submissionKey = useStableMutationKey('public-form-submission');
     const [error, setError] = useState('');
     const [successMessage, setSuccessMessage] = useState('');
 
@@ -188,7 +190,13 @@ export default function PublicFormPage() {
         setError('');
         await run(async () => {
             try {
-                const result = await submitPublicForm(identifier, values);
+                const signature = JSON.stringify(values);
+                const result = await submitPublicForm(
+                    identifier,
+                    values,
+                    submissionKey.keyFor(`${identifier}:${signature}`),
+                );
+                submissionKey.reset();
                 setSuccessMessage(result.message || 'Thank you for your submission.');
                 const redirect = safePublicFormRedirect(result.redirect_url);
                 if (redirect) window.location.assign(redirect);

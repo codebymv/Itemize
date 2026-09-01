@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ChangeTierSection from './ChangeTierSection';
 import * as adminApi from '@/services/adminApi';
@@ -53,5 +53,26 @@ describe('ChangeTierSection', () => {
       variant: 'destructive',
     }));
     expect(toast).not.toHaveBeenCalledWith(expect.objectContaining({ title: 'Plan Updated' }));
+  });
+
+  it('admits only one plan change before pending state renders', async () => {
+    let resolveUpdate: (() => void) | undefined;
+    vi.mocked(adminApi.updateMyPlan).mockImplementation(() => new Promise((resolve) => {
+      resolveUpdate = () => resolve({ message: 'Plan updated to starter', plan: 'starter' });
+    }));
+    refreshSubscription.mockResolvedValue({ planName: 'starter', status: 'active' });
+    render(<ChangeTierSection />);
+
+    const button = screen.getByRole('button', { name: 'Solo' });
+    act(() => {
+      button.click();
+      button.click();
+    });
+
+    expect(adminApi.updateMyPlan).toHaveBeenCalledOnce();
+    await act(async () => {
+      resolveUpdate?.();
+    });
+    await waitFor(() => expect(refreshSubscription).toHaveBeenCalledOnce());
   });
 });

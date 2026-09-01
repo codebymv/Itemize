@@ -62,6 +62,7 @@ const ListCard: React.FC<ListCardProps> = ({
     isEditingCategory, setIsEditingCategory,
     showNewCategoryInput, setShowNewCategoryInput,
     newCategory, setNewCategory, 
+    isSavingCategory,
     handleEditCategory, handleAddCustomCategory, handleUpdateCategoryColor,
     
     // Items
@@ -203,6 +204,7 @@ const ListCard: React.FC<ListCardProps> = ({
           isEditingCategory={isEditingCategory}
           showNewCategoryInput={showNewCategoryInput}
           newCategory={newCategory}
+          isSavingCategory={isSavingCategory}
           setNewCategory={setNewCategory}
           setIsEditingCategory={setIsEditingCategory}
           setShowNewCategoryInput={setShowNewCategoryInput}

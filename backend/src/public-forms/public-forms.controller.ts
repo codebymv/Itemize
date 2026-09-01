@@ -35,11 +35,16 @@ export class PublicFormsController {
     @Req() request: Request,
     @Res({ passthrough: true }) response: Response,
   ) {
-    const result = await this.forms.submitPublicForm(identifier, body ?? {}, {
-      ipAddress: request.ip ?? null,
-      userAgent: request.get('user-agent') ?? null,
-      referrer: request.get('referrer') ?? null,
-    });
+    const result = await this.forms.submitPublicForm(
+      identifier,
+      body ?? {},
+      {
+        ipAddress: request.ip ?? null,
+        userAgent: request.get('user-agent') ?? null,
+        referrer: request.get('referrer') ?? null,
+      },
+      request.get('idempotency-key'),
+    );
     response.set('Cache-Control', 'no-store');
     return result;
   }

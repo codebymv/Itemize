@@ -1,7 +1,10 @@
 import { Inject, Injectable } from '@nestjs/common';
+import * as crypto from 'crypto';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
 import { extractEmailTemplateVariables } from './email-template.variables';
+
+export class EmailTemplatePublishIdempotencyConflictError extends Error {}
 
 export type EmailTemplateRow = {
   id: number;
@@ -289,6 +292,7 @@ export class EmailTemplatesRepository {
     organizationId: number,
     id: number,
     userId: number,
+    idempotencyKey: string,
     isActive?: boolean,
   ): Promise<EmailTemplateRow | null> {
     return this.transaction(async (client) => {
@@ -297,7 +301,35 @@ export class EmailTemplatesRepository {
       }>(`SELECT draft_version_id,published_version_id,is_active FROM email_templates
           WHERE id=$1 AND organization_id=$2 FOR UPDATE`, [id, organizationId]);
       const row = template.rows[0];
-      if (!row?.draft_version_id) return null;
+      if (!row) return null;
+      const requestFingerprint = crypto
+        .createHash('sha256')
+        .update(JSON.stringify({ isActive: isActive ?? null }))
+        .digest('hex');
+      const receipt = await client.query<{
+        request_fingerprint: string;
+        published_version_id: number | null;
+      }>(
+        `SELECT request_fingerprint,published_version_id
+         FROM email_template_publish_receipts
+         WHERE organization_id=$1 AND template_id=$2 AND idempotency_key=$3`,
+        [organizationId, id, idempotencyKey],
+      );
+      if (receipt.rows[0]) {
+        if (receipt.rows[0].request_fingerprint !== requestFingerprint) {
+          throw new EmailTemplatePublishIdempotencyConflictError();
+        }
+        if (receipt.rows[0].published_version_id) {
+          return this.selectById(client, organizationId, id);
+        }
+      }
+      if (!row.draft_version_id) return null;
+      await client.query(
+        `INSERT INTO email_template_publish_receipts (
+           organization_id,template_id,idempotency_key,request_fingerprint
+         ) VALUES ($1,$2,$3,$4)`,
+        [organizationId, id, idempotencyKey, requestFingerprint],
+      );
       const draft = await client.query<{
         id: number; subject: string; preheader: string | null; body_html: string;
         body_text: string | null; variables: unknown; is_active: boolean;
@@ -318,6 +350,12 @@ export class EmailTemplatesRepository {
         [id, organizationId, content.subject, content.preheader, content.body_html, content.body_text,
           JSON.stringify(content.variables ?? []), content.id,
           isActive ?? content.is_active ?? (row.published_version_id ? row.is_active : true)],
+      );
+      await client.query(
+        `UPDATE email_template_publish_receipts
+         SET published_version_id=$4,completed_at=CURRENT_TIMESTAMP
+         WHERE organization_id=$1 AND template_id=$2 AND idempotency_key=$3`,
+        [organizationId, id, idempotencyKey, content.id],
       );
       return this.selectById(client, organizationId, id);
     });

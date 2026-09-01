@@ -87,6 +87,7 @@ import {
 } from '@/lib/integrationOAuthReturn';
 import { disconnectStripeConnect, initiateStripeConnect } from '@/services/stripeConnectApi';
 import { ManageAccountCard } from './settings/components/ManageAccountCard';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 const OrganizationSettings = React.lazy(() =>
   import('./settings/OrganizationSettings').then((module) => ({
     default: module.OrganizationSettings,
@@ -200,7 +201,7 @@ function AccountInfo({
   const { toast } = useToast();
   const plansRequested = isAvailablePlansLocation(location.search, location.hash);
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'yearly'>('monthly');
-  const [isLoading, setIsLoading] = useState(false);
+  const { pending: isLoading, run: runUpgrade } = useSingleFlightAction();
   const [plansOpen, setPlansOpen] = useState(plansRequested);
   const plansContentRef = useRef<HTMLDivElement>(null);
   const { data: usageStats } = useUsageStats();
@@ -233,26 +234,25 @@ function AccountInfo({
     if (planId === 'free') return;
     if (currentPlan === planId && !canSubscribeCurrentTrial) return;
 
-    setIsLoading(true);
-    try {
-      if (shouldStartSoloTrial(currentPlan, planId, starterTrialEligible)) {
-        await startSoloTrial();
+    await runUpgrade(async () => {
+      try {
+        if (shouldStartSoloTrial(currentPlan, planId, starterTrialEligible)) {
+          await startSoloTrial();
+          toast({
+            title: 'Solo trial started',
+            description: 'Your business tools are unlocked for 14 days.',
+          });
+        } else {
+          await startCheckout(planId, billingPeriod);
+        }
+      } catch (error) {
         toast({
-          title: 'Solo trial started',
-          description: 'Your business tools are unlocked for 14 days.',
+          title: 'Could not change plan',
+          description: error instanceof Error ? error.message : 'Failed to change plan',
+          variant: 'destructive',
         });
-      } else {
-        await startCheckout(planId, billingPeriod);
       }
-    } catch (error) {
-      toast({
-        title: 'Could not change plan',
-        description: error instanceof Error ? error.message : 'Failed to change plan',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    });
   };
 
   return (
@@ -560,7 +560,7 @@ function PaymentsSettings({ setSaveButton, showCheckoutSuccess, onCloseCheckoutS
   const navigate = useNavigate();
   const { isLoading: subscriptionLoading, isSubscribed } = useSubscriptionState();
   const { organizationId } = useOrganization();
-  const [connectingStripe, setConnectingStripe] = useState(false);
+  const { pending: connectingStripe, run: runStripeAction } = useSingleFlightAction();
   const {
     loading,
     initialLoad,
@@ -635,25 +635,27 @@ function PaymentsSettings({ setSaveButton, showCheckoutSuccess, onCloseCheckoutS
 
   const handleConnectStripe = async () => {
     if (!organizationId) return;
-    setConnectingStripe(true);
-    try {
-      const { authUrl } = await initiateStripeConnect(organizationId, '/payment-settings');
-      window.location.href = authUrl;
-    } catch {
-      toast({ title: 'Error', description: 'Failed to start Stripe connection', variant: 'destructive' });
-      setConnectingStripe(false);
-    }
+    await runStripeAction(async () => {
+      try {
+        const { authUrl } = await initiateStripeConnect(organizationId, '/payment-settings');
+        window.location.href = authUrl;
+      } catch {
+        toast({ title: 'Error', description: 'Failed to start Stripe connection', variant: 'destructive' });
+      }
+    });
   };
 
   const handleDisconnectStripe = async () => {
     if (!organizationId) return;
-    try {
-      await disconnectStripeConnect(organizationId);
-      toast({ title: 'Disconnected', description: 'Stripe is no longer connected for invoice payments.' });
-      await refetchData();
-    } catch {
-      toast({ title: 'Error', description: 'Failed to disconnect Stripe', variant: 'destructive' });
-    }
+    await runStripeAction(async () => {
+      try {
+        await disconnectStripeConnect(organizationId);
+        toast({ title: 'Disconnected', description: 'Stripe is no longer connected for invoice payments.' });
+        await refetchData();
+      } catch {
+        toast({ title: 'Error', description: 'Failed to disconnect Stripe', variant: 'destructive' });
+      }
+    });
   };
 
   const handleFormChange = (field: string, value: string) => {

@@ -27,6 +27,7 @@ import {
     MAX_CONTACT_CSV_BYTES,
     parseContactCsv,
 } from '../contactCsv';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 
 interface ImportContactsModalProps {
     organizationId: number;
@@ -46,6 +47,7 @@ export function ImportContactsModal({ organizationId, onClose, onImported }: Imp
     const [skipDuplicates, setSkipDuplicates] = useState(true);
     const [importResult, setImportResult] = useState<ImportResult | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const { pending: importPending, run: runImport, dismissIfIdle } = useSingleFlightAction();
 
     const getApiErrorMessage = (err: unknown): string => {
         if (err && typeof err === 'object') {
@@ -94,25 +96,27 @@ export function ImportContactsModal({ organizationId, onClose, onImported }: Imp
 
     // Handle import
     const handleImport = async () => {
-        setStep('importing');
-        setError(null);
+        await runImport(async () => {
+            setStep('importing');
+            setError(null);
 
-        try {
-            const result = await importContactsCSV(parsedData, organizationId, skipDuplicates);
-            setImportResult(result);
-            setStep('complete');
+            try {
+                const result = await importContactsCSV(parsedData, organizationId, skipDuplicates);
+                setImportResult(result);
+                setStep('complete');
 
-            if (result.imported > 0) {
-                toast({
-                    title: 'Import Complete',
-                    description: `Successfully imported ${result.imported} contacts`,
-                });
-                onImported();
+                if (result.imported > 0) {
+                    toast({
+                        title: 'Import Complete',
+                        description: `Successfully imported ${result.imported} contacts`,
+                    });
+                    onImported();
+                }
+            } catch (err: unknown) {
+                setError(getApiErrorMessage(err));
+                setStep('preview');
             }
-        } catch (err: unknown) {
-            setError(getApiErrorMessage(err));
-            setStep('preview');
-        }
+        });
     };
 
     // Drag and drop handlers
@@ -145,8 +149,8 @@ export function ImportContactsModal({ organizationId, onClose, onImported }: Imp
     };
 
     return (
-        <Dialog open onOpenChange={onClose}>
-            <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+        <Dialog open onOpenChange={open => { if (!open) dismissIfIdle(onClose); }}>
+            <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col" aria-busy={importPending ? 'true' : undefined}>
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <FileSpreadsheet className="h-5 w-5 text-blue-600" />
@@ -287,10 +291,10 @@ export function ImportContactsModal({ organizationId, onClose, onImported }: Imp
                     )}
                     {step === 'preview' && (
                         <>
-                            <Button variant="outline" onClick={() => { setStep('upload'); setParsedData([]); }} style={{ fontFamily: '"Raleway", sans-serif' }} aria-label="Back to upload">
+                            <Button variant="outline" disabled={importPending} onClick={() => { setStep('upload'); setParsedData([]); }} style={{ fontFamily: '"Raleway", sans-serif' }} aria-label="Back to upload">
                                 Back
                             </Button>
-                            <Button onClick={handleImport} className="bg-blue-600 interaction-button--primary text-white" style={{ fontFamily: '"Raleway", sans-serif' }} aria-label={`Import ${parsedData.length} contacts`}>
+                            <Button onClick={handleImport} disabled={importPending} aria-busy={importPending ? 'true' : undefined} className="bg-blue-600 interaction-button--primary text-white" style={{ fontFamily: '"Raleway", sans-serif' }} aria-label={`Import ${parsedData.length} contacts`}>
                                 Import {parsedData.length} Contacts
                             </Button>
                         </>

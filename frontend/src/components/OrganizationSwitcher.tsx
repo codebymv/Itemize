@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useOrganizationContext } from '@/contexts/organization-context';
 import { useToast } from '@/hooks/use-toast';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 
 export const OrganizationSwitcher = () => {
   const {
@@ -20,30 +21,37 @@ export const OrganizationSwitcher = () => {
   } = useOrganizationContext();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
+  const { pending, run, dismissIfIdle } = useSingleFlightAction();
 
   if (isLoading || !organization || organizations.length < 2) return null;
 
   const handleSelect = async (organizationId: number) => {
-    setOpen(false);
-    try {
-      await selectOrganization(organizationId);
-    } catch {
-      toast({
-        title: 'Organization switch failed',
-        description: 'Please try again.',
-        variant: 'destructive',
-      });
-    }
+    await run(async () => {
+      setOpen(false);
+      try {
+        await selectOrganization(organizationId);
+      } catch {
+        toast({
+          title: 'Organization switch failed',
+          description: 'Please try again.',
+          variant: 'destructive',
+        });
+      }
+    });
   };
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
+    <DropdownMenu open={open} onOpenChange={nextOpen => {
+      if (nextOpen) setOpen(true);
+      else dismissIfIdle(() => setOpen(false));
+    }}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="outline"
           size="sm"
           className="h-11 min-w-11 max-w-48 gap-2"
-          disabled={isSwitching}
+          disabled={isSwitching || pending}
+          aria-busy={isSwitching || pending ? 'true' : undefined}
           aria-label={`Current organization: ${organization.name}`}
         >
           <Building2 className="h-4 w-4 flex-shrink-0" />
@@ -55,7 +63,7 @@ export const OrganizationSwitcher = () => {
         {organizations.map((candidate) => (
           <DropdownMenuItem
             key={candidate.id}
-            disabled={isSwitching}
+            disabled={isSwitching || pending}
             onSelect={() => void handleSelect(candidate.id)}
           >
             <span className="flex-1 truncate">{candidate.name}</span>

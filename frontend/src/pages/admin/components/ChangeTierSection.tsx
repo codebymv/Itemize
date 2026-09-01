@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { type Plan, PLAN_METADATA } from '@/lib/subscription';
 import { Loader2, User as UserIcon, Zap, Crown, Building2 } from 'lucide-react';
 import * as adminApi from '@/services/adminApi';
+import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 
 const PLAN_ICONS = {
     free: UserIcon,
@@ -22,6 +23,7 @@ function ChangeTierSection() {
     const { refreshSubscription } = useSubscriptionFeatures();
     const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
     const { toast } = useToast();
+    const { pending, run } = useSingleFlightAction();
 
     const currentPlan = (subscription?.planName?.toLowerCase() as Plan) || 'free';
 
@@ -33,33 +35,33 @@ function ChangeTierSection() {
     ];
 
     const handleChangePlan = async (planId: Plan) => {
-        if (loadingPlan) return;
-        
-        setLoadingPlan(planId);
-        try {
-            await adminApi.updateMyPlan(planId);
-            const refreshed = await refreshSubscription();
-            const expectedStatus = planId === 'free' ? 'none' : 'active';
-            if (
-                refreshed?.planName?.toLowerCase() !== planId
-                || refreshed.status !== expectedStatus
-            ) {
-                throw new Error('The plan update was accepted but the entitlement state did not refresh.');
+        await run(async () => {
+            setLoadingPlan(planId);
+            try {
+                await adminApi.updateMyPlan(planId);
+                const refreshed = await refreshSubscription();
+                const expectedStatus = planId === 'free' ? 'none' : 'active';
+                if (
+                    refreshed?.planName?.toLowerCase() !== planId
+                    || refreshed.status !== expectedStatus
+                ) {
+                    throw new Error('The plan update was accepted but the entitlement state did not refresh.');
+                }
+                const planDisplayName = PLAN_METADATA[planId]?.displayName || planId;
+                toast({
+                    title: 'Plan Updated',
+                    description: `Your plan has been changed to ${planDisplayName}`,
+                });
+            } catch (error) {
+                toast({
+                    title: 'Error',
+                    description: getErrorMessage(error, 'Failed to update plan'),
+                    variant: 'destructive'
+                });
+            } finally {
+                setLoadingPlan(null);
             }
-            const planDisplayName = PLAN_METADATA[planId]?.displayName || planId;
-            toast({
-                title: 'Plan Updated',
-                description: `Your plan has been changed to ${planDisplayName}`,
-            });
-            setLoadingPlan(null);
-        } catch (error) {
-            toast({
-                title: 'Error',
-                description: getErrorMessage(error, 'Failed to update plan'),
-                variant: 'destructive'
-            });
-            setLoadingPlan(null);
-        }
+        });
     };
 
     return (
@@ -78,7 +80,8 @@ function ChangeTierSection() {
                                     variant={isSelected ? 'default' : 'outline'}
                                     className={`h-auto py-4 flex items-center justify-center gap-2 ${isSelected ? 'bg-blue-600 interaction-button--primary text-white' : ''}`}
                                     onClick={() => handleChangePlan(plan.id)}
-                                    disabled={loadingPlan !== null}
+                                    disabled={pending}
+                                    aria-busy={isLoading ? 'true' : undefined}
                                 >
                                     {isLoading ? (
                                         <Loader2 className="h-4 w-4 animate-spin" />

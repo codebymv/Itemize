@@ -116,9 +116,15 @@ export const saveEmailTemplateDraft = async (
 
 export const publishEmailTemplate = async (
     templateId: number,
-    isActive = true,
+    isActive: boolean,
+    idempotencyKey: string,
     organizationId?: number
-): Promise<EmailTemplate> => publishEmailTemplateViaGraphql(templateId, isActive, organizationId);
+): Promise<EmailTemplate> => publishEmailTemplateViaGraphql(
+    templateId,
+    isActive,
+    idempotencyKey,
+    organizationId,
+);
 
 export const previewEmailTemplate = async (
     input: Pick<EmailTemplateDraftInput, 'subject' | 'preheader' | 'body_html' | 'body_text'>,

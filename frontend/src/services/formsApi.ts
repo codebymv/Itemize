@@ -143,9 +143,14 @@ export const getPublicForm = async (identifier: string): Promise<PublicFormData>
 
 export const submitPublicForm = async (
     identifier: string,
-    data: JsonRecord
+    data: JsonRecord,
+    idempotencyKey: string,
 ): Promise<{ success: boolean; message: string; redirect_url?: string }> => {
-    const response = await api.post(`/api/forms/public/form/${identifier}`, { data });
+    const response = await api.post(
+        `/api/forms/public/form/${identifier}`,
+        { data },
+        { headers: { 'Idempotency-Key': idempotencyKey } },
+    );
     return unwrapResponse<{ success: boolean; message: string; redirect_url?: string }>(response.data);
 };
 

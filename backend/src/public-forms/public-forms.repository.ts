@@ -49,6 +49,19 @@ const escapeHtml = (value: unknown): string =>
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
 
+const stableSerialize = (value: unknown): string => {
+  if (Array.isArray(value)) {
+    return `[${value.map(stableSerialize).join(',')}]`;
+  }
+  if (value && typeof value === 'object') {
+    return `{${Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, entry]) => `${JSON.stringify(key)}:${stableSerialize(entry)}`)
+      .join(',')}}`;
+  }
+  return JSON.stringify(value);
+};
+
 @Injectable()
 export class PublicFormsRepository {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
@@ -79,8 +92,10 @@ export class PublicFormsRepository {
     validate: (
       fields: PublicFormFieldRow[],
     ) => Record<string, unknown>,
+    idempotencyKey: string | null = null,
   ): Promise<
     | { status: 'not_found' }
+    | { status: 'idempotency_conflict' }
     | { status: 'ok'; form: SubmittableFormRow }
   > {
     return this.transaction(async (client) => {
@@ -95,6 +110,30 @@ export class PublicFormsRepository {
 
       const fields = await this.formFields(client, form.id, true);
       const normalizedData = validate(fields);
+      const requestFingerprint = idempotencyKey
+        ? crypto
+            .createHash('sha256')
+            .update(stableSerialize(normalizedData))
+            .digest('hex')
+        : null;
+
+      if (idempotencyKey) {
+        await client.query(
+          "SELECT pg_advisory_xact_lock(hashtext('public-form-submit'), hashtext($1::text || ':' || $2))",
+          [form.id, idempotencyKey],
+        );
+        const existing = await client.query<{ request_fingerprint: string }>(
+          `SELECT request_fingerprint
+           FROM form_submissions
+           WHERE form_id = $1 AND idempotency_key = $2`,
+          [form.id, idempotencyKey],
+        );
+        if (existing.rows.length > 0) {
+          return existing.rows[0].request_fingerprint === requestFingerprint
+            ? { status: 'ok', form }
+            : { status: 'idempotency_conflict' };
+        }
+      }
 
       let contactId: number | null = null;
       if (form.create_contact) {
@@ -154,9 +193,10 @@ export class PublicFormsRepository {
       }>(
         `INSERT INTO form_submissions (
            form_id, organization_id, contact_id, data,
-           ip_address, user_agent, referrer
+           ip_address, user_agent, referrer,
+           idempotency_key, request_fingerprint
          )
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          RETURNING id, contact_id, created_at`,
         [
           form.id,
@@ -166,6 +206,8 @@ export class PublicFormsRepository {
           String(context.ipAddress || '').slice(0, 50) || null,
           String(context.userAgent || '').slice(0, 2000) || null,
           String(context.referrer || '').slice(0, 500) || null,
+          idempotencyKey,
+          requestFingerprint,
         ],
       );
       const submissionRow = submission.rows[0];

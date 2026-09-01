@@ -334,17 +334,18 @@ export const saveEmailTemplateDraftViaGraphql = async (
 
 export const publishEmailTemplateViaGraphql = async (
   id: number,
-  isActive = true,
+  isActive: boolean,
+  idempotencyKey: string,
   organizationId?: number,
 ): Promise<EmailTemplate> => {
   const data = await graphqlMutationRequest<
     { publishEmailTemplate: GraphqlEmailTemplate },
-    { id: number; input: { isActive: boolean } }
+    { id: number; input: { isActive: boolean; idempotencyKey: string } }
   >(
     `mutation PublishEmailTemplate($id: Int!, $input: PublishEmailTemplateInput!) {
       publishEmailTemplate(id: $id, input: $input) { ${emailTemplateFields} }
     }`,
-    { id, input: { isActive } },
+    { id, input: { isActive, idempotencyKey } },
     organizationId,
   );
   return mapEmailTemplate(data.publishEmailTemplate);

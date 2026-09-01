@@ -42,6 +42,7 @@ import { useDirtyState } from "@/hooks/useDirtyState";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { useSingleFlightAction } from "@/hooks/useSingleFlightAction";
+import { useStableMutationKey } from "@/hooks/useStableMutationKey";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import {
@@ -197,6 +198,10 @@ export function EmailTemplateEditorPage() {
     }),
     [state],
   );
+  const {
+    keyFor: publishKeyFor,
+    reset: resetPublishKey,
+  } = useStableMutationKey("email-template-publish");
 
   const runEditorAction = useCallback(
     async <T,>(
@@ -295,8 +300,12 @@ export function EmailTemplateEditorPage() {
         const published = await publishEmailTemplate(
           target.id,
           state.isActive,
+          publishKeyFor(
+            `${target.id}:${target.draft_version ?? "none"}:${state.isActive}`,
+          ),
           organizationId,
         );
+        resetPublishKey();
         setTemplate(published);
         patchCatalog(published);
         const cleanState = stateFromTemplate(published);
@@ -324,6 +333,8 @@ export function EmailTemplateEditorPage() {
     organizationId,
     patchCatalog,
     persistDraftInternal,
+    publishKeyFor,
+    resetPublishKey,
     runEditorAction,
     state.isActive,
     template,

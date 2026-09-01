@@ -145,6 +145,7 @@ describe('PublicFormsController retained HTTP contract', () => {
   it('submits normalized data and returns the retained double envelope', async () => {
     const response = await request(app.getHttpServer())
       .post('/api/forms/public/form/frm_abc123')
+      .set('Idempotency-Key', 'public-form-request-1')
       .send({
         data: { '1': '  Sam Doe  ', '2': 'SAM@Example.com', '3': 5 },
       })
@@ -159,6 +160,37 @@ describe('PublicFormsController retained HTTP contract', () => {
       '1': 'Sam Doe',
       '2': 'sam@example.com',
       '3': 5,
+    });
+    expect(repository.submitPublicForm.mock.calls[0][3]).toBe(
+      'public-form-request-1',
+    );
+  });
+
+  it('rejects unsafe idempotency keys before persistence', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/forms/public/form/frm_abc123')
+      .set('Idempotency-Key', 'unsafe key')
+      .send({ data: { '1': 'Sam', '2': 'sam@example.com' } })
+      .expect(400);
+    expect(response.body.error).toEqual({
+      message: 'Idempotency key must be 1-128 safe ASCII characters',
+      code: 'INVALID_IDEMPOTENCY_KEY',
+    });
+    expect(repository.submitPublicForm).not.toHaveBeenCalled();
+  });
+
+  it('reports reuse of a key with different submission data', async () => {
+    repository.submitPublicForm.mockResolvedValue({
+      status: 'idempotency_conflict',
+    });
+    const response = await request(app.getHttpServer())
+      .post('/api/forms/public/form/frm_abc123')
+      .set('Idempotency-Key', 'public-form-request-conflict')
+      .send({ data: { '1': 'Sam', '2': 'sam@example.com' } })
+      .expect(409);
+    expect(response.body.error).toEqual({
+      message: 'Idempotency key was already used for a different submission',
+      code: 'IDEMPOTENCY_CONFLICT',
     });
   });
 

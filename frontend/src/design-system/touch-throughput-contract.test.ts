@@ -61,7 +61,7 @@ describe('touch throughput contract', () => {
     expect(source).toContain('onDealMove(deal.id, targetStage.id)')
     expect(source).toContain('touch-pan-x touch-pan-y overflow-x-auto overscroll-x-contain')
     expect(source).toContain('const effectiveZoom = isMobile ? 100')
-    expect(source).toContain('draggable={!isMobile}')
+    expect(source).toContain('draggable={!isMobile && !isDealPending(deal.id)}')
   })
 
   it('documents target size, scroll ownership, feedback, and gesture fallbacks', () => {

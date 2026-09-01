@@ -264,15 +264,29 @@ describe('Email templates GraphQL PostgreSQL contract', () => {
     const published = await graphql(
       memberToken,
       organizationId,
-      `mutation Publish($id: Int!) {
-        publishEmailTemplate(id: $id, input: { isActive: true }) { ${fields} }
+      `mutation Publish($id: Int!, $key: String!) {
+        publishEmailTemplate(id: $id, input: { isActive: true, idempotencyKey: $key }) { ${fields} }
       }`,
-      { id },
+      { id, key: 'email-template-lifecycle-publish-1' },
     ).expect(200);
     expect(published.body.errors).toBeUndefined();
     expect(published.body.data.publishEmailTemplate).toMatchObject({
       subject: 'Draft {{first_name}}', draftVersion: null, publishedVersion: 1,
       isActive: true, hasUnpublishedChanges: false,
+    });
+
+    const replayed = await graphql(
+      memberToken,
+      organizationId,
+      `mutation Publish($id: Int!, $key: String!) {
+        publishEmailTemplate(id: $id, input: { isActive: true, idempotencyKey: $key }) { ${fields} }
+      }`,
+      { id, key: 'email-template-lifecycle-publish-1' },
+    ).expect(200);
+    expect(replayed.body.errors).toBeUndefined();
+    expect(replayed.body.data.publishEmailTemplate).toMatchObject({
+      publishedVersion: 1,
+      hasUnpublishedChanges: false,
     });
 
     const saved = await graphql(

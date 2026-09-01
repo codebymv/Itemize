@@ -65,7 +65,8 @@ const NoteCard: React.FC<NoteCardProps> = ({
     isEditingCategory, setIsEditingCategory,
     showNewCategoryInput, setShowNewCategoryInput,
     newCategory, setNewCategory, 
-    handleEditCategory, handleAddCustomCategory,
+    isSavingCategory,
+    handleEditCategory, handleAddCustomCategory, handleUpdateCategoryColor,
     
     // Content
     isEditingContent, setIsEditingContent,
@@ -123,11 +124,6 @@ const NoteCard: React.FC<NoteCardProps> = ({
 
   const categoryColor = existingCategories.find(c => c.name === note.category)?.color_value;
   const noteDisplayColor = note.color_value || categoryColor || '#FFFFE0'; // Default to light yellow if no color is set
-
-  // Wrapper function to adapt updateCategory interface for the selector
-  const handleUpdateCategoryColor = async (categoryName: string, newColor: string) => {
-    await updateCategory(categoryName, { color_value: newColor });
-  };
 
   return (
     <Collapsible
@@ -278,6 +274,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
           isEditingCategory={isEditingCategory}
           showNewCategoryInput={showNewCategoryInput}
           newCategory={newCategory}
+          isSavingCategory={isSavingCategory}
           setNewCategory={setNewCategory}
           setIsEditingCategory={setIsEditingCategory}
           setShowNewCategoryInput={setShowNewCategoryInput}

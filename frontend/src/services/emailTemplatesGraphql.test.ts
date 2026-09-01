@@ -201,7 +201,7 @@ describe('email-template GraphQL consumer', () => {
     await expect(previewEmailTemplateViaGraphql({
       subject: 'Draft {{first_name}}', preheader: 'Draft preview', body_html: '<p>Draft</p>',
     }, 4)).resolves.toMatchObject({ subject: 'Draft Test', variables: ['first_name'] });
-    await publishEmailTemplateViaGraphql(9, true, 4);
+    await publishEmailTemplateViaGraphql(9, true, 'publish-key-9', 4);
 
     const bodies = vi.mocked(fetch).mock.calls.map(call =>
       JSON.parse(String((call[1] as RequestInit).body)),
@@ -210,7 +210,10 @@ describe('email-template GraphQL consumer', () => {
     expect(bodies[2].variables.input).toEqual({
       subject: 'Draft {{first_name}}', preheader: 'Draft preview', bodyHtml: '<p>Draft</p>',
     });
-    expect(bodies[3].variables).toEqual({ id: 9, input: { isActive: true } });
+    expect(bodies[3].variables).toEqual({
+      id: 9,
+      input: { isActive: true, idempotencyKey: 'publish-key-9' },
+    });
     expect(fetchCsrfToken).toHaveBeenCalledTimes(4);
   });
 });

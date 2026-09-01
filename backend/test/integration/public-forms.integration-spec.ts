@@ -306,6 +306,53 @@ describe('Public forms (legacy behavior pinned)', () => {
     }
   });
 
+  it('replays one public submission without duplicating its durable effects', async () => {
+    const key = `public-form-replay-${Date.now()}`;
+    const email = `public-form-replay-${Date.now()}@test.itemize`;
+    const body = validSubmission(nestForm, email);
+
+    const first = await request(app.getHttpServer())
+      .post(`/api/forms/public/form/${nestForm.public_id}`)
+      .set('Idempotency-Key', key)
+      .send(body)
+      .expect(201);
+    const replay = await request(app.getHttpServer())
+      .post(`/api/forms/public/form/${nestForm.public_id}`)
+      .set('Idempotency-Key', key)
+      .send(body)
+      .expect(201);
+    expect(replay.body).toEqual(first.body);
+
+    const submissions = await pool.query<{ id: number }>(
+      `SELECT id
+       FROM form_submissions
+       WHERE form_id = $1 AND idempotency_key = $2`,
+      [nestForm.id, key],
+    );
+    expect(submissions.rows).toHaveLength(1);
+    const submissionId = submissions.rows[0].id;
+
+    const triggers = await pool.query(
+      'SELECT id FROM workflow_triggers WHERE event_key = $1',
+      [`domain:form_submitted:${submissionId}`],
+    );
+    expect(triggers.rows).toHaveLength(1);
+    const notifications = await pool.query(
+      `SELECT id
+       FROM workflow_side_effect_outbox
+       WHERE idempotency_key LIKE $1`,
+      [`form-submission-${submissionId}-notify-%`],
+    );
+    expect(notifications.rows).toHaveLength(2);
+
+    const conflict = await request(app.getHttpServer())
+      .post(`/api/forms/public/form/${nestForm.public_id}`)
+      .set('Idempotency-Key', key)
+      .send(validSubmission(nestForm, `changed-${email}`))
+      .expect(409);
+    expect(conflict.body.error.code).toBe('IDEMPOTENCY_CONFLICT');
+  });
+
   it('requires the conditional field when its condition activates', async () => {
     const body = {
       data: {

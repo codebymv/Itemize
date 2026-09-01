@@ -142,9 +142,9 @@ describe('campaign editor GraphQL bootstrap', () => {
     expect(operations.filter((operation) => operation === 'CampaignEditorBootstrap')).toHaveLength(1);
     expect(operations).toEqual([
       'CampaignEditorBootstrap',
-      'Segments',
+      'SegmentPage',
       'SegmentFilterOptions',
-      'Segments',
+      'SegmentPage',
       'SegmentFilterOptions',
     ]);
   });

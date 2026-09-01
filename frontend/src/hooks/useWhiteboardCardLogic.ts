@@ -66,6 +66,7 @@ export const useWhiteboardCardLogic = ({ whiteboard, onUpdate, onDelete, isColla
     setShowNewCategoryInput,
     newCategory,
     setNewCategory,
+    isSavingCategory,
     handleEditCategory,
     handleAddCustomCategory,
     handleUpdateCategoryColor
@@ -155,6 +156,7 @@ export const useWhiteboardCardLogic = ({ whiteboard, onUpdate, onDelete, isColla
     setShowNewCategoryInput,
     newCategory,
     setNewCategory,
+    isSavingCategory,
     handleEditCategory,
     handleAddCustomCategory,
     handleUpdateCategoryColor,

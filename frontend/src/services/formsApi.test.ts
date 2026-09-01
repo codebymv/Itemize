@@ -91,7 +91,7 @@ describe('forms transport boundary', () => {
         });
 
         await getPublicForm('frm_test');
-        await submitPublicForm('frm_test', { answer: 'yes' });
+        await submitPublicForm('frm_test', { answer: 'yes' }, 'submission-key');
 
         expect(api.get).toHaveBeenCalledWith(
             '/api/forms/public/form/frm_test',
@@ -99,6 +99,7 @@ describe('forms transport boundary', () => {
         expect(api.post).toHaveBeenCalledWith(
             '/api/forms/public/form/frm_test',
             { data: { answer: 'yes' } },
+            { headers: { 'Idempotency-Key': 'submission-key' } },
         );
     });
 });

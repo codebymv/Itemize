@@ -16,6 +16,7 @@ interface CategorySelectorProps {
   isEditingCategory: boolean;
   showNewCategoryInput: boolean;
   newCategory: string;
+  isSavingCategory?: boolean;
   setNewCategory: (value: string) => void;
   setIsEditingCategory: (value: boolean) => void;
   setShowNewCategoryInput: (value: boolean) => void;
@@ -32,6 +33,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
   isEditingCategory,
   showNewCategoryInput,
   newCategory,
+  isSavingCategory = false,
   setNewCategory,
   setIsEditingCategory,
   setShowNewCategoryInput,
@@ -44,7 +46,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
   const getContrastColor = () => '#ffffff';
 
   return (
-    <div className="mb-2 px-6 flex items-center gap-2">
+    <div className="mb-2 px-6 flex items-center gap-2" aria-busy={isSavingCategory}>
       {isEditingCategory ? (
         <div className="mb-2 w-full">
           {showNewCategoryInput ? (
@@ -54,9 +56,10 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
                 onChange={(e) => setNewCategory(e.target.value)}
                 placeholder="Enter new category"
                 className="h-8"
+                disabled={isSavingCategory}
                 autoFocus
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
+                  if (e.key === 'Enter' && !isSavingCategory) {
                     handleAddCustomCategory();
                   }
                 }}
@@ -67,6 +70,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
                 onClick={handleAddCustomCategory}
                 className="h-8 w-8 p-0"
                 aria-label="Save category"
+                disabled={isSavingCategory}
               >
                 <Check className="h-4 w-4" />
               </Button>
@@ -79,13 +83,14 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
                 }}
                 className="h-8 w-8 p-0"
                 aria-label="Cancel category"
+                disabled={isSavingCategory}
               >
                 <X className="h-4 w-4" />
               </Button>
             </div>
           ) : (
             <div className="flex flex-col space-y-2">
-              <Select onValueChange={handleEditCategory} defaultValue={displayCategory}>
+              <Select onValueChange={handleEditCategory} defaultValue={displayCategory} disabled={isSavingCategory}>
               <SelectTrigger className="h-8 font-raleway">
                   <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
@@ -118,13 +123,14 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
                 <div className="flex items-center gap-2 ml-2">
                   <ColorPicker
                     color={displayColor}
-                    onChange={(newColor) => handleUpdateCategoryColor(displayCategory, newColor)}
+                    onChange={() => undefined}
                     onSave={(newColor) => handleUpdateCategoryColor(displayCategory, newColor)}
                   >
                     <Button
                       variant="outline"
                       size="sm"
                       className="h-8 px-3 flex items-center gap-2"
+                      disabled={isSavingCategory}
                     >
                       <span
                         className="inline-block w-3 h-3 rounded-full border"
@@ -141,6 +147,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
                 variant="ghost"
                 className="self-start font-raleway"
                 onClick={() => setIsEditingCategory(false)}
+                disabled={isSavingCategory}
               >
                 Cancel
               </Button>
@@ -155,8 +162,18 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
             backgroundColor: displayColor,
             color: getContrastColor()
           }}
-          onClick={() => setIsEditingCategory(true)}
+          onClick={() => {
+            if (!isSavingCategory) setIsEditingCategory(true);
+          }}
+          onKeyDown={(event) => {
+            if (!isSavingCategory && (event.key === 'Enter' || event.key === ' ')) {
+              event.preventDefault();
+              setIsEditingCategory(true);
+            }
+          }}
           role="button"
+          tabIndex={isSavingCategory ? -1 : 0}
+          aria-disabled={isSavingCategory}
         >
           {displayCategory}
         </Badge>
