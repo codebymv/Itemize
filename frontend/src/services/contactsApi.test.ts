@@ -21,6 +21,7 @@ import {
   getOrganizations,
   getViewerOrganizationAllowance,
   inviteMember,
+  importContactsCSV,
   leaveOrganization,
   removeMember,
   resendOrganizationInvitation,
@@ -311,5 +312,35 @@ describe('contacts API GraphQL transport', () => {
     await expect(getContactContent(11, 42)).resolves.toEqual(content);
     expect(getContactContentViaGraphql).toHaveBeenCalledWith(11, 42);
     expect(api.get).not.toHaveBeenCalled();
+  });
+
+  it('sends CSV imports with their tenant and stable idempotency key', async () => {
+    const result = {
+      message: 'Import completed: 1 imported, 0 skipped',
+      imported: 1,
+      skipped: 0,
+      replayed: false,
+      errors: [],
+      errorCount: 0,
+      errorsTruncated: false,
+    };
+    vi.mocked(api.post).mockResolvedValue({ data: result });
+    const contacts = [{ first_name: 'Maya', email: 'maya@example.test' }];
+
+    await expect(importContactsCSV(contacts, 42, {
+      idempotencyKey: 'contact-import-attempt-1',
+      skipDuplicates: false,
+    })).resolves.toEqual(result);
+
+    expect(api.post).toHaveBeenCalledWith(
+      '/api/contacts/import/csv',
+      { contacts, skipDuplicates: false },
+      {
+        headers: {
+          'Idempotency-Key': 'contact-import-attempt-1',
+          'x-organization-id': '42',
+        },
+      },
+    );
   });
 });

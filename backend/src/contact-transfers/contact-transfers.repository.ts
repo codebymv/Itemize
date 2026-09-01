@@ -8,7 +8,13 @@ import {
 } from './contact-transfer.contract';
 
 export type ContactImportDatabaseResult =
-  | { kind: 'imported'; imported: number; skipped: number }
+  | {
+      kind: 'imported';
+      imported: number;
+      skipped: number;
+      replayed: boolean;
+    }
+  | { kind: 'idempotency_conflict' }
   | {
       kind: 'limit';
       current: number;
@@ -60,11 +66,55 @@ export class ContactTransfersRepository {
     userId: number,
     contacts: NormalizedImportContact[],
     skipDuplicates: boolean,
+    idempotencyKey: string,
+    requestFingerprint: string,
   ): Promise<ContactImportDatabaseResult> {
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
       await client.query('SELECT pg_advisory_xact_lock($1)', [organizationId]);
+      const receipt = await client.query<{
+        request_fingerprint: string;
+        imported: number | null;
+        skipped: number | null;
+        completed_at: Date | null;
+      }>(
+        `SELECT request_fingerprint, imported, skipped, completed_at
+         FROM contact_import_receipts
+         WHERE organization_id = $1
+           AND requested_by_user_id = $2
+           AND idempotency_key = $3`,
+        [organizationId, userId, idempotencyKey],
+      );
+      const existingReceipt = receipt.rows[0];
+      if (existingReceipt) {
+        if (existingReceipt.request_fingerprint !== requestFingerprint) {
+          await client.query('ROLLBACK');
+          return { kind: 'idempotency_conflict' };
+        }
+        if (
+          existingReceipt.imported === null
+          || existingReceipt.skipped === null
+          || existingReceipt.completed_at === null
+        ) {
+          throw new Error('Contact import receipt is incomplete');
+        }
+        await client.query('COMMIT');
+        return {
+          kind: 'imported',
+          imported: existingReceipt.imported,
+          skipped: existingReceipt.skipped,
+          replayed: true,
+        };
+      }
+
+      await client.query(
+        `INSERT INTO contact_import_receipts (
+           organization_id, requested_by_user_id, idempotency_key,
+           request_fingerprint
+         ) VALUES ($1, $2, $3, $4)`,
+        [organizationId, userId, idempotencyKey, requestFingerprint],
+      );
       const filtered = await this.filterDuplicates(
         client,
         organizationId,
@@ -139,11 +189,26 @@ export class ContactTransfersRepository {
         userId,
         insertedIds,
       );
+      await client.query(
+        `UPDATE contact_import_receipts
+         SET imported = $4, skipped = $5, completed_at = CURRENT_TIMESTAMP
+         WHERE organization_id = $1
+           AND requested_by_user_id = $2
+           AND idempotency_key = $3`,
+        [
+          organizationId,
+          userId,
+          idempotencyKey,
+          insertedIds.length,
+          filtered.skipped,
+        ],
+      );
       await client.query('COMMIT');
       return {
         kind: 'imported',
         imported: insertedIds.length,
         skipped: filtered.skipped,
+        replayed: false,
       };
     } catch (error) {
       await client.query('ROLLBACK');

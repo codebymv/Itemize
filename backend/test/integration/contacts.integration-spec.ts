@@ -1,6 +1,7 @@
 import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
+import { randomUUID } from 'node:crypto';
 import { Pool } from 'pg';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
@@ -1123,8 +1124,8 @@ describe('Contacts GraphQL PostgreSQL contract', () => {
       path: string,
       token = memberToken,
       selectedOrganizationId = organizationId,
-    ) =>
-      request(graphqlApp.getHttpServer())
+    ) => {
+      const pending = request(graphqlApp.getHttpServer())
         [method](path)
         .set('Cookie', [
           `itemize_auth=${token}`,
@@ -1132,6 +1133,11 @@ describe('Contacts GraphQL PostgreSQL contract', () => {
         ])
         .set('x-csrf-token', csrf)
         .set('x-organization-id', String(selectedOrganizationId));
+      if (method === 'post') {
+        pending.set('idempotency-key', randomUUID());
+      }
+      return pending;
+    };
 
     it('requires authentication, verified membership, and CSRF', async () => {
       await request(graphqlApp.getHttpServer())
@@ -1159,6 +1165,23 @@ describe('Contacts GraphQL PostgreSQL contract', () => {
       expect(missingCsrf.body).toMatchObject({
         code: 'FORBIDDEN',
         reason: 'CSRF_COOKIE_MISSING',
+      });
+
+      const missingIdempotencyKey = await request(graphqlApp.getHttpServer())
+        .post('/api/contacts/import/csv')
+        .set('Cookie', [
+          `itemize_auth=${memberToken}`,
+          `csrf-token=${csrf}`,
+        ])
+        .set('x-csrf-token', csrf)
+        .set('x-organization-id', String(organizationId))
+        .send({
+          contacts: [{ first_name: 'Missing idempotency key' }],
+          skipDuplicates: true,
+        })
+        .expect(400);
+      expect(missingIdempotencyKey.body).toMatchObject({
+        code: 'INVALID_IDEMPOTENCY_KEY',
       });
     });
 
@@ -1197,33 +1220,37 @@ describe('Contacts GraphQL PostgreSQL contract', () => {
     it('reports invalid rows, skips canonical duplicates, and commits effects atomically', async () => {
       const suffix = `${Date.now()}-${process.pid}`;
       const canonicalEmail = `csv-import-${suffix}@test.itemize`;
+      const idempotencyKey = randomUUID();
+      const importBody = {
+        contacts: [
+          {
+            first_name: 'Imported First',
+            email: ` ${canonicalEmail.toUpperCase()} `,
+            tags: 'vip; newsletter;vip',
+          },
+          {
+            first_name: 'Duplicate Variant',
+            email: canonicalEmail,
+          },
+          { first_name: 'Imported Without Email' },
+          { first_name: '', email: '   ' },
+          { first_name: 'Unknown Column', unexpected: 'value' },
+        ],
+        skipDuplicates: true,
+      };
       const response = await transferRequest(
         'post',
         '/api/contacts/import/csv',
       )
-        .send({
-          contacts: [
-            {
-              first_name: 'Imported First',
-              email: ` ${canonicalEmail.toUpperCase()} `,
-              tags: 'vip; newsletter;vip',
-            },
-            {
-              first_name: 'Duplicate Variant',
-              email: canonicalEmail,
-            },
-            { first_name: 'Imported Without Email' },
-            { first_name: '', email: '   ' },
-            { first_name: 'Unknown Column', unexpected: 'value' },
-          ],
-          skipDuplicates: true,
-        })
+        .set('idempotency-key', idempotencyKey)
+        .send(importBody)
         .expect(201);
 
       expect(response.body).toMatchObject({
         success: true,
         imported: 2,
         skipped: 1,
+        replayed: false,
         errorCount: 2,
         errorsTruncated: false,
       });
@@ -1231,6 +1258,33 @@ describe('Contacts GraphQL PostgreSQL contract', () => {
         expect.objectContaining({ row: 4 }),
         expect.objectContaining({ row: 5, error: 'Unknown columns: unexpected' }),
       ]);
+
+      const replay = await transferRequest(
+        'post',
+        '/api/contacts/import/csv',
+      )
+        .set('idempotency-key', idempotencyKey)
+        .send(importBody)
+        .expect(201);
+      expect(replay.body).toMatchObject({
+        imported: 2,
+        skipped: 1,
+        replayed: true,
+        errorCount: 2,
+      });
+      expect(replay.body.errors).toEqual(response.body.errors);
+
+      const conflict = await transferRequest(
+        'post',
+        '/api/contacts/import/csv',
+      )
+        .set('idempotency-key', idempotencyKey)
+        .send({
+          contacts: [{ first_name: 'Different import' }],
+          skipDuplicates: true,
+        })
+        .expect(409);
+      expect(conflict.body).toMatchObject({ code: 'IDEMPOTENCY_CONFLICT' });
 
       const persisted = await pool.query<{
         id: number;
@@ -1264,6 +1318,19 @@ describe('Contacts GraphQL PostgreSQL contract', () => {
         [persisted.rows.map((row) => row.id)],
       );
       expect(effects.rows[0]).toEqual({ triggers: 2, activities: 2 });
+
+      const receipts = await pool.query<{ total: number }>(
+        `SELECT COUNT(*)::int AS total
+         FROM contact_import_receipts
+         WHERE organization_id = $1
+           AND requested_by_user_id = $2
+           AND idempotency_key = $3
+           AND imported = 2
+           AND skipped = 1
+           AND completed_at IS NOT NULL`,
+        [organizationId, memberId, idempotencyKey],
+      );
+      expect(receipts.rows[0].total).toBe(1);
     });
 
     it('preserves duplicates when requested and serializes same-email imports when skipping', async () => {

@@ -28,6 +28,7 @@ import {
     parseContactCsv,
 } from '../contactCsv';
 import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
+import { useStableMutationKey } from '@/hooks/useStableMutationKey';
 
 interface ImportContactsModalProps {
     organizationId: number;
@@ -48,6 +49,7 @@ export function ImportContactsModal({ organizationId, onClose, onImported }: Imp
     const [importResult, setImportResult] = useState<ImportResult | null>(null);
     const [error, setError] = useState<string | null>(null);
     const { pending: importPending, run: runImport, dismissIfIdle } = useSingleFlightAction();
+    const { keyFor: importKeyFor, reset: resetImportKey } = useStableMutationKey('contact-import');
 
     const getApiErrorMessage = (err: unknown): string => {
         if (err && typeof err === 'object') {
@@ -63,6 +65,7 @@ export function ImportContactsModal({ organizationId, onClose, onImported }: Imp
         if (!file) return;
 
         setError(null);
+        resetImportKey();
         setFileName(file.name);
         if (file.size > MAX_CONTACT_CSV_BYTES) {
             setError('CSV files are limited to 1 MB.');
@@ -92,7 +95,7 @@ export function ImportContactsModal({ organizationId, onClose, onImported }: Imp
             setError('Failed to read file. Please try again.');
         };
         reader.readAsText(file);
-    }, []);
+    }, [resetImportKey]);
 
     // Handle import
     const handleImport = async () => {
@@ -101,7 +104,12 @@ export function ImportContactsModal({ organizationId, onClose, onImported }: Imp
             setError(null);
 
             try {
-                const result = await importContactsCSV(parsedData, organizationId, skipDuplicates);
+                const signature = JSON.stringify({ organizationId, parsedData, skipDuplicates });
+                const result = await importContactsCSV(parsedData, organizationId, {
+                    idempotencyKey: importKeyFor(signature),
+                    skipDuplicates,
+                });
+                resetImportKey();
                 setImportResult(result);
                 setStep('complete');
 
@@ -149,7 +157,9 @@ export function ImportContactsModal({ organizationId, onClose, onImported }: Imp
     };
 
     return (
-        <Dialog open onOpenChange={open => { if (!open) dismissIfIdle(onClose); }}>
+        <Dialog open onOpenChange={open => {
+            if (!open) dismissIfIdle(() => { resetImportKey(); onClose(); });
+        }}>
             <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col" aria-busy={importPending ? 'true' : undefined}>
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
@@ -291,7 +301,7 @@ export function ImportContactsModal({ organizationId, onClose, onImported }: Imp
                     )}
                     {step === 'preview' && (
                         <>
-                            <Button variant="outline" disabled={importPending} onClick={() => { setStep('upload'); setParsedData([]); }} style={{ fontFamily: '"Raleway", sans-serif' }} aria-label="Back to upload">
+                            <Button variant="outline" disabled={importPending} onClick={() => { resetImportKey(); setStep('upload'); setParsedData([]); }} style={{ fontFamily: '"Raleway", sans-serif' }} aria-label="Back to upload">
                                 Back
                             </Button>
                             <Button onClick={handleImport} disabled={importPending} aria-busy={importPending ? 'true' : undefined} className="bg-blue-600 interaction-button--primary text-white" style={{ fontFamily: '"Raleway", sans-serif' }} aria-label={`Import ${parsedData.length} contacts`}>

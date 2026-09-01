@@ -1,11 +1,13 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   Logger,
   PayloadTooLargeException,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import { createHash } from 'node:crypto';
 import {
   ContactExportFilter,
   ContactImportResult,
@@ -25,6 +27,22 @@ import { ContactTransfersRepository } from './contact-transfers.repository';
 const statuses = new Set(['active', 'inactive', 'archived']);
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phonePattern = /^[+()\-.\s\d]+$/;
+const idempotencyKeyPattern = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
+
+const canonicalJson = (value: unknown): unknown => {
+  if (Array.isArray(value)) return value.map(canonicalJson);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.keys(value as Record<string, unknown>)
+        .sort()
+        .map((key) => [
+          key,
+          canonicalJson((value as Record<string, unknown>)[key]),
+        ]),
+    );
+  }
+  return value;
+};
 
 @Injectable()
 export class ContactTransfersService {
@@ -114,7 +132,9 @@ export class ContactTransfersService {
     userId: number,
     body: unknown,
     requestId: string,
+    rawIdempotencyKey: string | undefined,
   ): Promise<ContactImportResult> {
+    const idempotencyKey = this.idempotencyKey(rawIdempotencyKey);
     const envelope = validateImportEnvelope(body);
     if (typeof envelope === 'string') {
       throw new BadRequestException({
@@ -122,6 +142,9 @@ export class ContactTransfersService {
         code: 'INVALID_IMPORT',
       });
     }
+    const requestFingerprint = createHash('sha256')
+      .update(JSON.stringify(canonicalJson(envelope)))
+      .digest('hex');
 
     const normalized: NormalizedImportContact[] = [];
     const errors: ImportRowError[] = [];
@@ -146,7 +169,15 @@ export class ContactTransfersService {
         userId,
         normalized,
         envelope.skipDuplicates,
+        idempotencyKey,
+        requestFingerprint,
       );
+      if (outcome.kind === 'idempotency_conflict') {
+        throw new ConflictException({
+          error: 'Idempotency key was already used for a different contact import',
+          code: 'IDEMPOTENCY_CONFLICT',
+        });
+      }
       if (outcome.kind === 'limit') {
         throw new ForbiddenException({
           error: 'Contact import would exceed the active organization limit',
@@ -159,6 +190,7 @@ export class ContactTransfersService {
       const result = {
         imported: outcome.imported,
         skipped: outcome.skipped,
+        replayed: outcome.replayed,
         errors,
         errorCount,
         errorsTruncated: errorCount > errors.length,
@@ -170,8 +202,9 @@ export class ContactTransfersService {
         imported: result.imported,
         skipped: result.skipped,
         rejected: result.errorCount,
+        replayed: result.replayed,
       });
-      if (result.imported > 0) {
+      if (result.imported > 0 && !result.replayed) {
         await this.getStarted.record({
           organizationId,
           userId,
@@ -181,12 +214,26 @@ export class ContactTransfersService {
       }
       return result;
     } catch (error) {
-      if (error instanceof ForbiddenException) throw error;
+      if (
+        error instanceof ForbiddenException
+        || error instanceof ConflictException
+      ) throw error;
       throw new ServiceUnavailableException({
         error: 'Contact import is unavailable',
         code: 'SERVICE_UNAVAILABLE',
       });
     }
+  }
+
+  private idempotencyKey(value: string | undefined): string {
+    const key = value?.trim() ?? '';
+    if (!idempotencyKeyPattern.test(key)) {
+      throw new BadRequestException({
+        error: 'Idempotency-Key must contain 1-128 safe ASCII characters',
+        code: 'INVALID_IDEMPOTENCY_KEY',
+      });
+    }
+    return key;
   }
 
   private normalizeExportFilter(

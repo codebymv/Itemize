@@ -280,7 +280,10 @@ export interface ImportResult {
   message: string;
   imported: number;
   skipped: number;
+  replayed: boolean;
   errors: Array<{ row: number; error: string }>;
+  errorCount: number;
+  errorsTruncated: boolean;
 }
 
 export const exportContactsCSV = async (
@@ -312,12 +315,18 @@ export const exportContactsCSV = async (
 export const importContactsCSV = async (
   contacts: ImportContactData[],
   organizationId: number,
-  skipDuplicates: boolean = true
+  options: { idempotencyKey: string; skipDuplicates?: boolean },
 ): Promise<ImportResult> => {
+  const { idempotencyKey, skipDuplicates = true } = options;
   const response = await api.post(
     '/api/contacts/import/csv',
     { contacts, skipDuplicates },
-    { headers: { 'x-organization-id': organizationId.toString() } }
+    {
+      headers: {
+        'Idempotency-Key': idempotencyKey,
+        'x-organization-id': organizationId.toString(),
+      },
+    },
   );
   return unwrapResponse<ImportResult>(response.data);
 };

@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Header,
+  Headers,
   Post,
   Query,
   Res,
@@ -43,11 +44,15 @@ export class ContactTransfersController {
   }
 
   @Post('import/csv')
-  async importCsv(@Body() body: unknown): Promise<{
+  async importCsv(
+    @Body() body: unknown,
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
+  ): Promise<{
     success: true;
     message: string;
     imported: number;
     skipped: number;
+    replayed: boolean;
     errors: Array<{ row: number; error: string }>;
     errorCount: number;
     errorsTruncated: boolean;
@@ -58,6 +63,7 @@ export class ContactTransfersController {
       context.userId,
       body,
       context.requestId,
+      idempotencyKey,
     );
     return {
       success: true,

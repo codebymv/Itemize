@@ -50,6 +50,7 @@ export type ContactImportRequest = {
 export type ContactImportResult = {
   imported: number;
   skipped: number;
+  replayed: boolean;
   errors: ImportRowError[];
   errorCount: number;
   errorsTruncated: boolean;
