@@ -81,9 +81,9 @@ export function useCanvasSharing(
     }
   };
 
-  const handleListUnshare = async (listId: string): Promise<void> => {
+  const handleListUnshare = async (listId: string, mutationId: string): Promise<void> => {
     try {
-      await disableListSharingViaGraphql(Number(listId));
+      await disableListSharingViaGraphql(Number(listId), mutationId);
       setLists((current) => current.map((list) => (
         list.id === listId ? { ...list, ...unsharedFields } : list
       )));
@@ -106,9 +106,9 @@ export function useCanvasSharing(
     }
   };
 
-  const handleNoteUnshare = async (noteId: number): Promise<void> => {
+  const handleNoteUnshare = async (noteId: number, mutationId: string): Promise<void> => {
     try {
-      await disableNoteSharingViaGraphql(noteId);
+      await disableNoteSharingViaGraphql(noteId, mutationId);
       setNotes((current) => current.map((note) => (
         note.id === noteId ? { ...note, ...unsharedFields } : note
       )));
@@ -131,9 +131,9 @@ export function useCanvasSharing(
     }
   };
 
-  const handleWhiteboardUnshare = async (whiteboardId: number): Promise<void> => {
+  const handleWhiteboardUnshare = async (whiteboardId: number, mutationId: string): Promise<void> => {
     try {
-      await disableWhiteboardSharingViaGraphql(whiteboardId);
+      await disableWhiteboardSharingViaGraphql(whiteboardId, mutationId);
       setWhiteboards((current) => current.map((whiteboard) => (
         whiteboard.id === whiteboardId ? { ...whiteboard, ...unsharedFields } : whiteboard
       )));
@@ -156,9 +156,9 @@ export function useCanvasSharing(
     }
   };
 
-  const handleWireframeUnshare = async (wireframeId: number): Promise<void> => {
+  const handleWireframeUnshare = async (wireframeId: number, mutationId: string): Promise<void> => {
     try {
-      await disableWorkspaceWireframeSharingViaGraphql(wireframeId);
+      await disableWorkspaceWireframeSharingViaGraphql(wireframeId, mutationId);
       setWireframes((current) => current.map((wireframe) => (
         wireframe.id === wireframeId ? { ...wireframe, ...unsharedFields } : wireframe
       )));

@@ -69,6 +69,7 @@ import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { ErrorState } from '@/components/ErrorState';
 import { useWorkspaceContent } from './hooks/useWorkspaceContent';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useStableMutationKey } from '@/hooks/useStableMutationKey';
 import { getWorkspaceLanding } from '@/lib/workspaceNavigation';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -127,6 +128,9 @@ export function SharedPage() {
   // Unshare confirmation dialog
   const [unshareDialogOpen, setUnshareDialogOpen] = useState(false);
   const [contentToUnshare, setContentToUnshare] = useState<SharedContent | null>(null);
+  const [isUnsharing, setIsUnsharing] = useState(false);
+  const { begin: beginUnshare, release: releaseUnshare, reset: resetUnshare } =
+    useStableMutationKey('workspace-sharing');
 
   // Build the base URL for share links
   const baseUrl = useMemo(() => {
@@ -307,18 +311,33 @@ export function SharedPage() {
 
   // Handle unshare confirmation
   const handleUnshareClick = (content: SharedContent) => {
+    resetUnshare();
     setContentToUnshare(content);
     setUnshareDialogOpen(true);
+  };
+
+  const handleUnshareDialogChange = (open: boolean) => {
+    if (!open && isUnsharing) return;
+    setUnshareDialogOpen(open);
+    if (!open) {
+      resetUnshare();
+      setContentToUnshare(null);
+    }
   };
 
   // Handle unshare
   const handleUnshare = async () => {
     if (!contentToUnshare) return;
+    const mutationId = beginUnshare(
+      `disable:${contentToUnshare.type}:${contentToUnshare.id}`,
+    );
+    if (!mutationId) return;
 
+    setIsUnsharing(true);
     try {
       switch (contentToUnshare.type) {
         case 'list':
-          await apiUnshareList(contentToUnshare.id as string, token);
+          await apiUnshareList(contentToUnshare.id as string, token, mutationId);
           setLists(prev => prev.map(l =>
             l.id === contentToUnshare.id
               ? { ...l, is_public: false, share_token: undefined }
@@ -326,7 +345,7 @@ export function SharedPage() {
           ));
           break;
         case 'note':
-          await apiUnshareNote(contentToUnshare.id as number, token);
+          await apiUnshareNote(contentToUnshare.id as number, token, mutationId);
           setNotes(prev => prev.map(n =>
             n.id === contentToUnshare.id
               ? { ...n, is_public: false, share_token: undefined }
@@ -334,7 +353,7 @@ export function SharedPage() {
           ));
           break;
         case 'whiteboard':
-          await apiUnshareWhiteboard(contentToUnshare.id as number, token);
+          await apiUnshareWhiteboard(contentToUnshare.id as number, token, mutationId);
           setWhiteboards(prev => prev.map(w =>
             w.id === contentToUnshare.id
               ? { ...w, is_public: false, share_token: undefined }
@@ -356,7 +375,11 @@ export function SharedPage() {
         title: 'Sharing Disabled',
         description: `${contentToUnshare.title} is no longer shared`,
       });
+      resetUnshare();
+      setUnshareDialogOpen(false);
+      setContentToUnshare(null);
     } catch (error) {
+      releaseUnshare();
       console.error('Error disabling sharing:', error);
       toast({
         title: 'Error',
@@ -364,8 +387,7 @@ export function SharedPage() {
         variant: 'destructive',
       });
     } finally {
-      setUnshareDialogOpen(false);
-      setContentToUnshare(null);
+      setIsUnsharing(false);
     }
   };
 
@@ -600,7 +622,7 @@ export function SharedPage() {
           </Card>
 
           {/* Unshare confirmation dialog */}
-          <AlertDialog open={unshareDialogOpen} onOpenChange={setUnshareDialogOpen}>
+          <AlertDialog open={unshareDialogOpen} onOpenChange={handleUnshareDialogChange}>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle className="flex items-center gap-2 font-raleway">
@@ -613,9 +635,16 @@ export function SharedPage() {
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel className="font-raleway">Cancel</AlertDialogCancel>
+                <AlertDialogCancel disabled={isUnsharing} className="font-raleway">
+                  Cancel
+                </AlertDialogCancel>
                 <AlertDialogAction
-                  onClick={handleUnshare}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    void handleUnshare();
+                  }}
+                  disabled={isUnsharing}
+                  aria-busy={isUnsharing || undefined}
                   className="interaction-button--destructive bg-red-600 text-white font-raleway"
                 >
                   Disable Sharing

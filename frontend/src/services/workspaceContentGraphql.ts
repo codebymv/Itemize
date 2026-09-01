@@ -481,6 +481,7 @@ type GraphqlCanvasPositionFailure = {
 
 export const updateCanvasPositionsViaGraphql = async (
   updates: CanvasPositionUpdate[],
+  mutationId: string,
 ): Promise<{
   updated: Array<{
     type: string;
@@ -494,7 +495,7 @@ export const updateCanvasPositionsViaGraphql = async (
 }> => {
   const variables = {
     input: {
-      mutationId: crypto.randomUUID(),
+      mutationId,
       updates: updates.map((update) => ({
         type: update.type,
         id: Number(update.id),

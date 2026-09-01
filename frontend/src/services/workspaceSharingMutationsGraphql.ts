@@ -82,9 +82,10 @@ export const enableWorkspaceSharingViaGraphql = async (
 export const disableWorkspaceSharingViaGraphql = async (
   kind: WorkspaceShareKind,
   id: number,
+  mutationId: string,
 ): Promise<void> => {
   const operation = operations[kind];
-  const variables = { id, mutationId: crypto.randomUUID() };
+  const variables = { id, mutationId };
   const data = await graphqlMutationRequest<
     Record<string, { sharingDisabled: boolean }>,
     typeof variables
@@ -96,13 +97,13 @@ export const disableWorkspaceSharingViaGraphql = async (
 
 export const enableListSharingViaGraphql = (id: number) =>
   enableWorkspaceSharingViaGraphql('list', id);
-export const disableListSharingViaGraphql = (id: number) =>
-  disableWorkspaceSharingViaGraphql('list', id);
+export const disableListSharingViaGraphql = (id: number, mutationId: string) =>
+  disableWorkspaceSharingViaGraphql('list', id, mutationId);
 export const enableNoteSharingViaGraphql = (id: number) =>
   enableWorkspaceSharingViaGraphql('note', id);
-export const disableNoteSharingViaGraphql = (id: number) =>
-  disableWorkspaceSharingViaGraphql('note', id);
+export const disableNoteSharingViaGraphql = (id: number, mutationId: string) =>
+  disableWorkspaceSharingViaGraphql('note', id, mutationId);
 export const enableWhiteboardSharingViaGraphql = (id: number) =>
   enableWorkspaceSharingViaGraphql('whiteboard', id);
-export const disableWhiteboardSharingViaGraphql = (id: number) =>
-  disableWorkspaceSharingViaGraphql('whiteboard', id);
+export const disableWhiteboardSharingViaGraphql = (id: number, mutationId: string) =>
+  disableWorkspaceSharingViaGraphql('whiteboard', id, mutationId);

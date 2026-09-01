@@ -181,8 +181,8 @@ export const disconnectCalendarViaGraphql = async (
 
 export const requestCalendarSyncViaGraphql = async (
   connectionId: number,
-  organizationId?: number,
-  idempotencyKey?: string,
+  organizationId: number | undefined,
+  idempotencyKey: string,
 ): Promise<SyncResult> => {
   const response = await graphqlMutationRequest<
     {
@@ -196,7 +196,7 @@ export const requestCalendarSyncViaGraphql = async (
   >(
     `mutation RequestCalendarSync(
       $connectionId: Int!
-      $idempotencyKey: String
+      $idempotencyKey: String!
     ) {
       requestCalendarSync(
         connectionId: $connectionId
@@ -209,10 +209,7 @@ export const requestCalendarSyncViaGraphql = async (
     }`,
     {
       connectionId,
-      idempotencyKey:
-        idempotencyKey ??
-        globalThis.crypto?.randomUUID?.() ??
-        `calendar-sync-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      idempotencyKey,
     },
     organizationId,
   );

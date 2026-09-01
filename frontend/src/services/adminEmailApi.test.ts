@@ -29,7 +29,12 @@ describe('admin email GraphQL service', () => {
     await getEmailLog(4);
     await getEmailTemplates({ search: 'welcome' });
     await getPreview({ subject: 'x', bodyHtml: 'y' });
-    await sendEmail({ recipients: [{ email: 'a@example.test' }], subject: 'x', bodyHtml: 'y' });
+    await sendEmail({
+      recipients: [{ email: 'a@example.test' }],
+      subject: 'x',
+      bodyHtml: 'y',
+      idempotencyKey: 'admin-email-request-1',
+    });
     expect(getAdminEmailLogsViaGraphql).toHaveBeenCalledWith({ page: 0, limit: 25 });
     expect(getAdminEmailLogViaGraphql).toHaveBeenCalledWith(4);
     expect(getAdminEmailTemplatesViaGraphql).toHaveBeenCalledWith({ search: 'welcome' });
@@ -42,6 +47,7 @@ describe('admin email GraphQL service', () => {
       recipients: [{ email: 'a@example.test' }],
       subject: 'x',
       bodyHtml: 'y',
+      idempotencyKey: 'admin-email-request-1',
     });
   });
 });

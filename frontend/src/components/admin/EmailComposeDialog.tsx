@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { sendEmail } from '@/services/adminEmailApi';
 import { useToast } from '@/hooks/use-toast';
+import { useStableMutationKey } from '@/hooks/useStableMutationKey';
 import { EmailPreview } from './EmailPreview';
 import type { EmailTemplate } from './TemplateSelectorDialog';
 
@@ -44,6 +45,11 @@ export function EmailComposeDialog({
     const [mode, setMode] = useState<StudioMode>('edit');
     const [additionalRecipients, setAdditionalRecipients] = useState<Recipient[]>([]);
     const [emailInput, setEmailInput] = useState('');
+    const {
+        begin: beginSend,
+        release: releaseSend,
+        reset: resetSend,
+    } = useStableMutationKey('admin-email');
 
     useEffect(() => {
         if (!open) return;
@@ -84,6 +90,7 @@ export function EmailComposeDialog({
     };
 
     const resetForm = () => {
+        resetSend();
         setSubject('');
         setBody('');
         setMode('edit');
@@ -106,30 +113,51 @@ export function EmailComposeDialog({
             return;
         }
 
+        const payload = {
+            recipients: allRecipients.map(recipient => ({
+                id: typeof recipient.id === 'number' ? recipient.id : undefined,
+                email: recipient.email.trim().toLowerCase(),
+                name: recipient.name?.trim() || undefined,
+            })),
+            subject: subject.trim(),
+            bodyHtml: body.trim(),
+        };
+        const idempotencyKey = beginSend(JSON.stringify(payload));
+        if (!idempotencyKey) return;
+
         setSending(true);
+        let result: Awaited<ReturnType<typeof sendEmail>>;
         try {
-            const result = await sendEmail({
-                recipients: allRecipients.map(recipient => ({
-                    id: typeof recipient.id === 'number' ? recipient.id : undefined,
-                    email: recipient.email,
-                    name: recipient.name,
-                })),
-                subject,
-                bodyHtml: body,
+            result = await sendEmail({
+                ...payload,
+                idempotencyKey,
             });
-            const queued = result.queued ?? 0;
-            toast({
-                title: queued > 0 ? 'Email queued' : 'Email sent',
-                description: `${queued > 0 ? 'Queued for' : 'Sent to'} ${allRecipients.length} recipient${allRecipients.length === 1 ? '' : 's'}.`,
-            });
-            resetForm();
-            onSent?.();
         } catch (error: unknown) {
+            releaseSend();
             toast({
                 title: 'Unable to send email',
                 description: error instanceof Error ? error.message : 'Failed to send email',
                 variant: 'destructive',
             });
+            setSending(false);
+            return;
+        }
+
+        const queued = result.queued ?? 0;
+        resetSend();
+        toast({
+            title: result.replayed
+                ? 'Email already queued'
+                : queued > 0 ? 'Email queued' : 'Email sent',
+            description: result.replayed
+                ? `Recovered the existing request for ${allRecipients.length} recipient${allRecipients.length === 1 ? '' : 's'}.`
+                : `${queued > 0 ? 'Queued for' : 'Sent to'} ${allRecipients.length} recipient${allRecipients.length === 1 ? '' : 's'}.`,
+        });
+        try {
+            resetForm();
+            onSent?.();
+        } catch (error) {
+            console.error('Admin email queued, but follow-up UI work failed:', error);
         } finally {
             setSending(false);
         }
@@ -212,7 +240,7 @@ export function EmailComposeDialog({
             editor={editor}
             preview={<EmailPreview subject={subject} bodyHtml={body} className="h-full" />}
             headerActions={onBrowseTemplates ? (
-                <Button type="button" variant="outline" size="sm" className="h-8 px-2 sm:px-3" onClick={onBrowseTemplates}>
+                <Button type="button" variant="outline" size="sm" className="h-8 px-2 sm:px-3" onClick={onBrowseTemplates} disabled={sending}>
                     <FileText className="h-4 w-4" />
                     <span className="hidden sm:inline">Browse templates</span>
                     <span className="sr-only sm:hidden">Browse templates</span>
@@ -220,6 +248,7 @@ export function EmailComposeDialog({
             ) : undefined}
             mode={mode}
             onModeChange={setMode}
+            publishing={sending}
             footer={(
                 <>
                     <Button type="button" variant="outline" onClick={handleClose} disabled={sending}>Cancel</Button>
@@ -227,6 +256,7 @@ export function EmailComposeDialog({
                         type="button"
                         onClick={handleSend}
                         disabled={sending || !subject.trim() || !body.trim() || allRecipients.length === 0}
+                        aria-busy={sending}
                         className="bg-blue-600 text-white interaction-button--primary"
                     >
                         {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}

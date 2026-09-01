@@ -5,6 +5,7 @@ import {
   getWorkspaceNotesViaGraphql,
   getWorkspaceWhiteboardsViaGraphql,
   getWorkspaceWireframesViaGraphql,
+  updateCanvasPositionsViaGraphql,
 } from './workspaceContentGraphql';
 
 vi.mock('@/lib/api', () => ({
@@ -285,5 +286,37 @@ describe('workspace content GraphQL consumer', () => {
       JSON.parse(String((call[1] as RequestInit).body)),
     );
     expect(bodies.map((body) => body.variables.page.page)).toEqual([1, 2]);
+  });
+
+  it('uses the caller-owned mutation ID for canvas position batches', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(response({
+      data: {
+        batchCanvasPositions: {
+          updated: [{
+            type: 'list',
+            id: 4,
+            positionX: 12,
+            positionY: 20,
+            width: 340,
+            height: 265,
+          }],
+          failed: [],
+        },
+      },
+    }));
+
+    await updateCanvasPositionsViaGraphql([{
+      type: 'list',
+      id: 4,
+      position_x: 12,
+      position_y: 20,
+      width: 340,
+      height: 265,
+    }], 'position-attempt-1');
+
+    const body = JSON.parse(String(
+      (vi.mocked(fetch).mock.calls[0][1] as RequestInit).body,
+    ));
+    expect(body.variables.input.mutationId).toBe('position-attempt-1');
   });
 });

@@ -283,9 +283,11 @@ export const deleteList = async (listId: string, token?: string) => {
 
 export const updateCanvasPositions = async (
   updates: CanvasPositionUpdate[],
+  mutationId: string,
   token?: string,
 ) => {
-  return updateCanvasPositionsViaGraphql(updates);
+  void token;
+  return updateCanvasPositionsViaGraphql(updates, mutationId);
 };
 
 // Note API functions
@@ -469,6 +471,7 @@ export const updateWireframePosition = async (
   wireframeId: number,
   x: number,
   y: number,
+  mutationId: string,
   token?: string,
 ) => {
   void token;
@@ -479,7 +482,7 @@ export const updateWireframePosition = async (
       position_x: x,
       position_y: y,
     },
-  ]);
+  ], mutationId);
 };
 
 // Category API functions
@@ -701,8 +704,12 @@ export const shareList = async (listId: string, _token?: string) => {
 };
 
 // Unshare list
-export const unshareList = async (listId: string, _token?: string) => {
-  await disableListSharingViaGraphql(Number(listId));
+export const unshareList = async (
+  listId: string,
+  _token: string | undefined,
+  mutationId: string,
+) => {
+  await disableListSharingViaGraphql(Number(listId), mutationId);
   return { message: "List sharing revoked successfully" };
 };
 
@@ -712,8 +719,12 @@ export const shareNote = async (noteId: number, _token?: string) => {
 };
 
 // Unshare note
-export const unshareNote = async (noteId: number, _token?: string) => {
-  await disableNoteSharingViaGraphql(noteId);
+export const unshareNote = async (
+  noteId: number,
+  _token: string | undefined,
+  mutationId: string,
+) => {
+  await disableNoteSharingViaGraphql(noteId, mutationId);
   return { message: "Note sharing revoked successfully" };
 };
 
@@ -728,9 +739,10 @@ export const shareWhiteboard = async (
 // Unshare whiteboard
 export const unshareWhiteboard = async (
   whiteboardId: number,
-  _token?: string,
+  _token: string | undefined,
+  mutationId: string,
 ) => {
-  await disableWhiteboardSharingViaGraphql(whiteboardId);
+  await disableWhiteboardSharingViaGraphql(whiteboardId, mutationId);
   return { message: "Whiteboard sharing revoked successfully" };
 };
 

@@ -146,9 +146,10 @@ export const listGoogleCalendars = async (
  */
 export const syncCalendar = async (
     connectionId: number,
-    organizationId?: number
+    organizationId: number | undefined,
+    idempotencyKey: string,
 ): Promise<SyncResult> => {
-    return requestCalendarSyncViaGraphql(connectionId, organizationId);
+    return requestCalendarSyncViaGraphql(connectionId, organizationId, idempotencyKey);
 };
 
 /**

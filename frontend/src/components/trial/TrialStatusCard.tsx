@@ -10,8 +10,9 @@ import { Calendar, Clock, CreditCard, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTrialStatus } from '@/hooks/useTrialStatus';
 import { useBillingStatus } from '@/hooks/useBillingStatus';
-import { redirectToCheckout } from '@/services/billingApi';
 import { PLAN_METADATA } from '@/lib/subscription';
+import { useSubscriptionFeatures } from '@/contexts/SubscriptionContext';
+import { useToast } from '@/hooks/use-toast';
 
 // ============================================
 // Types
@@ -27,6 +28,8 @@ export interface TrialStatusCardProps {
 // ============================================
 
 export function TrialStatusCard({ className }: TrialStatusCardProps) {
+  const { startCheckout } = useSubscriptionFeatures();
+  const { toast } = useToast();
   const { data: billingStatus, isLoading, error } = useBillingStatus();
   const [isRedirecting, setIsRedirecting] = useState(false);
   const trialStatus = useTrialStatus(billingStatus?.trial_ends_at || null);
@@ -68,16 +71,21 @@ export function TrialStatusCard({ className }: TrialStatusCardProps) {
   };
 
   const handleSubscribe = async () => {
+    if (billingStatus.plan === 'free') return;
     try {
       setIsRedirecting(true);
-      await redirectToCheckout({
-        planId: billingStatus.plan,
-        billingPeriod: billingStatus.billing_period || 'monthly',
-      });
+      await startCheckout(
+        billingStatus.plan,
+        billingStatus.billing_period || 'monthly',
+      );
     } catch (error) {
       console.error('Failed to redirect to checkout:', error);
       setIsRedirecting(false);
-      // Error will be shown by the redirectToCheckout function
+      toast({
+        title: 'Could not open checkout',
+        description: error instanceof Error ? error.message : 'Try again.',
+        variant: 'destructive',
+      });
     }
   };
 

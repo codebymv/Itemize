@@ -29,6 +29,7 @@ import {
   organizationBootstrapQueryKey,
   type OrganizationBootstrap,
 } from '@/services/organizationBootstrapGraphql';
+import { useBillingSessionNavigation } from '@/hooks/useBillingSessionNavigation';
 
 // Legacy Types (re-defined here to remove dependency on subscriptionsApi.ts)
 export interface Subscription {
@@ -259,6 +260,10 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
   const bootstrapEnabled = !skipFetch && isAuthenticated && organizationId !== null;
   const bootstrap = useOrganizationBootstrap(bootstrapEnabled);
   const refetchBootstrap = bootstrap.refetch;
+  const {
+    startCheckout: startBillingCheckout,
+    openBillingPortal: openBillingPortalSession,
+  } = useBillingSessionNavigation(organizationId);
 
   // Keep subscription limits in a ref to avoid infinite loops when they are used in refreshUsage
   const subscriptionLimitsRef = useRef<Record<string, number> | undefined>(undefined);
@@ -521,15 +526,12 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
     billingPeriod: 'monthly' | 'yearly'
   ) => {
     try {
-      await billingApi.redirectToCheckout({
-        planId: planName as Plan,
-        billingPeriod
-      });
+      await startBillingCheckout(planName, billingPeriod);
     } catch (err: unknown) {
       console.error('Failed to start checkout:', err);
       throw new Error(getErrorMessage(err, 'Failed to start checkout'));
     }
-  }, []);
+  }, [startBillingCheckout]);
 
   const startSoloTrial = useCallback(async () => {
     const result = await billingApi.startSoloTrial();
@@ -550,12 +552,12 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
   // Open billing portal
   const openBillingPortal = useCallback(async () => {
     try {
-      await billingApi.redirectToPortal();
+      await openBillingPortalSession();
     } catch (err: unknown) {
       console.error('Failed to open billing portal:', err);
       throw new Error(getErrorMessage(err, 'Failed to open billing portal'));
     }
-  }, []);
+  }, [openBillingPortalSession]);
 
   const stateValue: SubscriptionStateContextType = useMemo(() => ({
     subscription,

@@ -121,8 +121,16 @@ describe('useCanvasSharing', () => {
     ]);
 
     await act(async () => {
-      await result.current.shareHandlers.note.onUnshare(note.id);
+      await result.current.shareHandlers.note.onUnshare(
+        note.id,
+        'sharing-attempt-1',
+      );
     });
+
+    expect(disableNoteSharingViaGraphql).toHaveBeenCalledWith(
+      note.id,
+      'sharing-attempt-1',
+    );
 
     const markUnshared = state.setNotes.mock.calls[1][0] as (notes: Note[]) => Note[];
     expect(markUnshared([{ ...note, is_public: true, share_token: 'note-token' }])).toEqual([

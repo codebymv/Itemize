@@ -165,6 +165,7 @@ export async function createCheckoutSession(params: {
     mode?: 'subscription' | 'payment';
     successUrl: string;
     cancelUrl: string;
+    idempotencyKey: string;
 }): Promise<ApiResponse<{ url: string }>> {
     try {
         return { success: true, data: await createBillingCheckoutViaGraphql(params) };
@@ -179,9 +180,15 @@ export async function createCheckoutSession(params: {
 /**
  * Create billing portal session
  */
-export async function createPortalSession(returnUrl: string): Promise<ApiResponse<{ url: string }>> {
+export async function createPortalSession(
+    returnUrl: string,
+    idempotencyKey: string,
+): Promise<ApiResponse<{ url: string }>> {
     try {
-        return { success: true, data: await createBillingPortalViaGraphql(returnUrl) };
+        return {
+            success: true,
+            data: await createBillingPortalViaGraphql(returnUrl, idempotencyKey),
+        };
     } catch (error: unknown) {
         return {
             success: false,
@@ -201,49 +208,6 @@ export async function getUsageStats(): Promise<ApiResponse<UsageStats>> {
             success: false,
             error: getApiErrorMessage(error)
         };
-    }
-}
-
-// ============================================
-// Helper Functions
-// ============================================
-
-/**
- * Redirect to Stripe checkout
- */
-export async function redirectToCheckout(params: {
-    planId: Plan;
-    billingPeriod?: 'monthly' | 'yearly';
-}): Promise<void> {
-    const { planId, billingPeriod = 'monthly' } = params;
-    
-    const result = await createCheckoutSession({
-        planId,
-        billingPeriod,
-        mode: 'subscription',
-        successUrl: `${window.location.origin}/payment-settings?checkout=success`,
-        cancelUrl: `${window.location.origin}/payment-settings?checkout=canceled`
-    });
-
-    if (result.success && result.data?.url) {
-        window.location.href = result.data.url;
-    } else {
-        throw new Error(result.error || 'Failed to create checkout session');
-    }
-}
-
-/**
- * Redirect to billing portal
- */
-export async function redirectToPortal(): Promise<void> {
-    const result = await createPortalSession(
-        `${window.location.origin}/payment-settings`
-    );
-
-    if (result.success && result.data?.url) {
-        window.location.href = result.data.url;
-    } else {
-        throw new Error(result.error || 'Failed to create portal session');
     }
 }
 
@@ -280,8 +244,6 @@ export const billingApi = {
     startSoloTrial,
     createPortalSession,
     getUsageStats,
-    redirectToCheckout,
-    redirectToPortal,
     acknowledgeTrialEnd
 };
 

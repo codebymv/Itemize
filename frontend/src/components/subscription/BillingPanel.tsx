@@ -38,6 +38,7 @@ import {
 } from '@/lib/subscription';
 import { STATUS_THEME_CLASSES } from '@/lib/statusVisuals';
 import { ErrorState } from '@/components/ErrorState';
+import { useSubscriptionFeatures } from '@/contexts/SubscriptionContext';
 
 // Plan icons
 const PLAN_ICONS: Record<Plan, typeof Zap> = {
@@ -52,6 +53,7 @@ const getErrorMessage = (error: unknown, fallback: string): string =>
 
 export function BillingPanel() {
     const { toast } = useToast();
+    const { startCheckout, openBillingPortal } = useSubscriptionFeatures();
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState(false);
     const [status, setStatus] = useState<BillingStatus | null>(null);
@@ -92,7 +94,7 @@ export function BillingPanel() {
     const handlePortal = async () => {
         setProcessing(true);
         try {
-            await billingApi.redirectToPortal();
+            await openBillingPortal();
         } catch (error) {
             toast({
                 title: 'Error',
@@ -104,12 +106,10 @@ export function BillingPanel() {
     };
 
     const handleUpgrade = async (planId: Plan) => {
+        if (planId === 'free') return;
         setProcessing(true);
         try {
-            await billingApi.redirectToCheckout({
-                planId,
-                billingPeriod,
-            });
+            await startCheckout(planId, billingPeriod);
         } catch (error) {
             toast({
                 title: 'Error',

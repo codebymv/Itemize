@@ -14,7 +14,6 @@ import { IntegrationProviderMark } from '@/components/brand/IntegrationProviderM
 import { SettingsPlanGate, SettingsSectionTitle } from '@/components/settings/SettingsPrimitives';
 import {
     disconnectCalendar,
-    syncCalendar,
     initiateGoogleAuth,
 } from '@/services/calendarIntegrationsApi';
 import { disconnectChannel, getFacebookConnectUrl } from '@/services/socialApi';
@@ -31,6 +30,7 @@ import {
 import { IntegrationStatusRow } from '@/components/integrations/IntegrationStatusRow';
 import { AVAILABLE_PLANS_PATH } from '@/lib/settingsNavigation';
 import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
+import { CalendarAccountRow } from '@/components/integrations/CalendarAccountRow';
 
 export function CalendarIntegrationsPage({ embedded = false }: { embedded?: boolean }) {
     const { toast } = useToast();
@@ -44,7 +44,6 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
         isLoading: organizationLoading,
         error: initError,
     } = useOrganization({ onError: () => 'Failed to initialize.' });
-    const [syncing, setSyncing] = useState<number | null>(null);
     const [connecting, setConnecting] = useState<'google' | 'facebook' | 'stripe' | null>(null);
     const overviewQueryKey = ['integration-overview', organizationId] as const;
     const overviewQuery = useQuery({
@@ -109,19 +108,6 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
         window.history.replaceState({}, document.title, location.pathname);
     }, [location.pathname, location.search, toast]);
 
-    const handleSync = async (id: number) => {
-        if (!organizationId) return;
-        setSyncing(id);
-        try {
-            await syncCalendar(id, organizationId);
-            toast({ title: 'Sync queued', description: 'Calendar sync will continue in the background.' });
-        } catch {
-            toast({ title: 'Error', description: 'Sync failed', variant: 'destructive' });
-        } finally {
-            setSyncing(null);
-        }
-    };
-
     const handleDisconnect = async (id: number) => {
         if (!organizationId) return;
         try {
@@ -176,11 +162,6 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
     };
 
     const googleConnection = connections.find((connection) => connection.provider === 'google' && connection.is_active);
-
-    const formatLastSync = (value: string | null) => {
-        if (!value) return 'Not synced yet';
-        return `Last synced ${new Date(value).toLocaleString()}`;
-    };
 
     if (!subscriptionLoading && !isSubscribed) {
         const planGate = (
@@ -326,22 +307,11 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
                     <CardContent surface="inset">
                         <div className="divide-y rounded-lg border">
                             {connections.map((connection) => (
-                                <IntegrationStatusRow
+                                <CalendarAccountRow
                                     key={connection.id}
-                                    name={connection.provider_email || 'Calendar account'}
-                                    description={`${connection.provider === 'google' ? 'Google Calendar' : 'Outlook Calendar'} · ${formatLastSync(connection.last_sync_at)}`}
-                                    status={connection.is_active ? 'connected' : 'inactive'}
-                                    detail={connection.error_message || undefined}
-                                    icon={(
-                                        <IntegrationProviderMark
-                                            provider={connection.provider === 'outlook' ? 'outlook-calendar' : 'google-calendar'}
-                                        />
-                                    )}
-                                    primaryLabel="Sync"
-                                    primaryVariant="outline"
-                                    onPrimary={() => void handleSync(connection.id)}
+                                    connection={connection}
+                                    organizationId={organizationId as number}
                                     onDisconnect={() => void handleDisconnect(connection.id)}
-                                    busy={syncing === connection.id}
                                 />
                             ))}
                         </div>

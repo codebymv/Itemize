@@ -29,7 +29,6 @@ describe('workspace sharing GraphQL consumers', () => {
     vi.clearAllMocks();
     vi.stubEnv('VITE_GRAPHQL_URL', 'https://graphql.test.itemize/graphql');
     vi.stubGlobal('fetch', vi.fn());
-    vi.stubGlobal('crypto', { randomUUID: vi.fn(() => mutationId) });
     vi.mocked(fetchCsrfToken).mockResolvedValue('sharing-csrf');
   });
 
@@ -77,16 +76,16 @@ describe('workspace sharing GraphQL consumers', () => {
     await expect(enableListSharingViaGraphql(2)).resolves.toMatchObject({
       shareToken: token,
     });
-    await expect(disableListSharingViaGraphql(2)).resolves.toBeUndefined();
+    await expect(disableListSharingViaGraphql(2, mutationId)).resolves.toBeUndefined();
     await expect(enableNoteSharingViaGraphql(3)).resolves.toMatchObject({
       shareToken: token,
     });
-    await expect(disableNoteSharingViaGraphql(3)).resolves.toBeUndefined();
+    await expect(disableNoteSharingViaGraphql(3, mutationId)).resolves.toBeUndefined();
     await expect(enableWhiteboardSharingViaGraphql(4)).resolves.toMatchObject({
       shareToken: token,
     });
     await expect(
-      disableWhiteboardSharingViaGraphql(4),
+      disableWhiteboardSharingViaGraphql(4, mutationId),
     ).resolves.toBeUndefined();
 
     const calls = vi.mocked(fetch).mock.calls.map((call) => ({

@@ -121,7 +121,7 @@ describe('workspace wireframe GraphQL mutation consumer', () => {
         'https://itemize.cloud/shared/wireframe/621ca66e-2b82-46a7-b2ba-e7343b6cbac2',
     });
     await expect(
-      disableWorkspaceWireframeSharingViaGraphql(10),
+      disableWorkspaceWireframeSharingViaGraphql(10, mutationId),
     ).resolves.toBeUndefined();
 
     const bodies = vi.mocked(fetch).mock.calls.map((call) =>

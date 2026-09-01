@@ -27,13 +27,20 @@ describe('admin email GraphQL adapters', () => {
   });
 
   it('enqueues delivery with a stable mutation payload and maps accepted count to queued', async () => {
-    vi.stubGlobal('crypto', { randomUUID: () => 'fixed-request-key' });
-    vi.mocked(graphqlMutationRequest).mockResolvedValue({ enqueueAdminEmailBatch: { batchId: 9, status: 'queued', accepted: 2, replayed: false } });
-    await expect(enqueueAdminEmailViaGraphql({ recipients: [{ email: 'a@test.dev' }, { email: 'b@test.dev' }], subject: 'x', bodyHtml: 'y' }))
-      .resolves.toMatchObject({ queued: 2, batchId: 9, sent: 0, failed: 0 });
+    vi.mocked(graphqlMutationRequest).mockResolvedValue({ enqueueAdminEmailBatch: { batchId: 9, status: 'queued', accepted: 2, replayed: true } });
+    await expect(enqueueAdminEmailViaGraphql({
+      recipients: [{ email: 'a@test.dev' }, { email: 'b@test.dev' }],
+      subject: 'x',
+      bodyHtml: 'y',
+      idempotencyKey: 'fixed-request-key',
+    })).resolves.toMatchObject({ queued: 2, batchId: 9, sent: 0, failed: 0, replayed: true });
     expect(graphqlMutationRequest).toHaveBeenCalledWith(expect.stringContaining('EnqueueAdminEmailBatch'), {
-      input: expect.objectContaining({ idempotencyKey: 'fixed-request-key' }),
+      input: {
+        recipients: [{ email: 'a@test.dev' }, { email: 'b@test.dev' }],
+        subject: 'x',
+        bodyHtml: 'y',
+        idempotencyKey: 'fixed-request-key',
+      },
     });
-    vi.unstubAllGlobals();
   });
 });

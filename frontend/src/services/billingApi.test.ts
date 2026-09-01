@@ -53,9 +53,13 @@ describe('billing API compatibility facade', () => {
         planId: 'starter',
         successUrl: 'https://itemize.cloud/success',
         cancelUrl: 'https://itemize.cloud/cancel',
+        idempotencyKey: 'checkout-request-0001',
       }),
     ).toEqual({ success: true, data: { url: 'checkout' } });
-    expect(await createPortalSession('https://itemize.cloud/settings')).toEqual({
+    expect(await createPortalSession(
+      'https://itemize.cloud/settings',
+      'portal-request-0001',
+    )).toEqual({
       success: true,
       data: { url: 'portal' },
     });

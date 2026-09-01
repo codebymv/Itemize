@@ -123,11 +123,14 @@ describe('workspace content API GraphQL transport', () => {
       position_y: 20,
     }];
 
-    await expect(updateCanvasPositions(updates)).resolves.toMatchObject({
+    await expect(updateCanvasPositions(updates, 'position-attempt-1')).resolves.toMatchObject({
       updated: [{ id: 4, position_x: 12.5 }],
       failed: [],
     });
-    expect(updateCanvasPositionsViaGraphql).toHaveBeenCalledWith(updates);
+    expect(updateCanvasPositionsViaGraphql).toHaveBeenCalledWith(
+      updates,
+      'position-attempt-1',
+    );
   });
 
   it('always reads wireframes through GraphQL without a REST fallback', async () => {

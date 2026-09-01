@@ -143,8 +143,9 @@ export const enableWorkspaceWireframeSharingViaGraphql = async (
 
 export const disableWorkspaceWireframeSharingViaGraphql = async (
   id: number,
+  mutationId: string,
 ): Promise<void> => {
-  const variables = { id, mutationId: crypto.randomUUID() };
+  const variables = { id, mutationId };
   const data = await graphqlMutationRequest<{
     disableWireframeSharing: { sharingDisabled: boolean };
   }, typeof variables>(disableWireframeSharingMutation, variables);

@@ -198,22 +198,20 @@ export const createBillingCheckoutViaGraphql = async (input: {
   mode?: 'subscription' | 'payment';
   successUrl: string;
   cancelUrl: string;
+  idempotencyKey: string;
 }): Promise<{ url: string }> => {
-  const graphqlInput = {
-    ...input,
-    idempotencyKey: crypto.randomUUID(),
-  };
   const response = await graphqlMutationRequest<
     { createBillingCheckoutSession: { url: string } },
-    { input: typeof graphqlInput }
-  >(checkoutMutation, { input: graphqlInput });
+    { input: typeof input }
+  >(checkoutMutation, { input });
   return response.createBillingCheckoutSession;
 };
 
 export const createBillingPortalViaGraphql = async (
   returnUrl: string,
+  idempotencyKey: string,
 ): Promise<{ url: string }> => {
-  const input = { returnUrl, idempotencyKey: crypto.randomUUID() };
+  const input = { returnUrl, idempotencyKey };
   const response = await graphqlMutationRequest<
     { createBillingPortalSession: { url: string } },
     { input: typeof input }

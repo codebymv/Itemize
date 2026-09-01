@@ -173,9 +173,12 @@ const Index = () => {
     }
   };
 
-  const handleListUnshare = async (listId: string): Promise<void> => {
+  const handleListUnshare = async (
+    listId: string,
+    mutationId: string,
+  ): Promise<void> => {
     try {
-      await disableListSharingViaGraphql(Number(listId));
+      await disableListSharingViaGraphql(Number(listId), mutationId);
     } catch (error) {
       console.error('Error unsharing list:', error);
       throw error;

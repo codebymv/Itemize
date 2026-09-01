@@ -123,6 +123,7 @@ export function IntegrationStatusRow({
             className={cn(primaryIsConnection && 'bg-blue-600 text-white interaction-button--primary')}
             onClick={onPrimary}
             disabled={status === 'soon' || busy || !onPrimary}
+            aria-busy={busy || undefined}
           >
             {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             {primaryLabel}

@@ -25,6 +25,7 @@ export interface SendEmailRequest {
     recipients: EmailRecipient[];
     subject: string;
     bodyHtml: string;
+    idempotencyKey: string;
 }
 
 export interface SendEmailResponse {
@@ -34,6 +35,7 @@ export interface SendEmailResponse {
     queued?: number;
     batchId?: number;
     status?: string;
+    replayed?: boolean;
 }
 
 export interface PreviewEmailRequest {

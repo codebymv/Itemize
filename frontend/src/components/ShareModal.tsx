@@ -19,6 +19,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { useToast } from '../hooks/use-toast';
+import { useStableMutationKey } from '../hooks/useStableMutationKey';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 type ShareItemType = 'note' | 'list' | 'whiteboard' | 'wireframe' | 'vault';
@@ -30,7 +31,7 @@ interface ShareModalProps<TId extends string | number = string | number> {
   itemId: TId;
   itemTitle: string;
   onShare: (id: TId) => Promise<{ shareToken: string; shareUrl: string }>;
-  onUnshare: (id: TId) => Promise<void>;
+  onUnshare: (id: TId, mutationId: string) => Promise<void>;
   existingShareData?: { shareToken: string; shareUrl: string } | null;
   isLocked?: boolean;
   showWarning?: boolean;
@@ -132,6 +133,7 @@ export const ShareModal = <TId extends string | number>({
   const [copied, setCopied] = useState(false);
   const [showWarningState, setShowWarningState] = useState(showWarning);
   const { toast } = useToast();
+  const { begin, release, reset } = useStableMutationKey('workspace-sharing');
   const config = shareConfig[itemType];
   const Icon = config.icon;
 
@@ -145,16 +147,21 @@ export const ShareModal = <TId extends string | number>({
       return;
     }
 
+    const mutationId = begin(`enable:${itemType}:${itemId}`);
+    if (!mutationId) return;
+
     setIsLoading(true);
     try {
       const result = await onShare(itemId);
       setShareData(result);
       setShowWarningState(false);
+      reset();
       toast({
         title: config.shareSuccessTitle,
         description: config.shareSuccessDescription
       });
     } catch (error) {
+      release();
       toast({
         title: 'Error',
         description: `Failed to share ${config.label.toLowerCase()}. Please try again.`,
@@ -166,16 +173,21 @@ export const ShareModal = <TId extends string | number>({
   };
 
   const handleUnshare = async () => {
+    const mutationId = begin(`disable:${itemType}:${itemId}`);
+    if (!mutationId) return;
+
     setIsLoading(true);
     try {
-      await onUnshare(itemId);
+      await onUnshare(itemId, mutationId);
       setShareData(null);
       setShowWarningState(showWarning);
+      reset();
       toast({
         title: 'Sharing revoked',
         description: config.revokeDescription
       });
     } catch (error) {
+      release();
       toast({
         title: 'Error',
         description: 'Failed to revoke sharing. Please try again.',
@@ -220,10 +232,16 @@ export const ShareModal = <TId extends string | number>({
 
   }, [open, existingShareData, showWarning]);
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen && isLoading) return;
+    if (!nextOpen) reset();
+    onOpenChange(nextOpen);
+  };
+
   if (!open) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 font-raleway">
@@ -310,13 +328,14 @@ export const ShareModal = <TId extends string | number>({
                   type="button"
                   onClick={handleUnshare}
                   disabled={isLoading}
+                  aria-busy={isLoading || undefined}
                   className="interaction-button--destructive bg-destructive font-raleway text-destructive-foreground"
                 >
                   Revoke Sharing
                 </Button>
 <Button
                   type="button"
-                  onClick={() => onOpenChange(false)}
+                  onClick={() => handleOpenChange(false)}
                   className="interaction-button--primary bg-blue-600 font-raleway text-white"
                 >
                   Done
@@ -328,7 +347,7 @@ export const ShareModal = <TId extends string | number>({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => onOpenChange(false)}
+                onClick={() => handleOpenChange(false)}
                   className="font-raleway"
               >
                 Close
@@ -340,7 +359,7 @@ export const ShareModal = <TId extends string | number>({
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => onOpenChange(false)}
+                  onClick={() => handleOpenChange(false)}
                   className="font-raleway"
                 >
                   Cancel
@@ -349,6 +368,7 @@ export const ShareModal = <TId extends string | number>({
                   type="button"
                   onClick={handleShare}
                   disabled={isLoading}
+                  aria-busy={isLoading || undefined}
                   className="interaction-button--primary bg-blue-600 font-raleway text-white"
                 >
                   I understand, Share
@@ -379,7 +399,8 @@ export const ShareModal = <TId extends string | number>({
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => onOpenChange(false)}
+                  onClick={() => handleOpenChange(false)}
+                  disabled={isLoading}
                   className="font-raleway"
                 >
                   Cancel
@@ -391,7 +412,7 @@ export const ShareModal = <TId extends string | number>({
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => onOpenChange(false)}
+                onClick={() => handleOpenChange(false)}
                   className="font-raleway"
               >
                 Cancel
@@ -400,6 +421,7 @@ export const ShareModal = <TId extends string | number>({
                 type="button"
                 onClick={handleShare}
                 disabled={isLoading}
+                aria-busy={isLoading || undefined}
                   className="interaction-button--primary bg-blue-600 font-raleway text-white"
               >
                 Share

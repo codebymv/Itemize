@@ -88,4 +88,39 @@ describe('ShareModal', () => {
     expect(screen.getByRole('button', { name: 'About note share links' })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Note share link' })).toHaveAttribute('readonly');
   });
+
+  it('keeps one caller-owned mutation ID across an ambiguous revoke retry', async () => {
+    const onUnshare = vi.fn()
+      .mockRejectedValueOnce(new Error('connection lost'))
+      .mockResolvedValueOnce(undefined);
+
+    render(
+      <ShareModal
+        open
+        onOpenChange={vi.fn()}
+        itemType="note"
+        itemId={4}
+        itemTitle="Retry-safe note"
+        onShare={vi.fn()}
+        onUnshare={onUnshare}
+        existingShareData={{
+          shareToken: 'note-token',
+          shareUrl: 'https://itemize.cloud/shared/note/note-token',
+        }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Revoke Sharing' }));
+    await waitFor(() => expect(onUnshare).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(
+      screen.getByRole('button', { name: 'Revoke Sharing' }),
+    ).not.toHaveAttribute('aria-busy'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Revoke Sharing' }));
+    await waitFor(() => expect(onUnshare).toHaveBeenCalledTimes(2));
+
+    expect(onUnshare.mock.calls[0][0]).toBe(4);
+    expect(onUnshare.mock.calls[1][0]).toBe(4);
+    expect(onUnshare.mock.calls[0][1]).toBe(onUnshare.mock.calls[1][1]);
+  });
 });

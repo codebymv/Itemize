@@ -171,12 +171,16 @@ describe('billing GraphQL adapter', () => {
       mode: 'subscription' as const,
       successUrl: 'https://itemize.cloud/success',
       cancelUrl: 'https://itemize.cloud/cancel',
+      idempotencyKey: 'checkout-request-0001',
     };
     expect(await createBillingCheckoutViaGraphql(checkout)).toEqual({
       url: 'https://stripe.test/checkout',
     });
     expect(
-      await createBillingPortalViaGraphql('https://itemize.cloud/settings'),
+      await createBillingPortalViaGraphql(
+        'https://itemize.cloud/settings',
+        'portal-request-0001',
+      ),
     ).toEqual({ url: 'https://stripe.test/portal' });
     expect(await acknowledgeBillingTrialEndViaGraphql()).toEqual({
       acknowledged: true,
@@ -193,7 +197,6 @@ describe('billing GraphQL adapter', () => {
       {
         input: {
           ...checkout,
-          idempotencyKey: expect.any(String),
         },
       },
     );
@@ -203,7 +206,7 @@ describe('billing GraphQL adapter', () => {
       {
         input: {
           returnUrl: 'https://itemize.cloud/settings',
-          idempotencyKey: expect.any(String),
+          idempotencyKey: 'portal-request-0001',
         },
       },
     );

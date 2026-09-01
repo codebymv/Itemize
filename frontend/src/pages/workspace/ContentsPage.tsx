@@ -642,20 +642,20 @@ export function ContentsPage() {
   );
 
   const disableSelectedWorkspaceSharing = useCallback(
-    async (id: string | number) => {
+    async (id: string | number, mutationId: string) => {
       if (!workspaceShareTarget) throw new Error("No workspace item selected");
       switch (workspaceShareTarget.itemType) {
         case "list":
-          await apiUnshareList(String(id), token);
+          await apiUnshareList(String(id), token, mutationId);
           break;
         case "note":
-          await apiUnshareNote(Number(id), token);
+          await apiUnshareNote(Number(id), token, mutationId);
           break;
         case "whiteboard":
-          await apiUnshareWhiteboard(Number(id), token);
+          await apiUnshareWhiteboard(Number(id), token, mutationId);
           break;
         case "wireframe":
-          await disableWorkspaceWireframeSharingViaGraphql(Number(id));
+          await disableWorkspaceWireframeSharingViaGraphql(Number(id), mutationId);
           break;
       }
       const clearSharing = <

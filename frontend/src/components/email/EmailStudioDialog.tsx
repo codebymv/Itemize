@@ -60,15 +60,15 @@ export function EmailStudioDialog({
               <div className="ml-auto flex shrink-0 items-center gap-2">
                 {headerActions}
                 <div className="flex items-center rounded-lg bg-muted/60 p-1 xl:hidden">
-                  <Button type="button" variant="toggle" size="compact" className="px-2 sm:px-3" aria-pressed={mode === 'edit'} onClick={() => onModeChange('edit')}>
+                  <Button type="button" variant="toggle" size="compact" className="px-2 sm:px-3" aria-pressed={mode === 'edit'} onClick={() => onModeChange('edit')} disabled={busy}>
                     <MonitorCog className="h-4 w-4" /><span className="hidden sm:inline">Edit</span><span className="sr-only sm:hidden">Edit email</span>
                   </Button>
-                  <Button type="button" variant="toggle" size="compact" className="px-2 sm:px-3" aria-pressed={mode === 'preview'} onClick={() => onModeChange('preview')}>
+                  <Button type="button" variant="toggle" size="compact" className="px-2 sm:px-3" aria-pressed={mode === 'preview'} onClick={() => onModeChange('preview')} disabled={busy}>
                     <Eye className="h-4 w-4" /><span className="hidden sm:inline">Preview</span><span className="sr-only sm:hidden">Preview email</span>
                   </Button>
                 </div>
                 <DialogClose asChild>
-                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label="Close email studio">
+                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0" aria-label="Close email studio" disabled={busy}>
                     <X className="h-4 w-4" />
                   </Button>
                 </DialogClose>

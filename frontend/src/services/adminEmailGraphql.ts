@@ -51,15 +51,21 @@ export const getAdminEmailTemplatesViaGraphql = async (input?: {
 };
 
 export const enqueueAdminEmailViaGraphql = async (request: SendEmailRequest): Promise<SendEmailResponse> => {
-  const idempotencyKey = globalThis.crypto?.randomUUID?.() ??
-    `admin-email-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const data = await graphqlMutationRequest<{
     enqueueAdminEmailBatch: { batchId: number; status: string; accepted: number; replayed: boolean };
-  }, { input: SendEmailRequest & { idempotencyKey: string } }>(
+  }, { input: SendEmailRequest }>(
     `mutation EnqueueAdminEmailBatch($input: AdminEmailBatchInput!) {
       enqueueAdminEmailBatch(input: $input) { batchId status accepted replayed }
-    }`, { input: { ...request, idempotencyKey } },
+    }`, { input: request },
   );
   const result = data.enqueueAdminEmailBatch;
-  return { sent: 0, failed: 0, errors: [], queued: result.accepted, batchId: result.batchId, status: result.status };
+  return {
+    sent: 0,
+    failed: 0,
+    errors: [],
+    queued: result.accepted,
+    batchId: result.batchId,
+    status: result.status,
+    replayed: result.replayed,
+  };
 };

@@ -87,7 +87,7 @@ describe('calendar integrations API transport selection', () => {
 
     await getCalendarConnections(3);
     await updateCalendarConnection(4, { sync_enabled: false }, 3);
-    await syncCalendar(4, 3);
+    await syncCalendar(4, 3, 'calendar-sync-request-1');
     await getSyncStatus(4, 3);
     await disconnectCalendar(4, 3);
 
@@ -97,7 +97,11 @@ describe('calendar integrations API transport selection', () => {
       { sync_enabled: false },
       3,
     );
-    expect(requestCalendarSyncViaGraphql).toHaveBeenCalledWith(4, 3);
+    expect(requestCalendarSyncViaGraphql).toHaveBeenCalledWith(
+      4,
+      3,
+      'calendar-sync-request-1',
+    );
     expect(getCalendarSyncStatusViaGraphql).toHaveBeenCalledWith(4, 3);
     expect(disconnectCalendarViaGraphql).toHaveBeenCalledWith(4, 3);
     expect(api.get).not.toHaveBeenCalled();
