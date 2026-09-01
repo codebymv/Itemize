@@ -58,6 +58,7 @@ import { ErrorState } from '@/components/ErrorState';
 import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useDirtyState } from '@/hooks/useDirtyState';
+import { useStableMutationKey } from '@/hooks/useStableMutationKey';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { Product } from '@/services/invoicesApi';
 import {
@@ -120,6 +121,11 @@ export function EstimateEditorPage() {
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const { toast } = useToast();
+    const {
+        begin: beginEstimateSend,
+        release: releaseEstimateSend,
+        reset: resetEstimateSend,
+    } = useStableMutationKey('estimate-editor-send');
     const isNew = id === 'new' || !id;
 
     const [initialized, setInitialized] = useState(false);
@@ -426,14 +432,17 @@ export function EstimateEditorPage() {
     // Send estimate
     const handleSendEstimate = async () => {
         if (!organizationId || !id || isNew) return;
-
+        const idempotencyKey = beginEstimateSend(`${organizationId}:${id}`);
+        if (!idempotencyKey) return;
         setSaving(true);
         try {
-            await sendEstimate(Number(id), organizationId);
+            await sendEstimate(Number(id), organizationId, idempotencyKey);
+            resetEstimateSend();
             setStatus('sent');
             toast({ title: 'Sent', description: 'Estimate sent successfully' });
         } catch (error) {
-            toast({ title: 'Error', description: toastMessages.failedToSend('estimate'), variant: 'destructive' });
+            releaseEstimateSend();
+            toast({ title: 'Error', description: 'Estimate delivery could not be confirmed. An unchanged retry is safe.', variant: 'destructive' });
         } finally {
             setSaving(false);
         }

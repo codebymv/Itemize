@@ -130,9 +130,12 @@ export const previewEmailTemplate = async (
  */
 export const sendEmailToContact = async (
     params: SendEmailToContactParams,
-    organizationId?: number
+    organizationId?: number,
+    idempotencyKey?: string,
 ): Promise<SendEmailResult> => {
-    return enqueueContactEmailViaGraphql(params, organizationId);
+    return idempotencyKey === undefined
+        ? enqueueContactEmailViaGraphql(params, organizationId)
+        : enqueueContactEmailViaGraphql(params, organizationId, idempotencyKey);
 };
 
 /**

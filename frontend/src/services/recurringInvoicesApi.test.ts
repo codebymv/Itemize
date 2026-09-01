@@ -110,7 +110,7 @@ describe('recurring invoice API transport', () => {
     await expect(deleteRecurringInvoice(8, 4)).resolves.toEqual({ success: true });
     await expect(pauseRecurringInvoice(8, 4)).resolves.toMatchObject({ status: 'paused' });
     await expect(resumeRecurringInvoice(8, 4)).resolves.toEqual(recurring);
-    await expect(generateRecurringInvoiceNow(8, 4))
+    await expect(generateRecurringInvoiceNow(8, 4, 'generation-request-8'))
       .resolves.toEqual({
         invoice_number: 'INV-00010',
         next_run_date: '2026-08-20',
@@ -124,6 +124,8 @@ describe('recurring invoice API transport', () => {
     expect(deleteRecurringInvoiceViaGraphql).toHaveBeenCalledWith(8, 4);
     expect(pauseRecurringInvoiceViaGraphql).toHaveBeenCalledWith(8, 4);
     expect(resumeRecurringInvoiceViaGraphql).toHaveBeenCalledWith(8, 4);
-    expect(generateRecurringInvoiceNowViaGraphql).toHaveBeenCalledWith(8, 4);
+    expect(generateRecurringInvoiceNowViaGraphql).toHaveBeenCalledWith(
+      8, 4, 'generation-request-8',
+    );
   });
 });

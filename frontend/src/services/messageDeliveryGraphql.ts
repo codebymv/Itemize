@@ -41,6 +41,7 @@ export const enqueueContactEmailViaGraphql = async (
     reply_to?: string;
   },
   organizationId?: number,
+  idempotencyKey?: string,
 ) => {
   const graphqlInput = {
     contactId: input.contact_id,
@@ -49,7 +50,7 @@ export const enqueueContactEmailViaGraphql = async (
     ...(input.body_html === undefined ? {} : { bodyHtml: input.body_html }),
     ...(input.body_text === undefined ? {} : { bodyText: input.body_text }),
     ...(input.reply_to === undefined ? {} : { replyTo: input.reply_to }),
-    idempotencyKey: crypto.randomUUID(),
+    idempotencyKey: idempotencyKey ?? crypto.randomUUID(),
   };
   const data = await graphqlMutationRequest<
     { enqueueContactEmail: MessageDeliveryResult },
@@ -71,12 +72,13 @@ export const enqueueContactSmsViaGraphql = async (
     message?: string;
   },
   organizationId?: number,
+  idempotencyKey?: string,
 ) => {
   const graphqlInput = {
     contactId: input.contact_id,
     ...(input.template_id === undefined ? {} : { templateId: input.template_id }),
     ...(input.message === undefined ? {} : { message: input.message }),
-    idempotencyKey: crypto.randomUUID(),
+    idempotencyKey: idempotencyKey ?? crypto.randomUUID(),
   };
   const data = await graphqlMutationRequest<
     { enqueueContactSms: MessageDeliveryResult },
@@ -97,13 +99,14 @@ export const sendEmailTemplateTestViaGraphql = async (
   sampleData?: Record<string, unknown>,
   organizationId?: number,
   useDraft = false,
+  idempotencyKey?: string,
 ) => {
   const input = {
     templateId,
     toEmail,
     ...(sampleData === undefined ? {} : { sampleData }),
     ...(useDraft ? { useDraft: true } : {}),
-    idempotencyKey: crypto.randomUUID(),
+    idempotencyKey: idempotencyKey ?? crypto.randomUUID(),
   };
   const data = await graphqlMutationRequest<
     { sendEmailTemplateTest: MessageDeliveryResult },
@@ -123,12 +126,13 @@ export const sendSmsTemplateTestViaGraphql = async (
   toPhone: string,
   sampleData?: Record<string, unknown>,
   organizationId?: number,
+  idempotencyKey?: string,
 ) => {
   const input = {
     templateId,
     toPhone,
     ...(sampleData === undefined ? {} : { sampleData }),
-    idempotencyKey: crypto.randomUUID(),
+    idempotencyKey: idempotencyKey ?? crypto.randomUUID(),
   };
   const data = await graphqlMutationRequest<
     { sendSmsTemplateTest: MessageDeliveryResult },

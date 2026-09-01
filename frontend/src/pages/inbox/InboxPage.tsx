@@ -16,6 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { useOnboardingTrigger } from '@/hooks/useOnboardingTrigger';
+import { useStableMutationKey } from '@/hooks/useStableMutationKey';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { Conversation } from '@/types';
@@ -70,6 +71,12 @@ export function InboxPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [newMessage, setNewMessage] = useState('');
     const [sendingMessage, setSendingMessage] = useState(false);
+    const {
+        begin: beginReplyAttempt,
+        release: releaseReplyAttempt,
+        reset: resetReplyAttempt,
+    } =
+        useStableMutationKey('inbox-reply');
     const [loadError, setLoadError] = useState('');
     const [composerOpen, setComposerOpen] = useState(false);
     const [searchParams, setSearchParams] = useSearchParams();
@@ -162,29 +169,44 @@ export function InboxPage() {
 
     const handleSendMessage = async () => {
         if (!selectedConversation || !organizationId || !newMessage.trim()) return;
+        const content = newMessage.trim();
+        const currentSubject = selectedConversation.subject?.trim() || 'Message from Itemize';
+        const replySubject = /^re:/i.test(currentSubject) ? currentSubject : `Re: ${currentSubject}`;
+        const idempotencyKey = beginReplyAttempt(JSON.stringify({
+            organizationId,
+            conversationId: selectedConversation.id,
+            channel: selectedConversation.channel,
+            content,
+            subject: selectedConversation.channel === 'email' ? replySubject : undefined,
+        }));
+        if (!idempotencyKey) return;
         setSendingMessage(true);
         try {
-            const content = newMessage.trim();
             if ((selectedConversation.channel === 'email' || selectedConversation.channel === 'sms') && !selectedConversation.contact_id) {
                 throw new Error('This conversation is not linked to a contact.');
             }
 
             if (selectedConversation.channel === 'email') {
-                const currentSubject = selectedConversation.subject?.trim() || 'Message from Itemize';
                 const result = await sendEmailToContact({
                     contact_id: selectedConversation.contact_id!,
-                    subject: /^re:/i.test(currentSubject) ? currentSubject : `Re: ${currentSubject}`,
+                    subject: replySubject,
                     body_text: content,
                     body_html: plainTextToEmailHtml(content),
-                }, organizationId);
-                if (!result.success) throw new Error(result.error || 'The email could not be queued.');
+                }, organizationId, idempotencyKey);
+                if (!result.success) {
+                    resetReplyAttempt();
+                    throw new Error(result.error || 'The email could not be queued.');
+                }
             } else if (selectedConversation.channel === 'sms') {
                 const result = await sendSmsToContact({
                     contact_id: selectedConversation.contact_id!,
                     message: content,
                     organization_id: organizationId,
-                });
-                if (!result.success) throw new Error(result.error || 'The SMS could not be queued.');
+                }, idempotencyKey);
+                if (!result.success) {
+                    resetReplyAttempt();
+                    throw new Error(result.error || 'The SMS could not be queued.');
+                }
             } else if (selectedConversation.channel === 'facebook' || selectedConversation.channel === 'instagram') {
                 if (!selectedConversation.social_conversation_id) {
                     throw new Error('This provider conversation is not available for replies.');
@@ -193,6 +215,7 @@ export function InboxPage() {
                     selectedConversation.social_conversation_id,
                     content,
                     organizationId,
+                    idempotencyKey,
                 );
             } else if (selectedConversation.channel === 'chat') {
                 if (!selectedConversation.chat_session_id || selectedConversation.chat_session_status !== 'active') {
@@ -202,6 +225,7 @@ export function InboxPage() {
                     selectedConversation.chat_session_id,
                     content,
                     organizationId,
+                    idempotencyKey,
                 );
             } else {
                 const message = await sendMessage(
@@ -211,14 +235,23 @@ export function InboxPage() {
                 );
                 setSelectedConversation(prev => prev ? { ...prev, messages: [...(prev.messages || []), message] } : null);
             }
+            resetReplyAttempt();
             setNewMessage('');
             if (['email', 'sms', 'facebook', 'instagram', 'chat'].includes(selectedConversation.channel)) {
-                const refreshed = await getConversation(selectedConversation.id, organizationId);
-                setSelectedConversation(refreshed);
                 toast({ title: 'Message queued' });
+                try {
+                    const refreshed = await getConversation(selectedConversation.id, organizationId);
+                    setSelectedConversation(refreshed);
+                } catch {
+                    toast({
+                        title: 'Message queued',
+                        description: 'The conversation refresh is delayed, but the delivery was accepted.',
+                    });
+                }
             }
             void fetchConversations();
         } catch (error) {
+            releaseReplyAttempt();
             toast({
                 title: 'Message not sent',
                 description: error instanceof Error ? error.message : 'Try again.',
@@ -720,6 +753,7 @@ export function InboxPage() {
                                         <Button
                                             onClick={handleSendMessage}
                                             disabled={sendingMessage || !newMessage.trim()}
+                                            aria-busy={sendingMessage}
                                             className="bg-blue-600 interaction-button--primary"
                                         >
                                             Send

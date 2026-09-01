@@ -167,13 +167,16 @@ export const getRecurringInvoiceHistory = async (
 export const generateRecurringInvoiceNow = async (
   id: number,
   organizationId?: number,
+  idempotencyKey?: string,
 ): Promise<{
   invoice_number: string;
   next_run_date: string | null;
   template_status: RecurringStatus;
   replayed: boolean;
 }> => {
-  return generateRecurringInvoiceNowViaGraphql(id, organizationId);
+  return idempotencyKey === undefined
+    ? generateRecurringInvoiceNowViaGraphql(id, organizationId)
+    : generateRecurringInvoiceNowViaGraphql(id, organizationId, idempotencyKey);
 };
 
 export const getRecurringInvoiceNumberPreview = async (

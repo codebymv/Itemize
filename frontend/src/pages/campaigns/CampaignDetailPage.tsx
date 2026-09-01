@@ -98,6 +98,7 @@ import { ShellBackButton } from "@/components/layout/ShellBackButton";
 import { StatCard } from "@/components/StatCard";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useToast } from "@/hooks/use-toast";
+import { useStableMutationKey } from "@/hooks/useStableMutationKey";
 import { cn } from "@/lib/utils";
 import { defineStatus } from "@/lib/statusVisuals";
 import {
@@ -268,6 +269,18 @@ export function CampaignDetailPage() {
   const [audiencePreview, setAudiencePreview] =
     useState<CampaignPreview | null>(null);
   const [working, setWorking] = useState(false);
+  const {
+    begin: beginCampaignSendAttempt,
+    release: releaseCampaignSendAttempt,
+    reset: resetCampaignSendAttempt,
+  } =
+    useStableMutationKey("campaign-send");
+  const {
+    begin: beginCampaignTestAttempt,
+    release: releaseCampaignTestAttempt,
+    reset: resetCampaignTestAttempt,
+  } =
+    useStableMutationKey("campaign-test");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
   const [testOpen, setTestOpen] = useState(false);
@@ -558,19 +571,33 @@ export function CampaignDetailPage() {
       audiencePreview.recipientCount < 1
     )
       return;
+    const idempotencyKey = beginCampaignSendAttempt(`${organizationId}:${campaign.id}`);
+    if (!idempotencyKey) return;
     setWorking(true);
     try {
-      const result = await sendCampaign(campaign.id, organizationId);
+      const result = await sendCampaign(
+        campaign.id,
+        organizationId,
+        idempotencyKey,
+      );
+      resetCampaignSendAttempt();
       setCampaign(result.campaign);
       resetForm(result.campaign);
       setAudiencePreview(null);
       cacheCampaignBootstrap(result.campaign, null);
+      void queryClient.invalidateQueries({
+        queryKey: campaignQueryKeys.queues(organizationId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["dashboard-snapshot", organizationId],
+      });
       setSendOpen(false);
       toast({ title: "Campaign started", description: result.message });
     } catch {
+      releaseCampaignSendAttempt();
       toast({
         title: "Unable to send campaign",
-        description: "The campaign remains unchanged.",
+        description: "Delivery could not be confirmed. Retry to safely reuse the same send request.",
         variant: "destructive",
       });
     } finally {
@@ -726,19 +753,28 @@ export function CampaignDetailPage() {
 
   const handleSendTest = async () => {
     if (!campaign || !organizationId || !testEmail.trim()) return;
+    const idempotencyKey = beginCampaignTestAttempt(JSON.stringify({
+      organizationId,
+      campaignId: campaign.id,
+      testEmail: testEmail.trim().toLowerCase(),
+    }));
+    if (!idempotencyKey) return;
     setWorking(true);
     try {
       const result = await sendTestEmail(
         campaign.id,
         testEmail.trim(),
         organizationId,
+        idempotencyKey,
       );
+      resetCampaignTestAttempt();
       setTestOpen(false);
       toast({ title: "Test email queued", description: result.message });
     } catch {
+      releaseCampaignTestAttempt();
       toast({
         title: "Unable to send test email",
-        description: "Check the destination and campaign content.",
+        description: "Check the destination and content. An unchanged retry is safe.",
         variant: "destructive",
       });
     } finally {
@@ -1786,7 +1822,11 @@ export function CampaignDetailPage() {
       ) : null}
 
       {campaign && (
-        <AlertDialog open={sendOpen} onOpenChange={setSendOpen}>
+      <AlertDialog open={sendOpen} onOpenChange={(open) => {
+        if (working) return;
+        setSendOpen(open);
+        if (!open) resetCampaignSendAttempt();
+      }}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Send {campaign.name} now?</AlertDialogTitle>
@@ -1801,6 +1841,7 @@ export function CampaignDetailPage() {
                 Keep campaign
               </AlertDialogCancel>
               <AlertDialogAction
+                aria-busy={working}
                 disabled={
                   working ||
                   !audiencePreview ||
@@ -1818,7 +1859,11 @@ export function CampaignDetailPage() {
         </AlertDialog>
       )}
 
-      <Dialog open={testOpen} onOpenChange={setTestOpen}>
+      <Dialog open={testOpen} onOpenChange={(open) => {
+        if (working) return;
+        setTestOpen(open);
+        if (!open) resetCampaignTestAttempt();
+      }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Send a test email</DialogTitle>
@@ -1848,6 +1893,7 @@ export function CampaignDetailPage() {
             <Button
               onClick={() => void handleSendTest()}
               disabled={working || !testEmail.trim()}
+              aria-busy={working}
             >
               <Send className="mr-2 h-4 w-4" />
               Send test

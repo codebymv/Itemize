@@ -65,14 +65,20 @@ describe('message delivery GraphQL adapter', () => {
       .mockResolvedValueOnce({ sendEmailTemplateTest: { ...queued, kind: 'test_email', contactId: null } })
       .mockResolvedValueOnce({ sendSmsTemplateTest: { ...queued, kind: 'test_sms', channel: 'sms', contactId: null } });
 
-    await enqueueContactSmsViaGraphql({ contact_id: 9, message: 'Hi' }, 4);
-    await sendEmailTemplateTestViaGraphql(3, 'test@example.com', { first_name: 'Ada' }, 4);
-    await sendSmsTemplateTestViaGraphql(3, '+16025550100', undefined, 4);
+    await enqueueContactSmsViaGraphql(
+      { contact_id: 9, message: 'Hi' }, 4, 'stable-contact-sms',
+    );
+    await sendEmailTemplateTestViaGraphql(
+      3, 'test@example.com', { first_name: 'Ada' }, 4, false, 'stable-email-test',
+    );
+    await sendSmsTemplateTestViaGraphql(
+      3, '+16025550100', undefined, 4, 'stable-sms-test',
+    );
 
     expect(graphqlMutationRequest).toHaveBeenNthCalledWith(
       1,
       expect.stringContaining('EnqueueContactSms'),
-      { input: { contactId: 9, message: 'Hi', idempotencyKey: 'request-key' } },
+      { input: { contactId: 9, message: 'Hi', idempotencyKey: 'stable-contact-sms' } },
       4,
     );
     expect(graphqlMutationRequest).toHaveBeenNthCalledWith(
@@ -83,7 +89,7 @@ describe('message delivery GraphQL adapter', () => {
           templateId: 3,
           toEmail: 'test@example.com',
           sampleData: { first_name: 'Ada' },
-          idempotencyKey: 'request-key',
+          idempotencyKey: 'stable-email-test',
         },
       },
       4,
@@ -95,7 +101,7 @@ describe('message delivery GraphQL adapter', () => {
         input: {
           templateId: 3,
           toPhone: '+16025550100',
-          idempotencyKey: 'request-key',
+          idempotencyKey: 'stable-sms-test',
         },
       },
       4,

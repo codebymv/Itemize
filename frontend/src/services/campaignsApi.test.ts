@@ -71,16 +71,16 @@ describe('campaign API GraphQL dispatch', () => {
   });
 
   it('routes campaign delivery controls through GraphQL', async () => {
-    await sendCampaign(43, 7);
+    await sendCampaign(43, 7, 'campaign-send-43');
     await pauseCampaign(43, 7);
     await resumeCampaign(43, 7);
-    await sendTestEmail(43, 'recipient@test.itemize', 7);
+    await sendTestEmail(43, 'recipient@test.itemize', 7, 'campaign-test-43');
 
-    expect(graphql.sendCampaignViaGraphql).toHaveBeenCalledWith(43, 7);
+    expect(graphql.sendCampaignViaGraphql).toHaveBeenCalledWith(43, 7, 'campaign-send-43');
     expect(graphql.pauseCampaignViaGraphql).toHaveBeenCalledWith(43, 7);
     expect(graphql.resumeCampaignViaGraphql).toHaveBeenCalledWith(43, 7);
     expect(graphql.sendCampaignTestViaGraphql).toHaveBeenCalledWith(
-      43, 'recipient@test.itemize', 7,
+      43, 'recipient@test.itemize', 7, 'campaign-test-43',
     );
   });
 });

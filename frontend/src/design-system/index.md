@@ -955,6 +955,29 @@ anatomy rather than relying on whole-shell scrolling.
 Treat fetching as part of the application design system. A stable interface
 must also have stable request ownership, freshness, and failure behavior.
 
+### Mutation lifecycle
+
+- A business mutation has one visible owner and one pending state. Disable its
+  initiating control immediately, expose `aria-busy`, and do not allow a second
+  handler to run while the first is unresolved.
+- Sends, charges, refunds, publishing, generation, and other externally visible
+  actions carry a server-enforced idempotency key. Keep that key stable when an
+  unchanged payload is retried after an ambiguous failure. Rotate it only when
+  the payload changes, the server confirms an outcome, or the user explicitly
+  cancels the attempt. `useStableMutationKey` owns this browser lifecycle.
+- A confirmed mutation and its follow-up refresh are separate failure domains.
+  If delivery succeeds but a conversation refresh fails, report the delivery as
+  accepted and the refresh as delayed; never relabel the business action as
+  failed.
+- Patch the authoritative returned entity into its owning cache. Invalidate only
+  derived route snapshots and list/count queries that cannot be patched safely.
+- Error copy must state whether the action was rejected, left unchanged, or
+  could not be confirmed. When an unchanged retry is idempotent, say that retry
+  is safe.
+
+See [the mutation lifecycle audit](./mutation-audit.md) for current high-impact
+coverage and the remaining migration queue.
+
 - Give every route one critical read model when its fields share the same
   organization, filters, freshness window, and error boundary. GraphQL already
   provides the endpoint; compose one named route operation instead of issuing a

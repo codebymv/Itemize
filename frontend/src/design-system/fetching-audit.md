@@ -101,6 +101,12 @@ cancellable query because it is independently paginated, status-filtered, and
 allowed to fail without taking campaign performance or editing offline.
 
 Recurring invoices now enter through one cancellable schedule-list query.
+The current list operation returns its server-filtered page and organization-wide
+status counts together. A rolling deployment without the newer `stats` field is
+probed once, then remembered; its compatibility operation keeps the requested
+page server-owned and derives the four global counts through aliases in the same
+request. Legacy search is limited to one 100-row support page rather than
+restoring an implicit all-page loop.
 Contacts are fetched only when creation opens, the unused eager product catalog
 has been removed, and expanding a schedule uses one
 `RecurringInvoicePreviewBootstrap` operation for the full schedule, advisory

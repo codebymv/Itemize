@@ -387,8 +387,9 @@ export const sendAgentChatMessageViaGraphql = async (
   sessionId: number,
   content: string,
   organizationId?: number,
+  idempotencyKey?: string,
 ): Promise<ChatMessage> => {
-  const input = { content, idempotencyKey: crypto.randomUUID() };
+  const input = { content, idempotencyKey: idempotencyKey ?? crypto.randomUUID() };
   const data = await graphqlMutationRequest<
     {
       sendAgentChatMessage: {

@@ -74,7 +74,7 @@ describe('estimate API transport selection', () => {
 
   it('routes sending through GraphQL without a REST fallback', async () => {
     vi.mocked(sendEstimateViaGraphql).mockResolvedValue();
-    await sendEstimate(8, 4);
-    expect(sendEstimateViaGraphql).toHaveBeenCalledWith(8, 4);
+    await sendEstimate(8, 4, 'estimate-send-8');
+    expect(sendEstimateViaGraphql).toHaveBeenCalledWith(8, 4, 'estimate-send-8');
   });
 });

@@ -212,7 +212,7 @@ describe('chat widget GraphQL consumer', () => {
         },
       });
     await expect(
-      sendAgentChatMessageViaGraphql(9, 'Hello', 3),
+      sendAgentChatMessageViaGraphql(9, 'Hello', 3, 'chat-reply-9'),
     ).resolves.toMatchObject({
       id: 12,
       session_id: 9,
@@ -230,7 +230,7 @@ describe('chat widget GraphQL consumer', () => {
         sessionId: 9,
         input: {
           content: 'Hello',
-          idempotencyKey: expect.any(String),
+          idempotencyKey: 'chat-reply-9',
         },
       },
       3,

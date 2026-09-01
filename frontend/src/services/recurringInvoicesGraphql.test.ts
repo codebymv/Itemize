@@ -10,6 +10,7 @@ import {
   getRecurringInvoiceNumberPreviewViaGraphql,
   getRecurringInvoicePageViaGraphql,
   pauseRecurringInvoiceViaGraphql,
+  resetRecurringInvoiceListCapability,
   resumeRecurringInvoiceViaGraphql,
   updateRecurringInvoiceViaGraphql,
 } from './recurringInvoicesGraphql';
@@ -36,7 +37,10 @@ const row = (extra: Record<string, unknown> = {}) => ({
 });
 
 describe('recurring invoice GraphQL adapter', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetRecurringInvoiceListCapability();
+  });
 
   it('returns one bounded server-filtered page with global stats', async () => {
     vi.mocked(graphqlRequest).mockResolvedValueOnce({
@@ -63,6 +67,68 @@ describe('recurring invoice GraphQL adapter', () => {
       4,
       undefined,
     );
+    expect(graphqlRequest).toHaveBeenCalledTimes(1);
+  });
+
+  it('uses one bounded legacy page and derives global stats when stats are unavailable', async () => {
+    const legacyData = {
+      page: {
+        nodes: [row(), row({
+          id: 9,
+          templateName: 'Studio plan',
+          customerName: 'Bob',
+          customerEmail: 'bob@example.com',
+          contactFirstName: 'Bob',
+          contactLastName: 'Stone',
+          contactEmail: 'bob@example.com',
+        })],
+        pageInfo: { page: 1, pageSize: 100, total: 2, totalPages: 1 },
+      },
+      all: { pageInfo: { total: 9 } },
+      active: { pageInfo: { total: 5 } },
+      paused: { pageInfo: { total: 3 } },
+      completed: { pageInfo: { total: 1 } },
+    };
+    vi.mocked(graphqlRequest)
+      .mockRejectedValueOnce(new Error(
+        'Cannot query field "stats" on type "RecurringInvoicePage".',
+      ))
+      .mockResolvedValueOnce(legacyData)
+      .mockResolvedValueOnce(legacyData);
+
+    await expect(getRecurringInvoicePageViaGraphql({
+      status: 'active', search: '  ADA  ', page: 1, limit: 20,
+    }, 4)).resolves.toMatchObject({
+      recurringInvoices: [{ id: 8, template_name: 'Retainer' }],
+      pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+      stats: { total: 9, active: 5, paused: 3, completed: 1 },
+    });
+    expect(graphqlRequest).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('all: recurringInvoices'),
+      {
+        filter: { status: 'active' },
+        page: { page: 1, pageSize: 100 },
+        allFilter: {},
+        activeFilter: { status: 'active' },
+        pausedFilter: { status: 'paused' },
+        completedFilter: { status: 'completed' },
+        summaryPage: { page: 1, pageSize: 1 },
+      },
+      4,
+      undefined,
+    );
+
+    await getRecurringInvoicePageViaGraphql({ status: 'all' }, 4);
+    expect(graphqlRequest).toHaveBeenCalledTimes(3);
+    expect(vi.mocked(graphqlRequest).mock.calls[2][0])
+      .toContain('LegacyRecurringInvoicePage');
+  });
+
+  it('does not mask non-schema list failures with a compatibility request', async () => {
+    vi.mocked(graphqlRequest).mockRejectedValueOnce(new Error('Network unavailable'));
+    await expect(getRecurringInvoicePageViaGraphql({}, 4))
+      .rejects.toThrow('Network unavailable');
     expect(graphqlRequest).toHaveBeenCalledTimes(1);
   });
 

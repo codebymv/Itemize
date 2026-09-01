@@ -312,9 +312,12 @@ export const getChatSession = async (
 export const sendAgentMessage = async (
     sessionId: number,
     content: string,
-    organizationId?: number
+    organizationId?: number,
+    idempotencyKey?: string,
 ): Promise<ChatMessage> => {
-    return sendAgentChatMessageViaGraphql(sessionId, content, organizationId);
+    return idempotencyKey === undefined
+        ? sendAgentChatMessageViaGraphql(sessionId, content, organizationId)
+        : sendAgentChatMessageViaGraphql(sessionId, content, organizationId, idempotencyKey);
 };
 
 /**

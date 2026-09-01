@@ -49,6 +49,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { useStableMutationKey } from '@/hooks/useStableMutationKey';
 import {
     createRecurringInvoice,
     deleteRecurringInvoice,
@@ -153,6 +154,11 @@ export function RecurringInvoicesPage() {
 
     // Generate invoice state
     const [generatingInvoice, setGeneratingInvoice] = useState<number | null>(null);
+    const {
+        begin: beginInvoiceGeneration,
+        release: releaseInvoiceGeneration,
+        reset: resetInvoiceGeneration,
+    } = useStableMutationKey('recurring-invoice-generation');
 
     // Create dialog state
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -372,10 +378,12 @@ export function RecurringInvoicesPage() {
     const handleGenerateNow = async (id: number, e?: React.MouseEvent) => {
         if (e) e.stopPropagation();
         if (!organizationId) return;
-        
+        const idempotencyKey = beginInvoiceGeneration(`${organizationId}:${id}`);
+        if (!idempotencyKey) return;
         setGeneratingInvoice(id);
         try {
-            const result = await generateRecurringInvoiceNow(id, organizationId);
+            const result = await generateRecurringInvoiceNow(id, organizationId, idempotencyKey);
+            resetInvoiceGeneration();
             toast({ 
                 title: 'Invoice Generated', 
                 description: `${result.invoice_number} created successfully`
@@ -392,6 +400,7 @@ export function RecurringInvoicesPage() {
                 }),
             ]);
         } catch (error: unknown) {
+            releaseInvoiceGeneration();
             const message = getApiErrorMessage(error, 'Failed to generate invoice');
             toast({ title: 'Error', description: message, variant: 'destructive' });
         } finally {

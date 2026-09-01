@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Send, User, Users, Mail, MessageSquare, Phone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +25,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
+import { useStableMutationKey } from '@/hooks/useStableMutationKey';
 import { sendReviewRequest, sendBulkReviewRequests } from '@/services/reputationApi';
 import { getContacts } from '@/services/contactsApi';
 import { debounce } from 'lodash';
@@ -68,7 +69,12 @@ export function SendReviewRequestModal({
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<'single' | 'bulk'>('single');
-  const deliveryAttempt = useRef<{ signature: string; key: string } | null>(null);
+  const {
+    begin: beginDeliveryAttempt,
+    release: releaseDeliveryAttempt,
+    reset: resetDeliveryAttempt,
+  } =
+    useStableMutationKey('review-request');
   
   // Contact search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -148,14 +154,6 @@ export function SendReviewRequestModal({
     }));
   };
 
-  const idempotencyKeyFor = (signature: string): string => {
-    if (deliveryAttempt.current?.signature === signature) return deliveryAttempt.current.key;
-    const key = globalThis.crypto?.randomUUID?.() ??
-      `review-request-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    deliveryAttempt.current = { signature, key };
-    return key;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -197,9 +195,7 @@ export function SendReviewRequestModal({
         }
       }
 
-      setLoading(true);
-      try {
-        const payload = {
+      const payload = {
           contact_id: singleForm.useExistingContact ? singleForm.contact_id || undefined : undefined,
           contact_email: !singleForm.useExistingContact ? singleForm.contact_email : undefined,
           contact_phone: !singleForm.useExistingContact ? singleForm.contact_phone : undefined,
@@ -207,13 +203,17 @@ export function SendReviewRequestModal({
           channel: singleForm.channel,
           custom_message: singleForm.custom_message || undefined,
           preferred_platform: singleForm.preferred_platform || undefined,
-        };
+      };
+      const idempotencyKey = beginDeliveryAttempt(JSON.stringify({ mode: 'single', payload }));
+      if (!idempotencyKey) return;
+      setLoading(true);
+      try {
         const result = await sendReviewRequest(
           payload,
           organizationId,
-          idempotencyKeyFor(JSON.stringify({ mode: 'single', payload })),
+          idempotencyKey,
         );
-        deliveryAttempt.current = null;
+        resetDeliveryAttempt();
         
         if (result.status === 'failed' || result.status === 'reconciliation_required') {
           toast({
@@ -230,6 +230,7 @@ export function SendReviewRequestModal({
         }
         onSent();
       } catch (error) {
+        releaseDeliveryAttempt();
         console.error('Error sending request:', error);
         toast({
           title: 'Error',
@@ -250,20 +251,22 @@ export function SendReviewRequestModal({
         return;
       }
 
-      setLoading(true);
-      try {
-        const payload = {
+      const payload = {
           contact_ids: bulkForm.selectedContactIds,
           channel: bulkForm.channel,
           custom_message: bulkForm.custom_message || undefined,
           preferred_platform: bulkForm.preferred_platform || undefined,
-        };
+      };
+      const idempotencyKey = beginDeliveryAttempt(JSON.stringify({ mode: 'bulk', payload }));
+      if (!idempotencyKey) return;
+      setLoading(true);
+      try {
         const result = await sendBulkReviewRequests(
           payload,
           organizationId,
-          idempotencyKeyFor(JSON.stringify({ mode: 'bulk', payload })),
+          idempotencyKey,
         );
-        deliveryAttempt.current = null;
+        resetDeliveryAttempt();
         
         toast({
           title: result.status === 'sent' ? 'Requests sent' : 'Requests accepted',
@@ -273,6 +276,7 @@ export function SendReviewRequestModal({
         });
         onSent();
       } catch (error) {
+        releaseDeliveryAttempt();
         console.error('Error sending bulk requests:', error);
         toast({
           title: 'Error',
@@ -286,7 +290,12 @@ export function SendReviewRequestModal({
   };
 
   return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
+    <Dialog open onOpenChange={(open) => {
+      if (!open && !loading) {
+        resetDeliveryAttempt();
+        onClose();
+      }
+    }}>
       <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -635,13 +644,18 @@ export function SendReviewRequestModal({
               <Button
                 type="button"
                 variant="outline"
-                onClick={onClose}
+                onClick={() => {
+                  resetDeliveryAttempt();
+                  onClose();
+                }}
+                disabled={loading}
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={loading}
+                aria-busy={loading}
                 className="bg-blue-600 interaction-button--primary text-white"
               >
                 {loading ? 'Sending...' : mode === 'single' ? 'Send Request' : `Send ${bulkForm.selectedContactIds.length} Request${bulkForm.selectedContactIds.length !== 1 ? 's' : ''}`}

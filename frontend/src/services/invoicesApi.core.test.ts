@@ -128,8 +128,10 @@ describe('core invoice API transport selection', () => {
     vi.mocked(sendInvoiceViaGraphql).mockResolvedValue({
       ...invoice, status: 'sent', emailSent: true,
     });
-    await sendInvoice(12, 4, options);
-    expect(sendInvoiceViaGraphql).toHaveBeenCalledWith(12, options, 4);
+    await sendInvoice(12, 4, options, 'invoice-send-12');
+    expect(sendInvoiceViaGraphql).toHaveBeenCalledWith(
+      12, options, 4, 'invoice-send-12',
+    );
     expect(api.post).not.toHaveBeenCalled();
   });
 
@@ -137,10 +139,12 @@ describe('core invoice API transport selection', () => {
     vi.mocked(createInvoicePaymentLinkViaGraphql).mockResolvedValue({
       url: 'https://pay.test/graphql', session_id: 'cs_graphql',
     });
-    await expect(createPaymentLink(12, 4)).resolves.toEqual({
+    await expect(createPaymentLink(12, 4, 'payment-link-12')).resolves.toEqual({
       url: 'https://pay.test/graphql', session_id: 'cs_graphql',
     });
-    expect(createInvoicePaymentLinkViaGraphql).toHaveBeenCalledWith(12, 4);
+    expect(createInvoicePaymentLinkViaGraphql).toHaveBeenCalledWith(
+      12, 4, 'payment-link-12',
+    );
     expect(api.post).not.toHaveBeenCalled();
   });
 

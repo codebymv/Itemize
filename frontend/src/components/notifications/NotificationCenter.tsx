@@ -21,7 +21,7 @@ import {
   Undo2,
   UsersRound,
 } from 'lucide-react';
-import { io } from 'socket.io-client';
+import type { Socket } from 'socket.io-client';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/EmptyState';
@@ -410,31 +410,39 @@ export function NotificationCenter() {
 
   useEffect(() => {
     if (!organizationId) return;
-    const socket = io(getApiUrl(), {
-      transports: ['websocket', 'polling'],
-      withCredentials: true,
-    });
-    socket.on('connect', () => socket.emit('joinUserNotifications'));
-    socket.on('notificationCreated', (event: RealtimeNotification) => {
-      if (Number(event.organizationId) !== organizationId || !event.notification) return;
-      void invalidate();
-      toast({
-        title: event.notification.title,
-        description: event.notification.body,
-        ...(event.notification.href ? {
-          action: (
-            <ToastAction
-              altText="View notification"
-              variant="primary"
-              onClick={() => handleRead(event.notification as AppNotification)}
-            >
-              View
-            </ToastAction>
-          ),
-        } : {}),
+    let cancelled = false;
+    let socket: Socket | null = null;
+    void import('socket.io-client').then(({ io }) => {
+      if (cancelled) return;
+      socket = io(getApiUrl(), {
+        transports: ['websocket', 'polling'],
+        withCredentials: true,
       });
-    });
-    return () => socket.disconnect();
+      socket.on('connect', () => socket?.emit('joinUserNotifications'));
+      socket.on('notificationCreated', (event: RealtimeNotification) => {
+        if (Number(event.organizationId) !== organizationId || !event.notification) return;
+        void invalidate();
+        toast({
+          title: event.notification.title,
+          description: event.notification.body,
+          ...(event.notification.href ? {
+            action: (
+              <ToastAction
+                altText="View notification"
+                variant="primary"
+                onClick={() => handleRead(event.notification as AppNotification)}
+              >
+                View
+              </ToastAction>
+            ),
+          } : {}),
+        });
+      });
+    }).catch(() => undefined);
+    return () => {
+      cancelled = true;
+      socket?.disconnect();
+    };
     // Reconnect only when the active organization changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [organizationId, toast]);

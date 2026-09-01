@@ -313,9 +313,12 @@ export interface SendInvoiceResponse extends Invoice {
 export const sendInvoice = async (
     invoiceId: number,
     organizationId?: number,
-    options?: SendInvoiceOptions
+    options?: SendInvoiceOptions,
+    idempotencyKey?: string,
 ): Promise<SendInvoiceResponse> => {
-    return sendInvoiceViaGraphql(invoiceId, options ?? {}, organizationId);
+    return idempotencyKey === undefined
+        ? sendInvoiceViaGraphql(invoiceId, options ?? {}, organizationId)
+        : sendInvoiceViaGraphql(invoiceId, options ?? {}, organizationId, idempotencyKey);
 };
 
 /**
@@ -365,9 +368,12 @@ export const recordPayment = async (
 
 export const createPaymentLink = async (
     invoiceId: number,
-    organizationId?: number
+    organizationId?: number,
+    idempotencyKey?: string,
 ): Promise<{ url: string; session_id: string }> => {
-    return createInvoicePaymentLinkViaGraphql(invoiceId, organizationId);
+    return idempotencyKey === undefined
+        ? createInvoicePaymentLinkViaGraphql(invoiceId, organizationId)
+        : createInvoicePaymentLinkViaGraphql(invoiceId, organizationId, idempotencyKey);
 };
 
 export const createRecurringTemplateFromInvoice = async (

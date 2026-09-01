@@ -93,6 +93,59 @@ export type RecurringInvoiceListResponse = {
   stats: RecurringInvoiceStats;
 };
 
+type RecurringInvoicePageData = {
+  nodes: GraphqlRecurringInvoice[];
+  pageInfo: {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+  };
+};
+
+type ListCapability = 'unknown' | 'stats' | 'legacy';
+let listCapability: ListCapability = 'unknown';
+
+const recurringInvoicePageQuery = `
+  query RecurringInvoicePage(
+    $filter: RecurringInvoiceFilterInput, $page: PageInput
+  ) {
+    recurringInvoices(filter: $filter, page: $page) {
+      nodes { ${coreFields} }
+      pageInfo { page pageSize total totalPages }
+      stats { total active paused completed }
+    }
+  }
+`;
+
+const legacyRecurringInvoicePageQuery = `
+  query LegacyRecurringInvoicePage(
+    $filter: RecurringInvoiceFilterInput, $page: PageInput,
+    $allFilter: RecurringInvoiceFilterInput,
+    $activeFilter: RecurringInvoiceFilterInput,
+    $pausedFilter: RecurringInvoiceFilterInput,
+    $completedFilter: RecurringInvoiceFilterInput,
+    $summaryPage: PageInput
+  ) {
+    page: recurringInvoices(filter: $filter, page: $page) {
+      nodes { ${coreFields} }
+      pageInfo { page pageSize total totalPages }
+    }
+    all: recurringInvoices(filter: $allFilter, page: $summaryPage) {
+      pageInfo { total }
+    }
+    active: recurringInvoices(filter: $activeFilter, page: $summaryPage) {
+      pageInfo { total }
+    }
+    paused: recurringInvoices(filter: $pausedFilter, page: $summaryPage) {
+      pageInfo { total }
+    }
+    completed: recurringInvoices(filter: $completedFilter, page: $summaryPage) {
+      pageInfo { total }
+    }
+  }
+`;
+
 const mapItem = (item: GraphqlRecurringItem): RecurringInvoiceItem => ({
   product_id: item.productId,
   name: item.name,
@@ -162,6 +215,89 @@ const mapInput = (input: RecurringInvoiceWriteInput) => ({
   ...(input.payment_terms === undefined ? {} : { paymentTerms: input.payment_terms }),
 });
 
+const mapPage = (
+  page: RecurringInvoicePageData,
+  stats: RecurringInvoiceStats,
+): RecurringInvoiceListResponse => ({
+  recurringInvoices: page.nodes.map(mapRecurringInvoice),
+  pagination: {
+    page: page.pageInfo.page,
+    limit: page.pageInfo.pageSize,
+    total: page.pageInfo.total,
+    totalPages: page.pageInfo.totalPages,
+  },
+  stats,
+});
+
+const missingRecurringInvoiceStats = (error: unknown): boolean =>
+  error instanceof Error
+  && error.message.includes('Cannot query field')
+  && error.message.includes('stats')
+  && error.message.includes('RecurringInvoicePage');
+
+const getLegacyRecurringInvoicePage = async (
+  status: RecurringStatus | 'all',
+  search: string | undefined,
+  page: number,
+  limit: number,
+  organizationId?: number,
+  signal?: AbortSignal,
+): Promise<RecurringInvoiceListResponse> => {
+  const data = await graphqlRequest<{
+    page: RecurringInvoicePageData;
+    all: { pageInfo: { total: number } };
+    active: { pageInfo: { total: number } };
+    paused: { pageInfo: { total: number } };
+    completed: { pageInfo: { total: number } };
+  }, Record<string, unknown>>(
+    legacyRecurringInvoicePageQuery,
+    {
+      filter: status === 'all' ? {} : { status },
+      // Older schemas predate server search. One bounded compatibility page
+      // preserves rolling-deploy search without restoring an all-page walk.
+      page: search
+        ? { page: 1, pageSize: 100 }
+        : { page, pageSize: limit },
+      allFilter: {},
+      activeFilter: { status: 'active' },
+      pausedFilter: { status: 'paused' },
+      completedFilter: { status: 'completed' },
+      summaryPage: { page: 1, pageSize: 1 },
+    },
+    organizationId,
+    signal,
+  );
+  const pageData = search
+    ? (() => {
+        const needle = search.toLocaleLowerCase();
+        const matches = data.page.nodes.filter((row) => [
+          row.templateName,
+          row.customerName,
+          row.customerEmail,
+          row.contactFirstName,
+          row.contactLastName,
+          row.contactEmail,
+        ].some((value) => value?.toLocaleLowerCase().includes(needle)));
+        const offset = (page - 1) * limit;
+        return {
+          nodes: matches.slice(offset, offset + limit),
+          pageInfo: {
+            page,
+            pageSize: limit,
+            total: matches.length,
+            totalPages: Math.ceil(matches.length / limit),
+          },
+        };
+      })()
+    : data.page;
+  return mapPage(pageData, {
+    total: data.all.pageInfo.total,
+    active: data.active.pageInfo.total,
+    paused: data.paused.pageInfo.total,
+    completed: data.completed.pageInfo.total,
+  });
+};
+
 export const getRecurringInvoicePageViaGraphql = async (
   params: RecurringInvoiceListParams = {},
   organizationId?: number,
@@ -171,47 +307,43 @@ export const getRecurringInvoicePageViaGraphql = async (
   const normalizedSearch = params.search?.trim();
   const page = params.page ?? 1;
   const limit = params.limit ?? 20;
-  const data = await graphqlRequest<{
-    recurringInvoices: {
-      nodes: GraphqlRecurringInvoice[];
-      pageInfo: {
-        page: number;
-        pageSize: number;
-        total: number;
-        totalPages: number;
+  if (listCapability === 'legacy') {
+    return getLegacyRecurringInvoicePage(
+      status, normalizedSearch, page, limit, organizationId, signal,
+    );
+  }
+  try {
+    const data = await graphqlRequest<{
+      recurringInvoices: RecurringInvoicePageData & {
+        stats: RecurringInvoiceStats;
       };
-      stats: RecurringInvoiceStats;
-    };
-  }, Record<string, unknown>>(
-    `query RecurringInvoicePage(
-      $filter: RecurringInvoiceFilterInput, $page: PageInput
-    ) {
-      recurringInvoices(filter: $filter, page: $page) {
-        nodes { ${coreFields} }
-        pageInfo { page pageSize total totalPages }
-        stats { total active paused completed }
-      }
-    }`,
-    {
-      filter: {
-        ...(status === 'all' ? {} : { status }),
-        ...(normalizedSearch ? { search: normalizedSearch } : {}),
+    }, Record<string, unknown>>(
+      recurringInvoicePageQuery,
+      {
+        filter: {
+          ...(status === 'all' ? {} : { status }),
+          ...(normalizedSearch ? { search: normalizedSearch } : {}),
+        },
+        page: { page, pageSize: limit },
       },
-      page: { page, pageSize: limit },
-    },
-    organizationId,
-    signal,
-  );
-  return {
-    recurringInvoices: data.recurringInvoices.nodes.map(mapRecurringInvoice),
-    pagination: {
-      page: data.recurringInvoices.pageInfo.page,
-      limit: data.recurringInvoices.pageInfo.pageSize,
-      total: data.recurringInvoices.pageInfo.total,
-      totalPages: data.recurringInvoices.pageInfo.totalPages,
-    },
-    stats: data.recurringInvoices.stats,
-  };
+      organizationId,
+      signal,
+    );
+    listCapability = 'stats';
+    return mapPage(data.recurringInvoices, data.recurringInvoices.stats);
+  } catch (error) {
+    if (listCapability === 'unknown' && missingRecurringInvoiceStats(error)) {
+      listCapability = 'legacy';
+      return getLegacyRecurringInvoicePage(
+        status, normalizedSearch, page, limit, organizationId, signal,
+      );
+    }
+    throw error;
+  }
+};
+
+export const resetRecurringInvoiceListCapability = (): void => {
+  listCapability = 'unknown';
 };
 
 export const getRecurringInvoicesViaGraphql = async (

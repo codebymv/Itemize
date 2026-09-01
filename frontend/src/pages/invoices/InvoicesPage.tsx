@@ -44,6 +44,7 @@ import { useToast } from '@/hooks/use-toast';
 import { toastMessages } from '@/constants/toastMessages';
 import { getAssetUrl } from '@/lib/api';
 import { useOrganization } from '@/hooks/useOrganization';
+import { useStableMutationKey } from '@/hooks/useStableMutationKey';
 import {
     getInvoices,
     getInvoice,
@@ -156,6 +157,16 @@ export function InvoicesPage() {
     const [selectedInvoiceForSend, setSelectedInvoiceForSend] = useState<Invoice | null>(null);
     const [fullInvoiceDataForSend, setFullInvoiceDataForSend] = useState<ApiInvoice | null>(null);
     const [sending, setSending] = useState(false);
+    const {
+        begin: beginInvoiceSend,
+        release: releaseInvoiceSend,
+        reset: resetInvoiceSend,
+    } = useStableMutationKey('invoice-send');
+    const {
+        begin: beginPaymentLink,
+        release: releasePaymentLink,
+        reset: resetPaymentLink,
+    } = useStableMutationKey('invoice-payment-link');
     const [isResend, setIsResend] = useState(false);
     
     // Make recurring modal state
@@ -254,16 +265,28 @@ export function InvoicesPage() {
     // Actually send the invoice with email options
     const handleSendInvoice = async (options: SendOptions) => {
         if (!organizationId || !selectedInvoiceForSend) return;
-        
+        const payload = {
+            subject: options.subject,
+            message: options.message,
+            ccEmails: options.ccEmails,
+            includePaymentLink: options.includePaymentLink,
+            resend: isResend,
+        };
+        const idempotencyKey = beginInvoiceSend(JSON.stringify({
+            organizationId,
+            invoiceId: selectedInvoiceForSend.id,
+            payload,
+        }));
+        if (!idempotencyKey) return;
         setSending(true);
         try {
-            const result = await sendInvoice(selectedInvoiceForSend.id, organizationId, {
-                subject: options.subject,
-                message: options.message,
-                ccEmails: options.ccEmails,
-                includePaymentLink: options.includePaymentLink,
-                resend: isResend
-            });
+            const result = await sendInvoice(
+                selectedInvoiceForSend.id,
+                organizationId,
+                payload,
+                idempotencyKey,
+            );
+            resetInvoiceSend();
             
             // Show appropriate toast based on email status
             if (result.emailSent) {
@@ -282,6 +305,7 @@ export function InvoicesPage() {
             setSelectedInvoiceForSend(null);
             fetchInvoices();
         } catch (error: unknown) {
+            releaseInvoiceSend();
             const errorMessage = getApiErrorMessage(error, 'Failed to send invoice');
             toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
         } finally {
@@ -451,8 +475,16 @@ export function InvoicesPage() {
     // Generate payment link (called from modal)
     const generatePaymentLink = async (invoiceId: number): Promise<{ url: string }> => {
         if (!organizationId) throw new Error('Organization not found');
-        
-        const { url } = await createPaymentLink(invoiceId, organizationId);
+        const idempotencyKey = beginPaymentLink(`${organizationId}:${invoiceId}`);
+        if (!idempotencyKey) throw new Error('Payment link generation is already in progress');
+        let url: string;
+        try {
+            ({ url } = await createPaymentLink(invoiceId, organizationId, idempotencyKey));
+            resetPaymentLink();
+        } catch (error) {
+            releasePaymentLink();
+            throw error;
+        }
         
         if (!url) {
             throw new Error('No checkout URL returned');
@@ -1154,8 +1186,10 @@ export function InvoicesPage() {
                 <SendInvoiceModal
                     open={showSendModal}
                     onOpenChange={(open) => {
+                        if (sending) return;
                         setShowSendModal(open);
                         if (!open) {
+                            resetInvoiceSend();
                             setSelectedInvoiceForSend(null);
                             setFullInvoiceDataForSend(null);
                         }
@@ -1222,6 +1256,7 @@ export function InvoicesPage() {
                     open={showPaymentLinkModal}
                     onOpenChange={(open) => {
                         if (!open) {
+                            resetPaymentLink();
                             setShowPaymentLinkModal(false);
                             setSelectedInvoiceForPaymentLink(null);
                         }

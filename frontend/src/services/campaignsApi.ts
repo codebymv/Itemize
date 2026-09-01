@@ -261,9 +261,12 @@ export const unscheduleCampaign = async (
  */
 export const sendCampaign = async (
     campaignId: number,
-    organizationId?: number
+    organizationId?: number,
+    idempotencyKey?: string,
 ): Promise<{ campaign: EmailCampaign; recipientCount: number; message: string }> => {
-    return sendCampaignViaGraphql(campaignId, organizationId);
+    return idempotencyKey === undefined
+        ? sendCampaignViaGraphql(campaignId, organizationId)
+        : sendCampaignViaGraphql(campaignId, organizationId, idempotencyKey);
 };
 
 /**
@@ -323,9 +326,12 @@ export const previewCampaign = async (
 export const sendTestEmail = async (
     campaignId: number,
     testEmail: string,
-    organizationId?: number
+    organizationId?: number,
+    idempotencyKey?: string,
 ): Promise<{ success: boolean; message: string; emailId?: string }> => {
-    return sendCampaignTestViaGraphql(campaignId, testEmail, organizationId);
+    return idempotencyKey === undefined
+        ? sendCampaignTestViaGraphql(campaignId, testEmail, organizationId)
+        : sendCampaignTestViaGraphql(campaignId, testEmail, organizationId, idempotencyKey);
 };
 
 export default {

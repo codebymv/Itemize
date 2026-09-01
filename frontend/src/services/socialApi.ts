@@ -182,9 +182,12 @@ export const updateConversation = async (
 export const sendMessage = async (
     conversationId: number,
     text: string,
-    organizationId?: number
+    organizationId?: number,
+    idempotencyKey?: string,
 ): Promise<SocialMessage> => {
-    return sendSocialMessageViaGraphql(conversationId, text, organizationId);
+    return idempotencyKey === undefined
+        ? sendSocialMessageViaGraphql(conversationId, text, organizationId)
+        : sendSocialMessageViaGraphql(conversationId, text, organizationId, idempotencyKey);
 };
 
 // ======================

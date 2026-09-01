@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { useStableMutationKey } from '@/hooks/useStableMutationKey';
 import { Contact } from '@/types';
 import { getEmailTemplates, sendEmailToContact, type EmailTemplate } from '@/services/emailApi';
 import { Loader2, Send, FileText, PenLine, Sparkles } from 'lucide-react';
@@ -45,6 +46,12 @@ export function ComposeEmailModal({
     const [subject, setSubject] = useState('');
     const [body, setBody] = useState('');
     const [isSending, setIsSending] = useState(false);
+    const {
+        begin: beginDeliveryAttempt,
+        release: releaseDeliveryAttempt,
+        reset: resetDeliveryAttempt,
+    } =
+        useStableMutationKey('contact-email');
 
     // Fetch templates
     const { data: templatesData, isLoading: templatesLoading } = useQuery({
@@ -60,14 +67,15 @@ export function ComposeEmailModal({
 
     // Send email mutation
     const sendMutation = useMutation({
-        mutationFn: async () => {
+        mutationFn: async (idempotencyKey: string) => {
             if (mode === 'template') {
                 if (!selectedTemplateId) {
                     throw new Error('Please select a template');
                 }
                 return sendEmailToContact(
                     { contact_id: contact.id, template_id: parseInt(selectedTemplateId) },
-                    organizationId
+                    organizationId,
+                    idempotencyKey,
                 );
             } else {
                 if (!subject.trim() || !body.trim()) {
@@ -79,11 +87,13 @@ export function ComposeEmailModal({
                         subject: subject.trim(),
                         body_html: body.replace(/\n/g, '<br/>'),
                     },
-                    organizationId
+                    organizationId,
+                    idempotencyKey,
                 );
             }
         },
         onSuccess: (result) => {
+            resetDeliveryAttempt();
             if (result.success) {
                 toast({
                     title: 'Email queued',
@@ -100,6 +110,7 @@ export function ComposeEmailModal({
             }
         },
         onError: (error: Error) => {
+            releaseDeliveryAttempt();
             toast({
                 title: 'Error',
                 description: error.message,
@@ -109,9 +120,23 @@ export function ComposeEmailModal({
     });
 
     const handleSend = async () => {
+        const signature = mode === 'template'
+            ? JSON.stringify({
+                organizationId,
+                contactId: contact.id,
+                templateId: parseInt(selectedTemplateId),
+            })
+            : JSON.stringify({
+                organizationId,
+                contactId: contact.id,
+                subject: subject.trim(),
+                body: body.trim(),
+            });
+        const idempotencyKey = beginDeliveryAttempt(signature);
+        if (!idempotencyKey) return;
         setIsSending(true);
         try {
-            await sendMutation.mutateAsync();
+            await sendMutation.mutateAsync(idempotencyKey);
         } finally {
             setIsSending(false);
         }
@@ -128,7 +153,11 @@ export function ComposeEmailModal({
     ];
 
     return (
-        <Dialog open onOpenChange={() => onClose()}>
+        <Dialog open onOpenChange={() => {
+            if (isSending) return;
+            resetDeliveryAttempt();
+            onClose();
+        }}>
             <ModalContent size="lg">
                 <ModalHeader
                     icon={Send}
@@ -247,7 +276,16 @@ export function ComposeEmailModal({
                 </ModalBody>
 
                 <ModalFooter>
-                    <Button variant="outline" onClick={onClose} style={{ fontFamily: '"Raleway", sans-serif' }} aria-label="Cancel">
+                    <Button
+                        variant="outline"
+                        onClick={() => {
+                            resetDeliveryAttempt();
+                            onClose();
+                        }}
+                        disabled={isSending}
+                        style={{ fontFamily: '"Raleway", sans-serif' }}
+                        aria-label="Cancel"
+                    >
                         Cancel
                     </Button>
                     <Button
@@ -260,6 +298,7 @@ export function ComposeEmailModal({
                         className="gap-2 bg-blue-600 interaction-button--primary text-white"
                         style={{ fontFamily: '"Raleway", sans-serif' }}
                         aria-label={isSending ? 'Sending email...' : 'Send email'}
+                        aria-busy={isSending}
                     >
                         {isSending ? (
                             <>

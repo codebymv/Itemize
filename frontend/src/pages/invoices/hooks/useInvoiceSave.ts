@@ -5,6 +5,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { useStableMutationKey } from '@/hooks/useStableMutationKey';
 import { toastMessages } from '@/constants/toastMessages';
 import {
   createInvoice,
@@ -76,6 +77,11 @@ export function useInvoiceSave({
   const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const {
+    begin: beginInvoiceSend,
+    release: releaseInvoiceSend,
+    reset: resetInvoiceSend,
+  } = useStableMutationKey('invoice-editor-send');
 
   const handleSave = async (data: InvoiceData, lineItems: LineItem[]) => {
     if (!organizationId) return;
@@ -130,14 +136,23 @@ export function useInvoiceSave({
 
   const handleSendInvoice = async (options: SendOptions) => {
     if (!organizationId || !invoiceId || isNew) return;
-
+    const payload = {
+      subject: options.subject,
+      message: options.message,
+      ccEmails: options.ccEmails,
+    };
+    const idempotencyKey = beginInvoiceSend(JSON.stringify({
+      organizationId,
+      invoiceId,
+      payload,
+    }));
+    if (!idempotencyKey) return;
     setSaving(true);
     try {
-      const result = await sendInvoice(parseInt(invoiceId), organizationId, {
-        subject: options.subject,
-        message: options.message,
-        ccEmails: options.ccEmails,
-      });
+      const result = await sendInvoice(
+        parseInt(invoiceId), organizationId, payload, idempotencyKey,
+      );
+      resetInvoiceSend();
 
       // Show appropriate toast based on email status
       if (result.emailSent) {
@@ -161,6 +176,7 @@ export function useInvoiceSave({
 
       navigate('/invoices');
     } catch (error: unknown) {
+      releaseInvoiceSend();
       const errorMessage = getApiErrorMessage(error, toastMessages.failedToSend('invoice'));
       toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
     } finally {

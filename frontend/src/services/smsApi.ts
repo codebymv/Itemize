@@ -148,8 +148,13 @@ export const duplicateSmsTemplate = async (id: number, organizationId?: number) 
 /**
  * Send SMS to a contact
  */
-export const sendSmsToContact = async (data: SendSmsToContactData): Promise<SendEmailResult> => {
-  return enqueueContactSmsViaGraphql(data, data.organization_id);
+export const sendSmsToContact = async (
+  data: SendSmsToContactData,
+  idempotencyKey?: string,
+): Promise<SendEmailResult> => {
+  return idempotencyKey === undefined
+    ? enqueueContactSmsViaGraphql(data, data.organization_id)
+    : enqueueContactSmsViaGraphql(data, data.organization_id, idempotencyKey);
 };
 
 /**

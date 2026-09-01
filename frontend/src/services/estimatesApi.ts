@@ -132,8 +132,11 @@ export const deleteEstimate = async (
 export const sendEstimate = async (
   id: number,
   organizationId?: number,
+  idempotencyKey?: string,
 ): Promise<void> => {
-  return sendEstimateViaGraphql(id, organizationId);
+  return idempotencyKey === undefined
+    ? sendEstimateViaGraphql(id, organizationId)
+    : sendEstimateViaGraphql(id, organizationId, idempotencyKey);
 };
 
 export const convertEstimateToInvoice = async (

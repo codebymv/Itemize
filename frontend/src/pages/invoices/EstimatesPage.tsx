@@ -32,6 +32,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/hooks/useOrganization';
+import { useStableMutationKey } from '@/hooks/useStableMutationKey';
 import {
     convertEstimateToInvoice,
     deleteEstimate,
@@ -116,6 +117,12 @@ export function EstimatesPage() {
     const [expandedEstimateData, setExpandedEstimateData] = useState<Estimate | null>(null);
     const [loadingPreview, setLoadingPreview] = useState(false);
     const [previewError, setPreviewError] = useState(false);
+    const [sendingEstimateId, setSendingEstimateId] = useState<number | null>(null);
+    const {
+        begin: beginEstimateSend,
+        release: releaseEstimateSend,
+        reset: resetEstimateSend,
+    } = useStableMutationKey('estimate-list-send');
 
     useEffect(() => {
         if (!organizationId) {
@@ -147,12 +154,19 @@ export function EstimatesPage() {
 
     const handleSendEstimate = async (id: number) => {
         if (!organizationId) return;
+        const idempotencyKey = beginEstimateSend(`${organizationId}:${id}`);
+        if (!idempotencyKey) return;
+        setSendingEstimateId(id);
         try {
-            await sendEstimate(id, organizationId);
+            await sendEstimate(id, organizationId, idempotencyKey);
+            resetEstimateSend();
             toast({ title: 'Sent', description: 'Estimate sent successfully' });
             fetchEstimates();
         } catch (error) {
-            toast({ title: 'Error', description: 'Failed to send estimate', variant: 'destructive' });
+            releaseEstimateSend();
+            toast({ title: 'Error', description: 'Estimate delivery could not be confirmed. An unchanged retry is safe.', variant: 'destructive' });
+        } finally {
+            setSendingEstimateId(null);
         }
     };
 
@@ -451,7 +465,7 @@ export function EstimatesPage() {
                                                                 <Pencil className="mr-2 h-4 w-4" />Edit
                                                             </DropdownMenuItem>
                                                             {estimate.status === 'draft' && (
-                                                                <DropdownMenuItem onClick={() => handleSendEstimate(estimate.id)} className="group/menu">
+                                                                <DropdownMenuItem disabled={sendingEstimateId !== null} onClick={() => handleSendEstimate(estimate.id)} className="group/menu">
                                                                     <Send className="mr-2 h-4 w-4" />Send
                                                                 </DropdownMenuItem>
                                                             )}
@@ -525,7 +539,7 @@ export function EstimatesPage() {
                                                         <ExpandedRowActionLabel full="Edit estimate" compact="Edit" />
                                                     </Button>
                                                     {estimate.status === 'draft' && (
-                                                        <Button size="sm" onClick={() => handleSendEstimate(estimate.id)}>
+                                                        <Button size="sm" disabled={sendingEstimateId !== null} aria-busy={sendingEstimateId === estimate.id} onClick={() => handleSendEstimate(estimate.id)}>
                                                             <Send className="mr-2 h-4 w-4" />
                                                             <ExpandedRowActionLabel full="Send estimate" compact="Send" />
                                                         </Button>
