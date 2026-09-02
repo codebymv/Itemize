@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
+import { PublicReviewSubmission } from './public-review.idempotency';
 
 export const REVIEW_PLATFORMS = new Set([
   'google',
@@ -48,12 +49,17 @@ export type ReviewRequestRow = {
   contact_name: string | null;
   preferred_platform: string | null;
   redirect_url: string | null;
+  status?: string;
+  expires_at?: Date | null;
+  is_expired?: boolean;
+  submission_fingerprint?: string | null;
   organization_name?: string;
 };
 
 export type SubmitReviewOutcome =
   | { kind: 'not_found' }
-  | { kind: 'submitted'; request: ReviewRequestRow };
+  | { kind: 'conflict' }
+  | { kind: 'submitted'; request: ReviewRequestRow; replayed: boolean };
 
 @Injectable()
 export class PublicReputationRepository {
@@ -150,26 +156,32 @@ export class PublicReputationRepository {
 
   async submitReview(
     token: string,
-    values: {
-      rating: number;
-      reviewText: string | null;
-      platform: string | null;
-      sentiment: string;
-    },
+    values: PublicReviewSubmission & { requestFingerprint: string },
   ): Promise<SubmitReviewOutcome> {
     return this.transaction(async (client) => {
       const requestResult = await client.query<ReviewRequestRow>(
         `SELECT id, organization_id, contact_id, contact_email, contact_phone,
-                contact_name, preferred_platform, redirect_url
+                contact_name, preferred_platform, redirect_url, status,
+                expires_at, submission_fingerprint,
+                (expires_at IS NOT NULL AND expires_at <= CURRENT_TIMESTAMP) AS is_expired
          FROM review_requests
          WHERE unique_token = $1
-           AND status NOT IN ('completed', 'unsubscribed')
-           AND (expires_at IS NULL OR expires_at > CURRENT_TIMESTAMP)
          FOR UPDATE`,
         [token],
       );
       if (requestResult.rows.length === 0) return { kind: 'not_found' };
       const request = requestResult.rows[0];
+      if (request.status === 'completed') {
+        return request.submission_fingerprint === values.requestFingerprint
+          ? { kind: 'submitted', request, replayed: true }
+          : { kind: 'conflict' };
+      }
+      if (
+        request.status === 'unsubscribed'
+        || request.is_expired === true
+      ) {
+        return { kind: 'not_found' };
+      }
 
       const review = await client.query<{ id: number }>(
         `INSERT INTO reviews (
@@ -197,11 +209,12 @@ export class PublicReputationRepository {
            review_submitted = TRUE,
            review_submitted_at = CURRENT_TIMESTAMP,
            review_id = $2,
+           submission_fingerprint = $4,
            status = 'completed'
          WHERE id = $3`,
-        [values.rating, review.rows[0].id, request.id],
+        [values.rating, review.rows[0].id, request.id, values.requestFingerprint],
       );
-      return { kind: 'submitted', request };
+      return { kind: 'submitted', request, replayed: false };
     });
   }
 

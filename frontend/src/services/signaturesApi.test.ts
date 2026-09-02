@@ -125,7 +125,11 @@ describe('signature API transport boundaries', () => {
     await uploadSignatureDocument(7, file);
     await uploadSignatureTemplate(5, file);
     await getPublicSigningData('public-token');
-    await submitPublicSignature('public-token', { fields: [{ id: 1, value: 'signed' }] });
+    const publicSignaturePayload = {
+      fields: [{ id: 1, value: 'signed' }],
+      consent: { agreed: true as const, version: 'test-consent-v1' },
+    };
+    await submitPublicSignature('public-token', publicSignaturePayload);
     await declinePublicSignature('public-token', 'Declined');
 
     expect(api.post).toHaveBeenCalledWith(
@@ -138,14 +142,27 @@ describe('signature API transport boundaries', () => {
       expect.any(FormData),
       { headers: { 'Content-Type': 'multipart/form-data' } },
     );
-    expect(api.get).toHaveBeenCalledWith('/api/public/sign/public-token');
+    expect(api.get).toHaveBeenCalledWith('/api/public/sign/public-token', {
+      publicRequest: true,
+      withCredentials: false,
+    });
     expect(api.post).toHaveBeenCalledWith(
       '/api/public/sign/public-token',
-      { fields: [{ id: 1, value: 'signed' }] },
+      publicSignaturePayload,
+      {
+        publicRequest: true,
+        retryOnNetworkError: true,
+        withCredentials: false,
+      },
     );
     expect(api.post).toHaveBeenCalledWith(
       '/api/public/sign/public-token/decline',
       { reason: 'Declined' },
+      {
+        publicRequest: true,
+        retryOnNetworkError: true,
+        withCredentials: false,
+      },
     );
     expect(downloadSignedDocument(7)).toEqual({
       url: 'https://api.test/api/signatures/documents/7/download',

@@ -90,10 +90,14 @@ describe('PublicSigningService', () => {
 
   it('records a signed advancement without exposing its organization identity', async () => {
     repository.submit.mockResolvedValue({
-      recipientId: 7,
-      documentId: 11,
-      organizationId: 3,
-      completionQueued: false,
+      kind: 'ok',
+      replayed: false,
+      result: {
+        recipientId: 7,
+        documentId: 11,
+        organizationId: 3,
+        completionQueued: false,
+      },
     });
     await expect(service.submit(token, {
       fields: [],
@@ -109,6 +113,44 @@ describe('PublicSigningService', () => {
       artifactId: 11,
       stage: 'signed',
       source: 'signature_recipient_signed',
+    });
+  });
+
+  it('replays the accepted signing result without recording advancement twice', async () => {
+    repository.submit.mockResolvedValue({
+      kind: 'ok',
+      replayed: true,
+      result: {
+        recipientId: 7,
+        documentId: 11,
+        organizationId: 3,
+        completionQueued: true,
+      },
+    });
+
+    await expect(service.submit(token, {
+      fields: [],
+      consent: { agreed: true, version: SIGNATURE_CONSENT_VERSION },
+    }, audit)).resolves.toEqual({
+      recipientId: 7,
+      documentId: 11,
+      completionQueued: true,
+    });
+    expect(activation.recordArtifactAdvanced).not.toHaveBeenCalled();
+  });
+
+  it('reports terminal response conflicts without revealing signing state', async () => {
+    repository.submit.mockResolvedValue({ kind: 'conflict' });
+    await expect(service.submit(token, {
+      fields: [],
+      consent: { agreed: true, version: SIGNATURE_CONSENT_VERSION },
+    }, audit)).rejects.toMatchObject({
+      status: 409,
+      response: expect.objectContaining({
+        error: expect.objectContaining({
+          reason: 'SIGNATURE_RESPONSE_FINALIZED',
+        }),
+      }),
     });
   });
 

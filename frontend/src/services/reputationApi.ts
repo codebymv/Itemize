@@ -350,7 +350,10 @@ export const deleteReviewRequest = async (
 };
 
 export const getPublicReviewRequest = async (token: string): Promise<PublicReviewRequest> => {
-    const response = await api.get(`/api/reputation/public/review/${encodeURIComponent(token)}`);
+    const response = await api.get(
+        `/api/reputation/public/review/${encodeURIComponent(token)}`,
+        { publicRequest: true, withCredentials: false }
+    );
     return unwrapResponse<PublicReviewRequest>(response.data);
 };
 
@@ -360,7 +363,12 @@ export const submitPublicReview = async (
 ): Promise<{ success: boolean; redirect_url?: string }> => {
     const response = await api.post(
         `/api/reputation/public/review/${encodeURIComponent(token)}`,
-        input
+        input,
+        {
+            publicRequest: true,
+            retryOnNetworkError: true,
+            withCredentials: false,
+        }
     );
     return unwrapResponse<{ success: boolean; redirect_url?: string }>(response.data);
 };

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   GoneException,
   Inject,
   Injectable,
@@ -27,6 +28,10 @@ import {
   publicSigningTokenHash,
   PublicSigningValidationError,
 } from './public-signing.validation';
+import {
+  publicSigningDeclineFingerprint,
+  publicSigningSubmissionFingerprint,
+} from './public-signing.idempotency';
 import {
   SIGNATURE_CONSENT_SHA256,
   SIGNATURE_CONSENT_TEXT,
@@ -109,9 +114,15 @@ export class PublicSigningService {
     const tokenHash = this.tokenHash(token);
     try {
       const submission = normalizePublicSigningSubmission(payload);
-      const result = await this.repository.submit(tokenHash, submission, audit);
-      if (!result) throw this.notFound();
-      await this.activation.recordArtifactAdvanced({
+      const outcome = await this.repository.submit(
+        tokenHash,
+        submission,
+        audit,
+        publicSigningSubmissionFingerprint(submission),
+      );
+      if (outcome.kind !== 'ok') this.terminalFailure(outcome.kind);
+      const result = outcome.result;
+      if (!outcome.replayed) await this.activation.recordArtifactAdvanced({
         organizationId: result.organizationId,
         artifactType: 'signature',
         artifactId: result.documentId,
@@ -154,13 +165,14 @@ export class PublicSigningService {
     if (normalized.length > 2000) {
       throw this.bad('Decline reason is too long', 'DECLINE_REASON_TOO_LONG');
     }
-    const result = await this.repository.decline(
+    const outcome = await this.repository.decline(
       tokenHash,
       normalized || null,
       audit,
+      publicSigningDeclineFingerprint(normalized || null),
     );
-    if (!result) throw this.notFound();
-    return result;
+    if (outcome.kind !== 'ok') this.terminalFailure(outcome.kind);
+    return outcome.result;
   }
 
   async file(
@@ -234,6 +246,21 @@ export class PublicSigningService {
       throw this.bad(error.message, error.reason);
     }
     throw error;
+  }
+
+  private terminalFailure(kind: 'not-found' | 'conflict'): never {
+    if (kind === 'not-found') throw this.notFound();
+    if (kind === 'conflict') {
+      throw new ConflictException({
+        success: false,
+        error: {
+          message: 'This signing response has already been finalized',
+          code: 'CONFLICT',
+          reason: 'SIGNATURE_RESPONSE_FINALIZED',
+        },
+      });
+    }
+    throw new Error('Unknown public signing terminal outcome');
   }
 
   private bad(message: string, reason: string): BadRequestException {

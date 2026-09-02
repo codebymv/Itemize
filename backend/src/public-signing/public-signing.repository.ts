@@ -83,6 +83,37 @@ export type PublicSigningSubmitResult = {
   completionQueued: boolean;
 };
 
+export type PublicSigningSubmitOutcome =
+  | { kind: 'ok'; result: PublicSigningSubmitResult; replayed: boolean }
+  | { kind: 'conflict' }
+  | { kind: 'not-found' };
+
+export type PublicSigningDeclineResult = {
+  documentId: number;
+  recipientId: number;
+};
+
+export type PublicSigningDeclineOutcome =
+  | { kind: 'ok'; result: PublicSigningDeclineResult; replayed: boolean }
+  | { kind: 'conflict' }
+  | { kind: 'not-found' };
+
+type PublicSigningReceiptRow = {
+  action: 'signed' | 'declined';
+  request_fingerprint: string;
+  organization_id: number;
+  document_id: number;
+  recipient_id: number;
+  completion_queued: boolean | null;
+};
+
+type PublicSigningReceiptResult = {
+  recipientId: number;
+  documentId: number;
+  organizationId: number;
+  completionQueued: boolean | null;
+};
+
 @Injectable()
 export class PublicSigningRepository {
   constructor(
@@ -167,10 +198,31 @@ export class PublicSigningRepository {
     tokenHash: string,
     submission: PublicSigningSubmission,
     audit: PublicSigningAudit,
-  ): Promise<PublicSigningSubmitResult | null> {
+    requestFingerprint: string,
+  ): Promise<PublicSigningSubmitOutcome> {
     return this.transaction(async (client) => {
+      await this.lockPublicResponse(client, tokenHash);
+      const receipt = await this.publicResponseReceipt(client, tokenHash);
+      if (receipt) {
+        if (
+          receipt.action !== 'signed'
+          || receipt.request_fingerprint !== requestFingerprint
+        ) {
+          return { kind: 'conflict' };
+        }
+        return {
+          kind: 'ok',
+          replayed: true,
+          result: {
+            recipientId: receipt.recipient_id,
+            documentId: receipt.document_id,
+            organizationId: receipt.organization_id,
+            completionQueued: receipt.completion_queued === true,
+          },
+        };
+      }
       const capability = await this.capability(client, tokenHash, true);
-      if (!capability) return null;
+      if (!capability) return { kind: 'not-found' };
       const recipients = await this.lockRecipients(client, capability);
       const allowed = await client.query<SigningFieldRow>(
         `SELECT id,field_type,page_number,x_position,y_position,width,height,
@@ -276,12 +328,20 @@ export class PublicSigningRepository {
             audit,
           );
         }
-        return {
+        const result = {
           recipientId: capability.recipient_id,
           documentId: capability.document_id,
           organizationId: capability.organization_id,
           completionQueued: true,
         };
+        await this.recordPublicResponse(
+          client,
+          tokenHash,
+          'signed',
+          requestFingerprint,
+          result,
+        );
+        return { kind: 'ok', result, replayed: false };
       }
 
       if ((capability.routing_mode || 'parallel') === 'sequential') {
@@ -305,12 +365,20 @@ export class PublicSigningRepository {
          WHERE id=$1`,
         [capability.document_id],
       );
-      return {
+      const result = {
         recipientId: capability.recipient_id,
         documentId: capability.document_id,
         organizationId: capability.organization_id,
         completionQueued: false,
       };
+      await this.recordPublicResponse(
+        client,
+        tokenHash,
+        'signed',
+        requestFingerprint,
+        result,
+      );
+      return { kind: 'ok', result, replayed: false };
     });
   }
 
@@ -318,10 +386,29 @@ export class PublicSigningRepository {
     tokenHash: string,
     reason: string | null,
     audit: PublicSigningAudit,
-  ): Promise<{ documentId: number; recipientId: number } | null> {
+    requestFingerprint: string,
+  ): Promise<PublicSigningDeclineOutcome> {
     return this.transaction(async (client) => {
+      await this.lockPublicResponse(client, tokenHash);
+      const receipt = await this.publicResponseReceipt(client, tokenHash);
+      if (receipt) {
+        if (
+          receipt.action !== 'declined'
+          || receipt.request_fingerprint !== requestFingerprint
+        ) {
+          return { kind: 'conflict' };
+        }
+        return {
+          kind: 'ok',
+          replayed: true,
+          result: {
+            documentId: receipt.document_id,
+            recipientId: receipt.recipient_id,
+          },
+        };
+      }
       const capability = await this.capability(client, tokenHash, true);
-      if (!capability) return null;
+      if (!capability) return { kind: 'not-found' };
       await this.lockRecipients(client, capability);
       await client.query(
         `UPDATE signature_recipients SET status='declined',declined_at=CURRENT_TIMESTAMP,
@@ -373,11 +460,74 @@ export class PublicSigningRepository {
         audit,
       );
       await this.enqueueDeclined(client, capability, reason);
-      return {
+      const result = {
         documentId: capability.document_id,
         recipientId: capability.recipient_id,
       };
+      await this.recordPublicResponse(
+        client,
+        tokenHash,
+        'declined',
+        requestFingerprint,
+        {
+          ...result,
+          organizationId: capability.organization_id,
+          completionQueued: null,
+        },
+      );
+      return { kind: 'ok', result, replayed: false };
     });
+  }
+
+  private async lockPublicResponse(
+    client: PoolClient,
+    tokenHash: string,
+  ): Promise<void> {
+    await client.query(
+      `SELECT pg_advisory_xact_lock(
+         hashtext('public-signing-response'),
+         hashtext($1)
+       )`,
+      [tokenHash],
+    );
+  }
+
+  private async publicResponseReceipt(
+    client: PoolClient,
+    tokenHash: string,
+  ): Promise<PublicSigningReceiptRow | null> {
+    const result = await client.query<PublicSigningReceiptRow>(
+      `SELECT action,request_fingerprint,organization_id,document_id,
+         recipient_id,completion_queued
+       FROM signature_public_response_receipts
+       WHERE token_hash=$1`,
+      [tokenHash],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  private async recordPublicResponse(
+    client: PoolClient,
+    tokenHash: string,
+    action: 'signed' | 'declined',
+    requestFingerprint: string,
+    result: PublicSigningReceiptResult,
+  ): Promise<void> {
+    await client.query(
+      `INSERT INTO signature_public_response_receipts
+         (token_hash,action,request_fingerprint,organization_id,document_id,
+          recipient_id,completion_queued)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+      [
+        tokenHash,
+        action,
+        requestFingerprint,
+        result.organizationId,
+        result.documentId,
+        result.recipientId,
+        result.completionQueued,
+      ],
+    );
   }
 
   private async capability(

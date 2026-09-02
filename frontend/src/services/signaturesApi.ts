@@ -260,7 +260,10 @@ export const getSignatureAudit = async (id: number) => {
 };
 
 export const getPublicSigningData = async (token: string) => {
-  const response = await api.get(`/api/public/sign/${token}`);
+  const response = await api.get(`/api/public/sign/${token}`, {
+    publicRequest: true,
+    withCredentials: false,
+  });
   return unwrapResponse<PublicSigningData>(response.data);
 };
 
@@ -271,12 +274,20 @@ export const submitPublicSignature = async (
     consent: { agreed: true; version: string };
   },
 ) => {
-  const response = await api.post(`/api/public/sign/${token}`, payload);
+  const response = await api.post(`/api/public/sign/${token}`, payload, {
+    publicRequest: true,
+    retryOnNetworkError: true,
+    withCredentials: false,
+  });
   return unwrapResponse<ApiPayload>(response.data);
 };
 
 export const declinePublicSignature = async (token: string, reason?: string) => {
-  const response = await api.post(`/api/public/sign/${token}/decline`, { reason });
+  const response = await api.post(`/api/public/sign/${token}/decline`, { reason }, {
+    publicRequest: true,
+    retryOnNetworkError: true,
+    withCredentials: false,
+  });
   return unwrapResponse<ApiPayload>(response.data);
 };
 

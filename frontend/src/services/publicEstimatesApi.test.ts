@@ -21,7 +21,10 @@ const data = {
 } as const;
 
 describe('public estimate API', () => {
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
 
   it('uses credential-free capability requests for reads and terminal actions', async () => {
     const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(new Response(
@@ -55,5 +58,22 @@ describe('public estimate API', () => {
     await expect(getPublicEstimate('missing')).rejects.toThrow(
       'Estimate link is invalid or expired',
     );
+  });
+
+  it('retries an ambiguous terminal transport failure with the same capability action', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn()
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce(new Response(
+        JSON.stringify({ success: true, data }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      ));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const pending = acceptPublicEstimate('public_token_value_abcdefghijklmnopqrstuvwxyz');
+    await vi.runAllTimersAsync();
+    await expect(pending).resolves.toEqual(data);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0]).toEqual(fetchMock.mock.calls[1]);
   });
 });

@@ -200,10 +200,18 @@ describe('reputation API permanent transport selection', () => {
       redirect_url: 'https://example.test/review',
     });
 
-    expect(api.get).toHaveBeenCalledWith('/api/reputation/public/review/token%2Fvalue');
+    expect(api.get).toHaveBeenCalledWith(
+      '/api/reputation/public/review/token%2Fvalue',
+      { publicRequest: true, withCredentials: false },
+    );
     expect(api.post).toHaveBeenCalledWith(
       '/api/reputation/public/review/token%2Fvalue',
       { rating: 5 },
+      {
+        publicRequest: true,
+        retryOnNetworkError: true,
+        withCredentials: false,
+      },
     );
   });
 });

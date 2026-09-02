@@ -39,20 +39,35 @@ type Envelope = {
   error?: { message?: string };
 };
 
+const MAX_NETWORK_RETRIES = 2;
+
+const networkRetryDelay = (attempt: number): Promise<void> =>
+  new Promise((resolve) => window.setTimeout(resolve, 200 * (2 ** attempt)));
+
 const request = async (
   token: string,
   action?: 'accept' | 'decline',
 ): Promise<PublicEstimateData> => {
   const suffix = action ? `/${action}` : '';
-  const response = await fetch(
-    `${getApiUrl()}/api/public/estimates/${encodeURIComponent(token)}${suffix}`,
-    {
-      method: action ? 'POST' : 'GET',
-      credentials: 'omit',
-      headers: { Accept: 'application/json' },
-      referrerPolicy: 'no-referrer',
-    },
-  );
+  let response: Response | null = null;
+  for (let attempt = 0; attempt <= MAX_NETWORK_RETRIES; attempt += 1) {
+    try {
+      response = await fetch(
+        `${getApiUrl()}/api/public/estimates/${encodeURIComponent(token)}${suffix}`,
+        {
+          method: action ? 'POST' : 'GET',
+          credentials: 'omit',
+          headers: { Accept: 'application/json' },
+          referrerPolicy: 'no-referrer',
+        },
+      );
+      break;
+    } catch (error) {
+      if (attempt === MAX_NETWORK_RETRIES) throw error;
+      await networkRetryDelay(attempt);
+    }
+  }
+  if (!response) throw new Error('This estimate is unavailable');
   const payload = await response.json().catch(() => ({})) as Envelope;
   if (!response.ok || !payload.success || !payload.data) {
     throw new Error(payload.error?.message || 'This estimate is unavailable');

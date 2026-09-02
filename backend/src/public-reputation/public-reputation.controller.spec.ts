@@ -151,6 +151,7 @@ describe('PublicReputationController retained HTTP contract', () => {
   it('submits a review with derived sentiment and rating-gated redirect', async () => {
     repository.submitReview.mockResolvedValue({
       kind: 'submitted',
+      replayed: false,
       request: { redirect_url: 'https://reviews.example.com' },
     });
     const positive = await request(app.getHttpServer())
@@ -166,6 +167,7 @@ describe('PublicReputationController retained HTTP contract', () => {
       reviewText: 'Great service',
       platform: 'google',
       sentiment: 'positive',
+      requestFingerprint: expect.stringMatching(/^[a-f0-9]{64}$/),
     });
 
     const negative = await request(app.getHttpServer())
@@ -178,6 +180,20 @@ describe('PublicReputationController retained HTTP contract', () => {
       reviewText: null,
       platform: null,
       sentiment: 'negative',
+      requestFingerprint: expect.stringMatching(/^[a-f0-9]{64}$/),
+    });
+  });
+
+  it('distinguishes a changed response after completion from an unavailable request', async () => {
+    repository.submitReview.mockResolvedValue({ kind: 'conflict' });
+    const response = await request(app.getHttpServer())
+      .post(`/api/reputation/public/review/${REQUEST_TOKEN}`)
+      .send({ rating: 4 })
+      .expect(409);
+    expect(response.body).toEqual({
+      error: 'This review request has already been completed',
+      code: 'CONFLICT',
+      reason: 'REVIEW_RESPONSE_FINALIZED',
     });
   });
 

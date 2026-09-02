@@ -12,6 +12,7 @@ import { SignatureFileCleanupService } from '../../src/signature-files/signature
 import { SignatureCompletionJobsService } from '../../src/public-signing/signature-completion-jobs.service';
 import { SignatureDeliveryJobsService } from '../../src/signature-delivery/signature-delivery-jobs.service';
 import { signatureDeliveryToken } from '../../src/signature-delivery/signature-delivery.token';
+import { SIGNATURE_CONSENT_VERSION } from '../../src/public-signing/signature-consent';
 import {
   SIGNATURE_FILE_STORAGE,
   SignatureFileStorage,
@@ -27,6 +28,11 @@ async function signaturePdf(title: string): Promise<Buffer> {
   document.addPage([612, 792]);
   return Buffer.from(await document.save());
 }
+
+const signingPayload = (fieldId: number, value: string) => ({
+  fields: [{ id: fieldId, value }],
+  consent: { agreed: true, version: SIGNATURE_CONSENT_VERSION },
+});
 
 describe('E-signature GraphQL read contract', () => {
   let app: NestExpressApplication;
@@ -800,6 +806,21 @@ describe('E-signature GraphQL read contract', () => {
     }).expect(200);
     expect(created.body.errors).toBeUndefined();
     const id = Number(created.body.data.createSignatureTemplate.id);
+    const templateUrl = '/uploads/signatures/atomic-template.pdf';
+    const templatePdf = await signaturePdf('Atomic template');
+    storedSignatureFiles.set(templateUrl, templatePdf);
+    await pool.query(
+      `UPDATE signature_templates SET file_url=$1,file_name='atomic-template.pdf',
+         file_size=$2,file_type='application/pdf',original_sha256=$3,page_count=1
+       WHERE id=$4 AND organization_id=$5`,
+      [
+        templateUrl,
+        templatePdf.length,
+        createHash('sha256').update(templatePdf).digest('hex'),
+        id,
+        organizationId,
+      ],
+    );
 
     const failed = await graphql(memberToken, organizationId, `mutation Update($id:Int!,$input:UpdateSignatureTemplateInput!){updateSignatureTemplate(id:$id,input:$input){id title}}`, {
       id, input: { title: 'Must roll back', roles: [{ roleName: 'Other', signingOrder: 1 }] },
@@ -1108,6 +1129,10 @@ describe('E-signature GraphQL read contract', () => {
 
   it('durably sends, reminds, schedules, and cancels without persisting raw signing capabilities', async () => {
     deliveryEmail.send.mockReset().mockResolvedValue({ providerId: 'signature-provider-1' });
+    storedSignatureFiles.set(
+      'private/durable.pdf',
+      await signaturePdf('Durable delivery'),
+    );
     const inserted = await pool.query<{ id: number }>(
       `INSERT INTO signature_documents
          (organization_id,title,message,file_url,file_name,file_size,file_type,status,
@@ -1127,6 +1152,13 @@ describe('E-signature GraphQL read contract', () => {
       [documentId, organizationId],
     );
     const recipientId = Number(recipient.rows[0].id);
+    await pool.query(
+      `INSERT INTO signature_fields
+         (document_id,recipient_id,role_name,field_type,page_number,x_position,
+          y_position,width,height,label,is_required,locked)
+       VALUES ($1,$2,'Signer','signature',1,10,10,20,10,'Sign here',true,false)`,
+      [documentId, recipientId],
+    );
     const send = () => graphql(
       memberToken,
       organizationId,
@@ -1354,7 +1386,7 @@ describe('E-signature GraphQL read contract', () => {
 
     const rejected = await request(app.getHttpServer())
       .post(path)
-      .send({ fields: [{ id: fixture.sharedFieldId, value: 'overwrite' }] });
+      .send(signingPayload(fixture.sharedFieldId!, 'overwrite'));
     expect(rejected.status).toBe(400);
     expect(rejected.body).toMatchObject({
       success: false,
@@ -1376,7 +1408,7 @@ describe('E-signature GraphQL read contract', () => {
     const signed = await request(app.getHttpServer())
       .post(path)
       .set('x-request-id', 'public-signing-submit-1')
-      .send({ fields: [{ id: signer.fieldId, value: 'Public Signer One' }] });
+      .send(signingPayload(signer.fieldId, 'Public Signer One'));
     expect(signed.status).toBe(200);
     expect(signed.body).toMatchObject({
       success: true,
@@ -1386,9 +1418,32 @@ describe('E-signature GraphQL read contract', () => {
         completionQueued: true,
       },
     });
-    await request(app.getHttpServer()).post(path).send({
-      fields: [{ id: signer.fieldId, value: 'Replay' }],
-    }).expect(404);
+    const replayed = await request(app.getHttpServer())
+      .post(path)
+      .send(signingPayload(signer.fieldId, 'Public Signer One'))
+      .expect(200);
+    expect(replayed.body).toEqual(signed.body);
+    await request(app.getHttpServer())
+      .post(path)
+      .send(signingPayload(signer.fieldId, 'Changed response'))
+      .expect(409)
+      .expect(({ body }) => {
+        expect(body.error.reason).toBe('SIGNATURE_RESPONSE_FINALIZED');
+      });
+    await request(app.getHttpServer())
+      .post(`${path}/decline`)
+      .send({ reason: 'Changed my mind' })
+      .expect(409);
+    expect(Number((await pool.query(
+      `SELECT COUNT(*) AS total FROM signature_audit_log
+       WHERE document_id=$1 AND recipient_id=$2 AND event_type='signed'`,
+      [fixture.documentId, signer.id],
+    )).rows[0].total)).toBe(1);
+    expect(Number((await pool.query(
+      `SELECT COUNT(*) AS total FROM signature_public_response_receipts
+       WHERE document_id=$1 AND recipient_id=$2 AND action='signed'`,
+      [fixture.documentId, signer.id],
+    )).rows[0].total)).toBe(1);
 
     const queued = await pool.query<{ id: number }>(
       `SELECT id FROM signature_completion_jobs
@@ -1451,7 +1506,7 @@ describe('E-signature GraphQL read contract', () => {
     const second = fixture.recipients[1];
     await request(app.getHttpServer())
       .post(`/api/public/sign/${first.token}`)
-      .send({ fields: [{ id: first.fieldId, value: 'First Signer' }] })
+      .send(signingPayload(first.fieldId, 'First Signer'))
       .expect(200);
 
     const key =
@@ -1484,6 +1539,19 @@ describe('E-signature GraphQL read contract', () => {
       success: true,
       data: { documentId: fixture.documentId, recipientId: second.id },
     });
+    const replayedDecline = await request(app.getHttpServer())
+      .post(`/api/public/sign/${secondToken}/decline`)
+      .send({ reason: 'Terms changed' })
+      .expect(200);
+    expect(replayedDecline.body).toEqual(declined.body);
+    await request(app.getHttpServer())
+      .post(`/api/public/sign/${secondToken}/decline`)
+      .send({ reason: 'Different reason' })
+      .expect(409);
+    await request(app.getHttpServer())
+      .post(`/api/public/sign/${secondToken}`)
+      .send(signingPayload(second.fieldId, 'Second Signer'))
+      .expect(409);
     expect((await pool.query(
       `SELECT status FROM signature_documents WHERE id=$1`,
       [fixture.documentId],
@@ -1509,12 +1577,12 @@ describe('E-signature GraphQL read contract', () => {
     const outcomes = await Promise.all([
       request(app.getHttpServer())
         .post(path)
-        .send({ fields: [{ id: signer.fieldId, value: 'Race Winner' }] }),
+        .send(signingPayload(signer.fieldId, 'Race Winner')),
       request(app.getHttpServer())
         .post(`${path}/decline`)
         .send({ reason: 'Race decline' }),
     ]);
-    expect(outcomes.map((outcome) => outcome.status).sort()).toEqual([200, 404]);
+    expect(outcomes.map((outcome) => outcome.status).sort()).toEqual([200, 409]);
     const authoritative = await pool.query<{ event_type: string }>(
       `SELECT event_type FROM signature_audit_log
        WHERE document_id=$1 AND event_type IN ('signed','declined')

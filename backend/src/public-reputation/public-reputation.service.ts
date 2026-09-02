@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   HttpException,
   Injectable,
   InternalServerErrorException,
@@ -10,6 +11,7 @@ import {
   PublicReputationRepository,
   REVIEW_PLATFORMS,
 } from './public-reputation.repository';
+import { publicReviewSubmissionFingerprint } from './public-review.idempotency';
 
 const WIDGET_KEY = /^[a-f0-9]{32}$/i;
 const REQUEST_TOKEN = /^[a-f0-9]{64}$/i;
@@ -105,19 +107,30 @@ export class PublicReputationService {
       throw new BadRequestException({ error: 'Review platform is invalid' });
     }
 
+    const submission = {
+      rating: numericRating,
+      reviewText: normalizedText || null,
+      platform: normalizedPlatform || null,
+      sentiment: this.sentiment(numericRating),
+    };
     const outcome = await this.guard(
       () =>
         this.repository.submitReview(token, {
-          rating: numericRating,
-          reviewText: normalizedText || null,
-          platform: normalizedPlatform || null,
-          sentiment: this.sentiment(numericRating),
+          ...submission,
+          requestFingerprint: publicReviewSubmissionFingerprint(submission),
         }),
       'Error submitting review',
       'Failed to submit review',
     );
     if (outcome.kind === 'not_found') {
       throw new NotFoundException({ error: 'Review request not found' });
+    }
+    if (outcome.kind === 'conflict') {
+      throw new ConflictException({
+        error: 'This review request has already been completed',
+        code: 'CONFLICT',
+        reason: 'REVIEW_RESPONSE_FINALIZED',
+      });
     }
     return {
       success: true,

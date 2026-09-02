@@ -508,13 +508,24 @@ describe('Reputation reviews GraphQL PostgreSQL contract', () => {
       preferred_platform: 'google',
     });
 
+    const firstSubmission = { rating: 5, review_text: 'Wonderful', platform: 'google' };
+    const secondSubmission = { rating: 4, review_text: 'Also good', platform: 'google' };
     const [one, two] = await Promise.all([
       request(app.getHttpServer()).post(`/api/reputation/public/review/${deliveryRequestToken}`)
-        .send({ rating: 5, review_text: 'Wonderful', platform: 'google' }),
+        .send(firstSubmission),
       request(app.getHttpServer()).post(`/api/reputation/public/review/${deliveryRequestToken}`)
-        .send({ rating: 4, review_text: 'Also good', platform: 'google' }),
+        .send(secondSubmission),
     ]);
-    expect([one.status, two.status].sort()).toEqual([200, 404]);
+    expect([one.status, two.status].sort()).toEqual([200, 409]);
+    const acceptedSubmission = one.status === 200 ? firstSubmission : secondSubmission;
+    await request(app.getHttpServer())
+      .post(`/api/reputation/public/review/${deliveryRequestToken}`)
+      .send(acceptedSubmission)
+      .expect(200);
+    await request(app.getHttpServer())
+      .post(`/api/reputation/public/review/${deliveryRequestToken}`)
+      .send({ ...acceptedSubmission, review_text: 'Changed response' })
+      .expect(409);
     const committed = await pool.query<{ count: string }>(
       `SELECT COUNT(*)::text count FROM reviews
        WHERE organization_id=$1 AND review_request_id=$2`,

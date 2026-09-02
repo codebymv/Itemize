@@ -168,7 +168,7 @@ describe('Public reputation retained HTTP parity (NestJS vs legacy origin)', () 
     }
   });
 
-  it('completes a request once with derived sentiment and denies replay identically', async () => {
+  it('completes a request once, replays it exactly, and rejects changed responses', async () => {
     const nest = await request(app.getHttpServer())
       .post(`/api/reputation/public/review/${tokens.nestSubmit}`)
       .send({ rating: 5, review_text: 'Wonderful', platform: 'google' })
@@ -177,6 +177,11 @@ describe('Public reputation retained HTTP parity (NestJS vs legacy origin)', () 
       success: true,
       redirect_url: 'https://reviews.example.com',
     });
+    const exactReplay = await request(app.getHttpServer())
+      .post(`/api/reputation/public/review/${tokens.nestSubmit}`)
+      .send({ rating: 5, review_text: 'Wonderful', platform: 'google' })
+      .expect(200);
+    expect(exactReplay.body).toEqual(nest.body);
 
     const legacy = await request(app.getHttpServer())
       .post(`/api/reputation/public/review/${tokens.legacySubmit}`)
@@ -215,8 +220,8 @@ describe('Public reputation retained HTTP parity (NestJS vs legacy origin)', () 
         .post(`/api/reputation/public/review/${tokens.nestSubmit}`)
         .send({ rating: 4 }),
     ]);
-    expect(replays[0].status).toBe(404);
-    expect(replays[1].status).toBe(404);
+    expect(replays[0].status).toBe(409);
+    expect(replays[1].status).toBe(409);
     expect(replays[0].body).toEqual(replays[1].body);
   });
 });
