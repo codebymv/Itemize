@@ -59,7 +59,7 @@ describe('segments API permanent GraphQL transport', () => {
 
     await getSegments({ is_active: true }, 3);
     await getSegment(7, 3);
-    await createSegment(input, 3);
+    await createSegment(input, 3, 'create-segment-key');
     await updateSegment(7, input, 3);
     await deleteSegment(7, 3);
     await calculateSegment(7, 3);
@@ -69,7 +69,7 @@ describe('segments API permanent GraphQL transport', () => {
 
     expect(getSegmentsViaGraphql).toHaveBeenCalledWith({ is_active: true }, 3);
     expect(getSegmentViaGraphql).toHaveBeenCalledWith(7, 3);
-    expect(createSegmentViaGraphql).toHaveBeenCalledWith(input, 3);
+    expect(createSegmentViaGraphql).toHaveBeenCalledWith(input, 3, 'create-segment-key');
     expect(updateSegmentViaGraphql).toHaveBeenCalledWith(7, input, 3);
     expect(deleteSegmentViaGraphql).toHaveBeenCalledWith(7, 3);
     expect(recalculateSegmentViaGraphql).toHaveBeenCalledWith(7, 3);

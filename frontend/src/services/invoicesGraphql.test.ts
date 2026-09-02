@@ -198,7 +198,7 @@ describe('core invoice GraphQL adapter', () => {
       discount_value: 1,
       tax_rate: 8.25,
       payment_terms: 30,
-    }, 4);
+    }, 'invoice-create-12', 4);
     await updateInvoiceViaGraphql(12, { notes: 'Updated', items }, 4);
     await expect(deleteInvoiceViaGraphql(12, 4))
       .resolves.toEqual({ success: true });
@@ -217,6 +217,7 @@ describe('core invoice GraphQL adapter', () => {
           taxRate: '8.25',
           paymentTerms: '30',
         }),
+        idempotencyKey: 'invoice-create-12',
       },
       4,
     );

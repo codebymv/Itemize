@@ -80,6 +80,7 @@ import { useOrganization } from "@/hooks/useOrganization";
 import { useToast } from "@/hooks/use-toast";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { useSingleFlightAction } from "@/hooks/useSingleFlightAction";
+import { useStableMutationKey } from "@/hooks/useStableMutationKey";
 import { cn } from "@/lib/utils";
 import { QUERY_STALE_TIME_MS, shouldRetryQuery } from "@/lib/queryPolicy";
 import { getInvoice, getInvoicePdf } from "@/services/invoicesApi";
@@ -163,6 +164,7 @@ export default function SignatureEditorPage() {
     run: runDocumentAction,
     dismissIfIdle,
   } = useSingleFlightAction();
+  const createAttempt = useStableMutationKey("create-signature-document");
   const working = prefilling || mutationPending;
   const [initialized, setInitialized] = useState(!id);
   const [showSendModal, setShowSendModal] = useState(false);
@@ -390,16 +392,22 @@ export default function SignatureEditorPage() {
   const handleCreateOrSave = async () => {
     if (!editable || !organizationId) return;
     await runDocumentAction(async () => {
+      let creationAttemptStarted = false;
       try {
         let target = document;
         const created = !target;
-        if (!target)
-          target = await createSignatureDocument({
+        if (!target) {
+          const createPayload = {
             title: title.trim() || "Untitled document",
             description,
             message,
             routing_mode: routingMode,
-          }, organizationId);
+          };
+          const idempotencyKey = createAttempt.begin(JSON.stringify(createPayload));
+          if (!idempotencyKey) return;
+          creationAttemptStarted = true;
+          target = await createSignatureDocument(createPayload, idempotencyKey, organizationId);
+        }
         if (file) target = await uploadSignatureDocument(target.id, file, organizationId);
         const updated = await updateSignatureDocument(target.id, {
           title: title.trim() || "Untitled document",
@@ -422,10 +430,12 @@ export default function SignatureEditorPage() {
         });
         toast({ title: created ? "Draft created" : "Document updated" });
         if (created) {
+          createAttempt.reset();
           initializedDocumentKeyRef.current = `${organizationId}:${updated.id}`;
           navigate(`/documents/${updated.id}`, { replace: true });
         }
       } catch {
+        if (creationAttemptStarted) createAttempt.release();
         toast({
           title: "Document could not be saved",
           description: "Review the draft and try again.",

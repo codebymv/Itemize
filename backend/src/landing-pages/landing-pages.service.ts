@@ -21,6 +21,7 @@ import {
   LandingPageSectionsResult,
 } from './landing-page.types';
 import {
+  LandingPageCreationOutcome,
   LandingPageRow,
   LandingPageSectionRow,
   LandingPagesRepository,
@@ -28,6 +29,7 @@ import {
   SectionValue,
   UpdatePageValue,
 } from './landing-pages.repository';
+import { landingPageCreationFingerprint } from './landing-page-creation.idempotency';
 
 const PAGE_STATUSES = new Set(['draft', 'published', 'archived']);
 const SECTION_TYPES = new Set([
@@ -100,38 +102,46 @@ export class LandingPagesService {
     organizationId: number,
     userId: number,
     input: CreateLandingPageInput,
+    idempotencyKey: string,
   ): Promise<LandingPage> {
     const name = this.text(input.name, 'name', 255);
     const slug = input.slug
       ? this.slug(input.slug)
       : this.slug(name);
+    const value = {
+      name,
+      description: this.nullableText(input.description, 'description', 10000),
+      slug,
+      autoAllocateSlug: !input.slug,
+      theme: this.record(input.theme ?? DEFAULT_THEME, 'theme'),
+      settings: this.record(input.settings ?? DEFAULT_SETTINGS, 'settings'),
+      seoTitle: this.nullableText(input.seoTitle, 'seoTitle', 255),
+      seoDescription: this.nullableText(
+        input.seoDescription,
+        'seoDescription',
+        500,
+      ),
+      seoKeywords: this.nullableText(input.seoKeywords, 'seoKeywords', 5000),
+      ogImage: this.nullableText(input.ogImage, 'ogImage', 500),
+      sections: this.sections(input.sections ?? []),
+    };
     const outcome = await this.withConstraintMapping(() =>
-      this.pages.create(organizationId, userId, {
-        name,
-        description: this.nullableText(input.description, 'description', 10000),
-        slug,
-        autoAllocateSlug: !input.slug,
-        theme: this.record(input.theme ?? DEFAULT_THEME, 'theme'),
-        settings: this.record(input.settings ?? DEFAULT_SETTINGS, 'settings'),
-        seoTitle: this.nullableText(input.seoTitle, 'seoTitle', 255),
-        seoDescription: this.nullableText(
-          input.seoDescription,
-          'seoDescription',
-          500,
-        ),
-        seoKeywords: this.nullableText(input.seoKeywords, 'seoKeywords', 5000),
-        ogImage: this.nullableText(input.ogImage, 'ogImage', 500),
-        sections: this.sections(input.sections ?? []),
-      }),
+      this.pages.create(
+        organizationId,
+        userId,
+        value,
+        this.idempotencyKey(idempotencyKey),
+        landingPageCreationFingerprint('create', value),
+      ),
     );
-    if ('limit' in outcome) {
+    if (outcome.kind === 'limit') {
       throw itemizeGraphqlError(
         `You've reached your landing page limit (${outcome.limit.current}/${outcome.limit.limit}). Please upgrade your plan.`,
         'FORBIDDEN',
         { reason: 'PLAN_LIMIT_REACHED', ...outcome.limit },
       );
     }
-    return this.mapAggregate(outcome);
+    return this.creationOutcome(outcome);
   }
 
   async update(
@@ -287,18 +297,24 @@ export class LandingPagesService {
     organizationId: number,
     userId: number,
     pageId: number,
+    idempotencyKey: string,
   ): Promise<LandingPage> {
     this.id(pageId, 'id');
-    const result = await this.pages.duplicate(organizationId, userId, pageId);
-    if (!result) throw this.notFound();
-    if ('limit' in result) {
+    const result = await this.pages.duplicate(
+      organizationId,
+      userId,
+      pageId,
+      this.idempotencyKey(idempotencyKey),
+      landingPageCreationFingerprint('duplicate', { sourcePageId: pageId }),
+    );
+    if (result.kind === 'limit') {
       throw itemizeGraphqlError(
         `You've reached your landing page limit (${result.limit.current}/${result.limit.limit}). Please upgrade your plan.`,
         'FORBIDDEN',
         { reason: 'PLAN_LIMIT_REACHED', ...result.limit },
       );
     }
-    return this.mapAggregate(result);
+    return this.creationOutcome(result);
   }
 
   async replaceSections(
@@ -477,6 +493,25 @@ export class LandingPagesService {
     return this.mapPage(value.page, value.sections);
   }
 
+  private creationOutcome(outcome: Exclude<LandingPageCreationOutcome, { kind: 'limit' }>): LandingPage {
+    if (outcome.kind === 'not_found') throw this.notFound();
+    if (outcome.kind === 'idempotency_conflict') {
+      throw itemizeGraphqlError(
+        'idempotencyKey was already used for a different landing page creation request',
+        'CONFLICT',
+        { field: 'idempotencyKey', reason: 'IDEMPOTENCY_KEY_REUSED' },
+      );
+    }
+    if (outcome.kind === 'result_unavailable') {
+      throw itemizeGraphqlError(
+        'The original landing page creation result is no longer available',
+        'CONFLICT',
+        { reason: 'IDEMPOTENT_RESULT_UNAVAILABLE' },
+      );
+    }
+    return this.mapAggregate(outcome.value);
+  }
+
   private mapPage(
     row: LandingPageRow,
     sections: LandingPageSectionRow[],
@@ -630,6 +665,18 @@ export class LandingPagesService {
       });
     }
     return value;
+  }
+
+  private idempotencyKey(value: string): string {
+    const key = String(value ?? '').trim();
+    if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(key)) {
+      throw itemizeGraphqlError(
+        'idempotencyKey must be 1-128 safe ASCII characters',
+        'BAD_USER_INPUT',
+        { field: 'idempotencyKey', reason: 'INVALID_IDEMPOTENCY_KEY' },
+      );
+    }
+    return key;
   }
 
   private nonNegativeInt(value: number, field: string): number {

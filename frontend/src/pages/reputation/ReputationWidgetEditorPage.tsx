@@ -47,6 +47,7 @@ import { useDirtyState } from "@/hooks/useDirtyState";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { useSingleFlightAction } from "@/hooks/useSingleFlightAction";
+import { useStableMutationKey } from "@/hooks/useStableMutationKey";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { QUERY_STALE_TIME_MS, shouldRetryQuery } from "@/lib/queryPolicy";
@@ -127,6 +128,7 @@ export function ReputationWidgetEditorPage() {
   const [widget, setWidget] = useState<ReviewWidget | null>(null);
   const [mode, setMode] = useState<EditorMode>("settings");
   const { pending: saving, run: runSave } = useSingleFlightAction();
+  const createAttempt = useStableMutationKey("create-reputation-widget");
   const validWidgetId = Number.isSafeInteger(widgetId) && (widgetId ?? 0) > 0;
   const widgetQueryKey = ["reputation-widget", organizationId, widgetId] as const;
   const widgetQuery = useQuery({
@@ -226,11 +228,23 @@ export function ReputationWidgetEditorPage() {
       return;
     }
     await runSave(async () => {
-      try {
       const payload = { ...draft, name: draft.name.trim() };
-      const saved = widget
-        ? await updateReviewWidget(widget.id, payload, organizationId)
-        : await createReviewWidget(payload, organizationId);
+      const creationKey = widget ? null : createAttempt.begin(JSON.stringify({
+        ...payload,
+        platforms: [...payload.platforms].sort(),
+      }));
+      if (!widget && !creationKey) return;
+      let saved: ReviewWidget;
+      try {
+        saved = widget
+          ? await updateReviewWidget(widget.id, payload, organizationId)
+          : await createReviewWidget(payload, organizationId, creationKey as string);
+      } catch {
+        if (creationKey) createAttempt.release();
+        toast({ title: "Could not save widget", variant: "destructive" });
+        return;
+      }
+      if (creationKey) createAttempt.reset();
       const {
         id: _id,
         organization_id: _organizationId,
@@ -258,9 +272,6 @@ export function ReputationWidgetEditorPage() {
       });
       toast({ title: "Review widget saved" });
       if (isNew) navigate(`/review-widgets/${saved.id}`, { replace: true });
-      } catch {
-        toast({ title: "Could not save widget", variant: "destructive" });
-      }
     });
   };
 

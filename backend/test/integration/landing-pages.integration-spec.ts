@@ -233,10 +233,11 @@ describe('Authenticated landing-pages GraphQL PostgreSQL contract', () => {
     const created = await mutation(
       memberToken,
       organizationId,
-      `mutation Create($input: CreateLandingPageInput!) {
-        createLandingPage(input: $input) { ${pageFields} }
+      `mutation Create($input: CreateLandingPageInput!, $idempotencyKey: String!) {
+        createLandingPage(input: $input, idempotencyKey: $idempotencyKey) { ${pageFields} }
       }`,
       {
+        idempotencyKey: 'page-create-generated-slug',
         input: {
           name: '  Launch  ',
           sections: [
@@ -263,7 +264,10 @@ describe('Authenticated landing-pages GraphQL PostgreSQL contract', () => {
       memberToken,
       organizationId,
       `mutation {
-        createLandingPage(input: { name: "Conflict", slug: "launch" }) { id }
+        createLandingPage(
+          input: { name: "Conflict", slug: "launch" }
+          idempotencyKey: "page-create-explicit-conflict"
+        ) { id }
       }`,
     ).expect(200);
     expect(conflict.body.errors[0].extensions).toMatchObject({
@@ -564,12 +568,90 @@ describe('Authenticated landing-pages GraphQL PostgreSQL contract', () => {
     expect(after.rows[0].settings).toEqual({ enableAnalytics: true });
   });
 
+  it('replays page creation and duplication without multiplying resources', async () => {
+    const createDocument = `mutation Create(
+      $input: CreateLandingPageInput!
+      $idempotencyKey: String!
+    ) {
+      createLandingPage(input: $input, idempotencyKey: $idempotencyKey) { ${pageFields} }
+    }`;
+    const createVariables = {
+      idempotencyKey: 'page-create-replay',
+      input: {
+        name: 'Replay page',
+        sections: [{ sectionType: 'hero', content: { heading: 'Safe' } }],
+      },
+    };
+    const [created, createReplay] = await Promise.all([
+      mutation(memberToken, organizationId, createDocument, createVariables).expect(200),
+      mutation(memberToken, organizationId, createDocument, createVariables).expect(200),
+    ]);
+    expect(created.body.errors).toBeUndefined();
+    expect(createReplay.body.data.createLandingPage).toEqual(
+      created.body.data.createLandingPage,
+    );
+    const createCount = await pool.query<{ count: number }>(
+      `SELECT COUNT(*)::int AS count FROM pages
+       WHERE organization_id=$1 AND name='Replay page'`,
+      [organizationId],
+    );
+    expect(createCount.rows[0].count).toBe(1);
+
+    const createConflict = await mutation(
+      memberToken,
+      organizationId,
+      createDocument,
+      { ...createVariables, input: { ...createVariables.input, name: 'Changed replay page' } },
+    ).expect(200);
+    expect(createConflict.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', reason: 'IDEMPOTENCY_KEY_REUSED',
+    });
+
+    const duplicateDocument = `mutation Duplicate($id: Int!, $idempotencyKey: String!) {
+      duplicateLandingPage(id: $id, idempotencyKey: $idempotencyKey) { ${pageFields} }
+    }`;
+    const duplicateVariables = {
+      id: pageId, idempotencyKey: 'page-duplicate-replay',
+    };
+    const [duplicated, duplicateReplay] = await Promise.all([
+      mutation(memberToken, organizationId, duplicateDocument, duplicateVariables).expect(200),
+      mutation(memberToken, organizationId, duplicateDocument, duplicateVariables).expect(200),
+    ]);
+    expect(duplicated.body.errors).toBeUndefined();
+    expect(duplicateReplay.body.data.duplicateLandingPage).toEqual(
+      duplicated.body.data.duplicateLandingPage,
+    );
+    const duplicateId = Number(duplicated.body.data.duplicateLandingPage.id);
+    const duplicateCount = await pool.query<{ count: number }>(
+      `SELECT COUNT(*)::int AS count FROM pages
+       WHERE organization_id=$1 AND name='Launch Copy'`,
+      [organizationId],
+    );
+    expect(duplicateCount.rows[0].count).toBe(1);
+
+    await mutation(
+      memberToken,
+      organizationId,
+      `mutation Delete($id: Int!) { deleteLandingPage(id: $id) { deletedId } }`,
+      { id: duplicateId },
+    ).expect(200);
+    const unavailable = await mutation(
+      memberToken, organizationId, duplicateDocument, duplicateVariables,
+    ).expect(200);
+    expect(unavailable.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', reason: 'IDEMPOTENT_RESULT_UNAVAILABLE',
+    });
+  });
+
   it('duplicates complete drafts, enforces limits, and tenant-privately deletes', async () => {
     const duplicated = await mutation(
       memberToken,
       organizationId,
       `mutation {
-        duplicateLandingPage(id: ${pageId}) { ${pageFields} }
+        duplicateLandingPage(
+          id: ${pageId}
+          idempotencyKey: "page-duplicate-complete-draft"
+        ) { ${pageFields} }
       }`,
     ).expect(200);
     expect(duplicated.body.errors).toBeUndefined();
@@ -595,7 +677,12 @@ describe('Authenticated landing-pages GraphQL PostgreSQL contract', () => {
     const limited = await mutation(
       memberToken,
       organizationId,
-      `mutation { duplicateLandingPage(id: ${pageId}) { id } }`,
+      `mutation {
+        duplicateLandingPage(
+          id: ${pageId}
+          idempotencyKey: "page-duplicate-over-limit"
+        ) { id }
+      }`,
     ).expect(200);
     expect(limited.body.errors[0].extensions).toMatchObject({
       code: 'FORBIDDEN',

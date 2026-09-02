@@ -202,6 +202,11 @@ export function EmailTemplateEditorPage() {
     keyFor: publishKeyFor,
     reset: resetPublishKey,
   } = useStableMutationKey("email-template-publish");
+  const {
+    begin: beginCreateAttempt,
+    release: releaseCreateAttempt,
+    reset: resetCreateAttempt,
+  } = useStableMutationKey("email-template-create-draft");
 
   const runEditorAction = useCallback(
     async <T,>(
@@ -231,29 +236,23 @@ export function EmailTemplateEditorPage() {
         });
         return null;
       }
+      let saved: EmailTemplate;
       try {
-        const saved = template
-          ? await saveEmailTemplateDraft(template.id, input, organizationId)
-          : await createEmailTemplateDraft(input, organizationId);
-        setTemplate(saved);
-        patchCatalog(saved);
-        const cleanState = {
-          ...stateFromTemplate(saved),
-          isActive: state.isActive,
-        };
-        setState(cleanState);
-        markClean(cleanState);
-        if (!template && options.navigateAfterCreate !== false) {
-          navigate(`/email-templates/${saved.id}`, { replace: true });
+        if (template) {
+          saved = await saveEmailTemplateDraft(template.id, input, organizationId);
+        } else {
+          const idempotencyKey = beginCreateAttempt(
+            JSON.stringify({ organizationId, input }),
+          );
+          if (!idempotencyKey) return null;
+          try {
+            saved = await createEmailTemplateDraft(input, idempotencyKey, organizationId);
+            resetCreateAttempt();
+          } catch (error) {
+            releaseCreateAttempt();
+            throw error;
+          }
         }
-        if (options.notify !== false) {
-          toast({
-            title: "Draft saved",
-            description:
-              "The published version remains live until you publish.",
-          });
-        }
-        return saved;
       } catch {
         toast({
           title: "Unable to save draft",
@@ -262,13 +261,35 @@ export function EmailTemplateEditorPage() {
         });
         return null;
       }
+      setTemplate(saved);
+      patchCatalog(saved);
+      const cleanState = {
+        ...stateFromTemplate(saved),
+        isActive: state.isActive,
+      };
+      setState(cleanState);
+      markClean(cleanState);
+      if (!template && options.navigateAfterCreate !== false) {
+        navigate(`/email-templates/${saved.id}`, { replace: true });
+      }
+      if (options.notify !== false) {
+        toast({
+          title: "Draft saved",
+          description:
+            "The published version remains live until you publish.",
+        });
+      }
+      return saved;
     },
     [
       input,
+      beginCreateAttempt,
       markClean,
       navigate,
       organizationId,
       patchCatalog,
+      releaseCreateAttempt,
+      resetCreateAttempt,
       state,
       template,
       toast,

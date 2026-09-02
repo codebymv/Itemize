@@ -271,6 +271,16 @@ export function CampaignDetailPage() {
     useState<CampaignPreview | null>(null);
   const { pending: working, run: runCampaignAction } = useSingleFlightAction();
   const {
+    begin: beginCampaignCreateAttempt,
+    release: releaseCampaignCreateAttempt,
+    reset: resetCampaignCreateAttempt,
+  } = useStableMutationKey("campaign-create");
+  const {
+    begin: beginCampaignDuplicateAttempt,
+    release: releaseCampaignDuplicateAttempt,
+    reset: resetCampaignDuplicateAttempt,
+  } = useStableMutationKey("campaign-duplicate");
+  const {
     begin: beginCampaignSendAttempt,
     release: releaseCampaignSendAttempt,
     reset: resetCampaignSendAttempt,
@@ -476,8 +486,7 @@ export function CampaignDetailPage() {
       return;
     }
     await runCampaignAction(async () => {
-      try {
-        const payload = {
+      const payload = {
         name: form.name.trim(),
         subject: form.subject.trim(),
         from_name: form.fromName.trim() || null,
@@ -494,35 +503,32 @@ export function CampaignDetailPage() {
         tag_ids: form.segmentType === "tag" ? form.tagIds : [],
         excluded_tag_ids: form.excludedTagIds,
       };
-        const updated = campaign
-          ? await updateCampaign(campaign.id, payload, organizationId)
-          : await createCampaign(
-              { ...payload, status: "draft", timezone: scheduleTimezone },
+      const creating = campaign === null;
+      let updated: EmailCampaign;
+      try {
+        if (campaign) {
+          updated = await updateCampaign(campaign.id, payload, organizationId);
+        } else {
+          const createPayload = {
+            ...payload,
+            status: "draft" as const,
+            timezone: scheduleTimezone,
+          };
+          const idempotencyKey = beginCampaignCreateAttempt(
+            JSON.stringify({ organizationId, createPayload }),
+          );
+          if (!idempotencyKey) return;
+          try {
+            updated = await createCampaign(
+              createPayload,
+              idempotencyKey,
               organizationId,
             );
-        setCampaign(updated);
-        resetForm(updated);
-        toast({
-          title: campaign ? "Campaign saved" : "Campaign created",
-          description: "The campaign setup is up to date.",
-        });
-        let nextAudiencePreview: CampaignPreview | null = null;
-        try {
-          nextAudiencePreview = await previewCampaign(updated.id, organizationId);
-          setAudiencePreview(nextAudiencePreview);
-        } catch {
-          setAudiencePreview(null);
-          toast({
-            title: "Audience preview unavailable",
-            description:
-              "The campaign was saved, but its eligible recipient count could not be refreshed.",
-            variant: "destructive",
-          });
-        }
-        cacheCampaignBootstrap(updated, nextAudiencePreview);
-        if (!campaign) {
-          initializedBootstrapRef.current = `${organizationId}:${updated.id}`;
-          navigate(`/campaigns/${updated.id}`, { replace: true });
+            resetCampaignCreateAttempt();
+          } catch (error) {
+            releaseCampaignCreateAttempt();
+            throw error;
+          }
         }
       } catch (error) {
         toast({
@@ -530,6 +536,31 @@ export function CampaignDetailPage() {
           description: "Your changes remain in the editor.",
           variant: "destructive",
         });
+        return;
+      }
+      setCampaign(updated);
+      resetForm(updated);
+      toast({
+        title: creating ? "Campaign created" : "Campaign saved",
+        description: "The campaign setup is up to date.",
+      });
+      let nextAudiencePreview: CampaignPreview | null = null;
+      try {
+        nextAudiencePreview = await previewCampaign(updated.id, organizationId);
+        setAudiencePreview(nextAudiencePreview);
+      } catch {
+        setAudiencePreview(null);
+        toast({
+          title: "Audience preview unavailable",
+          description:
+            "The campaign was saved, but its eligible recipient count could not be refreshed.",
+          variant: "destructive",
+        });
+      }
+      cacheCampaignBootstrap(updated, nextAudiencePreview);
+      if (creating) {
+        initializedBootstrapRef.current = `${organizationId}:${updated.id}`;
+        navigate(`/campaigns/${updated.id}`, { replace: true });
       }
     });
   };
@@ -713,21 +744,33 @@ export function CampaignDetailPage() {
   const handleDuplicate = async () => {
     if (!campaign || !organizationId) return;
     await runCampaignAction(async () => {
+      const idempotencyKey = beginCampaignDuplicateAttempt(
+        JSON.stringify({ organizationId, campaignId: campaign.id }),
+      );
+      if (!idempotencyKey) return;
+      let copy: EmailCampaign;
       try {
-        const copy = await duplicateCampaign(campaign.id, organizationId);
-        void queryClient.invalidateQueries({ queryKey: campaignQueryKeys.queues(organizationId) });
-        toast({
-          title: "Campaign duplicated",
-          description: "A new draft is ready to edit.",
-        });
-        navigate(`/campaigns/${copy.id}`);
+        copy = await duplicateCampaign(
+          campaign.id,
+          idempotencyKey,
+          organizationId,
+        );
+        resetCampaignDuplicateAttempt();
       } catch {
+        releaseCampaignDuplicateAttempt();
         toast({
           title: "Unable to duplicate campaign",
           description: "No copy was created.",
           variant: "destructive",
         });
+        return;
       }
+      void queryClient.invalidateQueries({ queryKey: campaignQueryKeys.queues(organizationId) });
+      toast({
+        title: "Campaign duplicated",
+        description: "A new draft is ready to edit.",
+      });
+      navigate(`/campaigns/${copy.id}`);
     });
   };
 

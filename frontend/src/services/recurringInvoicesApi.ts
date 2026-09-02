@@ -123,9 +123,10 @@ export const createRecurringInvoice = async (
     start_date: string;
     items: RecurringInvoiceItem[];
   },
+  idempotencyKey: string,
   organizationId?: number,
 ): Promise<RecurringInvoice> => {
-  return createRecurringInvoiceViaGraphql(input, organizationId);
+  return createRecurringInvoiceViaGraphql(input, idempotencyKey, organizationId);
 };
 
 export const updateRecurringInvoice = async (

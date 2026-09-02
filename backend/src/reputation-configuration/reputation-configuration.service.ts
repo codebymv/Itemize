@@ -24,12 +24,14 @@ import {
   ReputationWidget,
   ReputationWidgetEmbedCode,
 } from './reputation-configuration.types';
+import { reputationWidgetCreationFingerprint } from './reputation-widget-creation.idempotency';
 
 const PLATFORMS = new Set(['google', 'facebook', 'yelp', 'trustpilot', 'g2', 'capterra', 'custom']);
 const WIDGET_TYPES = new Set(['carousel', 'grid', 'list', 'badge', 'floating']);
 const THEMES = new Set(['light', 'dark', 'auto']);
 const CHANNELS = new Set(['email', 'sms', 'both']);
 const has = (value: object, field: string): boolean => Object.prototype.hasOwnProperty.call(value, field);
+const IDEMPOTENCY_KEY = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 
 @Injectable()
 export class ReputationConfigurationService {
@@ -91,14 +93,37 @@ export class ReputationConfigurationService {
   }
 
   async createWidget(
-    organizationId: number, input: CreateReputationWidgetInput,
+    organizationId: number,
+    userId: number,
+    input: CreateReputationWidgetInput,
+    idempotencyKey: string,
   ): Promise<ReputationWidget> {
     const values = this.widgetValues(null, input);
+    const key = this.idempotencyKey(idempotencyKey);
     try {
-      const row = await this.repository.createWidget(
-        organizationId, randomBytes(16).toString('hex'), values,
+      const outcome = await this.repository.createWidget(
+        organizationId,
+        userId,
+        key,
+        reputationWidgetCreationFingerprint(values),
+        randomBytes(16).toString('hex'),
+        values,
       );
-      return this.mapWidget(row);
+      if (outcome.kind === 'idempotency_conflict') {
+        throw itemizeGraphqlError(
+          'idempotencyKey was already used for a different review widget creation request',
+          'CONFLICT',
+          { field: 'idempotencyKey', reason: 'IDEMPOTENCY_KEY_REUSED' },
+        );
+      }
+      if (outcome.kind === 'result_unavailable') {
+        throw itemizeGraphqlError(
+          'The review widget created by this request is no longer available',
+          'CONFLICT',
+          { field: 'idempotencyKey', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE' },
+        );
+      }
+      return this.mapWidget(outcome.row);
     } catch (error) { this.rethrow(error); }
   }
 
@@ -387,6 +412,18 @@ export class ReputationConfigurationService {
 
   private id(value: number, label: string): void {
     if (!Number.isSafeInteger(value) || value < 1) this.badInput(`${label} ID must be positive`, 'id');
+  }
+
+  private idempotencyKey(value: string): string {
+    const normalized = String(value ?? '').trim();
+    if (!IDEMPOTENCY_KEY.test(normalized)) {
+      throw itemizeGraphqlError(
+        'idempotencyKey must be 1-128 safe ASCII characters',
+        'BAD_USER_INPUT',
+        { field: 'idempotencyKey', reason: 'INVALID_IDEMPOTENCY_KEY' },
+      );
+    }
+    return normalized;
   }
 
   private baseUrl(value: string | undefined, fallback: string): string {

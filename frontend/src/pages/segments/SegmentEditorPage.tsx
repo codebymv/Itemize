@@ -33,6 +33,7 @@ import { AvailabilitySettingRow } from "@/components/settings/SettingsPrimitives
 import { useOrganization } from "@/hooks/useOrganization";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { useSingleFlightAction } from "@/hooks/useSingleFlightAction";
+import { useStableMutationKey } from "@/hooks/useStableMutationKey";
 import { useToast } from "@/hooks/use-toast";
 import { QUERY_STALE_TIME_MS, shouldRetryQuery } from "@/lib/queryPolicy";
 import { cn } from "@/lib/utils";
@@ -86,6 +87,7 @@ export function SegmentEditorPage() {
   const [options, setOptions] = useState<FilterOptions | null>(null);
   const [preview, setPreview] = useState<SegmentPreview | null>(null);
   const { pending: saving, run: runSave } = useSingleFlightAction();
+  const createAttempt = useStableMutationKey("create-segment");
   const [previewing, setPreviewing] = useState(false);
   const parsedSegmentId = Number(id);
   const validSegmentId = !isNew
@@ -236,7 +238,6 @@ export function SegmentEditorPage() {
       return;
     }
     await runSave(async () => {
-      try {
       const payload: Partial<Segment> = isStatic
         ? {
             name: form.name.trim(),
@@ -251,9 +252,23 @@ export function SegmentEditorPage() {
             segment_type: "dynamic",
             is_active: form.isActive,
           };
-      const saved = segment
-        ? await updateSegment(segment.id, payload, organizationId)
-        : await createSegment(payload, organizationId);
+      const creationKey = segment ? null : createAttempt.begin(JSON.stringify(payload));
+      if (!segment && !creationKey) return;
+      let saved: Segment;
+      try {
+        saved = segment
+          ? await updateSegment(segment.id, payload, organizationId)
+          : await createSegment(payload, organizationId, creationKey as string);
+      } catch {
+        if (creationKey) createAttempt.release();
+        toast({
+          title: "Unable to save segment",
+          description: "Your changes remain in the editor.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (creationKey) createAttempt.reset();
       queryClient.setQueryData<Segment[]>(
         segmentQueryKeys.catalog(organizationId),
         current => {
@@ -287,13 +302,6 @@ export function SegmentEditorPage() {
         title: segment ? "Segment saved" : "Segment created",
         description: "The audience definition is up to date.",
       });
-      } catch {
-        toast({
-          title: "Unable to save segment",
-          description: "Your changes remain in the editor.",
-          variant: "destructive",
-        });
-      }
     });
   };
 

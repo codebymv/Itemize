@@ -3,6 +3,7 @@ import * as crypto from 'crypto';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
 import { extractEmailTemplateVariables } from './email-template.variables';
+import type { EmailTemplateCreationAction } from './email-template-creation.idempotency';
 
 export class EmailTemplatePublishIdempotencyConflictError extends Error {}
 
@@ -65,6 +66,18 @@ export type EmailTemplateStatsRow = {
 export type EmailTemplateCategoryRow = {
   category: string;
   count: string;
+};
+
+export type EmailTemplateCreationOutcome =
+  | { kind: 'created'; row: EmailTemplateRow; replayed: boolean }
+  | { kind: 'not_found' }
+  | { kind: 'idempotency_conflict' }
+  | { kind: 'result_unavailable' };
+
+type EmailTemplateCreationReceiptRow = {
+  action: EmailTemplateCreationAction;
+  request_fingerprint: string;
+  result_template_id: number | null;
 };
 
 const columns = (alias = 'et') => `
@@ -189,8 +202,15 @@ export class EmailTemplatesRepository {
     organizationId: number,
     userId: number,
     values: EmailTemplateValues,
-  ): Promise<EmailTemplateRow> {
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<EmailTemplateCreationOutcome> {
     return this.transaction(async (client) => {
+      await client.query('SELECT pg_advisory_xact_lock($1)', [organizationId]);
+      const replay = await this.replayCreationReceipt(
+        client, organizationId, idempotencyKey, 'create', requestFingerprint,
+      );
+      if (replay) return replay;
       const result = await client.query<EmailTemplateRow>(
         `INSERT INTO email_templates (
            organization_id, name, subject, preheader, body_html, body_text,
@@ -214,7 +234,11 @@ export class EmailTemplatesRepository {
         'UPDATE email_templates SET published_version_id=$2 WHERE id=$1',
         [template.id, version.rows[0].id],
       );
-      return (await this.selectById(client, organizationId, Number(template.id)))!;
+      const row = (await this.selectById(client, organizationId, Number(template.id)))!;
+      await this.insertCreationReceipt(
+        client, organizationId, userId, idempotencyKey, 'create', requestFingerprint, row.id,
+      );
+      return { kind: 'created', row, replayed: false };
     });
   }
 
@@ -222,8 +246,15 @@ export class EmailTemplatesRepository {
     organizationId: number,
     userId: number,
     values: EmailTemplateValues,
-  ): Promise<EmailTemplateRow> {
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<EmailTemplateCreationOutcome> {
     return this.transaction(async (client) => {
+      await client.query('SELECT pg_advisory_xact_lock($1)', [organizationId]);
+      const replay = await this.replayCreationReceipt(
+        client, organizationId, idempotencyKey, 'create_draft', requestFingerprint,
+      );
+      if (replay) return replay;
       const inserted = await client.query<{ id: number }>(
         `INSERT INTO email_templates (
            organization_id,name,subject,preheader,body_html,body_text,variables,category,is_active,created_by
@@ -242,7 +273,11 @@ export class EmailTemplatesRepository {
       );
       await client.query('UPDATE email_templates SET draft_version_id=$2 WHERE id=$1',
         [templateId, version.rows[0].id]);
-      return (await this.selectById(client, organizationId, templateId))!;
+      const row = (await this.selectById(client, organizationId, templateId))!;
+      await this.insertCreationReceipt(
+        client, organizationId, userId, idempotencyKey, 'create_draft', requestFingerprint, row.id,
+      );
+      return { kind: 'created', row, replayed: false };
     });
   }
 
@@ -439,8 +474,15 @@ export class EmailTemplatesRepository {
     organizationId: number,
     id: number,
     userId: number,
-  ): Promise<EmailTemplateRow | null> {
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<EmailTemplateCreationOutcome> {
     return this.transaction(async (client) => {
+      await client.query('SELECT pg_advisory_xact_lock($1)', [organizationId]);
+      const replay = await this.replayCreationReceipt(
+        client, organizationId, idempotencyKey, 'duplicate', requestFingerprint,
+      );
+      if (replay) return replay;
       const result = await client.query<EmailTemplateRow>(
         `INSERT INTO email_templates (
            organization_id,name,subject,preheader,body_html,body_text,variables,category,is_active,created_by
@@ -450,7 +492,7 @@ export class EmailTemplatesRepository {
         [id, organizationId, userId],
       );
       const copy = result.rows[0];
-      if (!copy) return null;
+      if (!copy) return { kind: 'not_found' };
       const version = await client.query<{ id: number }>(
         `INSERT INTO email_template_versions (
            organization_id,template_id,version_number,state,subject,preheader,body_html,body_text,
@@ -461,7 +503,12 @@ export class EmailTemplatesRepository {
       );
       await client.query('UPDATE email_templates SET published_version_id=$2 WHERE id=$1',
         [copy.id, version.rows[0].id]);
-      return this.selectById(client, organizationId, Number(copy.id));
+      const row = await this.selectById(client, organizationId, Number(copy.id));
+      if (!row) throw new Error('Duplicated email template could not be reloaded');
+      await this.insertCreationReceipt(
+        client, organizationId, userId, idempotencyKey, 'duplicate', requestFingerprint, row.id,
+      );
+      return { kind: 'created', row, replayed: false };
     });
   }
 
@@ -473,6 +520,49 @@ export class EmailTemplatesRepository {
       [id, organizationId],
     );
     return result.rows.length === 1;
+  }
+
+  private async replayCreationReceipt(
+    client: PoolClient,
+    organizationId: number,
+    idempotencyKey: string,
+    action: EmailTemplateCreationAction,
+    requestFingerprint: string,
+  ): Promise<EmailTemplateCreationOutcome | null> {
+    const receipt = await client.query<EmailTemplateCreationReceiptRow>(
+      `SELECT action,request_fingerprint,result_template_id
+       FROM email_template_creation_receipts
+       WHERE organization_id=$1 AND idempotency_key=$2 FOR UPDATE`,
+      [organizationId, idempotencyKey],
+    );
+    const existing = receipt.rows[0];
+    if (!existing) return null;
+    if (existing.action !== action || existing.request_fingerprint !== requestFingerprint) {
+      return { kind: 'idempotency_conflict' };
+    }
+    if (existing.result_template_id === null) return { kind: 'result_unavailable' };
+    const row = await this.selectById(client, organizationId, existing.result_template_id);
+    return row
+      ? { kind: 'created', row, replayed: true }
+      : { kind: 'result_unavailable' };
+  }
+
+  private async insertCreationReceipt(
+    client: PoolClient,
+    organizationId: number,
+    userId: number,
+    idempotencyKey: string,
+    action: EmailTemplateCreationAction,
+    requestFingerprint: string,
+    resultTemplateId: number,
+  ): Promise<void> {
+    await client.query(
+      `INSERT INTO email_template_creation_receipts (
+         organization_id,requested_by_user_id,idempotency_key,action,
+         request_fingerprint,result_template_id
+       ) VALUES ($1,$2,$3,$4,$5,$6)`,
+      [organizationId, userId, idempotencyKey, action, requestFingerprint, resultTemplateId],
+    );
   }
 
   private async transaction<T>(work: (client: PoolClient) => Promise<T>): Promise<T> {

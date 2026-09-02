@@ -46,15 +46,19 @@ describe('CampaignsService', () => {
   });
 
   it('normalizes create fields while retaining the typed audience contract', async () => {
-    repository.create.mockResolvedValue(row({ segment_type: 'tag', tag_ids: [12] }));
+    repository.create.mockResolvedValue({
+      kind: 'created',
+      row: row({ segment_type: 'tag', tag_ids: [12] }),
+      replayed: false,
+    });
     await service.create(4, 7, {
       name: ' Launch ', subject: ' Hello ', segmentType: 'tag', tagIds: [12],
       excludedTagIds: [], segmentFilter: {},
-    });
+    }, 'campaign-create-9');
     expect(repository.create).toHaveBeenCalledWith(4, 7, expect.objectContaining({
       name: 'Launch', subject: ' Hello ', segmentType: 'tag', tagIds: [12],
       templateId: null, contentText: null,
-    }));
+    }), 'campaign-create-9', expect.stringMatching(/^[a-f0-9]{64}$/));
   });
 
   it('preserves omitted update fields and permits explicit nullable-field clearing', async () => {
@@ -66,7 +70,7 @@ describe('CampaignsService', () => {
   it('rejects unsupported targeting and invalid lifecycle transitions', async () => {
     await expect(service.create(4, 7, {
       name: 'Launch', subject: 'Subject', segmentType: 'custom', tagIds: [], excludedTagIds: [],
-    })).rejects.toMatchObject({ extensions: { code: 'BAD_USER_INPUT' } });
+    }, 'campaign-create-invalid')).rejects.toMatchObject({ extensions: { code: 'BAD_USER_INPUT' } });
     repository.unschedule.mockResolvedValue({ kind: 'invalid_status', status: 'sent' });
     await expect(service.unschedule(4, 9)).rejects.toMatchObject({
       extensions: { code: 'BAD_USER_INPUT', reason: 'INVALID_CAMPAIGN_STATE', actualStatus: 'sent' },
@@ -86,11 +90,27 @@ describe('CampaignsService', () => {
 
   it('conceals foreign detail, duplicate, and delete IDs', async () => {
     repository.findById.mockResolvedValue(null);
-    repository.duplicate.mockResolvedValue(null);
+    repository.duplicate.mockResolvedValue({ kind: 'not_found' });
     repository.delete.mockResolvedValue({ kind: 'not_found' });
     await expect(service.detail(4, 99)).rejects.toMatchObject({ extensions: { code: 'NOT_FOUND' } });
-    await expect(service.duplicate(4, 99, 7)).rejects.toMatchObject({ extensions: { code: 'NOT_FOUND' } });
+    await expect(service.duplicate(4, 99, 7, 'campaign-duplicate-99')).rejects.toMatchObject({ extensions: { code: 'NOT_FOUND' } });
     await expect(service.delete(4, 99)).rejects.toMatchObject({ extensions: { code: 'NOT_FOUND' } });
+  });
+
+  it('rejects invalid creation keys and changed receipt intent', async () => {
+    await expect(service.create(4, 7, {
+      name: 'Launch', subject: 'Subject', segmentType: 'all', tagIds: [], excludedTagIds: [],
+    }, 'unsafe key')).rejects.toMatchObject({
+      extensions: { code: 'BAD_USER_INPUT', reason: 'INVALID_IDEMPOTENCY_KEY' },
+    });
+    expect(repository.create).not.toHaveBeenCalled();
+
+    repository.duplicate.mockResolvedValue({ kind: 'idempotency_conflict' });
+    await expect(
+      service.duplicate(4, 9, 7, 'campaign-duplicate-9'),
+    ).rejects.toMatchObject({
+      extensions: { code: 'CONFLICT', reason: 'IDEMPOTENCY_KEY_REUSED' },
+    });
   });
 
   it('maps audience previews and conceals foreign campaign IDs', async () => {

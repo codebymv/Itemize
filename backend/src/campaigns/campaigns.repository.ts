@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
+import type { CampaignCreationAction } from './campaign-creation.idempotency';
 import {
   AudienceValidationError,
   CampaignAudience,
@@ -45,6 +46,11 @@ export type CampaignValues = AudienceValues & {
 };
 
 export type CampaignUpdates = Partial<CampaignValues>;
+export type CampaignCreationOutcome =
+  | { kind: 'created'; row: CampaignRow; replayed: boolean }
+  | { kind: 'not_found' }
+  | { kind: 'idempotency_conflict' }
+  | { kind: 'result_unavailable' };
 export type RepositoryOutcome = { kind: 'ok'; row: CampaignRow } | { kind: 'not_found' } | { kind: 'invalid_status'; status: string };
 export type CampaignAudiencePreviewRow = {
   recipientCount: number; segmentType: string; segmentId: number | null;
@@ -61,6 +67,12 @@ export class CampaignValidationError extends Error {
     this.name = 'CampaignValidationError';
   }
 }
+
+type CampaignCreationReceiptRow = {
+  action: CampaignCreationAction;
+  request_fingerprint: string;
+  result_campaign_id: number | null;
+};
 
 const campaignColumns = (alias = 'c') => `
   ${alias}.id, ${alias}.organization_id, ${alias}.name, ${alias}.subject,
@@ -190,8 +202,23 @@ export class CampaignsRepository {
     }
   }
 
-  async create(organizationId: number, userId: number, values: CampaignValues): Promise<CampaignRow> {
+  async create(
+    organizationId: number,
+    userId: number,
+    values: CampaignValues,
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<CampaignCreationOutcome> {
     return this.transaction(async (client) => {
+      await client.query('SELECT pg_advisory_xact_lock($1)', [organizationId]);
+      const replay = await this.replayCreationReceipt(
+        client,
+        organizationId,
+        idempotencyKey,
+        'create',
+        requestFingerprint,
+      );
+      if (replay) return replay;
       await this.validateTemplate(client, organizationId, values.templateId, 'templateId');
       const audience = await this.validateAudience(client, organizationId, values);
       const result = await client.query<CampaignRow>(
@@ -206,7 +233,16 @@ export class CampaignsRepository {
           audience.segmentType, audience.segmentId, JSON.stringify(audience.segmentFilter),
           audience.tagIds, audience.excludedTagIds, userId],
       );
-      return result.rows[0];
+      const row = result.rows[0];
+      await this.insertCreationReceipt(client, {
+        organizationId,
+        userId,
+        idempotencyKey,
+        action: 'create',
+        requestFingerprint,
+        resultCampaignId: row.id,
+      });
+      return { kind: 'created', row, replayed: false };
     });
   }
 
@@ -250,23 +286,50 @@ export class CampaignsRepository {
     });
   }
 
-  async duplicate(organizationId: number, id: number, userId: number): Promise<CampaignRow | null> {
-    const result = await this.pool.query<CampaignRow>(
-      `INSERT INTO email_campaigns (
-         organization_id, name, subject, from_name, from_email, reply_to, template_id,
-         content_html, content_text, segment_type, segment_id, segment_filter,
-         tag_ids, excluded_tag_ids, created_by, status
-       ) SELECT organization_id, LEFT(name, 248) || ' (Copy)', subject, from_name, from_email,
-         reply_to, (SELECT et.id FROM email_templates et
-           WHERE et.id = email_campaigns.template_id
-             AND et.organization_id = email_campaigns.organization_id),
-         content_html, content_text, segment_type, segment_id,
-         segment_filter, tag_ids, excluded_tag_ids, $3, 'draft'
-       FROM email_campaigns WHERE id = $1 AND organization_id = $2
-       RETURNING ${campaignColumns('email_campaigns')}`,
-      [id, organizationId, userId],
-    );
-    return result.rows[0] ?? null;
+  async duplicate(
+    organizationId: number,
+    id: number,
+    userId: number,
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<CampaignCreationOutcome> {
+    return this.transaction(async (client) => {
+      await client.query('SELECT pg_advisory_xact_lock($1)', [organizationId]);
+      const replay = await this.replayCreationReceipt(
+        client,
+        organizationId,
+        idempotencyKey,
+        'duplicate',
+        requestFingerprint,
+      );
+      if (replay) return replay;
+      const result = await client.query<CampaignRow>(
+        `INSERT INTO email_campaigns (
+           organization_id, name, subject, from_name, from_email, reply_to, template_id,
+           content_html, content_text, segment_type, segment_id, segment_filter,
+           tag_ids, excluded_tag_ids, created_by, status
+         ) SELECT organization_id, LEFT(name, 248) || ' (Copy)', subject, from_name, from_email,
+           reply_to, (SELECT et.id FROM email_templates et
+             WHERE et.id = email_campaigns.template_id
+               AND et.organization_id = email_campaigns.organization_id),
+           content_html, content_text, segment_type, segment_id,
+           segment_filter, tag_ids, excluded_tag_ids, $3, 'draft'
+         FROM email_campaigns WHERE id = $1 AND organization_id = $2
+         RETURNING ${campaignColumns('email_campaigns')}`,
+        [id, organizationId, userId],
+      );
+      const row = result.rows[0];
+      if (!row) return { kind: 'not_found' };
+      await this.insertCreationReceipt(client, {
+        organizationId,
+        userId,
+        idempotencyKey,
+        action: 'duplicate',
+        requestFingerprint,
+        resultCampaignId: row.id,
+      });
+      return { kind: 'created', row, replayed: false };
+    });
   }
 
   async delete(organizationId: number, id: number): Promise<{ kind: 'ok' } | { kind: 'not_found' } | { kind: 'invalid_status'; status: string }> {
@@ -300,6 +363,69 @@ export class CampaignsRepository {
          RETURNING ${campaignColumns('email_campaigns')}`,
         [id, organizationId],
       )).rows[0]);
+  }
+
+  private async replayCreationReceipt(
+    client: PoolClient,
+    organizationId: number,
+    idempotencyKey: string,
+    action: CampaignCreationAction,
+    requestFingerprint: string,
+  ): Promise<CampaignCreationOutcome | null> {
+    const receipt = await client.query<CampaignCreationReceiptRow>(
+      `SELECT action, request_fingerprint, result_campaign_id
+       FROM campaign_creation_receipts
+       WHERE organization_id = $1 AND idempotency_key = $2
+       FOR UPDATE`,
+      [organizationId, idempotencyKey],
+    );
+    const existing = receipt.rows[0];
+    if (!existing) return null;
+    if (
+      existing.action !== action ||
+      existing.request_fingerprint !== requestFingerprint
+    ) {
+      return { kind: 'idempotency_conflict' };
+    }
+    if (existing.result_campaign_id === null) {
+      return { kind: 'result_unavailable' };
+    }
+    const result = await client.query<CampaignRow>(
+      `SELECT ${campaignColumns('email_campaigns')}
+       FROM email_campaigns
+       WHERE id = $1 AND organization_id = $2`,
+      [existing.result_campaign_id, organizationId],
+    );
+    return result.rows[0]
+      ? { kind: 'created', row: result.rows[0], replayed: true }
+      : { kind: 'result_unavailable' };
+  }
+
+  private async insertCreationReceipt(
+    client: PoolClient,
+    values: {
+      organizationId: number;
+      userId: number;
+      idempotencyKey: string;
+      action: CampaignCreationAction;
+      requestFingerprint: string;
+      resultCampaignId: number;
+    },
+  ): Promise<void> {
+    await client.query(
+      `INSERT INTO campaign_creation_receipts (
+         organization_id, requested_by_user_id, idempotency_key, action,
+         request_fingerprint, result_campaign_id
+       ) VALUES ($1,$2,$3,$4,$5,$6)`,
+      [
+        values.organizationId,
+        values.userId,
+        values.idempotencyKey,
+        values.action,
+        values.requestFingerprint,
+        values.resultCampaignId,
+      ],
+    );
   }
 
   private async transition(

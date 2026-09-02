@@ -64,6 +64,7 @@ import { useOrganization } from '@/hooks/useOrganization';
 import { useDirtyState } from '@/hooks/useDirtyState';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
+import { useStableMutationKey } from '@/hooks/useStableMutationKey';
 import {
   getWorkflow,
   createWorkflow,
@@ -212,6 +213,11 @@ export function WorkflowBuilderPage() {
   });
   const [loading, setLoading] = useState(true);
   const { pending: saving, run: runMutation } = useSingleFlightAction();
+  const {
+    begin: beginCreateAttempt,
+    release: releaseCreateAttempt,
+    reset: resetCreateAttempt,
+  } = useStableMutationKey('workflow-create');
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadVersion, setLoadVersion] = useState(0);
   
@@ -315,37 +321,42 @@ export function WorkflowBuilderPage() {
       return null;
     }
 
-    try {
-      // Convert nodes to steps
-      const steps = serializeWorkflowNodes(nodes);
+    const steps = serializeWorkflowNodes(nodes);
+    const payload = {
+      organization_id: organizationId,
+      name,
+      description,
+      trigger_type: triggerType as Workflow['trigger_type'],
+      trigger_config: triggerConfig,
+      steps,
+    };
 
-      if (isNewWorkflow) {
-        const newWorkflow = await createWorkflow({
-          organization_id: organizationId,
-          name,
-          description,
-          trigger_type: triggerType as Workflow['trigger_type'],
-          trigger_config: triggerConfig,
-          steps,
+    if (isNewWorkflow) {
+      const idempotencyKey = beginCreateAttempt(JSON.stringify(payload));
+      if (!idempotencyKey) return null;
+      let newWorkflow: Workflow;
+      try {
+        newWorkflow = await createWorkflow(payload, idempotencyKey);
+        resetCreateAttempt();
+      } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+        releaseCreateAttempt();
+        toast({
+          title: 'Error',
+          description: error.response?.data?.error || 'Failed to save workflow',
+          variant: 'destructive',
         });
-        await queryClient.invalidateQueries({ queryKey: workflowQueryKeys.queues(organizationId) });
-        toast({ title: 'Created', description: 'Workflow created successfully' });
-        navigate(`/automations/${newWorkflow.id}`);
-        return newWorkflow;
-      } else if (id) {
-        const updatedWorkflow = await updateWorkflow(parseInt(id), {
-          organization_id: organizationId,
-          name,
-          description,
-          trigger_type: triggerType as Workflow['trigger_type'],
-          trigger_config: triggerConfig,
-          steps,
-        });
-        await queryClient.invalidateQueries({ queryKey: workflowQueryKeys.queues(organizationId) });
-        markClean();
-        toast({ title: 'Saved', description: 'Workflow saved successfully' });
-        return updatedWorkflow;
+        return null;
       }
+      void queryClient.invalidateQueries({ queryKey: workflowQueryKeys.queues(organizationId) });
+      toast({ title: 'Created', description: 'Workflow created successfully' });
+      navigate(`/automations/${newWorkflow.id}`);
+      return newWorkflow;
+    }
+
+    if (!id) return null;
+    let updatedWorkflow: Workflow;
+    try {
+      updatedWorkflow = await updateWorkflow(parseInt(id), payload);
     } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       toast({
         title: 'Error',
@@ -354,8 +365,11 @@ export function WorkflowBuilderPage() {
       });
       return null;
     }
-    return null;
-  }, [organizationId, name, description, triggerType, triggerConfig, nodes, isNewWorkflow, id, navigate, toast, markClean, queryClient]);
+    void queryClient.invalidateQueries({ queryKey: workflowQueryKeys.queues(organizationId) });
+    markClean();
+    toast({ title: 'Saved', description: 'Workflow saved successfully' });
+    return updatedWorkflow;
+  }, [organizationId, name, description, triggerType, triggerConfig, nodes, isNewWorkflow, id, navigate, toast, markClean, queryClient, beginCreateAttempt, releaseCreateAttempt, resetCreateAttempt]);
 
   const handleSave = useCallback(
     async (): Promise<Workflow | null | undefined> => runMutation(persistWorkflow),

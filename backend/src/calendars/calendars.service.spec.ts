@@ -142,6 +142,7 @@ describe('CalendarsService', () => {
     repository.create.mockImplementation(
       async (_organizationId, _userId, values) => ({
         kind: 'created',
+        replayed: false,
         value: {
           calendar: calendarRow({
             name: values.name,
@@ -169,7 +170,7 @@ describe('CalendarsService', () => {
     await service.create(3, 7, {
       name: '  Consultation  ',
       color: '#aabbcc',
-    });
+    }, 'calendar-create-4');
 
     expect(repository.create).toHaveBeenCalledWith(
       3,
@@ -187,6 +188,8 @@ describe('CalendarsService', () => {
           isActive: true,
         })),
       }),
+      'calendar-create-4',
+      expect.stringMatching(/^[a-f0-9]{64}$/),
     );
   });
 
@@ -198,7 +201,7 @@ describe('CalendarsService', () => {
           { dayOfWeek: 1, startTime: '09:00', endTime: '12:00' },
           { dayOfWeek: 1, startTime: '11:00', endTime: '13:00' },
         ],
-      }),
+      }, 'calendar-create-overlap'),
     ).rejects.toMatchObject({
       extensions: {
         code: 'BAD_USER_INPUT',
@@ -206,6 +209,31 @@ describe('CalendarsService', () => {
       },
     });
     expect(repository.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects invalid creation keys before persistence', async () => {
+    await expect(
+      service.create(3, 7, { name: 'Consultation' }, 'unsafe key'),
+    ).rejects.toMatchObject({
+      extensions: {
+        code: 'BAD_USER_INPUT',
+        reason: 'INVALID_IDEMPOTENCY_KEY',
+      },
+    });
+    expect(repository.create).not.toHaveBeenCalled();
+  });
+
+  it('surfaces calendar creation receipt conflicts', async () => {
+    repository.create.mockResolvedValue({ kind: 'idempotency_conflict' });
+
+    await expect(
+      service.create(3, 7, { name: 'Consultation' }, 'calendar-create-4'),
+    ).rejects.toMatchObject({
+      extensions: {
+        code: 'CONFLICT',
+        reason: 'IDEMPOTENCY_KEY_REUSED',
+      },
+    });
   });
 
   it('preserves update omission and returns stable assignment errors', async () => {

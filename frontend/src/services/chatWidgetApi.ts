@@ -216,9 +216,10 @@ export const getChatWidget = async (organizationId?: number): Promise<ChatWidget
  */
 export const createChatWidget = async (
     config: Partial<ChatWidgetConfig>,
-    organizationId?: number
+    organizationId: number,
+    idempotencyKey: string
 ): Promise<ChatWidgetConfig> => {
-    return createChatWidgetViaGraphql(config, organizationId);
+    return createChatWidgetViaGraphql(config, organizationId, idempotencyKey);
 };
 
 /**

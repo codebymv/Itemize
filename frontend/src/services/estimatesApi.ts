@@ -109,9 +109,10 @@ export const getEstimate = async (
 
 export const createEstimate = async (
   input: EstimateWriteInput & { items: EstimateItem[] },
+  idempotencyKey: string,
   organizationId?: number,
 ): Promise<Estimate> => {
-  return createEstimateViaGraphql(input, organizationId);
+  return createEstimateViaGraphql(input, idempotencyKey, organizationId);
 };
 
 export const updateEstimate = async (

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
 import { itemizeGraphqlError } from '../common/graphql-error';
+import { calendarCreationFingerprint } from './calendar-creation.idempotency';
 import {
   CalendarAvailabilityWindowInput,
   CalendarDateOverrideInput,
@@ -52,6 +53,7 @@ export class CalendarsService {
     organizationId: number,
     userId: number,
     input: CreateCalendarInput,
+    idempotencyKey: string,
   ): Promise<Calendar> {
     const assignmentMode = this.assignmentMode(
       input.assignmentMode ?? 'specific',
@@ -66,7 +68,7 @@ export class CalendarsService {
       input.availabilityWindows == null
         ? this.defaultAvailabilityWindows()
         : this.availabilityWindows(input.availabilityWindows);
-    const outcome = await this.calendars.create(organizationId, userId, {
+    const values = {
       name: this.text(input.name, 'name', 255),
       description: this.nullableText(input.description, 'description', 10000),
       slug: this.slug(input.name),
@@ -114,7 +116,15 @@ export class CalendarsService {
       color: this.color(input.color ?? '#3B82F6'),
       isActive: input.isActive ?? true,
       availabilityWindows,
-    });
+    };
+    const { slug: _generatedSlug, ...fingerprintValues } = values;
+    const outcome = await this.calendars.create(
+      organizationId,
+      userId,
+      values,
+      this.idempotencyKey(idempotencyKey),
+      calendarCreationFingerprint(fingerprintValues),
+    );
     if (outcome.kind === 'limit') {
       throw itemizeGraphqlError(
         `You've reached your calendar limit (${outcome.limit.current}/${outcome.limit.limit}). Please upgrade your plan.`,
@@ -126,6 +136,12 @@ export class CalendarsService {
           plan: outcome.limit.plan,
         },
       );
+    }
+    if (
+      outcome.kind === 'idempotency_conflict' ||
+      outcome.kind === 'result_unavailable'
+    ) {
+      this.throwCreationOutcome(outcome.kind);
     }
     this.throwAssignmentOutcome(outcome.kind);
     return this.mapCalendar(
@@ -381,6 +397,41 @@ export class CalendarsService {
 
   private id(value: number): void {
     this.positiveId(value, 'id', 'INVALID_CALENDAR_ID');
+  }
+
+  private idempotencyKey(value: string): string {
+    const key = String(value ?? '').trim();
+    if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(key)) {
+      throw itemizeGraphqlError(
+        'idempotencyKey must be 1-128 safe ASCII characters',
+        'BAD_USER_INPUT',
+        {
+          field: 'idempotencyKey',
+          reason: 'INVALID_IDEMPOTENCY_KEY',
+        },
+      );
+    }
+    return key;
+  }
+
+  private throwCreationOutcome(
+    kind: 'idempotency_conflict' | 'result_unavailable',
+  ): never {
+    if (kind === 'idempotency_conflict') {
+      throw itemizeGraphqlError(
+        'idempotencyKey was already used for a different calendar creation request',
+        'CONFLICT',
+        {
+          field: 'idempotencyKey',
+          reason: 'IDEMPOTENCY_KEY_REUSED',
+        },
+      );
+    }
+    throw itemizeGraphqlError(
+      'The original calendar creation result is no longer available',
+      'CONFLICT',
+      { reason: 'IDEMPOTENT_RESULT_UNAVAILABLE' },
+    );
   }
 
   private positiveId(

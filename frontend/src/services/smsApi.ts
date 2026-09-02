@@ -105,8 +105,8 @@ export const getSmsTemplate = async (id: number, organizationId?: number) => {
 /**
  * Create a new SMS template
  */
-export const createSmsTemplate = async (data: CreateSmsTemplateData) => {
-  return createSmsTemplateViaGraphql(data);
+export const createSmsTemplate = async (data: CreateSmsTemplateData, idempotencyKey: string) => {
+  return createSmsTemplateViaGraphql(data, idempotencyKey);
 };
 
 /**
@@ -141,8 +141,8 @@ export const sendTestSms = async (
 /**
  * Duplicate an SMS template
  */
-export const duplicateSmsTemplate = async (id: number, organizationId?: number) => {
-  return duplicateSmsTemplateViaGraphql(id, organizationId);
+export const duplicateSmsTemplate = async (id: number, idempotencyKey: string, organizationId?: number) => {
+  return duplicateSmsTemplateViaGraphql(id, idempotencyKey, organizationId);
 };
 
 /**

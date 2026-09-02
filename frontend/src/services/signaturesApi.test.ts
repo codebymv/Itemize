@@ -72,7 +72,7 @@ describe('signature API transport boundaries', () => {
     await getSignatures({ search: 'nda' });
     await getSignatureDocument(7);
     await getSignatureAudit(7);
-    await createSignatureDocument(document);
+    await createSignatureDocument(document, 'document-key');
     await updateSignatureDocument(7, update);
     await deleteSignatureDocument(7);
     await deleteSignatureDocumentFile(7);
@@ -82,9 +82,9 @@ describe('signature API transport boundaries', () => {
     await getSignatureEmailPreview({ message: 'Sign this' });
     await listSignatureTemplates();
     await getSignatureTemplate(5);
-    await createSignatureTemplate(template);
+    await createSignatureTemplate(template, 'template-key');
     await updateSignatureTemplate(5, templateUpdate);
-    await instantiateSignatureTemplate(5, { title: 'Generated' });
+    await instantiateSignatureTemplate(5, { title: 'Generated' }, 'instantiate-key');
     await deleteSignatureTemplate(5);
 
     expect(graphql.listSignatureDocumentsViaGraphql).toHaveBeenNthCalledWith(
@@ -95,7 +95,7 @@ describe('signature API transport boundaries', () => {
     );
     expect(graphql.getSignatureDocumentViaGraphql).toHaveBeenCalledWith(7);
     expect(graphql.getSignatureAuditViaGraphql).toHaveBeenCalledWith(7);
-    expect(graphql.createSignatureDocumentViaGraphql).toHaveBeenCalledWith(document);
+    expect(graphql.createSignatureDocumentViaGraphql).toHaveBeenCalledWith(document, 'document-key');
     expect(graphql.updateSignatureDocumentViaGraphql).toHaveBeenCalledWith(7, update);
     expect(graphql.deleteSignatureDocumentViaGraphql).toHaveBeenCalledWith(7);
     expect(graphql.removeSignatureDocumentFileViaGraphql).toHaveBeenCalledWith(7);
@@ -107,12 +107,12 @@ describe('signature API transport boundaries', () => {
     });
     expect(graphql.listSignatureTemplatesViaGraphql).toHaveBeenCalledOnce();
     expect(graphql.getSignatureTemplateViaGraphql).toHaveBeenCalledWith(5);
-    expect(graphql.createSignatureTemplateViaGraphql).toHaveBeenCalledWith(template);
+    expect(graphql.createSignatureTemplateViaGraphql).toHaveBeenCalledWith(template, 'template-key');
     expect(graphql.updateSignatureTemplateViaGraphql).toHaveBeenCalledWith(
       5, templateUpdate,
     );
     expect(graphql.instantiateSignatureTemplateViaGraphql).toHaveBeenCalledWith(
-      5, { title: 'Generated' },
+      5, { title: 'Generated' }, 'instantiate-key',
     );
     expect(graphql.deleteSignatureTemplateViaGraphql).toHaveBeenCalledWith(5);
   });

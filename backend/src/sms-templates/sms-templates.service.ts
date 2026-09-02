@@ -5,6 +5,7 @@ import { CreateSmsTemplateInput, SmsTemplateFilterInput, UpdateSmsTemplateInput 
 import { DeleteSmsTemplateResult, SmsMessageInfo, SmsTemplate, SmsTemplateCategory, SmsTemplatePage } from './sms-template.types';
 import { extractSmsTemplateVariables, smsMessageInfo } from './sms-message-info';
 import { SmsTemplateRow, SmsTemplatesRepository, SmsTemplateUpdates } from './sms-templates.repository';
+import { smsTemplateCreationFingerprint } from './sms-template-creation.idempotency';
 
 @Injectable()
 export class SmsTemplatesService {
@@ -47,12 +48,19 @@ export class SmsTemplatesService {
 
   messageInfo(message: string): SmsMessageInfo { return smsMessageInfo(this.required(message, 'message', 1600, false)); }
 
-  async create(organizationId: number, userId: number, input: CreateSmsTemplateInput): Promise<SmsTemplate> {
+  async create(organizationId: number, userId: number, input: CreateSmsTemplateInput, idempotencyKey: string): Promise<SmsTemplate> {
     const name = this.required(input.name, 'name', 255);
     const message = this.required(input.message, 'message', 1600, false);
-    return this.map(await this.templates.create(organizationId, userId, {
+    const values = {
       name, message, variables: extractSmsTemplateVariables(message), category: this.category(input.category), isActive: input.isActive,
-    }));
+    };
+    return this.creationOutcome(await this.templates.create(
+      organizationId,
+      userId,
+      values,
+      this.idempotencyKey(idempotencyKey),
+      smsTemplateCreationFingerprint('create', values),
+    ));
   }
 
   async update(organizationId: number, id: number, input: UpdateSmsTemplateInput): Promise<SmsTemplate> {
@@ -68,9 +76,15 @@ export class SmsTemplatesService {
     if (!row) this.notFound(); return this.map(row);
   }
 
-  async duplicate(organizationId: number, id: number, userId: number): Promise<SmsTemplate> {
-    this.id(id); const row = await this.templates.duplicate(organizationId, id, userId);
-    if (!row) this.notFound(); return this.map(row);
+  async duplicate(organizationId: number, id: number, userId: number, idempotencyKey: string): Promise<SmsTemplate> {
+    this.id(id);
+    return this.creationOutcome(await this.templates.duplicate(
+      organizationId,
+      id,
+      userId,
+      this.idempotencyKey(idempotencyKey),
+      smsTemplateCreationFingerprint('duplicate', { sourceTemplateId: id }),
+    ));
   }
 
   async delete(organizationId: number, id: number): Promise<DeleteSmsTemplateResult> {
@@ -84,6 +98,29 @@ export class SmsTemplatesService {
     return { page: input.page, pageSize: input.pageSize, offset: (input.page - 1) * input.pageSize };
   }
   private id(value: number) { if (!Number.isSafeInteger(value) || value < 1) throw itemizeGraphqlError('id must be a positive integer', 'BAD_USER_INPUT'); }
+  private idempotencyKey(value: string): string {
+    const key = String(value ?? '').trim();
+    if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(key)) {
+      throw itemizeGraphqlError('idempotencyKey must be 1-128 safe ASCII characters', 'BAD_USER_INPUT', {
+        field: 'idempotencyKey', reason: 'INVALID_IDEMPOTENCY_KEY',
+      });
+    }
+    return key;
+  }
+  private creationOutcome(outcome: Awaited<ReturnType<SmsTemplatesRepository['create']>>): SmsTemplate {
+    if (outcome.kind === 'not_found') this.notFound();
+    if (outcome.kind === 'idempotency_conflict') {
+      throw itemizeGraphqlError('idempotencyKey was already used for a different SMS template creation request', 'CONFLICT', {
+        field: 'idempotencyKey', reason: 'IDEMPOTENCY_KEY_REUSED',
+      });
+    }
+    if (outcome.kind === 'result_unavailable') {
+      throw itemizeGraphqlError('The original SMS template creation result is no longer available', 'CONFLICT', {
+        reason: 'IDEMPOTENT_RESULT_UNAVAILABLE',
+      });
+    }
+    return this.map(outcome.row);
+  }
   private required(value: string, field: string, max: number, trim = true): string {
     if (typeof value !== 'string' || value.trim().length === 0 || value.length > max)
       throw itemizeGraphqlError(`${field} is required and must not exceed ${max} characters`, 'BAD_USER_INPUT', { field, reason: `INVALID_SMS_TEMPLATE_${field.toUpperCase()}` });

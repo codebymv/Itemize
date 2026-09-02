@@ -245,6 +245,7 @@ describe('landing-page GraphQL consumers', () => {
         seo_title: 'Launch SEO',
         sections: [{ section_type: 'hero', content: { heading: 'Hello' } }],
       },
+      'page-create-12',
       4,
     );
     await updateLandingPageViaGraphql(
@@ -252,7 +253,7 @@ describe('landing-page GraphQL consumers', () => {
       { custom_css: '.hero {}', description: null },
       4,
     );
-    await duplicateLandingPageViaGraphql(12, 4);
+    await duplicateLandingPageViaGraphql(12, 'page-duplicate-12', 4);
     await replaceLandingPageSectionsViaGraphql(
       12,
       [{ section_type: 'hero', content: { heading: 'Hello' } }],
@@ -309,10 +310,15 @@ describe('landing-page GraphQL consumers', () => {
           },
         ],
       },
+      idempotencyKey: 'page-create-12',
     });
     expect(bodies[1].variables).toEqual({
       id: 12,
       input: { customCss: '.hero {}', description: null },
+    });
+    expect(bodies[2].variables).toEqual({
+      id: 12,
+      idempotencyKey: 'page-duplicate-12',
     });
     expect(bodies[9].variables).toEqual({
       pageId: 12,

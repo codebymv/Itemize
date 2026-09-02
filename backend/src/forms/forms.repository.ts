@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
+import type { FormCreationAction } from './form-creation.idempotency';
 
 export type FormFieldValue = {
   id?: number;
@@ -107,8 +108,17 @@ export type UpdateFormValues = Partial<{
 export type FormWithFields = { form: FormRow; fields: FormFieldRow[] };
 export type FormLimit = { current: number; limit: number; plan: string };
 export type CreateFormOutcome =
-  | { kind: 'created'; value: FormWithFields }
-  | { kind: 'limit'; limit: FormLimit };
+  | { kind: 'created'; value: FormWithFields; replayed: boolean }
+  | { kind: 'limit'; limit: FormLimit }
+  | { kind: 'not_found' }
+  | { kind: 'idempotency_conflict' }
+  | { kind: 'result_unavailable' };
+
+type FormCreationReceiptRow = {
+  action: FormCreationAction;
+  request_fingerprint: string;
+  result_form_id: number | null;
+};
 
 const formSelection = `
   f.id,
@@ -264,9 +274,19 @@ export class FormsRepository {
     organizationId: number,
     userId: number,
     values: CreateFormValues,
+    idempotencyKey: string,
+    requestFingerprint: string,
   ): Promise<CreateFormOutcome> {
     return this.transaction(async (client) => {
       await client.query('SELECT pg_advisory_xact_lock($1)', [organizationId]);
+      const replay = await this.replayCreationReceipt(
+        client,
+        organizationId,
+        idempotencyKey,
+        'create',
+        requestFingerprint,
+      );
+      if (replay) return replay;
       const limit = await this.formLimit(client, organizationId);
       if (limit.limit !== -1 && limit.current >= limit.limit) {
         return { kind: 'limit', limit };
@@ -308,7 +328,15 @@ export class FormsRepository {
         inserted.rows[0].id,
       );
       if (!created) throw new Error('Created form could not be reloaded');
-      return { kind: 'created', value: created };
+      await this.insertCreationReceipt(client, {
+        organizationId,
+        userId,
+        idempotencyKey,
+        action: 'create',
+        requestFingerprint,
+        resultFormId: created.form.id,
+      });
+      return { kind: 'created', value: created, replayed: false };
     });
   }
 
@@ -382,15 +410,30 @@ export class FormsRepository {
     userId: number,
     formId: number,
     slug: string,
-  ): Promise<FormWithFields | null> {
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<CreateFormOutcome> {
     return this.transaction(async (client) => {
+      await client.query('SELECT pg_advisory_xact_lock($1)', [organizationId]);
+      const replay = await this.replayCreationReceipt(
+        client,
+        organizationId,
+        idempotencyKey,
+        'duplicate',
+        requestFingerprint,
+      );
+      if (replay) return replay;
       const locked = await client.query(
         `SELECT id FROM forms
          WHERE id = $1 AND organization_id = $2
          FOR UPDATE`,
         [formId, organizationId],
       );
-      if (locked.rows.length === 0) return null;
+      if (locked.rows.length === 0) return { kind: 'not_found' };
+      const limit = await this.formLimit(client, organizationId);
+      if (limit.limit !== -1 && limit.current >= limit.limit) {
+        return { kind: 'limit', limit };
+      }
       const source = await this.selectById(client, organizationId, formId);
       if (!source) throw new Error('Locked form could not be reloaded');
       const inserted = await client.query<{ id: number }>(
@@ -440,8 +483,84 @@ export class FormsRepository {
           mapToContactField: field.map_to_contact_field,
         })),
       );
-      return this.selectById(client, organizationId, inserted.rows[0].id);
+      const created = await this.selectById(
+        client,
+        organizationId,
+        inserted.rows[0].id,
+      );
+      if (!created) throw new Error('Duplicated form could not be reloaded');
+      await this.insertCreationReceipt(client, {
+        organizationId,
+        userId,
+        idempotencyKey,
+        action: 'duplicate',
+        requestFingerprint,
+        resultFormId: created.form.id,
+      });
+      return { kind: 'created', value: created, replayed: false };
     });
+  }
+
+  private async replayCreationReceipt(
+    client: PoolClient,
+    organizationId: number,
+    idempotencyKey: string,
+    action: FormCreationAction,
+    requestFingerprint: string,
+  ): Promise<CreateFormOutcome | null> {
+    const receipt = await client.query<FormCreationReceiptRow>(
+      `SELECT action, request_fingerprint, result_form_id
+       FROM form_creation_receipts
+       WHERE organization_id = $1 AND idempotency_key = $2
+       FOR UPDATE`,
+      [organizationId, idempotencyKey],
+    );
+    const existing = receipt.rows[0];
+    if (!existing) return null;
+    if (
+      existing.action !== action ||
+      existing.request_fingerprint !== requestFingerprint
+    ) {
+      return { kind: 'idempotency_conflict' };
+    }
+    if (existing.result_form_id === null) {
+      return { kind: 'result_unavailable' };
+    }
+    const result = await this.selectById(
+      client,
+      organizationId,
+      existing.result_form_id,
+    );
+    return result
+      ? { kind: 'created', value: result, replayed: true }
+      : { kind: 'result_unavailable' };
+  }
+
+  private async insertCreationReceipt(
+    client: PoolClient,
+    values: {
+      organizationId: number;
+      userId: number;
+      idempotencyKey: string;
+      action: FormCreationAction;
+      requestFingerprint: string;
+      resultFormId: number;
+    },
+  ): Promise<void> {
+    await client.query(
+      `INSERT INTO form_creation_receipts (
+         organization_id, requested_by_user_id, idempotency_key, action,
+         request_fingerprint, result_form_id
+       ) VALUES ($1,$2,$3,$4,$5,$6)`,
+      [
+        values.organizationId,
+        values.userId,
+        values.idempotencyKey,
+        values.action,
+        values.requestFingerprint,
+        values.resultFormId,
+      ],
+    );
   }
 
   async replaceFields(

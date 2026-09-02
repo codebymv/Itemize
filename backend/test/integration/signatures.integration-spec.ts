@@ -739,16 +739,27 @@ describe('E-signature GraphQL read contract', () => {
   });
 
   it('atomically creates and replaces a draft aggregate through GraphQL', async () => {
-    const create = await graphql(memberToken, organizationId, `mutation Create($input:CreateSignatureDocumentInput!){createSignatureDocument(input:$input){${documentFields}}}`, {
+    const createMutation = `mutation Create($input:CreateSignatureDocumentInput!,$key:String!){createSignatureDocument(input:$input,idempotencyKey:$key){${documentFields}}}`;
+    const createVariables = {
       input: {
         title: 'Atomic draft', routingMode: 'sequential', expirationDays: 45,
         recipients: [{ name: 'Signer', email: 'atomic-signer@test.itemize', roleName: 'Signer', signingOrder: 1 }],
         fields: [{ roleName: 'Signer', fieldType: 'signature', pageNumber: 1, xPosition: 10, yPosition: 10, width: 20, height: 10 }],
       },
-    }).expect(200);
+      key: 'signature-document-atomic-1',
+    };
+    const create = await graphql(memberToken, organizationId, createMutation, createVariables).expect(200);
     expect(create.body.errors).toBeUndefined();
     const id = Number(create.body.data.createSignatureDocument.id);
     expect(create.body.data.createSignatureDocument).toMatchObject({ title: 'Atomic draft', recipientCount: 1, routingMode: 'sequential' });
+    const replay = await graphql(memberToken, organizationId, createMutation, createVariables).expect(200);
+    expect(replay.body.errors).toBeUndefined();
+    expect(Number(replay.body.data.createSignatureDocument.id)).toBe(id);
+    const conflict = await graphql(memberToken, organizationId, createMutation, {
+      ...createVariables,
+      input: { ...createVariables.input, title: 'Different draft' },
+    }).expect(200);
+    expect(conflict.body.errors[0].extensions).toMatchObject({ code: 'CONFLICT', reason: 'IDEMPOTENCY_KEY_REUSED' });
 
     const failed = await graphql(memberToken, organizationId, `mutation Update($id:Int!,$input:UpdateSignatureDraftInput!){updateSignatureDraft(id:$id,input:$input){id title}}`, {
       id,
@@ -794,18 +805,33 @@ describe('E-signature GraphQL read contract', () => {
     expect(deleted.body.errors).toBeUndefined();
     expect(deleted.body.data.deleteSignatureDraft.id).toBe(id);
     expect((await pool.query('SELECT id FROM signature_documents WHERE id=$1', [id])).rows).toHaveLength(0);
+    const unavailable = await graphql(memberToken, organizationId, createMutation, createVariables).expect(200);
+    expect(unavailable.body.errors[0].extensions).toMatchObject({ code: 'CONFLICT', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE' });
   });
 
   it('atomically manages templates and snapshots them into editable drafts', async () => {
-    const created = await graphql(memberToken, organizationId, `mutation Create($input:CreateSignatureTemplateInput!){createSignatureTemplate(input:$input){id title}}`, {
+    const templateMutation = 'mutation Create($input:CreateSignatureTemplateInput!,$key:String!){createSignatureTemplate(input:$input,idempotencyKey:$key){id title}}';
+    const templateVariables = {
       input: {
         title: 'Atomic template', description: 'Original',
         roles: [{ roleName: 'Signer', signingOrder: 1 }],
         fields: [{ roleName: 'Signer', fieldType: 'signature', pageNumber: 1, xPosition: 10, yPosition: 10, width: 20, height: 10 }],
       },
-    }).expect(200);
+      key: 'signature-template-atomic-1',
+    };
+    const created = await graphql(memberToken, organizationId, templateMutation, templateVariables).expect(200);
     expect(created.body.errors).toBeUndefined();
     const id = Number(created.body.data.createSignatureTemplate.id);
+    const templateReplay = await graphql(memberToken, organizationId, templateMutation, templateVariables).expect(200);
+    expect(templateReplay.body.errors).toBeUndefined();
+    expect(Number(templateReplay.body.data.createSignatureTemplate.id)).toBe(id);
+    const crossActionConflict = await graphql(
+      memberToken,
+      organizationId,
+      'mutation Create($input:CreateSignatureDocumentInput!,$key:String!){createSignatureDocument(input:$input,idempotencyKey:$key){id}}',
+      { input: { title: 'Must not be created' }, key: templateVariables.key },
+    ).expect(200);
+    expect(crossActionConflict.body.errors[0].extensions).toMatchObject({ code: 'CONFLICT', reason: 'IDEMPOTENCY_KEY_REUSED' });
     const templateUrl = '/uploads/signatures/atomic-template.pdf';
     const templatePdf = await signaturePdf('Atomic template');
     storedSignatureFiles.set(templateUrl, templatePdf);
@@ -828,11 +854,18 @@ describe('E-signature GraphQL read contract', () => {
     expect(failed.body.errors[0].extensions.code).toBe('BAD_USER_INPUT');
     expect((await pool.query('SELECT title FROM signature_templates WHERE id=$1', [id])).rows[0].title).toBe('Atomic template');
 
-    const instantiated = await graphql(memberToken, organizationId, `mutation Instantiate($id:Int!,$input:InstantiateSignatureTemplateInput!){instantiateSignatureTemplate(id:$id,input:$input){${documentFields}}}`, {
-      id, input: { title: 'Template draft', recipients: [{ email: 'template-signer@test.itemize', roleName: 'Signer' }] },
-    }).expect(200);
+    const instantiateMutation = `mutation Instantiate($id:Int!,$input:InstantiateSignatureTemplateInput!,$key:String!){instantiateSignatureTemplate(id:$id,input:$input,idempotencyKey:$key){${documentFields}}}`;
+    const instantiateVariables = {
+      id,
+      input: { title: 'Template draft', recipients: [{ email: 'template-signer@test.itemize', roleName: 'Signer' }] },
+      key: 'signature-template-instantiate-1',
+    };
+    const instantiated = await graphql(memberToken, organizationId, instantiateMutation, instantiateVariables).expect(200);
     expect(instantiated.body.errors).toBeUndefined();
     const documentId = Number(instantiated.body.data.instantiateSignatureTemplate.id);
+    const instantiateReplay = await graphql(memberToken, organizationId, instantiateMutation, instantiateVariables).expect(200);
+    expect(instantiateReplay.body.errors).toBeUndefined();
+    expect(Number(instantiateReplay.body.data.instantiateSignatureTemplate.id)).toBe(documentId);
     const snapshot = await graphql(
       memberToken,
       organizationId,
@@ -855,6 +888,8 @@ describe('E-signature GraphQL read contract', () => {
       .toBe(snapshot.body.data.signatureDocument.recipients[0].id);
 
     await graphql(memberToken, organizationId, 'mutation Delete($id:Int!){deleteSignatureDraft(id:$id){id}}', { id: documentId }).expect(200);
+    const unavailableInstantiation = await graphql(memberToken, organizationId, instantiateMutation, instantiateVariables).expect(200);
+    expect(unavailableInstantiation.body.errors[0].extensions).toMatchObject({ code: 'CONFLICT', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE' });
     const deletedTemplateUrl = '/uploads/signatures/deleted-template.pdf';
     await pool.query(
       `UPDATE signature_templates SET
@@ -866,6 +901,8 @@ describe('E-signature GraphQL read contract', () => {
     const deleted = await graphql(memberToken, organizationId, 'mutation Delete($id:Int!){deleteSignatureTemplate(id:$id){id title}}', { id }).expect(200);
     expect(deleted.body.errors).toBeUndefined();
     expect(deleted.body.data.deleteSignatureTemplate.id).toBe(id);
+    const unavailableTemplate = await graphql(memberToken, organizationId, templateMutation, templateVariables).expect(200);
+    expect(unavailableTemplate.body.errors[0].extensions).toMatchObject({ code: 'CONFLICT', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE' });
     expect((await pool.query(
       `SELECT id FROM signature_file_deletion_jobs
        WHERE organization_id=$1 AND document_id IS NULL AND file_url=$2`,
@@ -1623,14 +1660,23 @@ describe('E-signature GraphQL read contract', () => {
     const attempts = await Promise.all(Array.from({ length: 6 }, (_, index) => graphql(
       memberToken,
       organizationId,
-      'mutation Create($input:CreateSignatureDocumentInput!){createSignatureDocument(input:$input){id}}',
-      { input: { title: `Quota ${index}` } },
+      'mutation Create($input:CreateSignatureDocumentInput!,$key:String!){createSignatureDocument(input:$input,idempotencyKey:$key){id}}',
+      { input: { title: `Quota ${index}` }, key: `signature-quota-${index}` },
     )));
     const successfulIds = attempts.filter((result) => !result.body.errors).map((result) => Number(result.body.data.createSignatureDocument.id));
     const failures = attempts.filter((result) => result.body.errors);
     expect(successfulIds).toHaveLength(5);
     expect(failures).toHaveLength(1);
     expect(failures[0].body.errors[0].extensions).toMatchObject({ code: 'FORBIDDEN', reason: 'SIGNATURE_MONTHLY_LIMIT' });
+    const successfulIndex = attempts.findIndex((result) => !result.body.errors);
+    const quotaReplay = await graphql(
+      memberToken,
+      organizationId,
+      'mutation Create($input:CreateSignatureDocumentInput!,$key:String!){createSignatureDocument(input:$input,idempotencyKey:$key){id}}',
+      { input: { title: `Quota ${successfulIndex}` }, key: `signature-quota-${successfulIndex}` },
+    ).expect(200);
+    expect(quotaReplay.body.errors).toBeUndefined();
+    expect(Number(quotaReplay.body.data.createSignatureDocument.id)).toBe(successfulIds[0]);
     await pool.query('DELETE FROM signature_documents WHERE id=ANY($1::int[])', [
       [...quotaBaseline.rows.map((row) => Number(row.id)), ...successfulIds],
     ]);

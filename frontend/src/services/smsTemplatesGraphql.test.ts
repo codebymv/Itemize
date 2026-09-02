@@ -60,10 +60,14 @@ describe('SMS-template GraphQL consumer', () => {
   });
   it('uses CSRF and removes organization authority from create input', async () => {
     vi.mocked(fetch).mockResolvedValue(response({ data: { createSmsTemplate: template } }));
-    await createSmsTemplateViaGraphql({ organization_id: 4, name: 'Reminder', message: 'Hi', is_active: false });
+    await createSmsTemplateViaGraphql(
+      { organization_id: 4, name: 'Reminder', message: 'Hi', is_active: false },
+      'sms-create-9',
+    );
     const [url, options] = vi.mocked(fetch).mock.calls[0]; const body = JSON.parse(String((options as RequestInit).body));
     expect(url).toBe('https://graphql.test/graphql'); expect((options as RequestInit).headers).toMatchObject({ 'x-csrf-token': 'sms-csrf', 'x-organization-id': '4' });
     expect(body.variables.input).toEqual({ name: 'Reminder', message: 'Hi', isActive: false });
+    expect(body.variables.idempotencyKey).toBe('sms-create-9');
   });
   it('maps standards-aware message information', async () => {
     vi.mocked(fetch).mockResolvedValue(response({ data: { smsMessageInfo: { length: 162, segments: 2, encoding: 'GSM', charsRemaining: 144 } } }));

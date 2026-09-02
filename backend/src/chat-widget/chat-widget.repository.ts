@@ -117,6 +117,18 @@ export type ChatWidgetWriteOutcome =
   | { kind: 'not_found' }
   | { kind: 'assignee_not_found' };
 
+export type ChatWidgetCreationOutcome =
+  | { kind: 'ok'; row: ChatWidgetRow; replayed: boolean }
+  | { kind: 'already_exists' }
+  | { kind: 'assignee_not_found' }
+  | { kind: 'idempotency_conflict' }
+  | { kind: 'result_unavailable' };
+
+type ChatWidgetCreationReceiptRow = {
+  request_fingerprint: string;
+  result_widget_id: number | null;
+};
+
 export type AgentMessageOutcome =
   | { kind: 'ok'; row: ChatMessageRow; replayed: boolean }
   | { kind: 'session_not_found' }
@@ -169,13 +181,37 @@ export class ChatWidgetRepository {
 
   async createWidget(
     organizationId: number,
+    userId: number,
     values: ChatWidgetValues,
-  ): Promise<ChatWidgetWriteOutcome> {
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<ChatWidgetCreationOutcome> {
     return this.transaction(async (client) => {
       await client.query('SELECT pg_advisory_xact_lock($1, $2)', [
         9341,
         organizationId,
       ]);
+      const receipt = await client.query<ChatWidgetCreationReceiptRow>(
+        `SELECT request_fingerprint,result_widget_id
+         FROM chat_widget_creation_receipts
+         WHERE organization_id=$1 AND idempotency_key=$2 FOR UPDATE`,
+        [organizationId, idempotencyKey],
+      );
+      const replay = receipt.rows[0];
+      if (replay) {
+        if (replay.request_fingerprint !== requestFingerprint) {
+          return { kind: 'idempotency_conflict' };
+        }
+        if (replay.result_widget_id === null) return { kind: 'result_unavailable' };
+        const result = await client.query<ChatWidgetRow>(
+          `SELECT ${widgetSelection} FROM chat_widgets
+           WHERE id=$1 AND organization_id=$2`,
+          [replay.result_widget_id, organizationId],
+        );
+        return result.rows[0]
+          ? { kind: 'ok', row: result.rows[0], replayed: true }
+          : { kind: 'result_unavailable' };
+      }
       const existing = await client.query(
         'SELECT id FROM chat_widgets WHERE organization_id=$1',
         [organizationId],
@@ -233,7 +269,13 @@ export class ChatWidgetRepository {
           values.allowedDomains ?? [],
         ],
       );
-      return { kind: 'ok', row: result.rows[0] };
+      await client.query(
+        `INSERT INTO chat_widget_creation_receipts (
+           organization_id,requested_by_user_id,idempotency_key,request_fingerprint,result_widget_id
+         ) VALUES ($1,$2,$3,$4,$5)`,
+        [organizationId, userId, idempotencyKey, requestFingerprint, result.rows[0].id],
+      );
+      return { kind: 'ok', row: result.rows[0], replayed: false };
     });
   }
 

@@ -168,19 +168,19 @@ const updateInput = (value: UpdateSmsTemplateData) => ({
   ...(value.name === undefined ? {} : { name: value.name }), ...(value.message === undefined ? {} : { message: value.message }),
   ...(value.category === undefined ? {} : { category: value.category }), ...(value.is_active === undefined ? {} : { isActive: value.is_active }),
 });
-export const createSmsTemplateViaGraphql = async (value: CreateSmsTemplateData) => {
-  const data = await graphqlMutationRequest<{ createSmsTemplate: GraphqlSmsTemplate }, { input: ReturnType<typeof createInput> }>(
-    `mutation CreateSmsTemplate($input: CreateSmsTemplateInput!) { createSmsTemplate(input: $input) { ${fields} } }`,
-    { input: createInput(value) }, value.organization_id); return map(data.createSmsTemplate);
+export const createSmsTemplateViaGraphql = async (value: CreateSmsTemplateData, idempotencyKey: string) => {
+  const data = await graphqlMutationRequest<{ createSmsTemplate: GraphqlSmsTemplate }, { input: ReturnType<typeof createInput>; idempotencyKey: string }>(
+    `mutation CreateSmsTemplate($input: CreateSmsTemplateInput!, $idempotencyKey: String!) { createSmsTemplate(input: $input, idempotencyKey: $idempotencyKey) { ${fields} } }`,
+    { input: createInput(value), idempotencyKey }, value.organization_id); return map(data.createSmsTemplate);
 };
 export const updateSmsTemplateViaGraphql = async (id: number, value: UpdateSmsTemplateData) => {
   const data = await graphqlMutationRequest<{ updateSmsTemplate: GraphqlSmsTemplate }, { id: number; input: ReturnType<typeof updateInput> }>(
     `mutation UpdateSmsTemplate($id: Int!, $input: UpdateSmsTemplateInput!) { updateSmsTemplate(id: $id, input: $input) { ${fields} } }`,
     { id, input: updateInput(value) }, value.organization_id); return map(data.updateSmsTemplate);
 };
-export const duplicateSmsTemplateViaGraphql = async (id: number, organizationId?: number) => {
-  const data = await graphqlMutationRequest<{ duplicateSmsTemplate: GraphqlSmsTemplate }, { id: number }>(
-    `mutation DuplicateSmsTemplate($id: Int!) { duplicateSmsTemplate(id: $id) { ${fields} } }`, { id }, organizationId);
+export const duplicateSmsTemplateViaGraphql = async (id: number, idempotencyKey: string, organizationId?: number) => {
+  const data = await graphqlMutationRequest<{ duplicateSmsTemplate: GraphqlSmsTemplate }, { id: number; idempotencyKey: string }>(
+    `mutation DuplicateSmsTemplate($id: Int!, $idempotencyKey: String!) { duplicateSmsTemplate(id: $id, idempotencyKey: $idempotencyKey) { ${fields} } }`, { id, idempotencyKey }, organizationId);
   return map(data.duplicateSmsTemplate);
 };
 export const deleteSmsTemplateViaGraphql = async (id: number, organizationId?: number) => {

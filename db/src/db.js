@@ -45,11 +45,17 @@ const {
 // Import Automation migrations
 const { runAllAutomationMigrations } = require('./db_automation_migrations');
 const {
+  runWorkflowCreationReceiptMigration,
+} = require('./db_workflow_creation_receipt_migrations');
+const {
   runEmailTemplateVersionsMigration,
 } = require('./db_email_template_versions_migrations');
 const {
   runEmailTemplatePublishReceiptMigration,
 } = require('./db_email_template_publish_receipt_migrations');
+const {
+  runEmailTemplateCreationReceiptMigration,
+} = require('./db_email_template_creation_receipt_migrations');
 const { runWorkflowRegistryMigration } = require('./db_workflow_registry_migrations');
 const { runWorkflowWebhookIdempotencyMigration } = require('./db_workflow_webhook_migrations');
 const { runWorkflowTriggerQueueMigration } = require('./db_workflow_trigger_queue_migrations');
@@ -76,6 +82,9 @@ const {
 
 // Import Calendar migrations
 const { runAllCalendarMigrations } = require('./db_calendar_migrations');
+const {
+  runCalendarCreationReceiptMigration,
+} = require('./db_calendar_creation_receipt_migrations');
 const {
   runBookingAvailabilityPolicyMigration,
 } = require('./db_booking_availability_policy_migrations');
@@ -159,12 +168,18 @@ const {
 
 // Import Forms migrations
 const { runAllFormsMigrations } = require('./db_forms_migrations');
+const {
+  runFormCreationReceiptMigration,
+} = require('./db_form_creation_receipt_migrations');
 
 // Import Inbox migrations
 const { runAllInboxMigrations } = require('./db_inbox_migrations');
 
 // Import SMS migrations
 const { runAllSmsMigrations } = require('./db_sms_migrations');
+const {
+  runSmsTemplateCreationReceiptMigration,
+} = require('./db_sms_template_creation_receipt_migrations');
 const {
     runSmsReceivingNumberRegistryMigration,
     runSmsWebhookIdempotencyMigration,
@@ -176,6 +191,9 @@ const {
   runChatWidgetGraphqlMigration,
 } = require('./db_chat_widget_graphql_migrations');
 const {
+  runChatWidgetCreationReceiptMigration,
+} = require('./db_chat_widget_creation_receipt_migrations');
+const {
   runChatInboxBridgeMigration,
 } = require('./db_chat_inbox_bridge_migrations');
 const {
@@ -185,16 +203,25 @@ const {
 // Import Email Campaign migrations
 const { runAllCampaignMigrations } = require('./db_campaign_migrations');
 const {
+  runCampaignCreationReceiptMigration,
+} = require('./db_campaign_creation_receipt_migrations');
+const {
     runEmailWebhookMigration,
     runEmailWebhookReconciliationMigration,
 } = require('./db_email_webhook_migrations');
 
 // Import Segments migrations
 const { runAllSegmentMigrations } = require('./db_segments_migrations');
+const { runSegmentCreationReceiptMigration } = require('./db_segment_creation_receipt_migrations');
 const { runCampaignSegmentTargetMigration } = require('./db_campaign_segment_migrations');
 
 // Import Invoicing migrations
 const { runAllInvoicingMigrations, addBusinessIdToEstimates } = require('./db_invoicing_migrations');
+const { runInvoiceCreationReceiptMigration } = require('./db_invoice_creation_receipt_migrations');
+const { runEstimateCreationReceiptMigration } = require('./db_estimate_creation_receipt_migrations');
+const {
+  runRecurringInvoiceCreationReceiptMigration,
+} = require('./db_recurring_invoice_creation_receipt_migrations');
 const { runStripeWebhookIdempotencyMigration } = require('./db_stripe_webhook_migrations');
 
 // Import Estimates and Recurring migrations
@@ -202,6 +229,9 @@ const { runEstimatesRecurringMigrations } = require('./db_estimates_recurring_mi
 
 // Import Reputation migrations
 const { runAllReputationMigrations } = require('./db_reputation_migrations');
+const {
+  runReputationWidgetCreationReceiptMigration,
+} = require('./db_reputation_widget_creation_receipt_migrations');
 const {
   runReputationRequestDeliveryMigration,
 } = require('./db_reputation_request_delivery_migrations');
@@ -224,6 +254,9 @@ const {
 
 // Import Pages migrations
 const { runAllPagesMigrations } = require('./db_pages_migrations');
+const {
+  runLandingPageCreationReceiptMigration,
+} = require('./db_landing_page_creation_receipt_migrations');
 const {
   runLandingPageVersionReceiptMigration,
 } = require('./db_landing_page_version_receipt_migrations');
@@ -258,6 +291,9 @@ const { runSignatureReliabilityMigration } = require('./db_signature_reliability
 const {
   runSignaturePublicResponseMigration,
 } = require('./db_signature_public_response_migrations');
+const {
+  runSignatureCreationReceiptMigration,
+} = require('./db_signature_creation_receipt_migrations');
 
 // Import Vault migrations (encrypted storage)
 const { runVaultMigrations } = require('./db_vault_migrations');
@@ -596,7 +632,17 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'feature_get_started', runGetStartedMigration);
     await runMigrationOnce(pool, 'activation_events_v1', runActivationEventsMigration);
     await runMigrationOnce(pool, 'module_automation', runAllAutomationMigrations);
+    await runMigrationOnce(
+      pool,
+      'workflow_creation_receipts_v1',
+      runWorkflowCreationReceiptMigration,
+    );
     await runMigrationOnce(pool, 'email_template_versions_v1', runEmailTemplateVersionsMigration);
+    await runMigrationOnce(
+      pool,
+      'email_template_creation_receipts_v1',
+      runEmailTemplateCreationReceiptMigration,
+    );
     await runMigrationOnce(
       pool,
       'email_template_publish_receipts_v1',
@@ -628,6 +674,11 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'workflow_schedules', runWorkflowScheduleMigration);
     await runMigrationOnce(pool, 'workflow_execution_claims', runWorkflowExecutionClaimMigration);
     await runMigrationOnce(pool, 'module_calendar', runAllCalendarMigrations);
+    await runMigrationOnce(
+      pool,
+      'calendar_creation_receipts_v1',
+      runCalendarCreationReceiptMigration,
+    );
     await runMigrationOnce(pool, 'booking_availability_policy', runBookingAvailabilityPolicyMigration);
     await runMigrationOnce(pool, 'booking_public_capabilities', runBookingPublicCapabilityMigration);
     await runMigrationOnce(
@@ -638,8 +689,18 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'calendar_token_encryption', runCalendarTokenEncryptionMigration);
     await runMigrationOnce(pool, 'calendar_sync_jobs', runCalendarSyncJobMigration);
     await runMigrationOnce(pool, 'module_forms', runAllFormsMigrations);
+    await runMigrationOnce(
+      pool,
+      'form_creation_receipts_v1',
+      runFormCreationReceiptMigration,
+    );
     await runMigrationOnce(pool, 'module_inbox', runAllInboxMigrations);
     await runMigrationOnce(pool, 'module_sms', runAllSmsMigrations);
+    await runMigrationOnce(
+      pool,
+      'sms_template_creation_receipts_v1',
+      runSmsTemplateCreationReceiptMigration,
+    );
     await runMigrationOnce(pool, 'workflow_side_effect_outbox', runWorkflowSideEffectOutboxMigration);
     await runMigrationOnce(pool, 'realtime_event_outbox', runRealtimeOutboxMigration);
     await runMigrationOnce(pool, 'whiteboard_realtime_outbox', runWhiteboardRealtimeOutboxMigration);
@@ -671,6 +732,11 @@ const initializeDatabase = async (pool) => {
     );
     await runMigrationOnce(
       pool,
+      'chat_widget_creation_receipts_v1',
+      runChatWidgetCreationReceiptMigration,
+    );
+    await runMigrationOnce(
+      pool,
       'chat_inbox_bridge_v1',
       runChatInboxBridgeMigration,
     );
@@ -680,14 +746,39 @@ const initializeDatabase = async (pool) => {
       runChatWidgetPublicIdempotencyMigration,
     );
     await runMigrationOnce(pool, 'module_campaigns', runAllCampaignMigrations);
+    await runMigrationOnce(
+      pool,
+      'campaign_creation_receipts_v1',
+      runCampaignCreationReceiptMigration,
+    );
     await runMigrationOnce(pool, 'email_webhook_events', runEmailWebhookMigration);
     await runMigrationOnce(pool, 'email_webhook_reconciliation', runEmailWebhookReconciliationMigration);
     await runMigrationOnce(pool, 'module_segments', runAllSegmentMigrations);
+    await runMigrationOnce(
+      pool,
+      'segment_creation_receipts_v1',
+      runSegmentCreationReceiptMigration,
+    );
     await runMigrationOnce(pool, 'campaign_segment_targeting', runCampaignSegmentTargetMigration);
     await runMigrationOnce(pool, 'module_invoicing', runAllInvoicingMigrations);
+    await runMigrationOnce(
+      pool,
+      'invoice_creation_receipts_v1',
+      runInvoiceCreationReceiptMigration,
+    );
     await runMigrationOnce(pool, 'stripe_webhook_idempotency', runStripeWebhookIdempotencyMigration);
     await runMigrationOnce(pool, 'module_estimates_recurring', runEstimatesRecurringMigrations);
     await runMigrationOnce(pool, 'estimates_business_column', addBusinessIdToEstimates);
+    await runMigrationOnce(
+      pool,
+      'estimate_creation_receipts_v1',
+      runEstimateCreationReceiptMigration,
+    );
+    await runMigrationOnce(
+      pool,
+      'recurring_invoice_creation_receipts_v1',
+      runRecurringInvoiceCreationReceiptMigration,
+    );
     await runMigrationOnce(pool, 'estimate_email_deliveries', runEstimateEmailDeliveryMigration);
     await runMigrationOnce(
       pool,
@@ -778,6 +869,11 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'module_reputation', runAllReputationMigrations);
     await runMigrationOnce(
       pool,
+      'reputation_widget_creation_receipts_v1',
+      runReputationWidgetCreationReceiptMigration,
+    );
+    await runMigrationOnce(
+      pool,
       'public_review_submission_idempotency_v1',
       runPublicReviewSubmissionMigration,
     );
@@ -808,6 +904,11 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'social_inbox_bridge_v1', runSocialInboxBridgeMigration);
     
     await runMigrationOnce(pool, 'module_pages', runAllPagesMigrations);
+    await runMigrationOnce(
+      pool,
+      'landing_page_creation_receipts_v1',
+      runLandingPageCreationReceiptMigration,
+    );
     await runMigrationOnce(
       pool,
       'landing_page_version_mutation_receipts_v1',
@@ -858,6 +959,11 @@ const initializeDatabase = async (pool) => {
       pool,
       'signature_public_response_receipts_v1',
       runSignaturePublicResponseMigration,
+    );
+    await runMigrationOnce(
+      pool,
+      'signature_creation_receipts_v1',
+      runSignatureCreationReceiptMigration,
     );
     await runMigrationOnce(pool, 'module_vault', runVaultMigrations);
     

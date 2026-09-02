@@ -127,7 +127,9 @@ describe('Reputation configuration GraphQL PostgreSQL contract', () => {
     expect(forged.body.errors[0].extensions.code).toBe('FORBIDDEN');
 
     const noCsrf = await graphql(
-      'mutation { createReputationWidget(input:{name:"Blocked"}) { id } }', {}, { csrf: false },
+      `mutation {
+        createReputationWidget(input:{name:"Blocked"},idempotencyKey:"blocked-create") { id }
+      }`, {}, { csrf: false },
     ).expect(200);
     expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
   });
@@ -219,11 +221,17 @@ describe('Reputation configuration GraphQL PostgreSQL contract', () => {
   });
 
   it('creates and updates widgets, emits usable embed code, and filters public review data', async () => {
+    const createMutation = `mutation Create(
+      $input:CreateReputationWidgetInput!, $idempotencyKey:String!
+    ){
+      createReputationWidget(input:$input,idempotencyKey:$idempotencyKey){ ${widgetFields} }
+    }`;
+    const createInput = {
+      name: ' Homepage ', widgetType: 'grid', platforms: ['google'], maxReviews: 5,
+    };
     const created = await graphql(
-      `mutation Create($input:CreateReputationWidgetInput!){
-        createReputationWidget(input:$input){ ${widgetFields} }
-      }`,
-      { input: { name: ' Homepage ', widgetType: 'grid', platforms: ['google'], maxReviews: 5 } },
+      createMutation,
+      { input: createInput, idempotencyKey: 'homepage-widget-create' },
     ).expect(200);
     expect(created.body.errors).toBeUndefined();
     expect(created.body.data.createReputationWidget).toMatchObject({
@@ -233,6 +241,26 @@ describe('Reputation configuration GraphQL PostgreSQL contract', () => {
     widgetId = Number(created.body.data.createReputationWidget.id);
     widgetKey = created.body.data.createReputationWidget.widgetKey;
     expect(widgetKey).toMatch(/^[a-f0-9]{32}$/);
+
+    const replay = await graphql(createMutation, {
+      input: createInput, idempotencyKey: 'homepage-widget-create',
+    }).expect(200);
+    expect(replay.body.errors).toBeUndefined();
+    expect(Number(replay.body.data.createReputationWidget.id)).toBe(widgetId);
+    expect(replay.body.data.createReputationWidget.widgetKey).toBe(widgetKey);
+
+    const conflict = await graphql(createMutation, {
+      input: { ...createInput, name: 'Checkout' },
+      idempotencyKey: 'homepage-widget-create',
+    }).expect(200);
+    expect(conflict.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', field: 'idempotencyKey', reason: 'IDEMPOTENCY_KEY_REUSED',
+    });
+    const widgetCount = await pool.query<{ count: string }>(
+      'SELECT COUNT(*)::text count FROM review_widgets WHERE organization_id=$1',
+      [organizationId],
+    );
+    expect(Number(widgetCount.rows[0].count)).toBe(1);
 
     const updated = await graphql(
       `mutation Update($id:Int!,$input:UpdateReputationWidgetInput!){
@@ -305,5 +333,18 @@ describe('Reputation configuration GraphQL PostgreSQL contract', () => {
       'mutation Delete($id:Int!){deleteReputationWidget(id:$id){deletedId}}', { id: widgetId },
     ).expect(200);
     expect(repeated.body.errors[0].extensions.code).toBe('NOT_FOUND');
+
+    const unavailable = await graphql(
+      `mutation Create($input:CreateReputationWidgetInput!,$idempotencyKey:String!){
+        createReputationWidget(input:$input,idempotencyKey:$idempotencyKey){id}
+      }`,
+      {
+        input: { name: ' Homepage ', widgetType: 'grid', platforms: ['google'], maxReviews: 5 },
+        idempotencyKey: 'homepage-widget-create',
+      },
+    ).expect(200);
+    expect(unavailable.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE',
+    });
   });
 });

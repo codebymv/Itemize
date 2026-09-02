@@ -19,6 +19,7 @@ import {
 } from './invoice.types';
 import {
   InvoiceAggregate,
+  InvoiceCreationOutcome,
   InvoiceItemRow,
   InvoiceItemValues,
   InvoiceRow,
@@ -27,6 +28,7 @@ import {
   InvoiceValues,
   InvoiceWriteOutcome,
 } from './invoices.repository';
+import { invoiceCreationFingerprint, invoiceCreationKey } from './invoice-creation.idempotency';
 
 const MONEY = /^(?:0|[1-9]\d{0,7})(?:\.\d{1,2})?$/;
 const QUANTITY = /^(?:0|[1-9]\d{0,7})(?:\.\d{1,2})?$/;
@@ -88,6 +90,7 @@ export class InvoicesService {
     organizationId: number,
     userId: number,
     input: CreateInvoiceInput,
+    idempotencyKey: string,
   ): Promise<Invoice> {
     const values: InvoiceValues = {
       contactId: this.optionalId(input.contactId, 'contactId'),
@@ -119,16 +122,35 @@ export class InvoicesService {
       paymentTerms: this.text(input.paymentTerms, 'paymentTerms', 10_000),
     };
     this.dateOrder(values.issueDate, values.dueDate);
-    const invoice = this.saved(
-      await this.invoices.create(organizationId, userId, values),
+    const key = invoiceCreationKey(idempotencyKey);
+    const outcome: InvoiceCreationOutcome = await this.invoices.create(
+      organizationId, userId, values, key, invoiceCreationFingerprint(values),
     );
-    await this.getStarted.record({
-      organizationId,
-      userId,
-      name: 'first_invoice',
-      source: 'create_invoice',
-      properties: { invoiceId: invoice.id },
-    });
+    if (outcome.kind === 'idempotency-conflict') {
+      throw itemizeGraphqlError(
+        'idempotencyKey was already used for a different invoice creation request',
+        'CONFLICT',
+        { field: 'idempotencyKey', reason: 'IDEMPOTENCY_KEY_REUSED' },
+      );
+    }
+    if (outcome.kind === 'result-unavailable') {
+      throw itemizeGraphqlError(
+        'The invoice created by this request is no longer available',
+        'CONFLICT',
+        { field: 'idempotencyKey', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE' },
+      );
+    }
+    const replayed = outcome.kind === 'saved' && outcome.replayed === true;
+    const invoice = this.saved(outcome);
+    if (!replayed) {
+      await this.getStarted.record({
+        organizationId,
+        userId,
+        name: 'first_invoice',
+        source: 'create_invoice',
+        properties: { invoiceId: invoice.id },
+      });
+    }
     return invoice;
   }
 

@@ -50,20 +50,23 @@ describe('forms transport boundary', () => {
     it('routes the complete authenticated surface directly to GraphQL', async () => {
         await getForms(42, 'draft');
         await getForm(7, 42);
-        await createForm({ name: 'Form', organization_id: 42 });
+        await createForm(
+            { name: 'Form', organization_id: 42 },
+            'create-form-key',
+        );
         await updateForm(7, { description: null }, 42);
         await deleteForm(7, 42);
         await updateFormFields(7, [], 42);
-        await duplicateForm(7, 42);
+        await duplicateForm(7, 'duplicate-form-key', 42);
         await getFormSubmissions(7, { page: 2, limit: 25 }, 42);
         await deleteFormSubmission(7, 9, 42);
 
         expect(getFormsViaGraphql).toHaveBeenCalledWith(42, 'draft');
         expect(getFormViaGraphql).toHaveBeenCalledWith(7, 42);
-        expect(createFormViaGraphql).toHaveBeenCalledWith({
-            name: 'Form',
-            organization_id: 42,
-        });
+        expect(createFormViaGraphql).toHaveBeenCalledWith(
+            { name: 'Form', organization_id: 42 },
+            'create-form-key',
+        );
         expect(updateFormViaGraphql).toHaveBeenCalledWith(
             7,
             { description: null },
@@ -71,7 +74,11 @@ describe('forms transport boundary', () => {
         );
         expect(deleteFormViaGraphql).toHaveBeenCalledWith(7, 42);
         expect(replaceFormFieldsViaGraphql).toHaveBeenCalledWith(7, [], 42);
-        expect(duplicateFormViaGraphql).toHaveBeenCalledWith(7, 42);
+        expect(duplicateFormViaGraphql).toHaveBeenCalledWith(
+            7,
+            'duplicate-form-key',
+            42,
+        );
         expect(getFormSubmissionsViaGraphql).toHaveBeenCalledWith(
             7,
             { page: 2, limit: 25 },

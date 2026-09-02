@@ -241,13 +241,14 @@ export const getSegmentViaGraphql = async (id: number, organizationId?: number):
 };
 
 export const createSegmentViaGraphql = async (
-  segment: Partial<Segment>, organizationId?: number,
+  segment: Partial<Segment>, organizationId: number, idempotencyKey: string,
 ): Promise<Segment> => {
   const data = await graphqlMutationRequest<
-    { createSegment: GraphqlSegment }, { input: ReturnType<typeof mapInput> }
-  >(`mutation CreateSegment($input: CreateSegmentInput!) {
-      createSegment(input: $input) { ${segmentFields} }
-    }`, { input: mapInput(segment) }, organizationId);
+    { createSegment: GraphqlSegment },
+    { input: ReturnType<typeof mapInput>; idempotencyKey: string }
+  >(`mutation CreateSegment($input: CreateSegmentInput!, $idempotencyKey: String!) {
+      createSegment(input: $input, idempotencyKey: $idempotencyKey) { ${segmentFields} }
+    }`, { input: mapInput(segment), idempotencyKey }, organizationId);
   return mapSegment(data.createSegment);
 };
 

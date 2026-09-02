@@ -39,3 +39,41 @@ export const useStableMutationKey = (scope: string) => {
 
   return { begin, keyFor, release, reset };
 };
+
+/**
+ * Retains independent mutation attempts for resource lists. One entity cannot
+ * start twice, while unrelated rows keep their own keys and remain concurrent.
+ */
+export const useKeyedStableMutationKey = <TKey,>(scope: string) => {
+  const attempts = useRef(new Map<
+    TKey,
+    { signature: string; key: string; inFlight: boolean }
+  >());
+
+  const begin = useCallback((entityKey: TKey, signature: string): string | null => {
+    const current = attempts.current.get(entityKey);
+    if (current?.inFlight) return null;
+    if (current?.signature === signature) {
+      current.inFlight = true;
+      return current.key;
+    }
+    const key = newMutationKey(`${scope}:${String(entityKey)}`);
+    attempts.current.set(entityKey, { signature, key, inFlight: true });
+    return key;
+  }, [scope]);
+
+  const release = useCallback((entityKey: TKey) => {
+    const current = attempts.current.get(entityKey);
+    if (current) current.inFlight = false;
+  }, []);
+
+  const reset = useCallback((entityKey: TKey) => {
+    attempts.current.delete(entityKey);
+  }, []);
+
+  const resetAll = useCallback(() => {
+    attempts.current.clear();
+  }, []);
+
+  return { begin, release, reset, resetAll };
+};

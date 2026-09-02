@@ -43,10 +43,10 @@ describe('campaign API GraphQL dispatch', () => {
 
     await getCampaigns({ page: 2, limit: 25, search: 'launch' }, 7);
     await getCampaign(43, 7);
-    await createCampaign(draft, 7);
+    await createCampaign(draft, 'campaign-create-key', 7);
     await updateCampaign(43, update, 7);
     await deleteCampaign(43, 7);
-    await duplicateCampaign(43, 7);
+    await duplicateCampaign(43, 'campaign-duplicate-key', 7);
     await scheduleCampaign(43, '2026-08-01T12:00:00Z', 'America/Phoenix', 7);
     await unscheduleCampaign(43, 7);
     await getCampaignRecipients(43, { status: 'opened', page: 2, limit: 25 }, 7);
@@ -56,10 +56,18 @@ describe('campaign API GraphQL dispatch', () => {
       { page: 2, limit: 25, search: 'launch' }, 7,
     );
     expect(graphql.getCampaignViaGraphql).toHaveBeenCalledWith(43, 7);
-    expect(graphql.createCampaignViaGraphql).toHaveBeenCalledWith(draft, 7);
+    expect(graphql.createCampaignViaGraphql).toHaveBeenCalledWith(
+      draft,
+      'campaign-create-key',
+      7,
+    );
     expect(graphql.updateCampaignViaGraphql).toHaveBeenCalledWith(43, update, 7);
     expect(graphql.deleteCampaignViaGraphql).toHaveBeenCalledWith(43, 7);
-    expect(graphql.duplicateCampaignViaGraphql).toHaveBeenCalledWith(43, 7);
+    expect(graphql.duplicateCampaignViaGraphql).toHaveBeenCalledWith(
+      43,
+      'campaign-duplicate-key',
+      7,
+    );
     expect(graphql.scheduleCampaignViaGraphql).toHaveBeenCalledWith(
       43, '2026-08-01T12:00:00Z', 'America/Phoenix', 7,
     );

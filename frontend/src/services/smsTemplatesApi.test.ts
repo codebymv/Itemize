@@ -76,10 +76,10 @@ describe('SMS-template permanent GraphQL transport', () => {
 
     await sms.getSmsTemplates(4, { search: 'reminder' });
     await sms.getSmsTemplate(9, 4);
-    await sms.createSmsTemplate(createInput);
+    await sms.createSmsTemplate(createInput, 'sms-create-9');
     await sms.updateSmsTemplate(9, updateInput);
     await sms.deleteSmsTemplate(9, 4);
-    await sms.duplicateSmsTemplate(9, 4);
+    await sms.duplicateSmsTemplate(9, 'sms-duplicate-9', 4);
     await sms.getMessageInfo('Hi');
     await sms.getSmsTemplateCategories(4);
     await sms.sendTestSms(9, '+16025550100', 4);
@@ -87,10 +87,12 @@ describe('SMS-template permanent GraphQL transport', () => {
 
     expect(adapter.getSmsTemplatesViaGraphql).toHaveBeenCalledWith({ search: 'reminder' }, 4);
     expect(adapter.getSmsTemplateViaGraphql).toHaveBeenCalledWith(9, 4);
-    expect(adapter.createSmsTemplateViaGraphql).toHaveBeenCalledWith(createInput);
+    expect(adapter.createSmsTemplateViaGraphql).toHaveBeenCalledWith(createInput, 'sms-create-9');
     expect(adapter.updateSmsTemplateViaGraphql).toHaveBeenCalledWith(9, updateInput);
     expect(adapter.deleteSmsTemplateViaGraphql).toHaveBeenCalledWith(9, 4);
-    expect(adapter.duplicateSmsTemplateViaGraphql).toHaveBeenCalledWith(9, 4);
+    expect(adapter.duplicateSmsTemplateViaGraphql).toHaveBeenCalledWith(
+      9, 'sms-duplicate-9', 4,
+    );
     expect(adapter.getSmsMessageInfoViaGraphql).toHaveBeenCalledWith('Hi');
     expect(adapter.getSmsTemplateCategoriesViaGraphql).toHaveBeenCalledWith(4);
     expect(sendSmsTemplateTestViaGraphql).toHaveBeenCalledWith(

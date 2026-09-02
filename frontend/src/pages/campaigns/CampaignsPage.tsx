@@ -78,6 +78,7 @@ import {
 import type { Campaign } from '@/types/campaigns';
 import { CAMPAIGN_SUMMARY_VISUALS, getCampaignStatusVisual } from './constants/campaignVisuals';
 import { useKeyedSingleFlightAction } from '@/hooks/useSingleFlightAction';
+import { useKeyedStableMutationKey } from '@/hooks/useStableMutationKey';
 
 const CAMPAIGN_STATUSES: Array<{ value: Campaign['status']; label: string }> = [
   { value: 'draft', label: 'Draft' },
@@ -132,6 +133,11 @@ export function CampaignsPage() {
   const [campaignToDelete, setCampaignToDelete] = useState<Campaign | null>(null);
   const [campaignToSend, setCampaignToSend] = useState<Campaign | null>(null);
   const { isPending: isCampaignPending, run: runCampaignAction } = useKeyedSingleFlightAction<number>();
+  const {
+    begin: beginDuplicateAttempt,
+    release: releaseDuplicateAttempt,
+    reset: resetDuplicateAttempt,
+  } = useKeyedStableMutationKey<number>('campaign-duplicate');
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
@@ -221,13 +227,21 @@ export function CampaignsPage() {
   const handleDuplicate = async (campaign: Campaign) => {
     if (!organizationId) return;
     await runCampaignAction(campaign.id, async () => {
+      const idempotencyKey = beginDuplicateAttempt(
+        campaign.id,
+        JSON.stringify({ organizationId, campaignId: campaign.id }),
+      );
+      if (!idempotencyKey) return;
       try {
-        await duplicateCampaign(campaign.id, organizationId);
-        await refreshQueue();
-        toast({ title: 'Duplicated', description: 'Campaign duplicated as a draft.' });
+        await duplicateCampaign(campaign.id, idempotencyKey, organizationId);
+        resetDuplicateAttempt(campaign.id);
       } catch (error) {
+        releaseDuplicateAttempt(campaign.id);
         toast({ title: 'Unable to duplicate', description: 'The campaign was not duplicated.', variant: 'destructive' });
+        return;
       }
+      await refreshQueue().catch(() => undefined);
+      toast({ title: 'Duplicated', description: 'Campaign duplicated as a draft.' });
     });
   };
 

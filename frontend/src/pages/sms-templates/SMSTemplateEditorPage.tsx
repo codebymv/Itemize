@@ -35,6 +35,7 @@ import { useDirtyState } from "@/hooks/useDirtyState";
 import { useOrganization } from "@/hooks/useOrganization";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { useSingleFlightAction } from "@/hooks/useSingleFlightAction";
+import { useStableMutationKey } from "@/hooks/useStableMutationKey";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { getCatalogStatusVisual } from "@/pages/campaigns/constants/campaignVisuals";
@@ -127,6 +128,8 @@ export function SMSTemplateEditorPage() {
   const [messageInfo, setMessageInfo] = useState<MessageInfo>(EMPTY_INFO);
   const [loading, setLoading] = useState(!isNew);
   const { pending: saving, run: runSave } = useSingleFlightAction();
+  const { begin: beginCreateAttempt, release: releaseCreateAttempt, reset: resetCreateAttempt } =
+    useStableMutationKey("sms-template-create");
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const loadTemplate = useCallback(async () => {
@@ -200,7 +203,6 @@ export function SMSTemplateEditorPage() {
       return;
     }
     await runSave(async () => {
-      try {
       const input = {
         organization_id: organizationId,
         name: state.name.trim(),
@@ -208,9 +210,29 @@ export function SMSTemplateEditorPage() {
         category: state.category || undefined,
         is_active: state.isActive,
       };
-      const saved = template
-        ? await updateSmsTemplate(template.id, input)
-        : await createSmsTemplate(input);
+      let saved: SmsTemplate;
+      try {
+        if (template) {
+          saved = await updateSmsTemplate(template.id, input);
+        } else {
+          const idempotencyKey = beginCreateAttempt(JSON.stringify(input));
+          if (!idempotencyKey) return;
+          try {
+            saved = await createSmsTemplate(input, idempotencyKey);
+            resetCreateAttempt();
+          } catch (error) {
+            releaseCreateAttempt();
+            throw error;
+          }
+        }
+      } catch {
+        toast({
+          title: "Unable to save template",
+          description: "Your changes were not saved. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
       const cleanState = stateFromTemplate(saved);
       setTemplate(saved);
       queryClient.setQueryData<{ templates: SmsTemplate[]; total: number }>(
@@ -230,13 +252,6 @@ export function SMSTemplateEditorPage() {
       markClean(cleanState);
       if (!template) navigate(`/sms-templates/${saved.id}`, { replace: true });
       toast({ title: template ? "Template updated" : "Template created" });
-      } catch {
-        toast({
-          title: "Unable to save template",
-          description: "Your changes were not saved. Please try again.",
-          variant: "destructive",
-        });
-      }
     });
   };
 

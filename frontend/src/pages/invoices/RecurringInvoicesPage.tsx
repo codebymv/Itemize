@@ -160,6 +160,11 @@ export function RecurringInvoicesPage() {
         release: releaseInvoiceGeneration,
         reset: resetInvoiceGeneration,
     } = useStableMutationKey('recurring-invoice-generation');
+    const {
+        begin: beginRecurringCreate,
+        release: releaseRecurringCreate,
+        reset: resetRecurringCreate,
+    } = useStableMutationKey('recurring-invoice-create');
 
     // Create dialog state
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -328,28 +333,46 @@ export function RecurringInvoicesPage() {
         }
 
         await runSave(async () => {
+            const payload = {
+                template_name: templateName,
+                contact_id: contactId,
+                customer_name: customerName || undefined,
+                frequency,
+                start_date: startDate,
+                end_date: endDate || undefined,
+                items: validItems.map(item => ({
+                    name: item.name,
+                    description: item.description,
+                    quantity: item.quantity,
+                    unit_price: item.unit_price,
+                    tax_rate: item.tax_rate,
+                })),
+            };
+            const idempotencyKey = beginRecurringCreate(JSON.stringify({
+                organizationId,
+                recurringInvoice: payload,
+            }));
+            if (!idempotencyKey) return;
+            let created: RecurringInvoice;
             try {
-                const created = await createRecurringInvoice({
-                    template_name: templateName,
-                    contact_id: contactId,
-                    customer_name: customerName || undefined,
-                    frequency,
-                    start_date: startDate,
-                    end_date: endDate || undefined,
-                    items: validItems.map(item => ({
-                        name: item.name,
-                        description: item.description,
-                        quantity: item.quantity,
-                        unit_price: item.unit_price,
-                        tax_rate: item.tax_rate,
-                    })),
-                }, organizationId);
-                cacheRecurringInvoice(created);
-                toast({ title: 'Created', description: 'Recurring invoice created successfully' });
-                setDialogOpen(false);
+                created = await createRecurringInvoice(
+                    payload,
+                    idempotencyKey,
+                    organizationId,
+                );
             } catch {
-                toast({ title: 'Error', description: 'Failed to create recurring schedule', variant: 'destructive' });
+                releaseRecurringCreate();
+                toast({
+                    title: 'Error',
+                    description: 'Recurring schedule creation could not be confirmed. An unchanged retry is safe.',
+                    variant: 'destructive',
+                });
+                return;
             }
+            resetRecurringCreate();
+            cacheRecurringInvoice(created);
+            toast({ title: 'Created', description: 'Recurring invoice created successfully' });
+            setDialogOpen(false);
         });
     };
 
@@ -1007,7 +1030,10 @@ export function RecurringInvoicesPage() {
             {/* Create Recurring Dialog */}
             <Dialog open={dialogOpen} onOpenChange={(open) => {
                 if (open) setDialogOpen(true);
-                else dismissIfIdle(() => setDialogOpen(false));
+                else dismissIfIdle(() => {
+                    resetRecurringCreate();
+                    setDialogOpen(false);
+                });
             }}>
                 <ModalContent size="lg">
                     <ModalHeader
@@ -1136,7 +1162,10 @@ export function RecurringInvoicesPage() {
                         </div>
                     </ModalBody>
                     <ModalFooter>
-                        <Button variant="outline" onClick={() => dismissIfIdle(() => setDialogOpen(false))} disabled={saving}>
+                        <Button variant="outline" onClick={() => dismissIfIdle(() => {
+                            resetRecurringCreate();
+                            setDialogOpen(false);
+                        })} disabled={saving}>
                             Cancel
                         </Button>
                         <Button

@@ -65,8 +65,13 @@ export class SegmentsResolver {
   @CsrfProtected()
   @OrganizationScoped()
   @Mutation(() => Segment)
-  createSegment(@Args('input') input: CreateSegmentInput): Promise<Segment> {
-    return this.segmentsService.create(this.organizationId(), this.userId(), input);
+  createSegment(
+    @Args('input') input: CreateSegmentInput,
+    @Args('idempotencyKey', { type: () => String }) idempotencyKey: string,
+  ): Promise<Segment> {
+    return this.segmentsService.create(
+      this.organizationId(), this.userId(), input, idempotencyKey,
+    );
   }
 
   @CsrfProtected()

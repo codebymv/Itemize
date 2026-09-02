@@ -168,8 +168,8 @@ export const createWorkflow = async (data: {
   trigger_type: Workflow['trigger_type'];
   trigger_config?: WorkflowConfig;
   steps?: Omit<WorkflowStep, 'id' | 'workflow_id'>[];
-}): Promise<Workflow> => {
-  return createWorkflowViaGraphql(data);
+}, idempotencyKey: string): Promise<Workflow> => {
+  return createWorkflowViaGraphql(data, idempotencyKey);
 };
 
 export const updateWorkflow = async (
@@ -261,8 +261,12 @@ export const resumeEnrollment = (workflowId: number, enrollmentId: number, organ
 export const retryEnrollment = (workflowId: number, enrollmentId: number, organizationId: number) =>
   changeEnrollmentState('retry', workflowId, enrollmentId, organizationId);
 
-export const duplicateWorkflow = async (id: number, organizationId: number): Promise<Workflow> => {
-  return duplicateWorkflowViaGraphql(id, organizationId);
+export const duplicateWorkflow = async (
+  id: number,
+  idempotencyKey: string,
+  organizationId: number,
+): Promise<Workflow> => {
+  return duplicateWorkflowViaGraphql(id, idempotencyKey, organizationId);
 };
 
 // ===================
@@ -293,8 +297,8 @@ export const createEmailTemplate = async (data: {
   body_text?: string;
   category?: string;
   is_active?: boolean;
-}): Promise<EmailTemplate> => {
-  return createEmailTemplateViaGraphql(data, data.organization_id);
+}, idempotencyKey: string): Promise<EmailTemplate> => {
+  return createEmailTemplateViaGraphql(data, idempotencyKey, data.organization_id);
 };
 
 export const updateEmailTemplate = async (
@@ -330,8 +334,8 @@ export const sendTestEmail = async (
   );
 };
 
-export const duplicateEmailTemplate = async (id: number, organizationId: number): Promise<EmailTemplate> => {
-  return duplicateEmailTemplateViaGraphql(id, organizationId);
+export const duplicateEmailTemplate = async (id: number, idempotencyKey: string, organizationId: number): Promise<EmailTemplate> => {
+  return duplicateEmailTemplateViaGraphql(id, idempotencyKey, organizationId);
 };
 
 export const getTemplateCategories = async (organizationId: number): Promise<{

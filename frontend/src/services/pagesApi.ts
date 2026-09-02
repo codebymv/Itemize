@@ -359,9 +359,10 @@ export const createPage = async (
         og_image?: string;
         sections?: Partial<PageSection>[];
     },
+    idempotencyKey: string,
     organizationId?: number
 ): Promise<Page> => {
-    return createLandingPageViaGraphql(page, organizationId);
+    return createLandingPageViaGraphql(page, idempotencyKey, organizationId);
 };
 
 export const updatePage = async (
@@ -381,9 +382,10 @@ export const deletePage = async (
 
 export const duplicatePage = async (
     pageId: number,
+    idempotencyKey: string,
     organizationId?: number
 ): Promise<Page> => {
-    return duplicateLandingPageViaGraphql(pageId, organizationId);
+    return duplicateLandingPageViaGraphql(pageId, idempotencyKey, organizationId);
 };
 
 export const setPagePassword = async (

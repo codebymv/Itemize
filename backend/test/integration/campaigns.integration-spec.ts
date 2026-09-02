@@ -120,22 +120,52 @@ describe('Campaign management GraphQL PostgreSQL contract', () => {
   `;
 
   it('creates, filters, pages, and reads through GraphQL', async () => {
-    const created = await graphql(
-      memberToken,
-      organizationId,
-      `mutation Create($input: CreateCampaignInput!) {
-        createCampaign(input: $input) { ${fields} }
-      }`,
-      { input: {
+    const createDocument = `mutation Create(
+      $input: CreateCampaignInput!
+      $idempotencyKey: String!
+    ) {
+      createCampaign(input: $input, idempotencyKey: $idempotencyKey) { ${fields} }
+    }`;
+    const createVariables = {
+      idempotencyKey: 'campaign-create-launch',
+      input: {
         name: ' Launch ', subject: 'Hello audience', contentHtml: '<p>Hello</p>',
         segmentType: 'all', excludedTagIds: [],
-      } },
-    ).expect(200);
+      },
+    };
+    const [created, replayed] = await Promise.all([
+      graphql(memberToken, organizationId, createDocument, createVariables).expect(200),
+      graphql(memberToken, organizationId, createDocument, createVariables).expect(200),
+    ]);
     expect(created.body.errors).toBeUndefined();
+    expect(replayed.body.errors).toBeUndefined();
+    expect(replayed.body.data.createCampaign).toEqual(
+      created.body.data.createCampaign,
+    );
     expect(created.body.data.createCampaign).toMatchObject({
       organizationId, name: 'Launch', status: 'draft', segmentType: 'all', totalRecipients: 0,
     });
     const id = Number(created.body.data.createCampaign.id);
+    const createdCount = await pool.query<{ count: number }>(
+      `SELECT COUNT(*)::int AS count
+       FROM email_campaigns
+       WHERE organization_id = $1 AND name = 'Launch'`,
+      [organizationId],
+    );
+    expect(createdCount.rows[0].count).toBe(1);
+
+    const conflicting = await graphql(
+      memberToken,
+      organizationId,
+      createDocument,
+      {
+        ...createVariables,
+        input: { ...createVariables.input, subject: 'Changed subject' },
+      },
+    ).expect(200);
+    expect(conflicting.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', reason: 'IDEMPOTENCY_KEY_REUSED',
+    });
 
     const listed = await graphql(
       memberToken,
@@ -200,29 +230,38 @@ describe('Campaign management GraphQL PostgreSQL contract', () => {
        RETURNING id`,
       [organizationId, outsiderOrganizationId, memberId, outsiderId],
     );
-    const create = `mutation Create($input: CreateCampaignInput!) {
-      createCampaign(input: $input) { id segmentType segmentId tagIds }
+    const create = `mutation Create(
+      $input: CreateCampaignInput!
+      $idempotencyKey: String!
+    ) {
+      createCampaign(input: $input, idempotencyKey: $idempotencyKey) {
+        id segmentType segmentId tagIds
+      }
     }`;
-    const ownedTag = await graphql(memberToken, organizationId, create, { input: {
+    const ownedTag = await graphql(memberToken, organizationId, create, {
+      idempotencyKey: 'campaign-create-owned-tag', input: {
       name: 'Tag audience', subject: 'Tag audience', segmentType: 'tag',
       tagIds: [Number(tags.rows[0].id)],
     } }).expect(200);
     expect(ownedTag.body.data.createCampaign).toMatchObject({
       segmentType: 'tag', tagIds: [Number(tags.rows[0].id)],
     });
-    const ownedSegment = await graphql(memberToken, organizationId, create, { input: {
+    const ownedSegment = await graphql(memberToken, organizationId, create, {
+      idempotencyKey: 'campaign-create-owned-segment', input: {
       name: 'Saved audience', subject: 'Saved audience', segmentType: 'segment',
       segmentId: Number(segments.rows[0].id),
     } }).expect(200);
     expect(ownedSegment.body.data.createCampaign).toMatchObject({
       segmentType: 'segment', segmentId: Number(segments.rows[0].id),
     });
-    const foreignTag = await graphql(memberToken, organizationId, create, { input: {
+    const foreignTag = await graphql(memberToken, organizationId, create, {
+      idempotencyKey: 'campaign-create-foreign-tag', input: {
       name: 'Denied tag', subject: 'Denied tag', segmentType: 'tag',
       tagIds: [Number(tags.rows[1].id)],
     } }).expect(200);
     expect(foreignTag.body.errors[0].extensions.code).toBe('BAD_USER_INPUT');
-    const foreignSegment = await graphql(memberToken, organizationId, create, { input: {
+    const foreignSegment = await graphql(memberToken, organizationId, create, {
+      idempotencyKey: 'campaign-create-foreign-segment', input: {
       name: 'Denied segment', subject: 'Denied segment', segmentType: 'segment',
       segmentId: Number(segments.rows[1].id),
     } }).expect(200);
@@ -322,14 +361,61 @@ describe('Campaign management GraphQL PostgreSQL contract', () => {
       [organizationId, memberId],
     );
     const id = Number(source.rows[0].id);
-    const duplicate = await graphql(
+    const duplicateDocument = `mutation Duplicate(
+      $id: Int!
+      $idempotencyKey: String!
+    ) {
+      duplicateCampaign(id: $id, idempotencyKey: $idempotencyKey) { ${fields} }
+    }`;
+    const duplicateVariables = {
+      id,
+      idempotencyKey: 'campaign-duplicate-lifecycle',
+    };
+    const [duplicate, replayed] = await Promise.all([
+      graphql(memberToken, organizationId, duplicateDocument, duplicateVariables).expect(200),
+      graphql(memberToken, organizationId, duplicateDocument, duplicateVariables).expect(200),
+    ]);
+    expect(duplicate.body.errors).toBeUndefined();
+    expect(replayed.body.errors).toBeUndefined();
+    expect(replayed.body.data.duplicateCampaign).toEqual(
+      duplicate.body.data.duplicateCampaign,
+    );
+    expect(duplicate.body.data.duplicateCampaign).toMatchObject({ name: 'Lifecycle (Copy)', status: 'draft' });
+    const copyId = Number(duplicate.body.data.duplicateCampaign.id);
+    const copyCount = await pool.query<{ count: number }>(
+      `SELECT COUNT(*)::int AS count
+       FROM email_campaigns
+       WHERE organization_id = $1 AND name = 'Lifecycle (Copy)'`,
+      [organizationId],
+    );
+    expect(copyCount.rows[0].count).toBe(1);
+
+    const conflictingDuplicate = await graphql(
       memberToken,
       organizationId,
-      `mutation Duplicate($id: Int!) { duplicateCampaign(id: $id) { ${fields} } }`,
-      { id },
+      duplicateDocument,
+      { ...duplicateVariables, id: copyId },
     ).expect(200);
-    expect(duplicate.body.errors).toBeUndefined();
-    expect(duplicate.body.data.duplicateCampaign).toMatchObject({ name: 'Lifecycle (Copy)', status: 'draft' });
+    expect(conflictingDuplicate.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', reason: 'IDEMPOTENCY_KEY_REUSED',
+    });
+
+    const deletedCopy = await graphql(
+      memberToken,
+      organizationId,
+      'mutation Delete($id: Int!) { deleteCampaign(id: $id) { deletedId success } }',
+      { id: copyId },
+    ).expect(200);
+    expect(deletedCopy.body.data.deleteCampaign.success).toBe(true);
+    const unavailableReplay = await graphql(
+      memberToken,
+      organizationId,
+      duplicateDocument,
+      duplicateVariables,
+    ).expect(200);
+    expect(unavailableReplay.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', reason: 'IDEMPOTENT_RESULT_UNAVAILABLE',
+    });
 
     await pool.query("UPDATE email_campaigns SET status='sending' WHERE id=$1", [id]);
     const blocked = await graphql(
@@ -493,7 +579,9 @@ describe('Campaign management GraphQL PostgreSQL contract', () => {
     expect(testEmailProvider.send).toHaveBeenCalledWith(expect.objectContaining({
       to: variables.testEmail,
       subject: '[TEST] Test launch',
-      html: `<p>Hello Test at Test Company (${variables.testEmail})</p>`,
+      html: expect.stringContaining(
+        `<p style="margin:0 0 16px">Hello Test at Test Company (${variables.testEmail})</p>`,
+      ),
       text: 'Hello User',
       fromName: 'Campaign Sender',
       idempotencyKey: expect.stringMatching(/^campaign-test-email:/),

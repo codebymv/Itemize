@@ -124,11 +124,14 @@ describe('calendar API transport selection', () => {
 
     const createInput = { name: 'Consultation', organization_id: 3 };
     const updateInput = { name: 'Renamed' };
-    await createCalendar(createInput);
+    await createCalendar(createInput, 'calendar-create-key');
     await updateCalendar(4, updateInput, 3);
     await deleteCalendar(4, 3);
 
-    expect(createCalendarViaGraphql).toHaveBeenCalledWith(createInput);
+    expect(createCalendarViaGraphql).toHaveBeenCalledWith(
+      createInput,
+      'calendar-create-key',
+    );
     expect(updateCalendarViaGraphql).toHaveBeenCalledWith(4, updateInput, 3);
     expect(deleteCalendarViaGraphql).toHaveBeenCalledWith(4, 3);
     expect(api.put).not.toHaveBeenCalled();

@@ -192,7 +192,7 @@ describe('calendar GraphQL consumer', () => {
           },
         ],
         organization_id: 3,
-      }),
+      }, 'calendar-create-key'),
     ).resolves.toEqual(expect.objectContaining({ id: 4, name: 'Consultation' }));
 
     expect(fetchCsrfToken).toHaveBeenCalledOnce();
@@ -202,6 +202,7 @@ describe('calendar GraphQL consumer', () => {
       'x-csrf-token': 'calendar-csrf',
     });
     expect(JSON.parse(String(request.body)).variables).toEqual({
+      idempotencyKey: 'calendar-create-key',
       input: {
         name: 'Consultation',
         description: null,

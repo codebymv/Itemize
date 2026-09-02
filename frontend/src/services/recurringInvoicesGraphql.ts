@@ -446,16 +446,21 @@ export const createRecurringInvoiceViaGraphql = async (
     start_date: string;
     items: RecurringInvoiceItem[];
   },
+  idempotencyKey: string,
   organizationId?: number,
 ): Promise<RecurringInvoice> => {
   const data = await graphqlMutationRequest<
     { createRecurringInvoice: GraphqlRecurringInvoice },
-    { input: ReturnType<typeof mapInput> }
+    { input: ReturnType<typeof mapInput>; idempotencyKey: string }
   >(
-    `mutation CreateRecurringInvoice($input: CreateRecurringInvoiceInput!) {
-      createRecurringInvoice(input: $input) { ${recurringInvoiceDetailFields} }
+    `mutation CreateRecurringInvoice(
+      $input: CreateRecurringInvoiceInput!, $idempotencyKey: String!
+    ) {
+      createRecurringInvoice(input: $input, idempotencyKey: $idempotencyKey) {
+        ${recurringInvoiceDetailFields}
+      }
     }`,
-    { input: mapInput(input) },
+    { input: mapInput(input), idempotencyKey },
     organizationId,
   );
   return mapRecurringInvoice(data.createRecurringInvoice);
@@ -469,12 +474,14 @@ export const createRecurringInvoiceFromInvoiceViaGraphql = async (
     start_date: string;
     end_date?: string;
   },
+  idempotencyKey: string,
   organizationId?: number,
 ): Promise<{ recurring_template_id: number }> => {
   const data = await graphqlMutationRequest<
     { createRecurringInvoiceFromInvoice: { id: number } },
     {
       invoiceId: number;
+      idempotencyKey: string;
       input: {
         templateName: string;
         frequency: string;
@@ -484,14 +491,20 @@ export const createRecurringInvoiceFromInvoiceViaGraphql = async (
     }
   >(
     `mutation CreateRecurringInvoiceFromInvoice(
-      $invoiceId: Int!, $input: CreateRecurringInvoiceFromInvoiceInput!
+      $invoiceId: Int!, $input: CreateRecurringInvoiceFromInvoiceInput!,
+      $idempotencyKey: String!
     ) {
-      createRecurringInvoiceFromInvoice(invoiceId: $invoiceId, input: $input) {
+      createRecurringInvoiceFromInvoice(
+        invoiceId: $invoiceId,
+        input: $input,
+        idempotencyKey: $idempotencyKey
+      ) {
         id
       }
     }`,
     {
       invoiceId,
+      idempotencyKey,
       input: {
         templateName: input.template_name,
         frequency: input.frequency,

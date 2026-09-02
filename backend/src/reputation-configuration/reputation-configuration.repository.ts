@@ -34,6 +34,16 @@ export type ReputationWidgetValues = {
   isActive: boolean;
 };
 
+export type ReputationWidgetCreationOutcome =
+  | { kind: 'created'; row: ReputationWidgetRow; replayed: boolean }
+  | { kind: 'idempotency_conflict' }
+  | { kind: 'result_unavailable' };
+
+type ReputationWidgetCreationReceiptRow = {
+  request_fingerprint: string;
+  result_widget_id: number | null;
+};
+
 export type ReputationSettingsRow = {
   id: number; organization_id: number; auto_request_enabled: boolean | null;
   auto_request_delay_days: number | null; auto_request_channel: string | null;
@@ -143,19 +153,54 @@ export class ReputationConfigurationRepository {
   }
 
   async createWidget(
-    organizationId: number, widgetKey: string, values: ReputationWidgetValues,
-  ): Promise<ReputationWidgetRow> {
-    const result = await this.pool.query<ReputationWidgetRow>(
-      `INSERT INTO review_widgets (
-         organization_id,widget_key,name,widget_type,theme,primary_color,background_color,
-         text_color,border_radius,show_rating_stars,show_reviewer_photo,show_review_date,
-         show_platform_icon,min_rating,platforms,max_reviews,hide_no_text_reviews,
-         auto_refresh,refresh_interval_hours,is_active
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15::text[],$16,$17,$18,$19,$20)
-       RETURNING ${widgetSelection}`,
-      [organizationId, widgetKey, ...this.widgetParams(values)],
-    );
-    return result.rows[0];
+    organizationId: number,
+    userId: number,
+    idempotencyKey: string,
+    requestFingerprint: string,
+    widgetKey: string,
+    values: ReputationWidgetValues,
+  ): Promise<ReputationWidgetCreationOutcome> {
+    return this.transaction(async (client) => {
+      await client.query('SELECT id FROM organizations WHERE id=$1 FOR UPDATE', [organizationId]);
+      const receipt = await client.query<ReputationWidgetCreationReceiptRow>(
+        `SELECT request_fingerprint,result_widget_id
+         FROM reputation_widget_creation_receipts
+         WHERE organization_id=$1 AND idempotency_key=$2 FOR UPDATE`,
+        [organizationId, idempotencyKey],
+      );
+      const existing = receipt.rows[0];
+      if (existing) {
+        if (existing.request_fingerprint !== requestFingerprint) {
+          return { kind: 'idempotency_conflict' };
+        }
+        if (existing.result_widget_id === null) return { kind: 'result_unavailable' };
+        const replay = await client.query<ReputationWidgetRow>(
+          `SELECT ${widgetSelection} FROM review_widgets
+           WHERE id=$1 AND organization_id=$2`,
+          [existing.result_widget_id, organizationId],
+        );
+        return replay.rows[0]
+          ? { kind: 'created', row: replay.rows[0], replayed: true }
+          : { kind: 'result_unavailable' };
+      }
+      const result = await client.query<ReputationWidgetRow>(
+        `INSERT INTO review_widgets (
+           organization_id,widget_key,name,widget_type,theme,primary_color,background_color,
+           text_color,border_radius,show_rating_stars,show_reviewer_photo,show_review_date,
+           show_platform_icon,min_rating,platforms,max_reviews,hide_no_text_reviews,
+           auto_refresh,refresh_interval_hours,is_active
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15::text[],$16,$17,$18,$19,$20)
+         RETURNING ${widgetSelection}`,
+        [organizationId, widgetKey, ...this.widgetParams(values)],
+      );
+      await client.query(
+        `INSERT INTO reputation_widget_creation_receipts (
+           organization_id,requested_by_user_id,idempotency_key,request_fingerprint,result_widget_id
+         ) VALUES ($1,$2,$3,$4,$5)`,
+        [organizationId, userId, idempotencyKey, requestFingerprint, result.rows[0].id],
+      );
+      return { kind: 'created', row: result.rows[0], replayed: false };
+    });
   }
 
   async updateWidget(

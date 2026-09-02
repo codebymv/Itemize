@@ -213,24 +213,40 @@ describe('Authenticated forms GraphQL PostgreSQL contract', () => {
   });
 
   it('creates defaults, preserves omitted values, clears explicit nullable values, and enforces CSRF/limits', async () => {
-    const created = await mutation(
-      memberToken,
-      organizationId,
-      `mutation Create($input: CreateFormInput!) {
-        createForm(input: $input) {
+    const createQuery = `mutation Create(
+      $input: CreateFormInput!
+      $idempotencyKey: String!
+    ) {
+        createForm(input: $input, idempotencyKey: $idempotencyKey) {
           id name redirectUrl notificationEmails
           fields { fieldType label fieldOrder mapToContactField }
         }
-      }`,
-      {
-        input: {
-          name: '  Registration  ',
-          redirectUrl: 'https://example.com/done',
-          notificationEmails: ['OWNER@example.com', 'owner@example.com'],
-        },
+      }`;
+    const createVariables = {
+      idempotencyKey: 'forms-create-registration',
+      input: {
+        name: '  Registration  ',
+        redirectUrl: 'https://example.com/done',
+        notificationEmails: ['OWNER@example.com', 'owner@example.com'],
       },
-    ).expect(200);
+    };
+    const [created, replayed] = await Promise.all([
+      mutation(
+        memberToken,
+        organizationId,
+        createQuery,
+        createVariables,
+      ).expect(200),
+      mutation(
+        memberToken,
+        organizationId,
+        createQuery,
+        createVariables,
+      ).expect(200),
+    ]);
     expect(created.body.errors).toBeUndefined();
+    expect(replayed.body.errors).toBeUndefined();
+    expect(replayed.body.data.createForm).toEqual(created.body.data.createForm);
     expect(created.body.data.createForm).toMatchObject({
       name: 'Registration',
       redirectUrl: 'https://example.com/done',
@@ -238,6 +254,27 @@ describe('Authenticated forms GraphQL PostgreSQL contract', () => {
     });
     expect(created.body.data.createForm.fields).toHaveLength(2);
     const createdId = created.body.data.createForm.id;
+    const createdCount = await pool.query<{ count: number }>(
+      `SELECT COUNT(*)::int AS count
+       FROM forms
+       WHERE organization_id = $1 AND name = 'Registration'`,
+      [organizationId],
+    );
+    expect(createdCount.rows[0].count).toBe(1);
+
+    const conflictingCreate = await mutation(
+      memberToken,
+      organizationId,
+      createQuery,
+      {
+        idempotencyKey: createVariables.idempotencyKey,
+        input: { ...createVariables.input, name: 'Changed registration' },
+      },
+    ).expect(200);
+    expect(conflictingCreate.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_KEY_REUSED',
+    });
 
     const preserved = await mutation(
       memberToken,
@@ -281,7 +318,12 @@ describe('Authenticated forms GraphQL PostgreSQL contract', () => {
     const limited = await mutation(
       memberToken,
       organizationId,
-      `mutation { createForm(input: { name: "Blocked" }) { id } }`,
+      `mutation {
+        createForm(
+          input: { name: "Blocked" }
+          idempotencyKey: "forms-create-blocked"
+        ) { id }
+      }`,
     ).expect(200);
     expect(limited.body.errors[0].extensions).toMatchObject({
       code: 'FORBIDDEN',
@@ -386,14 +428,37 @@ describe('Authenticated forms GraphQL PostgreSQL contract', () => {
       },
     ).expect(200);
     const sourceFields = restored.body.data.replaceFormFields.fields;
-    const duplicated = await mutation(
-      memberToken,
-      organizationId,
-      `mutation { duplicateForm(id: ${formId}) {
+    const duplicateQuery = `mutation Duplicate(
+      $id: Int!
+      $idempotencyKey: String!
+    ) {
+      duplicateForm(id: $id, idempotencyKey: $idempotencyKey) {
         id name status fields { id label conditions }
-      } }`,
-    ).expect(200);
+      }
+    }`;
+    const duplicateVariables = {
+      id: formId,
+      idempotencyKey: 'forms-duplicate-intake',
+    };
+    const [duplicated, replayed] = await Promise.all([
+      mutation(
+        memberToken,
+        organizationId,
+        duplicateQuery,
+        duplicateVariables,
+      ).expect(200),
+      mutation(
+        memberToken,
+        organizationId,
+        duplicateQuery,
+        duplicateVariables,
+      ).expect(200),
+    ]);
     expect(duplicated.body.errors).toBeUndefined();
+    expect(replayed.body.errors).toBeUndefined();
+    expect(replayed.body.data.duplicateForm).toEqual(
+      duplicated.body.data.duplicateForm,
+    );
     expect(duplicated.body.data.duplicateForm).toMatchObject({
       name: 'Intake (Copy)',
       status: 'draft',
@@ -401,6 +466,24 @@ describe('Authenticated forms GraphQL PostgreSQL contract', () => {
     const copy = duplicated.body.data.duplicateForm;
     expect(copy.fields[0].id).not.toBe(sourceFields[0].id);
     expect(copy.fields[1].conditions[0].field_id).toBe(copy.fields[0].id);
+    const copyCount = await pool.query<{ count: number }>(
+      `SELECT COUNT(*)::int AS count
+       FROM forms
+       WHERE organization_id = $1 AND name = 'Intake (Copy)'`,
+      [organizationId],
+    );
+    expect(copyCount.rows[0].count).toBe(1);
+
+    const conflictingDuplicate = await mutation(
+      memberToken,
+      organizationId,
+      duplicateQuery,
+      { ...duplicateVariables, id: copy.id },
+    ).expect(200);
+    expect(conflictingDuplicate.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_KEY_REUSED',
+    });
 
     const foreignDelete = await mutation(
       outsiderToken,
@@ -414,6 +497,17 @@ describe('Authenticated forms GraphQL PostgreSQL contract', () => {
       `mutation { deleteForm(id: ${copy.id}) { deletedId } }`,
     ).expect(200);
     expect(deleted.body.data.deleteForm.deletedId).toBe(copy.id);
+
+    const unavailableReplay = await mutation(
+      memberToken,
+      organizationId,
+      duplicateQuery,
+      duplicateVariables,
+    ).expect(200);
+    expect(unavailableReplay.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENT_RESULT_UNAVAILABLE',
+    });
   });
 
   it('pages submissions deterministically and tenant-privately deletes one', async () => {

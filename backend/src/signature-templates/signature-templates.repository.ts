@@ -3,6 +3,10 @@ import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
 import { hasPaidEntitlement, PaidEntitlementState, signatureDocumentLimit } from '../billing/billing-entitlement';
 import { SignatureDocumentRow, SignatureQuotaExceededError, SignatureRecipientWrite, SignatureReferenceError } from '../signature-documents/signature-documents.repository';
+import {
+  SignatureCreationOutcome,
+  SignatureCreationReceiptRow,
+} from '../signature-creation/signature-creation.idempotency';
 
 export type SignatureTemplateRow = {
   id: number;
@@ -51,6 +55,9 @@ export type SignatureTemplateFieldWrite={roleName:string|null;fieldType:string;p
 export type SignatureTemplateValues={title:string;description:string|null;message:string|null;roles?:SignatureTemplateRoleWrite[];fields?:SignatureTemplateFieldWrite[]};
 export type SignatureTemplateUpdates=Partial<Omit<SignatureTemplateValues,'roles'|'fields'>>&{roles?:SignatureTemplateRoleWrite[];fields?:SignatureTemplateFieldWrite[]};
 export type InstantiateSignatureTemplateValues={title:string|null;description:string|null|undefined;message:string|null|undefined;routingMode:string;expirationDays:number;senderName:string|null;senderEmail:string|null;recipients:SignatureRecipientWrite[]};
+export type SignatureTemplateInstantiationOutcome =
+  | SignatureCreationOutcome<SignatureDocumentRow>
+  | { kind: 'not_found' };
 export class SignatureTemplateNotReadyError extends Error {}
 
 const columns = `t.id,t.organization_id,t.title,t.description,t.message,
@@ -141,8 +148,21 @@ export class SignatureTemplatesRepository {
     });
   }
 
-  async create(organizationId:number,userId:number,values:SignatureTemplateValues):Promise<SignatureTemplateRow>{
-    return this.transaction(async client=>{const inserted=await client.query<{id:number}>('INSERT INTO signature_templates (organization_id,title,description,message,created_by) VALUES ($1,$2,$3,$4,$5) RETURNING id',[organizationId,values.title,values.description,values.message,userId]);const id=Number(inserted.rows[0].id);if(values.roles!==undefined)await this.replaceRoles(client,id,values.roles);if(values.fields!==undefined){this.assertFieldRoles(values.fields,values.roles??[]);await this.replaceFields(client,id,values.fields);}return this.selectTemplate(client,organizationId,id);});
+  async create(organizationId:number,userId:number,values:SignatureTemplateValues,idempotencyKey:string,requestFingerprint:string):Promise<SignatureCreationOutcome<SignatureTemplateRow>>{
+    return this.transaction(async client=>{
+      await client.query('SELECT id FROM organizations WHERE id=$1 FOR UPDATE',[organizationId]);
+      const receipt=await client.query<SignatureCreationReceiptRow>(`SELECT action,request_fingerprint,result_document_id,result_template_id FROM signature_creation_receipts WHERE organization_id=$1 AND idempotency_key=$2 FOR UPDATE`,[organizationId,idempotencyKey]);
+      const replay=receipt.rows[0];
+      if(replay){
+        if(replay.action!=='create_template'||replay.request_fingerprint!==requestFingerprint)return{kind:'idempotency_conflict'};
+        if(replay.result_template_id===null)return{kind:'result_unavailable'};
+        const row=await this.selectTemplateOrNull(client,organizationId,replay.result_template_id);
+        return row?{kind:'created',row,replayed:true}:{kind:'result_unavailable'};
+      }
+      const inserted=await client.query<{id:number}>('INSERT INTO signature_templates (organization_id,title,description,message,created_by) VALUES ($1,$2,$3,$4,$5) RETURNING id',[organizationId,values.title,values.description,values.message,userId]);const id=Number(inserted.rows[0].id);if(values.roles!==undefined)await this.replaceRoles(client,id,values.roles);if(values.fields!==undefined){this.assertFieldRoles(values.fields,values.roles??[]);await this.replaceFields(client,id,values.fields);}const row=await this.selectTemplate(client,organizationId,id);
+      await client.query(`INSERT INTO signature_creation_receipts (organization_id,requested_by_user_id,idempotency_key,action,request_fingerprint,result_template_id) VALUES ($1,$2,$3,'create_template',$4,$5)`,[organizationId,userId,idempotencyKey,requestFingerprint,id]);
+      return{kind:'created',row,replayed:false};
+    });
   }
 
   async update(organizationId:number,id:number,values:SignatureTemplateUpdates):Promise<SignatureTemplateRow|null>{
@@ -166,8 +186,17 @@ export class SignatureTemplatesRepository {
     });
   }
 
-  async instantiate(organizationId:number,userId:number,id:number,values:InstantiateSignatureTemplateValues):Promise<SignatureDocumentRow|null>{
+  async instantiate(organizationId:number,userId:number,id:number,values:InstantiateSignatureTemplateValues,idempotencyKey:string,requestFingerprint:string):Promise<SignatureTemplateInstantiationOutcome>{
     return this.transaction(async client=>{
+      await client.query('SELECT id FROM organizations WHERE id=$1 FOR UPDATE',[organizationId]);
+      const receipt=await client.query<SignatureCreationReceiptRow>(`SELECT action,request_fingerprint,result_document_id,result_template_id FROM signature_creation_receipts WHERE organization_id=$1 AND idempotency_key=$2 FOR UPDATE`,[organizationId,idempotencyKey]);
+      const replay=receipt.rows[0];
+      if(replay){
+        if(replay.action!=='instantiate_template'||replay.request_fingerprint!==requestFingerprint)return{kind:'idempotency_conflict'};
+        if(replay.result_document_id===null)return{kind:'result_unavailable'};
+        const row=await this.selectDocumentOrNull(client,organizationId,replay.result_document_id);
+        return row?{kind:'created',row,replayed:true}:{kind:'result_unavailable'};
+      }
       await this.lockQuota(client,organizationId);
       const template=await client.query<{
         id:number;title:string;description:string|null;message:string|null;
@@ -179,7 +208,7 @@ export class SignatureTemplatesRepository {
          FROM signature_templates WHERE id=$1 AND organization_id=$2 FOR SHARE`,
         [id,organizationId],
       );
-      if(!template.rows[0])return null;
+      if(!template.rows[0])return{kind:'not_found'};
       const t=template.rows[0];
       const roles=await client.query<{role_name:string;signing_order:number}>(
         'SELECT role_name,signing_order FROM signature_template_roles WHERE template_id=$1 ORDER BY signing_order,id',
@@ -247,7 +276,9 @@ export class SignatureTemplatesRepository {
           field.y_position,field.width,field.height,field.label,field.is_required,
           field.font_size,field.font_family,field.text_align,field.locked],
       );
-      return this.selectDocument(client,organizationId,documentId);
+      const row=await this.selectDocument(client,organizationId,documentId);
+      await client.query(`INSERT INTO signature_creation_receipts (organization_id,requested_by_user_id,idempotency_key,action,request_fingerprint,result_document_id) VALUES ($1,$2,$3,'instantiate_template',$4,$5)`,[organizationId,userId,idempotencyKey,requestFingerprint,documentId]);
+      return{kind:'created',row,replayed:false};
     });
   }
 
@@ -278,6 +309,7 @@ export class SignatureTemplatesRepository {
   private async selectTemplate(client:PoolClient,organizationId:number,id:number):Promise<SignatureTemplateRow>{const row=await this.selectTemplateOrNull(client,organizationId,id);if(!row)throw new SignatureReferenceError('Signature template not found');return row;}
   private async selectTemplateOrNull(client:PoolClient,organizationId:number,id:number,lock=false):Promise<SignatureTemplateRow|null>{const result=await client.query<SignatureTemplateRow>(`SELECT ${columns} FROM signature_templates t WHERE t.id=$1 AND t.organization_id=$2${lock?' FOR UPDATE':''}`,[id,organizationId]);return result.rows[0]??null;}
   private async selectDocument(client:PoolClient,organizationId:number,id:number):Promise<SignatureDocumentRow>{const result=await client.query<SignatureDocumentRow>(`SELECT ${documentColumns},(SELECT COUNT(*)::int FROM signature_recipients r WHERE r.document_id=d.id AND r.organization_id=d.organization_id) AS recipient_count FROM signature_documents d WHERE d.id=$1 AND d.organization_id=$2`,[id,organizationId]);return result.rows[0];}
+  private async selectDocumentOrNull(client:PoolClient,organizationId:number,id:number):Promise<SignatureDocumentRow|null>{return(await this.selectDocument(client,organizationId,id))??null;}
   private async transaction<T>(work:(client:PoolClient)=>Promise<T>):Promise<T>{const client=await this.pool.connect();try{await client.query('BEGIN');const value=await work(client);await client.query('COMMIT');return value;}catch(error){await client.query('ROLLBACK').catch(()=>undefined);throw error;}finally{client.release();}}
 
   private async snapshot<T>(work: (client: PoolClient) => Promise<T>): Promise<T> {

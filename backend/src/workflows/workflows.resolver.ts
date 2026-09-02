@@ -26,8 +26,16 @@ export class WorkflowsResolver {
 
   @CsrfProtected() @OrganizationScoped()
   @Mutation(() => Workflow)
-  createWorkflow(@Args('input') input: CreateWorkflowInput): Promise<Workflow> {
-    return this.workflows.create(this.organizationId(), this.userId(), input);
+  createWorkflow(
+    @Args('input') input: CreateWorkflowInput,
+    @Args('idempotencyKey', { type: () => String }) idempotencyKey: string,
+  ): Promise<Workflow> {
+    return this.workflows.create(
+      this.organizationId(),
+      this.userId(),
+      input,
+      idempotencyKey,
+    );
   }
 
   @CsrfProtected() @OrganizationScoped()
@@ -38,8 +46,16 @@ export class WorkflowsResolver {
 
   @CsrfProtected() @OrganizationScoped()
   @Mutation(() => Workflow)
-  duplicateWorkflow(@Args('id', { type: () => Int }) id: number): Promise<Workflow> {
-    return this.workflows.duplicate(this.organizationId(), id, this.userId());
+  duplicateWorkflow(
+    @Args('id', { type: () => Int }) id: number,
+    @Args('idempotencyKey', { type: () => String }) idempotencyKey: string,
+  ): Promise<Workflow> {
+    return this.workflows.duplicate(
+      this.organizationId(),
+      id,
+      this.userId(),
+      idempotencyKey,
+    );
   }
 
   @CsrfProtected() @OrganizationScoped()

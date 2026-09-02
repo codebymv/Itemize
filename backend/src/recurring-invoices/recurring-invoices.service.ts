@@ -18,6 +18,8 @@ import {
 } from './recurring-invoice.types';
 import {
   RecurringInvoiceCloneOutcome,
+  RecurringInvoiceCloneCreationOutcome,
+  RecurringInvoiceCreationOutcome,
   RecurringInvoiceGenerationOutcome,
   RecurringInvoiceLifecycleOutcome,
   RecurringInvoiceItemValues,
@@ -28,6 +30,11 @@ import {
   RecurringInvoiceWriteOutcome,
   RecurringInvoicesRepository,
 } from './recurring-invoices.repository';
+import {
+  recurringInvoiceCloneFingerprint,
+  recurringInvoiceCreationFingerprint,
+  recurringInvoiceCreationKey,
+} from './recurring-invoice-creation.idempotency';
 
 const MONEY = /^(?:0|[1-9]\d{0,7})(?:\.\d{1,2})?$/;
 const QUANTITY = /^(?:0|[1-9]\d{0,7})(?:\.\d{1,2})?$/;
@@ -91,6 +98,7 @@ export class RecurringInvoicesService {
     organizationId: number,
     userId: number,
     input: CreateRecurringInvoiceInput,
+    idempotencyKey: string,
   ): Promise<RecurringInvoice> {
     const values: RecurringInvoiceValues = {
       templateName: this.requiredText(input.templateName, 'templateName', 255),
@@ -106,7 +114,16 @@ export class RecurringInvoicesService {
       notes: this.text(input.notes, 'notes', 50_000),
       paymentTerms: this.text(input.paymentTerms, 'paymentTerms', 50),
     };
-    return this.saved(await this.recurringInvoices.create(organizationId, userId, values));
+    const outcome: RecurringInvoiceCreationOutcome =
+      await this.recurringInvoices.create(
+        organizationId,
+        userId,
+        values,
+        recurringInvoiceCreationKey(idempotencyKey),
+        recurringInvoiceCreationFingerprint(values),
+      );
+    this.creationError(outcome);
+    return this.saved(outcome);
   }
 
   async createFromInvoice(
@@ -114,6 +131,7 @@ export class RecurringInvoicesService {
     userId: number,
     invoiceId: number,
     input: CreateRecurringInvoiceFromInvoiceInput,
+    idempotencyKey: string,
   ): Promise<RecurringInvoice> {
     this.id(invoiceId, 'invoiceId');
     const values = {
@@ -128,9 +146,36 @@ export class RecurringInvoicesService {
         { field: 'endDate', reason: 'INVALID_DATE_ORDER' },
       );
     }
-    return this.cloned(await this.recurringInvoices.createFromInvoice(
-      organizationId, userId, invoiceId, values,
-    ));
+    const outcome: RecurringInvoiceCloneCreationOutcome =
+      await this.recurringInvoices.createFromInvoice(
+        organizationId,
+        userId,
+        invoiceId,
+        values,
+        recurringInvoiceCreationKey(idempotencyKey),
+        recurringInvoiceCloneFingerprint(invoiceId, values),
+      );
+    this.creationError(outcome);
+    return this.cloned(outcome);
+  }
+
+  private creationError(
+    outcome: RecurringInvoiceCreationOutcome | RecurringInvoiceCloneCreationOutcome,
+  ): asserts outcome is RecurringInvoiceWriteOutcome | RecurringInvoiceCloneOutcome {
+    if (outcome.kind === 'idempotency-conflict') {
+      throw itemizeGraphqlError(
+        'idempotencyKey was already used for a different recurring invoice request',
+        'CONFLICT',
+        { field: 'idempotencyKey', reason: 'IDEMPOTENCY_KEY_REUSED' },
+      );
+    }
+    if (outcome.kind === 'result-unavailable') {
+      throw itemizeGraphqlError(
+        'The recurring invoice created by this request is no longer available',
+        'CONFLICT',
+        { field: 'idempotencyKey', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE' },
+      );
+    }
   }
 
   async update(

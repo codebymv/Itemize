@@ -448,16 +448,17 @@ export const resumeCampaignViaGraphql = async (
 
 export const createCampaignViaGraphql = async (
   input: Partial<EmailCampaign>,
+  idempotencyKey: string,
   organizationId?: number,
 ): Promise<EmailCampaign> => {
   const data = await graphqlMutationRequest<
     { createCampaign: GraphqlCampaign },
-    { input: ReturnType<typeof mapInput> }
+    { input: ReturnType<typeof mapInput>; idempotencyKey: string }
   >(
-    `mutation CreateCampaign($input: CreateCampaignInput!) {
-      createCampaign(input: $input) { ${campaignFields} }
+    `mutation CreateCampaign($input: CreateCampaignInput!, $idempotencyKey: String!) {
+      createCampaign(input: $input, idempotencyKey: $idempotencyKey) { ${campaignFields} }
     }`,
-    { input: mapInput(input) },
+    { input: mapInput(input), idempotencyKey },
     organizationId,
   );
   return mapCampaign(data.createCampaign);
@@ -481,10 +482,19 @@ export const updateCampaignViaGraphql = async (
   return mapCampaign(data.updateCampaign);
 };
 
-export const duplicateCampaignViaGraphql = async (id: number, organizationId?: number): Promise<EmailCampaign> => {
-  const data = await graphqlMutationRequest<{ duplicateCampaign: GraphqlCampaign }, { id: number }>(
-    `mutation DuplicateCampaign($id: Int!) { duplicateCampaign(id: $id) { ${campaignFields} } }`,
-    { id },
+export const duplicateCampaignViaGraphql = async (
+  id: number,
+  idempotencyKey: string,
+  organizationId?: number,
+): Promise<EmailCampaign> => {
+  const data = await graphqlMutationRequest<
+    { duplicateCampaign: GraphqlCampaign },
+    { id: number; idempotencyKey: string }
+  >(
+    `mutation DuplicateCampaign($id: Int!, $idempotencyKey: String!) {
+      duplicateCampaign(id: $id, idempotencyKey: $idempotencyKey) { ${campaignFields} }
+    }`,
+    { id, idempotencyKey },
     organizationId,
   );
   return mapCampaign(data.duplicateCampaign);

@@ -82,6 +82,11 @@ export function useInvoiceSave({
     release: releaseInvoiceSend,
     reset: resetInvoiceSend,
   } = useStableMutationKey('invoice-editor-send');
+  const {
+    begin: beginInvoiceCreate,
+    release: releaseInvoiceCreate,
+    reset: resetInvoiceCreate,
+  } = useStableMutationKey('invoice-editor-create');
 
   const handleSave = async (data: InvoiceData, lineItems: LineItem[]) => {
     if (!organizationId) return;
@@ -97,6 +102,7 @@ export function useInvoiceSave({
     }
 
     await run(async () => {
+      let createAttemptStarted = false;
       try {
         const invoiceData = {
         ...data,
@@ -112,7 +118,14 @@ export function useInvoiceSave({
       };
 
         if (isNew) {
-          await createInvoice(invoiceData, organizationId);
+          const idempotencyKey = beginInvoiceCreate(JSON.stringify({
+            organizationId,
+            invoice: invoiceData,
+          }));
+          if (!idempotencyKey) return;
+          createAttemptStarted = true;
+          await createInvoice(invoiceData, idempotencyKey, organizationId);
+          resetInvoiceCreate();
           toast({
             title: 'Created',
             description: toastMessages.created('invoice'),
@@ -124,6 +137,7 @@ export function useInvoiceSave({
           navigate('/invoices');
         }
       } catch (error) {
+        if (createAttemptStarted) releaseInvoiceCreate();
         toast({
           title: 'Error',
           description: toastMessages.failedToSave('invoice'),

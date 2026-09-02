@@ -46,6 +46,10 @@ import { publicFormPath } from '@/lib/publicContentRoutes';
 import { formQueryKeys } from '@/services/formQueryKeys';
 import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
 import { useKeyedSingleFlightAction, useSingleFlightAction } from '@/hooks/useSingleFlightAction';
+import {
+    useKeyedStableMutationKey,
+    useStableMutationKey,
+} from '@/hooks/useStableMutationKey';
 
 const PAGE_SIZE = 20;
 
@@ -66,6 +70,16 @@ export function FormsPage() {
     const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({ onError: () => 'Failed to initialize.' });
     const { pending: createPending, run: runCreate } = useSingleFlightAction();
     const { isPending: isRowPending, run: runRowAction } = useKeyedSingleFlightAction<number>();
+    const {
+        begin: beginCreateAttempt,
+        release: releaseCreateAttempt,
+        reset: resetCreateAttempt,
+    } = useStableMutationKey('form-create');
+    const {
+        begin: beginDuplicateAttempt,
+        release: releaseDuplicateAttempt,
+        reset: resetDuplicateAttempt,
+    } = useKeyedStableMutationKey<number>('form-duplicate');
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -80,14 +94,29 @@ export function FormsPage() {
     const handleCreateForm = useCallback(async () => {
         if (!organizationId) return;
         await runCreate(async () => {
+            const payload = { name: 'New Form', organization_id: organizationId };
+            const idempotencyKey = beginCreateAttempt(JSON.stringify(payload));
+            if (!idempotencyKey) return;
+            let newForm: Form;
             try {
-                const newForm = await createForm({ name: 'New Form', organization_id: organizationId });
-                navigate(`/forms/${newForm.id}`);
+                newForm = await createForm(payload, idempotencyKey);
+                resetCreateAttempt();
             } catch (error) {
+                releaseCreateAttempt();
                 toast({ title: 'Error', description: toastMessages.failedToCreate('form'), variant: 'destructive' });
+                return;
             }
+            navigate(`/forms/${newForm.id}`);
         });
-    }, [navigate, organizationId, runCreate, toast]);
+    }, [
+        beginCreateAttempt,
+        navigate,
+        organizationId,
+        releaseCreateAttempt,
+        resetCreateAttempt,
+        runCreate,
+        toast,
+    ]);
 
     useEffect(() => {
         const timeout = window.setTimeout(() => setDebouncedSearch(searchQuery.trim()), 250);
@@ -155,15 +184,23 @@ export function FormsPage() {
     const handleDuplicate = async (id: number) => {
         if (!organizationId) return;
         await runRowAction(id, async () => {
+            const idempotencyKey = beginDuplicateAttempt(
+                id,
+                JSON.stringify({ action: 'duplicate', formId: id }),
+            );
+            if (!idempotencyKey) return;
             try {
-                await duplicateForm(id, organizationId);
-                await queryClient.invalidateQueries({
-                    queryKey: formQueryKeys.pages(organizationId),
-                });
-                toast({ title: 'Duplicated', description: toastMessages.duplicated('form') });
+                await duplicateForm(id, idempotencyKey, organizationId);
+                resetDuplicateAttempt(id);
             } catch (error) {
+                releaseDuplicateAttempt(id);
                 toast({ title: 'Error', description: toastMessages.failedToDuplicate('form'), variant: 'destructive' });
+                return;
             }
+            await queryClient.invalidateQueries({
+                queryKey: formQueryKeys.pages(organizationId),
+            }).catch(() => undefined);
+            toast({ title: 'Duplicated', description: toastMessages.duplicated('form') });
         });
     };
 

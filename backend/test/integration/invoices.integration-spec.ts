@@ -164,6 +164,9 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     if (app) await app.close();
   });
 
+  let automaticInvoiceCreateKey = 0;
+  let automaticEstimateCreateKey = 0;
+  let automaticRecurringInvoiceCreateKey = 0;
   const graphql = (
     token: string,
     orgId: number,
@@ -181,12 +184,44 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
       )
       .set('x-organization-id', String(orgId));
     if (csrf) call.set('x-csrf-token', 'invoice-csrf');
-    return call.send({ query: document, variables });
+    let effectiveVariables = variables;
+    if (
+      document.includes('createInvoice(input: $input') &&
+      !Object.prototype.hasOwnProperty.call(effectiveVariables, 'idempotencyKey')
+    ) {
+      effectiveVariables = {
+        ...effectiveVariables,
+        idempotencyKey: `invoice-integration-${++automaticInvoiceCreateKey}`,
+      };
+    }
+    if (
+      document.includes('createEstimate(input: $input') &&
+      !Object.prototype.hasOwnProperty.call(effectiveVariables, 'idempotencyKey')
+    ) {
+      effectiveVariables = {
+        ...effectiveVariables,
+        idempotencyKey: `estimate-integration-${++automaticEstimateCreateKey}`,
+      };
+    }
+    if (
+      (
+        document.includes('createRecurringInvoice(input: $input') ||
+        document.includes('createRecurringInvoiceFromInvoice(')
+      ) &&
+      !Object.prototype.hasOwnProperty.call(effectiveVariables, 'idempotencyKey')
+    ) {
+      effectiveVariables = {
+        ...effectiveVariables,
+        idempotencyKey:
+          `recurring-integration-${++automaticRecurringInvoiceCreateKey}`,
+      };
+    }
+    return call.send({ query: document, variables: effectiveVariables });
   };
 
   const createMutation = `
-    mutation Create($input: CreateInvoiceInput!) {
-      createInvoice(input: $input) {
+    mutation Create($input: CreateInvoiceInput!, $idempotencyKey: String!) {
+      createInvoice(input: $input, idempotencyKey: $idempotencyKey) {
         id organizationId invoiceNumber contactId businessId status
         subtotal taxRate taxAmount discountAmount total amountDue
         issueDate dueDate
@@ -246,11 +281,15 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
   `;
 
   it('creates atomically, calculates decimals in PostgreSQL, and interoperates with REST', async () => {
+    const createVariables = {
+      input: input(),
+      idempotencyKey: 'invoice-create-atomic-1',
+    };
     const created = await graphql(
       memberToken,
       organizationId,
       createMutation,
-      { input: input() },
+      createVariables,
     ).expect(200);
     expect(created.body.errors).toBeUndefined();
     expect(created.body.data.createInvoice).toMatchObject({
@@ -272,6 +311,20 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
         total: '26.25',
         sortOrder: 0,
       }],
+    });
+    const replay = await graphql(
+      memberToken, organizationId, createMutation, createVariables,
+    ).expect(200);
+    expect(replay.body.errors).toBeUndefined();
+    expect(replay.body.data.createInvoice.id).toBe(created.body.data.createInvoice.id);
+    expect(replay.body.data.createInvoice.invoiceNumber)
+      .toBe(created.body.data.createInvoice.invoiceNumber);
+    const conflict = await graphql(memberToken, organizationId, createMutation, {
+      ...createVariables,
+      input: { ...createVariables.input, customerName: 'Different customer' },
+    }).expect(200);
+    expect(conflict.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', reason: 'IDEMPOTENCY_KEY_REUSED',
     });
     const id = Number(created.body.data.createInvoice.id);
     const persisted = await pool.query<{
@@ -354,6 +407,12 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     expect(deleted.body.data.deleteInvoice).toMatchObject({
       success: true,
       deletedId: id,
+    });
+    const unavailable = await graphql(
+      memberToken, organizationId, createMutation, createVariables,
+    ).expect(200);
+    expect(unavailable.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE',
     });
   });
 
@@ -1200,8 +1259,8 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
   });
 
   const estimateMutation = `
-    mutation CreateEstimate($input: CreateEstimateInput!) {
-      createEstimate(input: $input) {
+    mutation CreateEstimate($input: CreateEstimateInput!, $idempotencyKey: String!) {
+      createEstimate(input: $input, idempotencyKey: $idempotencyKey) {
         id organizationId estimateNumber contactId status issueDate validUntil
         subtotal taxAmount discountAmount total
         items { productId quantity unitPrice taxRate taxAmount total sortOrder }
@@ -1226,11 +1285,13 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
   });
 
   it('supports estimate CRUD with exact per-line tax and GraphQL detail parity', async () => {
+    const creationKey = 'estimate-crud-create';
+    const creationInput = estimateInput();
     const created = await graphql(
       memberToken,
       organizationId,
       estimateMutation,
-      { input: estimateInput() },
+      { input: creationInput, idempotencyKey: creationKey },
     ).expect(200);
     expect(created.body.errors).toBeUndefined();
     expect(created.body.data.createEstimate).toMatchObject({
@@ -1244,6 +1305,27 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
       items: [{ productId, taxAmount: '2.00', total: '27.00' }],
     });
     const id = Number(created.body.data.createEstimate.id);
+    const replayed = await graphql(
+      memberToken,
+      organizationId,
+      estimateMutation,
+      { input: creationInput, idempotencyKey: creationKey },
+    ).expect(200);
+    expect(replayed.body.errors).toBeUndefined();
+    expect(replayed.body.data.createEstimate).toEqual(created.body.data.createEstimate);
+    const conflict = await graphql(
+      memberToken,
+      organizationId,
+      estimateMutation,
+      {
+        input: { ...creationInput, customerName: 'Changed creation intent' },
+        idempotencyKey: creationKey,
+      },
+    ).expect(200);
+    expect(conflict.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_KEY_REUSED',
+    });
     const detail = await graphql(
       memberToken,
       organizationId,
@@ -1303,6 +1385,16 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     expect(deleted.body.data.deleteEstimate).toMatchObject({
       success: true,
       deletedId: id,
+    });
+    const unavailable = await graphql(
+      memberToken,
+      organizationId,
+      estimateMutation,
+      { input: creationInput, idempotencyKey: creationKey },
+    ).expect(200);
+    expect(unavailable.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE',
     });
   });
 
@@ -2059,8 +2151,10 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
   });
 
   const recurringMutation = `
-    mutation CreateRecurringInvoice($input: CreateRecurringInvoiceInput!) {
-      createRecurringInvoice(input: $input) {
+    mutation CreateRecurringInvoice(
+      $input: CreateRecurringInvoiceInput!, $idempotencyKey: String!
+    ) {
+      createRecurringInvoice(input: $input, idempotencyKey: $idempotencyKey) {
         id organizationId templateName contactId frequency status
         startDate endDate nextRunDate subtotal taxAmount discountAmount total
         items { productId name quantity unitPrice taxRate }
@@ -2088,9 +2182,11 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
   });
 
   it('supports recurring CRUD and recalculates stored items', async () => {
+    const creationKey = 'recurring-crud-create';
+    const creationInput = recurringInput();
     const created = await graphql(
       memberToken, organizationId, recurringMutation,
-      { input: recurringInput() },
+      { input: creationInput, idempotencyKey: creationKey },
     ).expect(200);
     expect(created.body.errors).toBeUndefined();
     expect(created.body.data.createRecurringInvoice).toMatchObject({
@@ -2105,6 +2201,28 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
       items: [{ productId, unitPrice: '12.50', taxRate: '8' }],
     });
     const id = Number(created.body.data.createRecurringInvoice.id);
+    const replayed = await graphql(
+      memberToken,
+      organizationId,
+      recurringMutation,
+      { input: creationInput, idempotencyKey: creationKey },
+    ).expect(200);
+    expect(replayed.body.errors).toBeUndefined();
+    expect(replayed.body.data.createRecurringInvoice)
+      .toEqual(created.body.data.createRecurringInvoice);
+    const conflict = await graphql(
+      memberToken,
+      organizationId,
+      recurringMutation,
+      {
+        input: { ...creationInput, templateName: 'Changed creation intent' },
+        idempotencyKey: creationKey,
+      },
+    ).expect(200);
+    expect(conflict.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_KEY_REUSED',
+    });
     const detail = await graphql(
       memberToken,
       organizationId,
@@ -2183,6 +2301,16 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
       success: true,
       deletedId: id,
       templateName: 'Weekly Consulting',
+    });
+    const unavailable = await graphql(
+      memberToken,
+      organizationId,
+      recurringMutation,
+      { input: creationInput, idempotencyKey: creationKey },
+    ).expect(200);
+    expect(unavailable.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE',
     });
   });
 
@@ -2391,9 +2519,14 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     );
 
     const cloneMutation = `mutation CreateRecurringInvoiceFromInvoice(
-      $invoiceId: Int!, $input: CreateRecurringInvoiceFromInvoiceInput!
+      $invoiceId: Int!, $input: CreateRecurringInvoiceFromInvoiceInput!,
+      $idempotencyKey: String!
     ) {
-      createRecurringInvoiceFromInvoice(invoiceId: $invoiceId, input: $input) {
+      createRecurringInvoiceFromInvoice(
+        invoiceId: $invoiceId,
+        input: $input,
+        idempotencyKey: $idempotencyKey
+      ) {
         id organizationId templateName sourceInvoiceId sourceInvoiceNumber
         contactId frequency startDate endDate nextRunDate status
         subtotal taxAmount discountAmount discountType discountValue total
@@ -2419,7 +2552,11 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
       memberToken,
       organizationId,
       cloneMutation,
-      { invoiceId: sourceId, input: cloneInput },
+      {
+        invoiceId: sourceId,
+        input: cloneInput,
+        idempotencyKey: 'recurring-clone-source',
+      },
     ).expect(200);
     expect(cloned.body.errors).toBeUndefined();
     expect(cloned.body.data.createRecurringInvoiceFromInvoice).toMatchObject({
@@ -2448,6 +2585,33 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
         unitPrice: '12.50',
         taxRate: '5.00',
       }],
+    });
+    const replayedClone = await graphql(
+      memberToken,
+      organizationId,
+      cloneMutation,
+      {
+        invoiceId: sourceId,
+        input: cloneInput,
+        idempotencyKey: 'recurring-clone-source',
+      },
+    ).expect(200);
+    expect(replayedClone.body.errors).toBeUndefined();
+    expect(replayedClone.body.data.createRecurringInvoiceFromInvoice)
+      .toEqual(cloned.body.data.createRecurringInvoiceFromInvoice);
+    const cloneConflict = await graphql(
+      memberToken,
+      organizationId,
+      cloneMutation,
+      {
+        invoiceId: sourceId,
+        input: { ...cloneInput, frequency: 'quarterly' },
+        idempotencyKey: 'recurring-clone-source',
+      },
+    ).expect(200);
+    expect(cloneConflict.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_KEY_REUSED',
     });
     const templateId = Number(
       cloned.body.data.createRecurringInvoiceFromInvoice.id,

@@ -229,9 +229,9 @@ describe('campaign GraphQL consumer', () => {
     await createCampaignViaGraphql({
       name: 'Launch', subject: 'Hello', segment_type: 'segment', segment_id: 12,
       excluded_tag_ids: [5],
-    }, 4);
+    }, 'campaign-create-key', 4);
     await updateCampaignViaGraphql(9, { from_name: null, content_text: null }, 4);
-    await duplicateCampaignViaGraphql(9, 4);
+    await duplicateCampaignViaGraphql(9, 'campaign-duplicate-key', 4);
     await scheduleCampaignViaGraphql(9, '2099-01-01T10:00:00Z', 'America/Phoenix', 4);
     await unscheduleCampaignViaGraphql(9, 4);
     await deleteCampaignViaGraphql(9, 4);
@@ -241,7 +241,12 @@ describe('campaign GraphQL consumer', () => {
     expect(bodies[0].variables.input).toEqual({
       name: 'Launch', subject: 'Hello', segmentType: 'segment', segmentId: 12, excludedTagIds: [5],
     });
+    expect(bodies[0].variables.idempotencyKey).toBe('campaign-create-key');
     expect(bodies[1].variables).toEqual({ id: 9, input: { fromName: null, contentText: null } });
+    expect(bodies[2].variables).toEqual({
+      id: 9,
+      idempotencyKey: 'campaign-duplicate-key',
+    });
     expect(bodies[3].variables.input).toEqual({
       scheduledAt: '2099-01-01T10:00:00Z', timezone: 'America/Phoenix',
     });

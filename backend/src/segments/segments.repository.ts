@@ -43,6 +43,16 @@ export type SegmentMutationOutcome =
   | { kind: 'ok'; row: SegmentRow }
   | { kind: 'not_found' };
 
+export type SegmentCreationOutcome =
+  | { kind: 'created'; row: SegmentRow; replayed: boolean }
+  | { kind: 'idempotency_conflict' }
+  | { kind: 'result_unavailable' };
+
+type SegmentCreationReceiptRow = {
+  request_fingerprint: string;
+  result_segment_id: number | null;
+};
+
 export type DeleteSegmentOutcome = 'deleted' | 'not_found' | 'in_use';
 
 export type SegmentStatsRow = {
@@ -142,8 +152,28 @@ export class SegmentsRepository {
     organizationId: number,
     userId: number,
     values: SegmentValues,
-  ): Promise<SegmentRow> {
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<SegmentCreationOutcome> {
     return this.transaction(async (client) => {
+      await client.query('SELECT id FROM organizations WHERE id=$1 FOR UPDATE', [organizationId]);
+      const receipt = await client.query<SegmentCreationReceiptRow>(
+        `SELECT request_fingerprint,result_segment_id
+         FROM segment_creation_receipts
+         WHERE organization_id=$1 AND idempotency_key=$2 FOR UPDATE`,
+        [organizationId, idempotencyKey],
+      );
+      const replay = receipt.rows[0];
+      if (replay) {
+        if (replay.request_fingerprint !== requestFingerprint) {
+          return { kind: 'idempotency_conflict' };
+        }
+        if (replay.result_segment_id === null) return { kind: 'result_unavailable' };
+        const row = await this.selectById(client, organizationId, replay.result_segment_id);
+        return row
+          ? { kind: 'created', row, replayed: true }
+          : { kind: 'result_unavailable' };
+      }
       await this.validateReferences(client, organizationId, values.definition);
       const inserted = await client.query<{ id: number }>(
         `INSERT INTO segments (
@@ -161,7 +191,13 @@ export class SegmentsRepository {
       await this.calculateCount(client, current);
       const row = await this.selectById(client, organizationId, id);
       if (!row) throw new Error('Segment disappeared after calculation');
-      return row;
+      await client.query(
+        `INSERT INTO segment_creation_receipts (
+           organization_id,requested_by_user_id,idempotency_key,request_fingerprint,result_segment_id
+         ) VALUES ($1,$2,$3,$4,$5)`,
+        [organizationId, userId, idempotencyKey, requestFingerprint, id],
+      );
+      return { kind: 'created', row, replayed: false };
     });
   }
 

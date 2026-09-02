@@ -71,7 +71,7 @@ describe('Chat Widget transport boundary', () => {
     });
 
     await getChatWidget(3);
-    await createChatWidget({ name: 'Support' }, 3);
+    await createChatWidget({ name: 'Support' }, 3, 'create-widget-key');
     await updateChatWidget({ is_active: false }, 3);
     await getEmbedCode(3);
     await getChatSessions({ status: 'active' }, 3);
@@ -83,6 +83,7 @@ describe('Chat Widget transport boundary', () => {
     expect(createChatWidgetViaGraphql).toHaveBeenCalledWith(
       { name: 'Support' },
       3,
+      'create-widget-key',
     );
     expect(updateChatWidgetViaGraphql).toHaveBeenCalledWith(
       { is_active: false },

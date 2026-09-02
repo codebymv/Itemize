@@ -75,8 +75,11 @@ export class ReputationConfigurationResolver {
   @Mutation(() => ReputationWidget)
   createReputationWidget(
     @Args('input') input: CreateReputationWidgetInput,
+    @Args('idempotencyKey', { type: () => String }) idempotencyKey: string,
   ): Promise<ReputationWidget> {
-    return this.configuration.createWidget(this.organizationId(), input);
+    return this.configuration.createWidget(
+      this.organizationId(), this.userId(), input, idempotencyKey,
+    );
   }
 
   @CsrfProtected()
@@ -125,5 +128,11 @@ export class ReputationConfigurationResolver {
     const organization = this.requestContext.current().organization;
     if (!organization) throw new Error('Verified organization context is unavailable');
     return organization.organizationId;
+  }
+
+  private userId(): number {
+    const identity = this.requestContext.current().identity;
+    if (!identity) throw new Error('Verified identity context is unavailable');
+    return identity.userId;
   }
 }

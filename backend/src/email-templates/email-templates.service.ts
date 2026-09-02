@@ -18,6 +18,7 @@ import {
   sanitizeEmailTemplateHtml,
 } from './email-template-content';
 import { renderEmailTemplateDocument } from './email-template-renderer';
+import { emailTemplateCreationFingerprint } from './email-template-creation.idempotency';
 import {
   EmailTemplatePublishIdempotencyConflictError,
   EmailTemplateRow,
@@ -79,22 +80,16 @@ export class EmailTemplatesService {
     organizationId: number,
     userId: number,
     input: CreateEmailTemplateInput,
+    idempotencyKey: string,
   ): Promise<EmailTemplate> {
-    const name = this.required(input.name, 'name', 255);
-    const subject = this.singleLineRequired(input.subject, 'subject', 500);
-    const preheader = this.optionalSingleLine(input.preheader, 'preheader', 255);
-    const bodyHtml = this.sanitizedHtml(input.bodyHtml);
-    const bodyText = this.optional(input.bodyText, 'bodyText', 1_000_000, false);
-    return this.map(await this.templates.create(organizationId, userId, {
-      name,
-      subject,
-      preheader,
-      bodyHtml,
-      bodyText,
-      variables: extractEmailTemplateVariables(subject, preheader, bodyHtml, bodyText),
-      category: this.category(input.category),
-      isActive: input.isActive,
-    }));
+    const values = this.contentValues(input);
+    return this.creationOutcome(await this.templates.create(
+      organizationId,
+      userId,
+      values,
+      this.idempotencyKey(idempotencyKey),
+      emailTemplateCreationFingerprint('create', values),
+    ));
   }
 
   async update(
@@ -124,20 +119,31 @@ export class EmailTemplatesService {
     return this.map(row);
   }
 
-  async duplicate(organizationId: number, id: number, userId: number): Promise<EmailTemplate> {
+  async duplicate(organizationId: number, id: number, userId: number, idempotencyKey: string): Promise<EmailTemplate> {
     this.id(id);
-    const row = await this.templates.duplicate(organizationId, id, userId);
-    if (!row) this.notFound();
-    return this.map(row);
+    return this.creationOutcome(await this.templates.duplicate(
+      organizationId,
+      id,
+      userId,
+      this.idempotencyKey(idempotencyKey),
+      emailTemplateCreationFingerprint('duplicate', { sourceTemplateId: id }),
+    ));
   }
 
   async createDraft(
     organizationId: number,
     userId: number,
     input: CreateEmailTemplateInput,
+    idempotencyKey: string,
   ): Promise<EmailTemplate> {
     const values = this.contentValues(input);
-    return this.map(await this.templates.createDraft(organizationId, userId, values));
+    return this.creationOutcome(await this.templates.createDraft(
+      organizationId,
+      userId,
+      values,
+      this.idempotencyKey(idempotencyKey),
+      emailTemplateCreationFingerprint('create_draft', values),
+    ));
   }
 
   async saveDraft(
@@ -256,6 +262,27 @@ export class EmailTemplatesService {
       );
     }
     return key;
+  }
+
+  private creationOutcome(
+    outcome: Awaited<ReturnType<EmailTemplatesRepository['create']>>,
+  ): EmailTemplate {
+    if (outcome.kind === 'not_found') this.notFound();
+    if (outcome.kind === 'idempotency_conflict') {
+      throw itemizeGraphqlError(
+        'idempotencyKey was already used for a different email template creation request',
+        'CONFLICT',
+        { field: 'idempotencyKey', reason: 'IDEMPOTENCY_KEY_REUSED' },
+      );
+    }
+    if (outcome.kind === 'result_unavailable') {
+      throw itemizeGraphqlError(
+        'The original email template creation result is no longer available',
+        'CONFLICT',
+        { reason: 'IDEMPOTENT_RESULT_UNAVAILABLE' },
+      );
+    }
+    return this.map(outcome.row);
   }
 
   private required(value: string, field: string, max: number, trim = true): string {

@@ -9,10 +9,12 @@ import {
   validateFormFields,
 } from './form.contract';
 import { CreateFormInput, FormFieldInput, FormFilterInput, UpdateFormInput } from './form.inputs';
+import { formCreationFingerprint } from './form-creation.idempotency';
 import { Form, FormField, FormPage, FormSubmission, FormSubmissionPage } from './form.types';
 import {
   FormFieldRow,
   FormFieldValue,
+  FormLimit,
   FormRow,
   FormSubmissionRow,
   FormsRepository,
@@ -78,6 +80,7 @@ export class FormsService {
     organizationId: number,
     userId: number,
     input: CreateFormInput,
+    idempotencyKey: string,
   ): Promise<Form> {
     const suppliedFields = input.fields ?? [];
     if (suppliedFields.some((field) => (field.conditions?.length ?? 0) > 0)) {
@@ -91,7 +94,7 @@ export class FormsService {
       suppliedFields.length > 0
         ? this.fields(suppliedFields, true)
         : this.defaultFields();
-    const outcome = await this.forms.create(organizationId, userId, {
+    const values = {
       name: this.text(input.name, 'name', 255),
       description: this.nullableText(input.description, 'description', 10000),
       slug: this.slug(input.name),
@@ -113,19 +116,19 @@ export class FormsService {
       createContact: input.createContact ?? true,
       contactTags: this.tags(input.contactTags ?? []),
       fields,
-    });
+    };
+    const { slug: _generatedSlug, ...fingerprintValues } = values;
+    const outcome = await this.forms.create(
+      organizationId,
+      userId,
+      values,
+      this.idempotencyKey(idempotencyKey),
+      formCreationFingerprint('create', fingerprintValues),
+    );
     if (outcome.kind === 'limit') {
-      throw itemizeGraphqlError(
-        `You've reached your form limit (${outcome.limit.current}/${outcome.limit.limit}). Please upgrade your plan.`,
-        'FORBIDDEN',
-        {
-          reason: 'PLAN_LIMIT_REACHED',
-          current: outcome.limit.current,
-          limit: outcome.limit.limit,
-          plan: outcome.limit.plan,
-        },
-      );
+      this.planLimit(outcome.limit);
     }
+    if (outcome.kind !== 'created') this.creationFailure(outcome.kind);
     return this.mapValue(outcome.value);
   }
 
@@ -230,16 +233,23 @@ export class FormsService {
     organizationId: number,
     userId: number,
     formId: number,
+    idempotencyKey: string,
   ): Promise<Form> {
     this.id(formId, 'id');
-    const value = await this.forms.duplicate(
+    const outcome = await this.forms.duplicate(
       organizationId,
       userId,
       formId,
       this.slug('form-copy'),
+      this.idempotencyKey(idempotencyKey),
+      formCreationFingerprint('duplicate', { sourceFormId: formId }),
     );
-    if (!value) throw itemizeGraphqlError('Form not found', 'NOT_FOUND');
-    return this.mapValue(value);
+    if (outcome.kind === 'not_found') {
+      throw itemizeGraphqlError('Form not found', 'NOT_FOUND');
+    }
+    if (outcome.kind === 'limit') this.planLimit(outcome.limit);
+    if (outcome.kind !== 'created') this.creationFailure(outcome.kind);
+    return this.mapValue(outcome.value);
   }
 
   async replaceFields(
@@ -458,6 +468,57 @@ export class FormsService {
       });
     }
     return tags;
+  }
+
+  private idempotencyKey(value: string): string {
+    const key = String(value ?? '').trim();
+    if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(key)) {
+      throw itemizeGraphqlError(
+        'idempotencyKey must be 1-128 safe ASCII characters',
+        'BAD_USER_INPUT',
+        {
+          field: 'idempotencyKey',
+          reason: 'INVALID_IDEMPOTENCY_KEY',
+        },
+      );
+    }
+    return key;
+  }
+
+  private creationFailure(
+    kind: 'not_found' | 'idempotency_conflict' | 'result_unavailable',
+  ): never {
+    if (kind === 'not_found') {
+      throw itemizeGraphqlError('Form not found', 'NOT_FOUND');
+    }
+    if (kind === 'idempotency_conflict') {
+      throw itemizeGraphqlError(
+        'idempotencyKey was already used for a different form creation request',
+        'CONFLICT',
+        {
+          field: 'idempotencyKey',
+          reason: 'IDEMPOTENCY_KEY_REUSED',
+        },
+      );
+    }
+    throw itemizeGraphqlError(
+      'The original form creation result is no longer available',
+      'CONFLICT',
+      { reason: 'IDEMPOTENT_RESULT_UNAVAILABLE' },
+    );
+  }
+
+  private planLimit(limit: FormLimit): never {
+    throw itemizeGraphqlError(
+      `You've reached your form limit (${limit.current}/${limit.limit}). Please upgrade your plan.`,
+      'FORBIDDEN',
+      {
+        reason: 'PLAN_LIMIT_REACHED',
+        current: limit.current,
+        limit: limit.limit,
+        plan: limit.plan,
+      },
+    );
   }
 
   private record(value: unknown, field: string): Record<string, unknown> {

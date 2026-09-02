@@ -211,14 +211,17 @@ const widgetInput = (widget: Partial<ReviewWidget>) => ({
 });
 
 export const createWidgetViaGraphql = async (
-  widget: Partial<ReviewWidget>, organizationId?: number,
+  widget: Partial<ReviewWidget>, organizationId: number, idempotencyKey: string,
 ): Promise<ReviewWidget> => {
   const input = widgetInput(widget);
   const data = await graphqlMutationRequest<
-    { createReputationWidget: GraphqlWidget }, { input: typeof input }
-  >(`mutation CreateReputationWidget($input: CreateReputationWidgetInput!) {
-    createReputationWidget(input: $input) { ${widgetFields} }
-  }`, { input }, organizationId);
+    { createReputationWidget: GraphqlWidget },
+    { input: typeof input; idempotencyKey: string }
+  >(`mutation CreateReputationWidget(
+    $input: CreateReputationWidgetInput!, $idempotencyKey: String!
+  ) {
+    createReputationWidget(input: $input, idempotencyKey: $idempotencyKey) { ${widgetFields} }
+  }`, { input, idempotencyKey }, organizationId);
   return mapWidget(data.createReputationWidget);
 };
 

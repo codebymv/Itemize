@@ -467,16 +467,17 @@ export const getInvoiceViaGraphql = async (
 
 export const createInvoiceViaGraphql = async (
   invoice: WritableInvoice & { items: InvoiceItem[] },
+  idempotencyKey: string,
   organizationId?: number,
 ): Promise<Invoice> => {
   const data = await graphqlMutationRequest<
     { createInvoice: GraphqlInvoice },
-    { input: ReturnType<typeof mapMutationInput> }
+    { input: ReturnType<typeof mapMutationInput>; idempotencyKey: string }
   >(
-    `mutation CreateInvoice($input: CreateInvoiceInput!) {
-      createInvoice(input: $input) { ${legacyInvoiceDetailFields} }
+    `mutation CreateInvoice($input: CreateInvoiceInput!, $idempotencyKey: String!) {
+      createInvoice(input: $input, idempotencyKey: $idempotencyKey) { ${legacyInvoiceDetailFields} }
     }`,
-    { input: mapMutationInput(invoice) },
+    { input: mapMutationInput(invoice), idempotencyKey },
     organizationId,
   );
   return mapInvoice(data.createInvoice);

@@ -97,10 +97,12 @@ export type UpdateCalendarValues = Partial<
 
 export type CalendarLimit = { current: number; limit: number; plan: string };
 export type CreateCalendarOutcome =
-  | { kind: 'created'; value: CalendarDetailRows }
+  | { kind: 'created'; value: CalendarDetailRows; replayed: boolean }
   | { kind: 'limit'; limit: CalendarLimit }
   | { kind: 'invalid_assignee' }
-  | { kind: 'assignee_required' };
+  | { kind: 'assignee_required' }
+  | { kind: 'idempotency_conflict' }
+  | { kind: 'result_unavailable' };
 export type UpdateCalendarOutcome =
   | { kind: 'updated'; value: CalendarDetailRows }
   | { kind: 'not_found' }
@@ -116,6 +118,11 @@ export type UpsertCalendarDateOverrideOutcome =
   { kind: 'updated'; value: CalendarDateOverrideRow } | { kind: 'not_found' };
 export type DeleteCalendarDateOverrideOutcome =
   { kind: 'deleted' } | { kind: 'not_found' };
+
+type CalendarCreationReceiptRow = {
+  request_fingerprint: string;
+  result_calendar_id: number | null;
+};
 
 const calendarSelection = `
   c.id,
@@ -188,9 +195,18 @@ export class CalendarsRepository {
     organizationId: number,
     userId: number,
     values: CreateCalendarValues,
+    idempotencyKey: string,
+    requestFingerprint: string,
   ): Promise<CreateCalendarOutcome> {
     return this.transaction(async (client) => {
       await client.query('SELECT pg_advisory_xact_lock($1)', [organizationId]);
+      const replay = await this.replayCreationReceipt(
+        client,
+        organizationId,
+        idempotencyKey,
+        requestFingerprint,
+      );
+      if (replay) return replay;
       const limit = await this.calendarLimit(client, organizationId);
       if (limit.limit !== -1 && limit.current >= limit.limit) {
         return { kind: 'limit', limit };
@@ -258,7 +274,14 @@ export class CalendarsRepository {
         inserted.rows[0].id,
       );
       if (!created) throw new Error('Created calendar could not be reloaded');
-      return { kind: 'created', value: created };
+      await this.insertCreationReceipt(client, {
+        organizationId,
+        userId,
+        idempotencyKey,
+        requestFingerprint,
+        resultCalendarId: created.calendar.id,
+      });
+      return { kind: 'created', value: created, replayed: false };
     });
   }
 
@@ -487,6 +510,62 @@ export class CalendarsRepository {
       );
       return result.rows[0] ? { kind: 'deleted' } : { kind: 'not_found' };
     });
+  }
+
+  private async replayCreationReceipt(
+    client: PoolClient,
+    organizationId: number,
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<CreateCalendarOutcome | null> {
+    const receipt = await client.query<CalendarCreationReceiptRow>(
+      `SELECT request_fingerprint, result_calendar_id
+       FROM calendar_creation_receipts
+       WHERE organization_id = $1 AND idempotency_key = $2
+       FOR UPDATE`,
+      [organizationId, idempotencyKey],
+    );
+    const existing = receipt.rows[0];
+    if (!existing) return null;
+    if (existing.request_fingerprint !== requestFingerprint) {
+      return { kind: 'idempotency_conflict' };
+    }
+    if (existing.result_calendar_id === null) {
+      return { kind: 'result_unavailable' };
+    }
+    const result = await this.selectById(
+      client,
+      organizationId,
+      existing.result_calendar_id,
+    );
+    return result
+      ? { kind: 'created', value: result, replayed: true }
+      : { kind: 'result_unavailable' };
+  }
+
+  private async insertCreationReceipt(
+    client: PoolClient,
+    values: {
+      organizationId: number;
+      userId: number;
+      idempotencyKey: string;
+      requestFingerprint: string;
+      resultCalendarId: number;
+    },
+  ): Promise<void> {
+    await client.query(
+      `INSERT INTO calendar_creation_receipts (
+         organization_id, requested_by_user_id, idempotency_key,
+         request_fingerprint, result_calendar_id
+       ) VALUES ($1,$2,$3,$4,$5)`,
+      [
+        values.organizationId,
+        values.userId,
+        values.idempotencyKey,
+        values.requestFingerprint,
+        values.resultCalendarId,
+      ],
+    );
   }
 
   private async selectById(

@@ -50,7 +50,7 @@ describe('estimate API transport selection', () => {
     });
     await getEstimates({ search: 'EST' }, 4);
     await getEstimate(8, 4);
-    await createEstimate({ items: estimate.items }, 4);
+    await createEstimate({ items: estimate.items }, 'estimate-create-8', 4);
     await updateEstimate(8, { notes: 'Updated' }, 4);
     await deleteEstimate(8, 4);
     await expect(convertEstimateToInvoice(8, 4)).resolves.toEqual({
@@ -61,6 +61,7 @@ describe('estimate API transport selection', () => {
     expect(getEstimateViaGraphql).toHaveBeenCalledWith(8, 4);
     expect(createEstimateViaGraphql).toHaveBeenCalledWith(
       { items: estimate.items },
+      'estimate-create-8',
       4,
     );
     expect(updateEstimateViaGraphql).toHaveBeenCalledWith(

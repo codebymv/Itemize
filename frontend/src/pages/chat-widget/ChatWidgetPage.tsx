@@ -53,6 +53,7 @@ import { useOrganization } from "@/hooks/useOrganization";
 import { useRouteOnboarding } from "@/hooks/useOnboardingTrigger";
 import { useUnsavedChangesGuard } from "@/hooks/useUnsavedChangesGuard";
 import { useSingleFlightAction } from "@/hooks/useSingleFlightAction";
+import { useStableMutationKey } from "@/hooks/useStableMutationKey";
 import {
   createChatWidget,
   getChatWidget,
@@ -138,6 +139,7 @@ export function ChatWidgetPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const { pending: saving, run: runSave } = useSingleFlightAction();
+  const createAttempt = useStableMutationKey("create-chat-widget");
   const [activeTab, setActiveTab] = useState("settings");
   const { isDirty, markClean } = useDirtyState({
     value: config,
@@ -206,10 +208,27 @@ export function ChatWidgetPage() {
     }
 
     await runSave(async () => {
+      const creationKey = config.id ? null : createAttempt.begin(JSON.stringify({
+        ...config,
+        allowed_domains: [...config.allowed_domains].sort(),
+      }));
+      if (!config.id && !creationKey) return;
+      let savedConfig: ChatWidgetConfig;
       try {
-      const savedConfig = config.id
-        ? await updateChatWidget(config, organizationId)
-        : await createChatWidget(config, organizationId);
+        savedConfig = config.id
+          ? await updateChatWidget(config, organizationId)
+          : await createChatWidget(config, organizationId, creationKey as string);
+      } catch (error) {
+        if (creationKey) createAttempt.release();
+        toast({
+          title: "Could not save chat widget",
+          description:
+            error instanceof Error ? error.message : "Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (creationKey) createAttempt.reset();
       const nextConfig = toLocalConfig(savedConfig);
       setConfig(nextConfig);
       setPersistedIsActive(savedConfig.is_active);
@@ -221,14 +240,6 @@ export function ChatWidgetPage() {
         setEmbedCode(embedResponse?.embed_code || "");
       } catch {
         setEmbedCode("");
-      }
-      } catch (error) {
-        toast({
-          title: "Could not save chat widget",
-          description:
-            error instanceof Error ? error.message : "Please try again.",
-          variant: "destructive",
-        });
       }
     });
   };

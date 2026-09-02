@@ -279,15 +279,16 @@ export const getLandingPageViaGraphql = async (
 
 export const createLandingPageViaGraphql = async (
   page: Record<string, unknown>,
+  idempotencyKey: string,
   organizationId?: number,
 ): Promise<Page> => {
-  const variables = { input: mapPageInput(page) };
+  const variables = { input: mapPageInput(page), idempotencyKey };
   const data = await graphqlMutationRequest<
     { createLandingPage: GqlPage },
     typeof variables
   >(
-    `mutation CreateLandingPage($input: CreateLandingPageInput!) {
-      createLandingPage(input: $input) { ${pageFields} }
+    `mutation CreateLandingPage($input: CreateLandingPageInput!, $idempotencyKey: String!) {
+      createLandingPage(input: $input, idempotencyKey: $idempotencyKey) { ${pageFields} }
     }`,
     variables,
     organizationId,
@@ -382,16 +383,17 @@ export const removeLandingPagePasswordViaGraphql = (
 
 export const duplicateLandingPageViaGraphql = async (
   id: number,
+  idempotencyKey: string,
   organizationId?: number,
 ): Promise<Page> => {
   const data = await graphqlMutationRequest<
     { duplicateLandingPage: GqlPage },
-    { id: number }
+    { id: number; idempotencyKey: string }
   >(
-    `mutation DuplicateLandingPage($id: Int!) {
-      duplicateLandingPage(id: $id) { ${pageFields} }
+    `mutation DuplicateLandingPage($id: Int!, $idempotencyKey: String!) {
+      duplicateLandingPage(id: $id, idempotencyKey: $idempotencyKey) { ${pageFields} }
     }`,
-    { id },
+    { id, idempotencyKey },
     organizationId,
   );
   return mapPage(data.duplicateLandingPage);

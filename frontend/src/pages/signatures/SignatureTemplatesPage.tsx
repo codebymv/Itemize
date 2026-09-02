@@ -20,6 +20,7 @@ import { ExpandedRowActionLabel, ExpandedRowActions } from '@/components/ui/expa
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
+import { useKeyedStableMutationKey, useStableMutationKey } from '@/hooks/useStableMutationKey';
 import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
 import FieldPlacementCanvas from './components/FieldPlacementCanvas';
 import {
@@ -40,6 +41,8 @@ export default function SignatureTemplatesPage() {
   const queryClient = useQueryClient();
   const { organizationId, isLoading: organizationLoading, error: organizationError } = useOrganization();
   const { pending: creating, run } = useSingleFlightAction();
+  const createAttempt = useStableMutationKey('create-signature-template');
+  const instantiateAttempts = useKeyedStableMutationKey<number>('instantiate-signature-template');
   const [searchQuery, setSearchQuery] = useState('');
   const [readinessFilter, setReadinessFilter] = useState<TemplateReadinessFilter>('all');
   const [expandedTemplateId, setExpandedTemplateId] = useState<number | null>(null);
@@ -76,27 +79,41 @@ export default function SignatureTemplatesPage() {
   const handleCreate = async () => {
     if (!organizationId) return;
     await run(async () => {
+      const payload = { title: 'New Template' };
+      const idempotencyKey = createAttempt.begin(JSON.stringify(payload));
+      if (!idempotencyKey) return;
+      let created: SignatureTemplate;
       try {
-        const created = await createSignatureTemplate({ title: 'New Template' }, organizationId);
-        queryClient.setQueryData<SignatureTemplate[]>(catalogQueryKey, current =>
-          current ? [created, ...current.filter(template => template.id !== created.id)] : current,
-        );
-        navigate(`/templates/${created.id}`);
+        created = await createSignatureTemplate(payload, idempotencyKey, organizationId);
       } catch (error) {
+        createAttempt.release();
         toast({ title: 'Error', description: 'Failed to create template', variant: 'destructive' });
+        return;
       }
+      createAttempt.reset();
+      queryClient.setQueryData<SignatureTemplate[]>(catalogQueryKey, current =>
+        current ? [created, ...current.filter(template => template.id !== created.id)] : current,
+      );
+      navigate(`/templates/${created.id}`);
     });
   };
 
   const handleUseTemplate = async (templateId: number) => {
     if (!organizationId) return;
     await run(async () => {
+      const payload = {};
+      const idempotencyKey = instantiateAttempts.begin(templateId, JSON.stringify(payload));
+      if (!idempotencyKey) return;
+      let document: Awaited<ReturnType<typeof instantiateSignatureTemplate>>;
       try {
-        const document = await instantiateSignatureTemplate(templateId, {}, organizationId);
-        navigate(`/documents/${document.id}`);
+        document = await instantiateSignatureTemplate(templateId, payload, idempotencyKey, organizationId);
       } catch (error) {
+        instantiateAttempts.release(templateId);
         toast({ title: 'Error', description: 'Failed to create document from template', variant: 'destructive' });
+        return;
       }
+      instantiateAttempts.reset(templateId);
+      navigate(`/documents/${document.id}`);
     });
   };
 

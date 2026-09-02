@@ -74,6 +74,7 @@ import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 import { getAssetUrl } from '@/lib/api';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useDirtyState } from '@/hooks/useDirtyState';
+import { useStableMutationKey } from '@/hooks/useStableMutationKey';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import type { JsonRecord } from '@/types';
 import {
@@ -143,6 +144,7 @@ export function InvoiceEditorPage() {
     const [recurringSchedule, setRecurringSchedule] = useState<RecurringInvoice | null>(null);
     const [recurringScheduleLoading, setRecurringScheduleLoading] = useState(false);
     const [recurringScheduleSaving, setRecurringScheduleSaving] = useState(false);
+    const recurringCloneAttempt = useStableMutationKey('recurring-invoice-clone');
     const [pauseScheduleOpen, setPauseScheduleOpen] = useState(false);
     const initializedBootstrapRef = useRef<string | null>(null);
     const invoiceId = !isNew && id
@@ -368,36 +370,55 @@ export function InvoiceEditorPage() {
 
     const handleCreateRecurringSchedule = async (options: RecurringOptions) => {
         if (!organizationId || !loadedInvoice) return;
-
+        const payload = {
+            template_name: options.template_name,
+            frequency: options.frequency,
+            start_date: options.start_date,
+            end_date: options.end_date,
+        };
+        const idempotencyKey = recurringCloneAttempt.begin(JSON.stringify({
+            organizationId,
+            invoiceId: loadedInvoice.id,
+            recurringInvoice: payload,
+        }));
+        if (!idempotencyKey) return;
         setRecurringScheduleSaving(true);
+        let result: Awaited<ReturnType<typeof createRecurringTemplateFromInvoice>>;
         try {
-            const result = await createRecurringTemplateFromInvoice(
+            result = await createRecurringTemplateFromInvoice(
                 loadedInvoice.id,
-                {
-                    template_name: options.template_name,
-                    frequency: options.frequency,
-                    start_date: options.start_date,
-                    end_date: options.end_date,
-                },
+                payload,
+                idempotencyKey,
                 organizationId,
             );
+            recurringCloneAttempt.reset();
+        } catch {
+            recurringCloneAttempt.release();
+            toast({
+                title: 'Error',
+                description: 'Recurring schedule creation could not be confirmed. An unchanged retry is safe.',
+                variant: 'destructive',
+            });
+            setRecurringScheduleSaving(false);
+            return;
+        }
+        setLoadedInvoice((current) => current ? {
+            ...current,
+            is_recurring_source: true,
+            recurring_source_template_id: result.recurring_template_id,
+        } : current);
+        setShowRecurringModal(false);
+        try {
             const schedule = await getRecurringInvoice(result.recurring_template_id, organizationId);
             setRecurringSchedule(schedule);
-            setLoadedInvoice((current) => current ? {
-                ...current,
-                is_recurring_source: true,
-                recurring_source_template_id: result.recurring_template_id,
-            } : current);
-            setShowRecurringModal(false);
             toast({
                 title: 'Recurring schedule created',
                 description: 'The original invoice is unchanged. Future invoices will follow this schedule.',
             });
-        } catch (error) {
+        } catch {
             toast({
-                title: 'Error',
-                description: 'Failed to create the recurring schedule',
-                variant: 'destructive',
+                title: 'Recurring schedule created',
+                description: 'The schedule was created, but its latest details could not be refreshed.',
             });
         } finally {
             setRecurringScheduleSaving(false);
@@ -1285,7 +1306,11 @@ export function InvoiceEditorPage() {
             {loadedInvoice && (
                 <MakeRecurringModal
                     open={showRecurringModal}
-                    onOpenChange={setShowRecurringModal}
+                    onOpenChange={(open) => {
+                        if (!open && recurringScheduleSaving) return;
+                        if (!open) recurringCloneAttempt.reset();
+                        setShowRecurringModal(open);
+                    }}
                     onConfirm={handleCreateRecurringSchedule}
                     converting={recurringScheduleSaving}
                     invoiceNumber={loadedInvoice.invoice_number}

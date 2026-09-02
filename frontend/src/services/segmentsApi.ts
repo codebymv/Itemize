@@ -123,9 +123,10 @@ export const getSegment = async (
  */
 export const createSegment = async (
     segment: Partial<Segment>,
-    organizationId?: number
+    organizationId: number,
+    idempotencyKey: string
 ): Promise<Segment> => {
-    return createSegmentViaGraphql(segment, organizationId);
+    return createSegmentViaGraphql(segment, organizationId, idempotencyKey);
 };
 
 /**

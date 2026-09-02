@@ -71,8 +71,11 @@ export const getCalendar = async (id: number, organizationId?: number): Promise<
     return getCalendarViaGraphql(id, organizationId);
 };
 
-export const createCalendar = async (data: CalendarCreateData): Promise<Calendar> => {
-    return createCalendarViaGraphql(data);
+export const createCalendar = async (
+    data: CalendarCreateData,
+    idempotencyKey: string,
+): Promise<Calendar> => {
+    return createCalendarViaGraphql(data, idempotencyKey);
 };
 
 export const updateCalendar = async (

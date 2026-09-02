@@ -141,8 +141,10 @@ const calendarDetailFields = `
 `;
 
 const createCalendarMutation = `
-  mutation CreateCalendar($input: CreateCalendarInput!) {
-    createCalendar(input: $input) { ${calendarDetailFields} }
+  mutation CreateCalendar($input: CreateCalendarInput!, $idempotencyKey: String!) {
+    createCalendar(input: $input, idempotencyKey: $idempotencyKey) {
+      ${calendarDetailFields}
+    }
   }
 `;
 
@@ -369,13 +371,14 @@ const calendarInput = (
 
 export const createCalendarViaGraphql = async (
   data: CalendarCreateData,
+  idempotencyKey: string,
 ): Promise<Calendar> => {
   const response = await graphqlMutationRequest<
     { createCalendar: GraphqlCalendar },
-    { input: Record<string, unknown> }
+    { input: Record<string, unknown>; idempotencyKey: string }
   >(
     createCalendarMutation,
-    { input: calendarInput(data) },
+    { input: calendarInput(data), idempotencyKey },
     data.organization_id,
   );
   return mapCalendar(response.createCalendar);

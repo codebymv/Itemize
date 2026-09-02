@@ -108,7 +108,7 @@ describe('reputation API permanent transport selection', () => {
       addPlatform(platformInput, 3),
       removePlatform(17, 3),
       getWidgets(3),
-      createWidget(widgetInput, 3),
+      createWidget(widgetInput, 3, 'create-widget-key'),
       updateWidget(19, widgetInput, 3),
       deleteWidget(19, 3),
       getWidgetEmbedCode(19, 3),
@@ -120,7 +120,7 @@ describe('reputation API permanent transport selection', () => {
     expect(upsertPlatformViaGraphql).toHaveBeenCalledWith(platformInput, 3);
     expect(deletePlatformViaGraphql).toHaveBeenCalledWith(17, 3);
     expect(getWidgetsViaGraphql).toHaveBeenCalledWith(3);
-    expect(createWidgetViaGraphql).toHaveBeenCalledWith(widgetInput, 3);
+    expect(createWidgetViaGraphql).toHaveBeenCalledWith(widgetInput, 3, 'create-widget-key');
     expect(updateWidgetViaGraphql).toHaveBeenCalledWith(19, widgetInput, 3);
     expect(deleteWidgetViaGraphql).toHaveBeenCalledWith(19, 3);
     expect(getWidgetEmbedCodeViaGraphql).toHaveBeenCalledWith(19, 3);

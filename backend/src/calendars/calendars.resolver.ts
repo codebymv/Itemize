@@ -37,8 +37,16 @@ export class CalendarsResolver {
   @CsrfProtected()
   @OrganizationScoped()
   @Mutation(() => Calendar)
-  createCalendar(@Args('input') input: CreateCalendarInput): Promise<Calendar> {
-    return this.calendars.create(this.organizationId(), this.userId(), input);
+  createCalendar(
+    @Args('input') input: CreateCalendarInput,
+    @Args('idempotencyKey', { type: () => String }) idempotencyKey: string,
+  ): Promise<Calendar> {
+    return this.calendars.create(
+      this.organizationId(),
+      this.userId(),
+      input,
+      idempotencyKey,
+    );
   }
 
   @CsrfProtected()

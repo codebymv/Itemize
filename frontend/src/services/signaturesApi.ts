@@ -147,10 +147,10 @@ export interface SignatureDocumentListParams {
   limit?: number;
 }
 
-export const createSignatureDocument = async (payload: Partial<SignatureDocument>, organizationId?: number) => {
+export const createSignatureDocument = async (payload: Partial<SignatureDocument>, idempotencyKey: string, organizationId?: number) => {
   return organizationId === undefined
-    ? createSignatureDocumentViaGraphql(payload)
-    : createSignatureDocumentViaGraphql(payload, organizationId);
+    ? createSignatureDocumentViaGraphql(payload, idempotencyKey)
+    : createSignatureDocumentViaGraphql(payload, idempotencyKey, organizationId);
 };
 
 export const updateSignatureDocument = async (id: number, payload: Partial<SignatureDocument> & { recipients?: SignatureRecipient[]; fields?: SignatureField[] }, organizationId?: number) => {
@@ -331,10 +331,10 @@ export interface SignatureTemplateField {
   locked?: boolean;
 }
 
-export const createSignatureTemplate = async (payload: Partial<SignatureTemplate>, organizationId?: number) => {
+export const createSignatureTemplate = async (payload: Partial<SignatureTemplate>, idempotencyKey: string, organizationId?: number) => {
   return organizationId === undefined
-    ? createSignatureTemplateViaGraphql(payload)
-    : createSignatureTemplateViaGraphql(payload, organizationId);
+    ? createSignatureTemplateViaGraphql(payload, idempotencyKey)
+    : createSignatureTemplateViaGraphql(payload, idempotencyKey, organizationId);
 };
 
 export const updateSignatureTemplate = async (
@@ -375,10 +375,10 @@ export const getSignatureTemplate = async (id: number, organizationId?: number, 
     : getSignatureTemplateViaGraphql(id, organizationId, signal);
 };
 
-export const instantiateSignatureTemplate = async (id: number, payload: ApiPayload, organizationId?: number) => {
+export const instantiateSignatureTemplate = async (id: number, payload: ApiPayload, idempotencyKey: string, organizationId?: number) => {
   return organizationId === undefined
-    ? instantiateSignatureTemplateViaGraphql(id, payload)
-    : instantiateSignatureTemplateViaGraphql(id, payload, organizationId);
+    ? instantiateSignatureTemplateViaGraphql(id, payload, idempotencyKey)
+    : instantiateSignatureTemplateViaGraphql(id, payload, idempotencyKey, organizationId);
 };
 
 export const deleteSignatureTemplate = async (id: number, organizationId?: number) => {

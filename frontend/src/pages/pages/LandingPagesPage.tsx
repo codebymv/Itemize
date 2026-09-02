@@ -44,6 +44,7 @@ import { PagePreviewDialog } from '@/components/PagePreviewDialog';
 import { landingPageQueryKeys } from '@/services/landingPageQueryKeys';
 import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
 import { useKeyedSingleFlightAction, useSingleFlightAction } from '@/hooks/useSingleFlightAction';
+import { useKeyedStableMutationKey, useStableMutationKey } from '@/hooks/useStableMutationKey';
 
 type LandingPage = Page & {
     conversions: number;
@@ -61,6 +62,16 @@ export function LandingPagesPage() {
     const { organizationId, error: initError, isLoading: orgLoading } = useOrganization({ onError: () => 'Failed to initialize.' });
     const { pending: createPending, run: runCreate } = useSingleFlightAction();
     const { isPending: isRowPending, run: runRowAction } = useKeyedSingleFlightAction<number>();
+    const {
+        begin: beginCreateAttempt,
+        release: releaseCreateAttempt,
+        reset: resetCreateAttempt,
+    } = useStableMutationKey('landing-page-create');
+    const {
+        begin: beginDuplicateAttempt,
+        release: releaseDuplicateAttempt,
+        reset: resetDuplicateAttempt,
+    } = useKeyedStableMutationKey<number>('landing-page-duplicate');
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -124,12 +135,19 @@ export function LandingPagesPage() {
     const handleCreatePage = async () => {
         if (!organizationId) return;
         await runCreate(async () => {
+            const input = { name: 'New Page' };
+            const idempotencyKey = beginCreateAttempt(JSON.stringify({ organizationId, input }));
+            if (!idempotencyKey) return;
+            let newPage: Page;
             try {
-                const newPage = await createPage({ name: 'New Page' }, organizationId);
-                navigate(`/pages/${newPage.id}`);
+                newPage = await createPage(input, idempotencyKey, organizationId);
+                resetCreateAttempt();
             } catch (error) {
+                releaseCreateAttempt();
                 toast({ title: 'Error', description: toastMessages.failedToCreate('page'), variant: 'destructive' });
+                return;
             }
+            navigate(`/pages/${newPage.id}`);
         });
     };
 
@@ -153,15 +171,23 @@ export function LandingPagesPage() {
     const handleDuplicate = async (id: number) => {
         if (!organizationId) return;
         await runRowAction(id, async () => {
+            const idempotencyKey = beginDuplicateAttempt(
+                id,
+                JSON.stringify({ organizationId, pageId: id }),
+            );
+            if (!idempotencyKey) return;
             try {
-                await duplicatePage(id, organizationId);
-                await queryClient.invalidateQueries({
-                    queryKey: landingPageQueryKeys.pages(organizationId),
-                });
-                toast({ title: 'Duplicated', description: toastMessages.duplicated('page') });
+                await duplicatePage(id, idempotencyKey, organizationId);
+                resetDuplicateAttempt(id);
             } catch (error) {
+                releaseDuplicateAttempt(id);
                 toast({ title: 'Error', description: toastMessages.failedToDuplicate('page'), variant: 'destructive' });
+                return;
             }
+            await queryClient.invalidateQueries({
+                queryKey: landingPageQueryKeys.pages(organizationId),
+            }).catch(() => undefined);
+            toast({ title: 'Duplicated', description: toastMessages.duplicated('page') });
         });
     };
 

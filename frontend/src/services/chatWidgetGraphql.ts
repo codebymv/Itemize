@@ -259,17 +259,20 @@ export const getChatWidgetViaGraphql = async (
 
 export const createChatWidgetViaGraphql = async (
   config: Partial<ChatWidgetConfig>,
-  organizationId?: number,
+  organizationId: number,
+  idempotencyKey: string,
 ): Promise<ChatWidgetConfig> => {
   const input = mapConfigInput(config);
   const data = await graphqlMutationRequest<
     { createChatWidget: GraphqlChatWidget },
-    { input: typeof input }
+    { input: typeof input; idempotencyKey: string }
   >(
-    `mutation CreateChatWidget($input: ChatWidgetConfigInput!) {
-      createChatWidget(input: $input) { ${widgetFields} }
+    `mutation CreateChatWidget(
+      $input: ChatWidgetConfigInput!, $idempotencyKey: String!
+    ) {
+      createChatWidget(input: $input, idempotencyKey: $idempotencyKey) { ${widgetFields} }
     }`,
-    { input },
+    { input, idempotencyKey },
     organizationId,
   );
   return mapWidget(data.createChatWidget);

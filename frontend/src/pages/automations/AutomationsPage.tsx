@@ -61,6 +61,7 @@ import { cn } from '@/lib/utils';
 import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
 import { workflowQueryKeys } from '@/services/workflowQueryKeys';
 import { useKeyedSingleFlightAction } from '@/hooks/useSingleFlightAction';
+import { useKeyedStableMutationKey } from '@/hooks/useStableMutationKey';
 
 const TRIGGER_TYPE_ICONS: Partial<Record<WorkflowTriggerType, LucideIcon>> = {
   contact_added: Users,
@@ -94,6 +95,11 @@ export function AutomationsPage() {
   const [page, setPage] = useState(1);
   const [workflowToDelete, setWorkflowToDelete] = useState<Workflow | null>(null);
   const { isPending: isWorkflowPending, run: runWorkflowAction } = useKeyedSingleFlightAction<number>();
+  const {
+    begin: beginDuplicateAttempt,
+    release: releaseDuplicateAttempt,
+    reset: resetDuplicateAttempt,
+  } = useKeyedStableMutationKey<number>('workflow-duplicate');
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setDebouncedSearchQuery(searchQuery.trim()), 250);
@@ -205,17 +211,25 @@ export function AutomationsPage() {
     if (!organizationId) return;
 
     await runWorkflowAction(workflow.id, async () => {
+      const idempotencyKey = beginDuplicateAttempt(
+        workflow.id,
+        JSON.stringify({ organizationId, workflowId: workflow.id }),
+      );
+      if (!idempotencyKey) return;
       try {
-        await duplicateWorkflow(workflow.id, organizationId);
-        toast({ title: 'Duplicated', description: 'Workflow duplicated successfully' });
-        await refreshQueue();
+        await duplicateWorkflow(workflow.id, idempotencyKey, organizationId);
+        resetDuplicateAttempt(workflow.id);
       } catch (error) {
+        releaseDuplicateAttempt(workflow.id);
         toast({
           title: 'Error',
           description: 'Failed to duplicate workflow',
           variant: 'destructive',
         });
+        return;
       }
+      await refreshQueue().catch(() => undefined);
+      toast({ title: 'Duplicated', description: 'Workflow duplicated successfully' });
     });
   };
 

@@ -73,7 +73,11 @@ describe('EmailTemplatesService', () => {
   });
 
   it('extracts unique variables in deterministic content order on create', async () => {
-    repository.create.mockResolvedValue(row({ variables: ['first_name', 'company', 'link'] }));
+    repository.create.mockResolvedValue({
+      kind: 'created',
+      row: row({ variables: ['first_name', 'company', 'link'] }),
+      replayed: false,
+    });
     await service.create(4, 7, {
       name: ' Welcome ',
       subject: 'Hello {{first_name}}',
@@ -81,12 +85,18 @@ describe('EmailTemplatesService', () => {
       bodyText: '{{company}}',
       category: ' OnBoarding ',
       isActive: true,
-    });
-    expect(repository.create).toHaveBeenCalledWith(4, 7, expect.objectContaining({
-      name: 'Welcome',
-      category: 'OnBoarding',
-      variables: ['first_name', 'company', 'link'],
-    }));
+    }, 'email-create-9');
+    expect(repository.create).toHaveBeenCalledWith(
+      4,
+      7,
+      expect.objectContaining({
+        name: 'Welcome',
+        category: 'OnBoarding',
+        variables: ['first_name', 'company', 'link'],
+      }),
+      'email-create-9',
+      expect.stringMatching(/^[a-f0-9]{64}$/),
+    );
   });
 
   it('preserves omitted update fields and permits explicit body-text clearing', async () => {
@@ -101,7 +111,7 @@ describe('EmailTemplatesService', () => {
   it('rejects blank required content and explicit null required updates', async () => {
     await expect(service.create(4, 7, {
       name: ' ', subject: 'Subject', bodyHtml: '<p>Body</p>', category: 'general', isActive: true,
-    })).rejects.toMatchObject({ extensions: { code: 'BAD_USER_INPUT' } });
+    }, 'email-create-invalid')).rejects.toMatchObject({ extensions: { code: 'BAD_USER_INPUT' } });
     await expect(service.update(4, 9, { subject: null })).rejects.toMatchObject({
       extensions: { code: 'BAD_USER_INPUT' },
     });
@@ -114,10 +124,14 @@ describe('EmailTemplatesService', () => {
   });
 
   it('keeps draft content separate until explicitly published', async () => {
-    repository.createDraft.mockResolvedValue(row({
-      draft_version_id: 20, published_version_id: null, draft_version: 1,
-      draft_is_active: true, draft_subject: 'Draft {{first_name}}',
-    }));
+    repository.createDraft.mockResolvedValue({
+      kind: 'created',
+      row: row({
+        draft_version_id: 20, published_version_id: null, draft_version: 1,
+        draft_is_active: true, draft_subject: 'Draft {{first_name}}',
+      }),
+      replayed: false,
+    });
     repository.publishDraft.mockResolvedValue(row({
       draft_version_id: null, published_version_id: 20, published_version: 1,
       subject: 'Draft {{first_name}}',
@@ -127,12 +141,16 @@ describe('EmailTemplatesService', () => {
       bodyHtml: '<p>Hello {{first_name}}</p>', bodyText: null,
       category: 'marketing', isActive: true,
     };
-    await expect(service.createDraft(4, 7, input)).resolves.toMatchObject({
+    await expect(service.createDraft(4, 7, input, 'email-draft-9')).resolves.toMatchObject({
       draftVersion: 1, publishedVersion: null, hasUnpublishedChanges: true,
     });
-    expect(repository.createDraft).toHaveBeenCalledWith(4, 7, expect.objectContaining({
-      variables: ['first_name', 'company'], isActive: true,
-    }));
+    expect(repository.createDraft).toHaveBeenCalledWith(
+      4,
+      7,
+      expect.objectContaining({ variables: ['first_name', 'company'], isActive: true }),
+      'email-draft-9',
+      expect.stringMatching(/^[a-f0-9]{64}$/),
+    );
     await expect(service.publishDraft(4, 9, 7, 'publish-key-9', true)).resolves.toMatchObject({
       draftVersion: null, publishedVersion: 1, hasUnpublishedChanges: false,
     });
@@ -174,10 +192,10 @@ describe('EmailTemplatesService', () => {
 
   it('conceals foreign IDs for detail, duplicate, and delete', async () => {
     repository.findById.mockResolvedValue(null);
-    repository.duplicate.mockResolvedValue(null);
+    repository.duplicate.mockResolvedValue({ kind: 'not_found' });
     repository.delete.mockResolvedValue(false);
     await expect(service.detail(4, 99)).rejects.toMatchObject({ extensions: { code: 'NOT_FOUND' } });
-    await expect(service.duplicate(4, 99, 7)).rejects.toMatchObject({ extensions: { code: 'NOT_FOUND' } });
+    await expect(service.duplicate(4, 99, 7, 'email-duplicate-99')).rejects.toMatchObject({ extensions: { code: 'NOT_FOUND' } });
     await expect(service.delete(4, 99)).rejects.toMatchObject({ extensions: { code: 'NOT_FOUND' } });
   });
 });

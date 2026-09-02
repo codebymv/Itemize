@@ -92,7 +92,7 @@ export type EstimateAggregate = {
 };
 
 export type EstimateWriteOutcome =
-  | { kind: 'saved'; aggregate: EstimateAggregate }
+  | { kind: 'saved'; aggregate: EstimateAggregate; replayed?: boolean }
   | { kind: 'not-found' }
   | { kind: 'not-editable' }
   | { kind: 'contact-not-found' }
@@ -100,6 +100,15 @@ export type EstimateWriteOutcome =
   | { kind: 'invalid-date-order' }
   | { kind: 'invalid-discount' }
   | { kind: 'negative-total' };
+
+export type EstimateCreationOutcome = EstimateWriteOutcome
+  | { kind: 'idempotency-conflict' }
+  | { kind: 'result-unavailable' };
+
+type EstimateCreationReceiptRow = {
+  request_fingerprint: string;
+  result_estimate_id: number | null;
+};
 
 export type EstimateConversionOutcome =
   | {
@@ -262,8 +271,38 @@ export class EstimatesRepository {
     organizationId: number,
     userId: number,
     values: EstimateValues,
-  ): Promise<EstimateWriteOutcome> {
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<EstimateCreationOutcome> {
     return this.transaction(async (client) => {
+      await client.query(
+        'SELECT id FROM organizations WHERE id=$1 FOR UPDATE',
+        [organizationId],
+      );
+      const receipt = await client.query<EstimateCreationReceiptRow>(
+        `SELECT request_fingerprint, result_estimate_id
+         FROM estimate_creation_receipts
+         WHERE organization_id=$1 AND idempotency_key=$2
+         FOR UPDATE`,
+        [organizationId, idempotencyKey],
+      );
+      const replay = receipt.rows[0];
+      if (replay) {
+        if (replay.request_fingerprint !== requestFingerprint) {
+          return { kind: 'idempotency-conflict' };
+        }
+        if (replay.result_estimate_id === null) {
+          return { kind: 'result-unavailable' };
+        }
+        const aggregate = await this.load(
+          client,
+          organizationId,
+          replay.result_estimate_id,
+        );
+        return aggregate
+          ? { kind: 'saved', aggregate, replayed: true }
+          : { kind: 'result-unavailable' };
+      }
       const reference = await this.references(client, organizationId, values);
       if (reference) return reference;
       const totals = await this.totals(
@@ -319,7 +358,14 @@ export class EstimatesRepository {
       await this.replaceItems(client, organizationId, estimateId, values.items);
       const aggregate = await this.load(client, organizationId, estimateId);
       if (!aggregate) throw new Error('Created estimate could not be reloaded');
-      return { kind: 'saved', aggregate };
+      await client.query(
+        `INSERT INTO estimate_creation_receipts (
+           organization_id, requested_by_user_id, idempotency_key,
+           request_fingerprint, result_estimate_id
+         ) VALUES ($1,$2,$3,$4,$5)`,
+        [organizationId, userId, idempotencyKey, requestFingerprint, estimateId],
+      );
+      return { kind: 'saved', aggregate, replayed: false };
     });
   }
 

@@ -74,12 +74,13 @@ describe('estimate GraphQL adapter', () => {
       discount_type: 'fixed',
       discount_value: 1,
       items: [{ name: 'Service', quantity: 2, unit_price: 12.5, tax_rate: 8 }],
-    }, 4);
+    }, 'estimate-create-8', 4);
     expect(vi.mocked(graphqlMutationRequest).mock.calls[0][1]).toEqual({
       input: {
         contactId: 9, discountType: 'fixed', discountValue: '1',
         items: [{ name: 'Service', quantity: '2', unitPrice: '12.5', taxRate: '8' }],
       },
+      idempotencyKey: 'estimate-create-8',
     });
     await expect(deleteEstimateViaGraphql(8, 4)).resolves.toEqual({ success: true });
   });

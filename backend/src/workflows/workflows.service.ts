@@ -4,6 +4,7 @@ import { PageInput, pageInfo } from '../common/pagination';
 import { CreateWorkflowInput, UpdateWorkflowInput, WorkflowFilterInput, WorkflowStepInput } from './workflow.inputs';
 import { isWorkflowStep, normalizeWorkflowTrigger, WORKFLOW_STEP_TYPES, WORKFLOW_TRIGGER_TYPES } from './workflow.registry';
 import { DeleteWorkflowResult, Workflow, WorkflowPage, WorkflowStats, WorkflowStep } from './workflow.types';
+import { workflowCreationFingerprint } from './workflow-creation.idempotency';
 import {
   ScheduleValue, WorkflowRow, WorkflowsRepository, WorkflowStepRow, WorkflowStepValue, WorkflowValue,
 } from './workflows.repository';
@@ -42,20 +43,36 @@ export class WorkflowsService {
     return this.map(value);
   }
 
-  async create(organizationId: number, userId: number, input: CreateWorkflowInput): Promise<Workflow> {
+  async create(
+    organizationId: number,
+    userId: number,
+    input: CreateWorkflowInput,
+    idempotencyKey: string,
+  ): Promise<Workflow> {
     const triggerType = this.trigger(input.triggerType);
     const triggerConfig = this.record(input.triggerConfig ?? {}, 'triggerConfig');
-    const outcome = await this.workflows.create(organizationId, userId, {
+    const values = {
       name: this.name(input.name),
       description: this.description(input.description),
       triggerType,
       triggerConfig,
       schedule: this.schedule(triggerType, triggerConfig),
       steps: this.steps(input.steps ?? []),
-    });
-    if (outcome.kind === 'limit') this.limit(outcome.limit);
-    if (outcome.kind === 'contact') this.invalidScheduledContact();
-    return this.map(outcome.value);
+    };
+    const outcome = await this.workflows.create(
+      organizationId,
+      userId,
+      values,
+      this.idempotencyKey(idempotencyKey),
+      workflowCreationFingerprint('create', {
+        name: values.name,
+        description: values.description,
+        triggerType: values.triggerType,
+        triggerConfig: values.triggerConfig,
+        steps: values.steps,
+      }),
+    );
+    return this.creationOutcome(outcome);
   }
 
   async update(organizationId: number, id: number, input: UpdateWorkflowInput): Promise<Workflow> {
@@ -79,12 +96,21 @@ export class WorkflowsService {
     return this.map(outcome.value);
   }
 
-  async duplicate(organizationId: number, id: number, userId: number): Promise<Workflow> {
+  async duplicate(
+    organizationId: number,
+    id: number,
+    userId: number,
+    idempotencyKey: string,
+  ): Promise<Workflow> {
     this.id(id);
-    const outcome = await this.workflows.duplicate(organizationId, id, userId);
-    if (outcome.kind === 'not_found') this.notFound();
-    if (outcome.kind === 'limit') this.limit(outcome.limit);
-    return this.map(outcome.value);
+    const outcome = await this.workflows.duplicate(
+      organizationId,
+      id,
+      userId,
+      this.idempotencyKey(idempotencyKey),
+      workflowCreationFingerprint('duplicate', { sourceWorkflowId: id }),
+    );
+    return this.creationOutcome(outcome);
   }
 
   async activate(organizationId: number, id: number): Promise<Workflow> {
@@ -228,6 +254,41 @@ export class WorkflowsService {
     if (!Number.isSafeInteger(value) || value < 1) {
       throw itemizeGraphqlError('id must be a positive integer', 'BAD_USER_INPUT', { field: 'id', reason: 'INVALID_WORKFLOW_ID' });
     }
+  }
+
+  private idempotencyKey(value: string): string {
+    const key = String(value ?? '').trim();
+    if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(key)) {
+      throw itemizeGraphqlError(
+        'idempotencyKey must be 1-128 safe ASCII characters',
+        'BAD_USER_INPUT',
+        { field: 'idempotencyKey', reason: 'INVALID_IDEMPOTENCY_KEY' },
+      );
+    }
+    return key;
+  }
+
+  private creationOutcome(
+    outcome: Awaited<ReturnType<WorkflowsRepository['create']>>,
+  ): Workflow {
+    if (outcome.kind === 'limit') this.limit(outcome.limit);
+    if (outcome.kind === 'contact') this.invalidScheduledContact();
+    if (outcome.kind === 'not_found') this.notFound();
+    if (outcome.kind === 'idempotency_conflict') {
+      throw itemizeGraphqlError(
+        'idempotencyKey was already used for a different workflow creation request',
+        'CONFLICT',
+        { field: 'idempotencyKey', reason: 'IDEMPOTENCY_KEY_REUSED' },
+      );
+    }
+    if (outcome.kind === 'result_unavailable') {
+      throw itemizeGraphqlError(
+        'The original workflow creation result is no longer available',
+        'CONFLICT',
+        { reason: 'IDEMPOTENT_RESULT_UNAVAILABLE' },
+      );
+    }
+    return this.map(outcome.value);
   }
 
   private count(value: unknown, field: string): number {

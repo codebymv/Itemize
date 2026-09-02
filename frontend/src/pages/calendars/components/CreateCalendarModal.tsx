@@ -19,6 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Calendar as CalendarType } from '@/types';
 import { createCalendar, CalendarCreateData } from '@/services/calendarsApi';
 import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
+import { useStableMutationKey } from '@/hooks/useStableMutationKey';
 
 const getApiErrorMessage = (error: unknown, fallback: string): string => {
     const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
@@ -71,6 +72,11 @@ export function CreateCalendarModal({
 }: CreateCalendarModalProps) {
     const { toast } = useToast();
     const { pending: loading, run, dismissIfIdle } = useSingleFlightAction();
+    const {
+        begin: beginCreateAttempt,
+        release: releaseCreateAttempt,
+        reset: resetCreateAttempt,
+    } = useStableMutationKey('calendar-create');
     const [formData, setFormData] = useState<CalendarCreateData>({
         name: '',
         description: '',
@@ -97,17 +103,23 @@ export function CreateCalendarModal({
         }
 
         await run(async () => {
+            const idempotencyKey = beginCreateAttempt(JSON.stringify(formData));
+            if (!idempotencyKey) return;
+            let calendar: CalendarType;
             try {
-                const calendar = await createCalendar(formData);
-                onCreated(calendar);
+                calendar = await createCalendar(formData, idempotencyKey);
+                resetCreateAttempt();
             } catch (error) {
+                releaseCreateAttempt();
                 console.error('Error creating calendar:', error);
                 toast({
                     title: 'Error',
                     description: getApiErrorMessage(error, 'Failed to create calendar'),
                     variant: 'destructive',
                 });
+                return;
             }
+            onCreated(calendar);
         });
     };
 

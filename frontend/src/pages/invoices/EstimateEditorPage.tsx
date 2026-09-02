@@ -127,6 +127,11 @@ export function EstimateEditorPage() {
         release: releaseEstimateSend,
         reset: resetEstimateSend,
     } = useStableMutationKey('estimate-editor-send');
+    const {
+        begin: beginEstimateCreate,
+        release: releaseEstimateCreate,
+        reset: resetEstimateCreate,
+    } = useStableMutationKey('estimate-editor-create');
     const isNew = id === 'new' || !id;
 
     const [initialized, setInitialized] = useState(false);
@@ -392,8 +397,7 @@ export function EstimateEditorPage() {
         }
 
         await runMutation(async () => {
-            try {
-                const estimateData = {
+            const estimateData = {
                 contact_id: contactId,
                 customer_name: customerName || undefined,
                 customer_email: customerEmail || undefined,
@@ -414,17 +418,44 @@ export function EstimateEditorPage() {
                 terms_and_conditions: termsAndConditions || undefined,
             };
 
-                if (isNew) {
-                    const response = await createEstimate(estimateData, organizationId);
+            if (isNew) {
+                const idempotencyKey = beginEstimateCreate(JSON.stringify({
+                    organizationId,
+                    estimate: estimateData,
+                }));
+                if (!idempotencyKey) return;
+                try {
+                    const response = await createEstimate(
+                        estimateData,
+                        idempotencyKey,
+                        organizationId,
+                    );
+                    resetEstimateCreate();
                     toast({ title: 'Created', description: toastMessages.created('estimate') });
                     navigate(`/estimates/${response.id}`);
-                } else if (id) {
+                } catch {
+                    releaseEstimateCreate();
+                    toast({
+                        title: 'Error',
+                        description: 'Estimate creation could not be confirmed. An unchanged retry is safe.',
+                        variant: 'destructive',
+                    });
+                }
+                return;
+            }
+
+            if (id) {
+                try {
                     await updateEstimate(Number(id), estimateData, organizationId);
                     markClean();
                     toast({ title: 'Saved', description: toastMessages.saved('estimate') });
+                } catch {
+                    toast({
+                        title: 'Error',
+                        description: toastMessages.failedToSave('estimate'),
+                        variant: 'destructive',
+                    });
                 }
-            } catch {
-                toast({ title: 'Error', description: toastMessages.failedToSave('estimate'), variant: 'destructive' });
             }
         });
     };

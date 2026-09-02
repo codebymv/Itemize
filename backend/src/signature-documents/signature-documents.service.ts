@@ -5,6 +5,12 @@ import { CreateSignatureDocumentInput, SignatureDocumentFilterInput, SignatureFi
 import { SignatureDocumentStatus } from './signature-document.enums';
 import { SignatureAuditEvent, SignatureDocument, SignatureDocumentDetail, SignatureDocumentPage, SignatureDocumentStats, SignatureField, SignatureRecipient } from './signature-document.types';
 import { SignatureAuditRow, SignatureDocumentRow, SignatureDocumentsRepository, SignatureFieldRow, SignatureFieldWrite, SignatureQuotaExceededError, SignatureRecipientRow, SignatureRecipientWrite, SignatureReferenceError } from './signature-documents.repository';
+import {
+  signatureCreationConflict,
+  signatureCreationFingerprint,
+  signatureCreationKey,
+  signatureCreationUnavailable,
+} from '../signature-creation/signature-creation.idempotency';
 
 const FIELD_TYPES=new Set(['signature','initials','text','date','checkbox']);
 const ROUTING_MODES=new Set(['parallel','sequential']);
@@ -40,10 +46,11 @@ export class SignatureDocumentsService {
     return rows.map((row) => this.audit(row));
   }
 
-  async create(organizationId:number,userId:number,input:CreateSignatureDocumentInput):Promise<SignatureDocument>{
+  async create(organizationId:number,userId:number,input:CreateSignatureDocumentInput,idempotencyKey:string):Promise<SignatureDocument>{
     await this.access(organizationId);
     const values={title:this.requiredText(input.title,'title',255),documentNumber:this.optionalText(input.documentNumber,'documentNumber',100),description:this.optionalText(input.description,'description',10000),message:this.optionalText(input.message,'message',50000),expirationDays:this.expiration(input.expirationDays??30),senderName:this.optionalText(input.senderName,'senderName',255),senderEmail:this.optionalEmail(input.senderEmail),timezone:this.optionalText(input.timezone,'timezone',100),locale:this.optionalText(input.locale,'locale',20),routingMode:this.routing(input.routingMode??'parallel'),templateId:input.templateId===undefined||input.templateId===null?null:this.positiveId(input.templateId,'templateId'),...(input.recipients===undefined?{}:{recipients:this.recipients(input.recipients)}),...(input.fields===undefined?{}:{fields:this.fields(input.fields)})};
-    try{return this.document(await this.repository.createDraft(organizationId,userId,values));}catch(error){this.writeError(error);}
+    const key=signatureCreationKey(idempotencyKey);
+    try{const outcome=await this.repository.createDraft(organizationId,userId,values,key,signatureCreationFingerprint('create_document',values));if(outcome.kind==='idempotency_conflict')return signatureCreationConflict('create_document');if(outcome.kind==='result_unavailable')return signatureCreationUnavailable('create_document');return this.document(outcome.row);}catch(error){this.writeError(error);}
   }
 
   async update(organizationId:number,id:number,input:UpdateSignatureDraftInput):Promise<SignatureDocument>{

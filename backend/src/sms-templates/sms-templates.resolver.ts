@@ -21,11 +21,17 @@ export class SmsTemplatesResolver {
   @OrganizationScoped() @Query(() => SmsMessageInfo)
   smsMessageInfo(@Args('message') message: string) { this.userId(); return this.templates.messageInfo(message); }
   @CsrfProtected() @OrganizationScoped() @Mutation(() => SmsTemplate)
-  createSmsTemplate(@Args('input') input: CreateSmsTemplateInput) { return this.templates.create(this.organizationId(), this.userId(), input); }
+  createSmsTemplate(
+    @Args('input') input: CreateSmsTemplateInput,
+    @Args('idempotencyKey', { type: () => String }) idempotencyKey: string,
+  ) { return this.templates.create(this.organizationId(), this.userId(), input, idempotencyKey); }
   @CsrfProtected() @OrganizationScoped() @Mutation(() => SmsTemplate)
   updateSmsTemplate(@Args('id', { type: () => Int }) id: number, @Args('input') input: UpdateSmsTemplateInput) { return this.templates.update(this.organizationId(), id, input); }
   @CsrfProtected() @OrganizationScoped() @Mutation(() => SmsTemplate)
-  duplicateSmsTemplate(@Args('id', { type: () => Int }) id: number) { return this.templates.duplicate(this.organizationId(), id, this.userId()); }
+  duplicateSmsTemplate(
+    @Args('id', { type: () => Int }) id: number,
+    @Args('idempotencyKey', { type: () => String }) idempotencyKey: string,
+  ) { return this.templates.duplicate(this.organizationId(), id, this.userId(), idempotencyKey); }
   @CsrfProtected() @OrganizationScoped() @Mutation(() => DeleteSmsTemplateResult)
   deleteSmsTemplate(@Args('id', { type: () => Int }) id: number) { return this.templates.delete(this.organizationId(), id); }
   private organizationId() { const value = this.requestContext.current().organization; if (!value) throw new Error('Verified organization context is unavailable'); return value.organizationId; }

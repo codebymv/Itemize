@@ -1,7 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { Pool } from 'pg';
+import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
 import { extractSmsTemplateVariables } from './sms-message-info';
+import type { SmsTemplateCreationAction } from './sms-template-creation.idempotency';
 
 export type SmsTemplateRow = {
   id: number; organization_id: number; name: string; message: string; variables: unknown;
@@ -13,6 +14,17 @@ export type SmsTemplateUpdates = Partial<Omit<SmsTemplateValues, 'variables'>>;
 export type SmsTemplateCriteria = { organizationId: number; category?: string; isActive?: boolean; searchPattern?: string; pageSize: number; offset: number };
 export type SmsTemplateStatsRow = { total: string; active: string; inactive: string; categories: string };
 export type SmsTemplateCategoryRow = { category: string; count: string };
+export type SmsTemplateCreationOutcome =
+  | { kind: 'created'; row: SmsTemplateRow; replayed: boolean }
+  | { kind: 'not_found' }
+  | { kind: 'idempotency_conflict' }
+  | { kind: 'result_unavailable' };
+
+type SmsTemplateCreationReceiptRow = {
+  action: SmsTemplateCreationAction;
+  request_fingerprint: string;
+  result_template_id: number | null;
+};
 
 const columns = (alias = 'st') => `${alias}.id, ${alias}.organization_id, ${alias}.name, ${alias}.message,
   ${alias}.variables, ${alias}.category, ${alias}.is_active, ${alias}.created_by,
@@ -86,11 +98,26 @@ export class SmsTemplatesRepository {
        GROUP BY category ORDER BY category ASC`, [organizationId])).rows;
   }
 
-  async create(organizationId: number, userId: number, values: SmsTemplateValues): Promise<SmsTemplateRow> {
-    return (await this.pool.query<SmsTemplateRow>(
-      `INSERT INTO sms_templates (organization_id, name, message, variables, category, is_active, created_by)
-       VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7) RETURNING ${columns('sms_templates')}`,
-      [organizationId, values.name, values.message, JSON.stringify(values.variables), values.category, values.isActive, userId])).rows[0];
+  async create(
+    organizationId: number,
+    userId: number,
+    values: SmsTemplateValues,
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<SmsTemplateCreationOutcome> {
+    return this.transaction(async (client) => {
+      await client.query('SELECT pg_advisory_xact_lock($1)', [organizationId]);
+      const replay = await this.replayCreationReceipt(
+        client, organizationId, idempotencyKey, 'create', requestFingerprint,
+      );
+      if (replay) return replay;
+      const row = (await client.query<SmsTemplateRow>(
+        `INSERT INTO sms_templates (organization_id, name, message, variables, category, is_active, created_by)
+         VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7) RETURNING ${columns('sms_templates')}`,
+        [organizationId, values.name, values.message, JSON.stringify(values.variables), values.category, values.isActive, userId])).rows[0];
+      await this.insertCreationReceipt(client, organizationId, userId, idempotencyKey, 'create', requestFingerprint, row.id);
+      return { kind: 'created', row, replayed: false };
+    });
   }
 
   async update(organizationId: number, id: number, updates: SmsTemplateUpdates): Promise<SmsTemplateRow | null> {
@@ -117,15 +144,91 @@ export class SmsTemplatesRepository {
     finally { client.release(); }
   }
 
-  async duplicate(organizationId: number, id: number, userId: number): Promise<SmsTemplateRow | null> {
-    return (await this.pool.query<SmsTemplateRow>(
-      `INSERT INTO sms_templates (organization_id, name, message, variables, category, is_active, created_by)
-       SELECT organization_id, LEFT(name, 248) || ' (Copy)', message, variables, category, FALSE, $3
-       FROM sms_templates WHERE id = $1 AND organization_id = $2 RETURNING ${columns('sms_templates')}`,
-      [id, organizationId, userId])).rows[0] ?? null;
+  async duplicate(
+    organizationId: number,
+    id: number,
+    userId: number,
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<SmsTemplateCreationOutcome> {
+    return this.transaction(async (client) => {
+      await client.query('SELECT pg_advisory_xact_lock($1)', [organizationId]);
+      const replay = await this.replayCreationReceipt(
+        client, organizationId, idempotencyKey, 'duplicate', requestFingerprint,
+      );
+      if (replay) return replay;
+      const row = (await client.query<SmsTemplateRow>(
+        `INSERT INTO sms_templates (organization_id, name, message, variables, category, is_active, created_by)
+         SELECT organization_id, LEFT(name, 248) || ' (Copy)', message, variables, category, FALSE, $3
+         FROM sms_templates WHERE id = $1 AND organization_id = $2 RETURNING ${columns('sms_templates')}`,
+        [id, organizationId, userId])).rows[0];
+      if (!row) return { kind: 'not_found' };
+      await this.insertCreationReceipt(client, organizationId, userId, idempotencyKey, 'duplicate', requestFingerprint, row.id);
+      return { kind: 'created', row, replayed: false };
+    });
   }
 
   async delete(organizationId: number, id: number): Promise<boolean> {
     return (await this.pool.query('DELETE FROM sms_templates WHERE id = $1 AND organization_id = $2 RETURNING id', [id, organizationId])).rows.length === 1;
+  }
+
+  private async replayCreationReceipt(
+    client: PoolClient,
+    organizationId: number,
+    idempotencyKey: string,
+    action: SmsTemplateCreationAction,
+    requestFingerprint: string,
+  ): Promise<SmsTemplateCreationOutcome | null> {
+    const receipt = await client.query<SmsTemplateCreationReceiptRow>(
+      `SELECT action, request_fingerprint, result_template_id
+       FROM sms_template_creation_receipts
+       WHERE organization_id=$1 AND idempotency_key=$2 FOR UPDATE`,
+      [organizationId, idempotencyKey],
+    );
+    const existing = receipt.rows[0];
+    if (!existing) return null;
+    if (existing.action !== action || existing.request_fingerprint !== requestFingerprint) {
+      return { kind: 'idempotency_conflict' };
+    }
+    if (existing.result_template_id === null) return { kind: 'result_unavailable' };
+    const row = (await client.query<SmsTemplateRow>(
+      `SELECT ${columns('sms_templates')} FROM sms_templates
+       WHERE id=$1 AND organization_id=$2`,
+      [existing.result_template_id, organizationId],
+    )).rows[0];
+    return row
+      ? { kind: 'created', row, replayed: true }
+      : { kind: 'result_unavailable' };
+  }
+
+  private async insertCreationReceipt(
+    client: PoolClient,
+    organizationId: number,
+    userId: number,
+    idempotencyKey: string,
+    action: SmsTemplateCreationAction,
+    requestFingerprint: string,
+    resultTemplateId: number,
+  ): Promise<void> {
+    await client.query(
+      `INSERT INTO sms_template_creation_receipts (
+         organization_id,requested_by_user_id,idempotency_key,action,
+         request_fingerprint,result_template_id
+       ) VALUES ($1,$2,$3,$4,$5,$6)`,
+      [organizationId, userId, idempotencyKey, action, requestFingerprint, resultTemplateId],
+    );
+  }
+
+  private async transaction<T>(work: (client: PoolClient) => Promise<T>): Promise<T> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const result = await work(client);
+      await client.query('COMMIT');
+      return result;
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => undefined);
+      throw error;
+    } finally { client.release(); }
   }
 }

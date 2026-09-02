@@ -79,21 +79,28 @@ describe('email-template permanent GraphQL transport', () => {
     await email.getEmailTemplates(4, { category: 'general' });
     await automations.getEmailTemplate(9, 4);
     await email.getEmailTemplate(9, 4);
-    await automations.createEmailTemplate(createInput);
+    await automations.createEmailTemplate(createInput, 'email-create-9');
     await automations.updateEmailTemplate(9, updateInput);
     await automations.deleteEmailTemplate(9, 4);
     await email.deleteEmailTemplate(9, 4);
-    await automations.duplicateEmailTemplate(9, 4);
-    await email.duplicateEmailTemplate(9, 4);
+    await automations.duplicateEmailTemplate(9, 'email-duplicate-9a', 4);
+    await email.duplicateEmailTemplate(9, 'email-duplicate-9b', 4);
     await automations.getTemplateCategories(4);
 
     expect(adapter.getEmailTemplatesViaGraphql).toHaveBeenNthCalledWith(1, { is_active: true }, 4);
     expect(adapter.getEmailTemplatesViaGraphql).toHaveBeenNthCalledWith(2, { category: 'general' }, 4);
     expect(adapter.getEmailTemplateViaGraphql).toHaveBeenCalledTimes(2);
-    expect(adapter.createEmailTemplateViaGraphql).toHaveBeenCalledWith(createInput, 4);
+    expect(adapter.createEmailTemplateViaGraphql).toHaveBeenCalledWith(
+      createInput, 'email-create-9', 4,
+    );
     expect(adapter.updateEmailTemplateViaGraphql).toHaveBeenCalledWith(9, updateInput, 4);
     expect(adapter.deleteEmailTemplateViaGraphql).toHaveBeenCalledTimes(2);
-    expect(adapter.duplicateEmailTemplateViaGraphql).toHaveBeenCalledTimes(2);
+    expect(adapter.duplicateEmailTemplateViaGraphql).toHaveBeenNthCalledWith(
+      1, 9, 'email-duplicate-9a', 4,
+    );
+    expect(adapter.duplicateEmailTemplateViaGraphql).toHaveBeenNthCalledWith(
+      2, 9, 'email-duplicate-9b', 4,
+    );
     expect(adapter.getEmailTemplateCategoriesViaGraphql).toHaveBeenCalledWith(4);
   });
 

@@ -69,8 +69,11 @@ export const getForm = async (id: number, organizationId?: number): Promise<Form
     return getFormViaGraphql(id, organizationId);
 };
 
-export const createForm = async (data: FormCreateData): Promise<Form> => {
-    return createFormViaGraphql(data);
+export const createForm = async (
+    data: FormCreateData,
+    idempotencyKey: string,
+): Promise<Form> => {
+    return createFormViaGraphql(data, idempotencyKey);
 };
 
 export const updateForm = async (
@@ -93,8 +96,12 @@ export const updateFormFields = async (
     return replaceFormFieldsViaGraphql(id, fields, organizationId);
 };
 
-export const duplicateForm = async (id: number, organizationId?: number): Promise<Form> => {
-    return duplicateFormViaGraphql(id, organizationId);
+export const duplicateForm = async (
+    id: number,
+    idempotencyKey: string,
+    organizationId?: number,
+): Promise<Form> => {
+    return duplicateFormViaGraphql(id, idempotencyKey, organizationId);
 };
 
 // ======================

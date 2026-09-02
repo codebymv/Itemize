@@ -155,9 +155,9 @@ describe('email-template GraphQL consumer', () => {
     await createEmailTemplateViaGraphql({
       organization_id: 4,
       name: 'Welcome', subject: 'Hello', body_html: '<p>Hello</p>', is_active: true,
-    }, 4);
+    }, 'email-create-9', 4);
     await updateEmailTemplateViaGraphql(9, { body_text: null, is_active: false }, 4);
-    await duplicateEmailTemplateViaGraphql(9, 4);
+    await duplicateEmailTemplateViaGraphql(9, 'email-duplicate-9', 4);
     await deleteEmailTemplateViaGraphql(9, 4);
 
     const bodies = vi.mocked(fetch).mock.calls.map((call) =>
@@ -166,7 +166,9 @@ describe('email-template GraphQL consumer', () => {
     expect(bodies[0].variables.input).toEqual({
       name: 'Welcome', subject: 'Hello', bodyHtml: '<p>Hello</p>', isActive: true,
     });
+    expect(bodies[0].variables.idempotencyKey).toBe('email-create-9');
     expect(bodies[1].variables).toEqual({ id: 9, input: { bodyText: null, isActive: false } });
+    expect(bodies[2].variables).toEqual({ id: 9, idempotencyKey: 'email-duplicate-9' });
     expect(fetchCsrfToken).toHaveBeenCalledTimes(4);
   });
 
@@ -193,7 +195,7 @@ describe('email-template GraphQL consumer', () => {
     await expect(createEmailTemplateDraftViaGraphql({
       name: 'Draft', subject: 'Draft {{first_name}}', preheader: 'Draft preview',
       body_html: '<p>Draft</p>', category: 'marketing', is_active: true,
-    }, 4)).resolves.toMatchObject({ draft_version: 1, has_unpublished_changes: true });
+    }, 'email-draft-9', 4)).resolves.toMatchObject({ draft_version: 1, has_unpublished_changes: true });
     await saveEmailTemplateDraftViaGraphql(9, {
       name: 'Draft', subject: 'Draft {{first_name}}', preheader: 'Draft preview',
       body_html: '<p>Draft</p>', category: 'marketing', is_active: true,
@@ -207,6 +209,7 @@ describe('email-template GraphQL consumer', () => {
       JSON.parse(String((call[1] as RequestInit).body)),
     );
     expect(bodies[0].variables.input).toMatchObject({ preheader: 'Draft preview', isActive: true });
+    expect(bodies[0].variables.idempotencyKey).toBe('email-draft-9');
     expect(bodies[2].variables.input).toEqual({
       subject: 'Draft {{first_name}}', preheader: 'Draft preview', bodyHtml: '<p>Draft</p>',
     });

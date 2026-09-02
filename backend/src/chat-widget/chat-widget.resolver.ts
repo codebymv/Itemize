@@ -59,8 +59,11 @@ export class ChatWidgetResolver {
   @Mutation(() => ChatWidgetConfig)
   createChatWidget(
     @Args('input') input: ChatWidgetConfigInput,
+    @Args('idempotencyKey', { type: () => String }) idempotencyKey: string,
   ): Promise<ChatWidgetConfig> {
-    return this.service.createWidget(this.organizationId(), input);
+    return this.service.createWidget(
+      this.organizationId(), this.userId(), input, idempotencyKey,
+    );
   }
 
   @CsrfProtected()

@@ -62,9 +62,10 @@ export class RecurringInvoicesResolver {
   @Mutation(() => RecurringInvoice)
   createRecurringInvoice(
     @Args('input') input: CreateRecurringInvoiceInput,
+    @Args('idempotencyKey', { type: () => String }) idempotencyKey: string,
   ): Promise<RecurringInvoice> {
     return this.recurringInvoices.create(
-      this.organizationId(), this.userId(), input,
+      this.organizationId(), this.userId(), input, idempotencyKey,
     );
   }
 
@@ -74,9 +75,10 @@ export class RecurringInvoicesResolver {
   createRecurringInvoiceFromInvoice(
     @Args('invoiceId', { type: () => Int }) invoiceId: number,
     @Args('input') input: CreateRecurringInvoiceFromInvoiceInput,
+    @Args('idempotencyKey', { type: () => String }) idempotencyKey: string,
   ): Promise<RecurringInvoice> {
     return this.recurringInvoices.createFromInvoice(
-      this.organizationId(), this.userId(), invoiceId, input,
+      this.organizationId(), this.userId(), invoiceId, input, idempotencyKey,
     );
   }
 

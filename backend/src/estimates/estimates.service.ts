@@ -9,10 +9,14 @@ import {
   EstimatePage,
 } from './estimate.types';
 import {
-  EstimateAggregate, EstimateConversionOutcome, EstimateItemRow,
+  EstimateAggregate, EstimateConversionOutcome, EstimateCreationOutcome, EstimateItemRow,
   EstimateItemValues, EstimateUpdates, EstimateValues, EstimateWriteOutcome,
   EstimatesRepository,
 } from './estimates.repository';
+import {
+  estimateCreationFingerprint,
+  estimateCreationKey,
+} from './estimate-creation.idempotency';
 
 const MONEY = /^(?:0|[1-9]\d{0,7})(?:\.\d{1,2})?$/;
 const QUANTITY = /^(?:0|[1-9]\d{0,7})(?:\.\d{1,2})?$/;
@@ -60,6 +64,7 @@ export class EstimatesService {
     organizationId: number,
     userId: number,
     input: CreateEstimateInput,
+    idempotencyKey: string,
   ): Promise<Estimate> {
     const values: EstimateValues = {
       contactId: this.optionalId(input.contactId, 'contactId'),
@@ -74,7 +79,29 @@ export class EstimatesService {
       notes: this.text(input.notes, 'notes', 50_000),
       termsAndConditions: this.text(input.termsAndConditions, 'termsAndConditions', 50_000),
     };
-    return this.saved(await this.estimates.create(organizationId, userId, values));
+    const key = estimateCreationKey(idempotencyKey);
+    const outcome: EstimateCreationOutcome = await this.estimates.create(
+      organizationId,
+      userId,
+      values,
+      key,
+      estimateCreationFingerprint(values),
+    );
+    if (outcome.kind === 'idempotency-conflict') {
+      throw itemizeGraphqlError(
+        'idempotencyKey was already used for a different estimate creation request',
+        'CONFLICT',
+        { field: 'idempotencyKey', reason: 'IDEMPOTENCY_KEY_REUSED' },
+      );
+    }
+    if (outcome.kind === 'result-unavailable') {
+      throw itemizeGraphqlError(
+        'The estimate created by this request is no longer available',
+        'CONFLICT',
+        { field: 'idempotencyKey', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE' },
+      );
+    }
+    return this.saved(outcome);
   }
 
   async update(

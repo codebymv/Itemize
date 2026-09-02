@@ -31,6 +31,7 @@ import { deleteEmailTemplate, duplicateEmailTemplate, sendTestEmail, type EmailT
 import { getEmailTemplatesViaGraphql } from '@/services/emailTemplatesGraphql';
 import { templateCatalogQueryKeys } from '@/services/templateCatalogQueryKeys';
 import { useKeyedSingleFlightAction } from '@/hooks/useSingleFlightAction';
+import { useKeyedStableMutationKey } from '@/hooks/useStableMutationKey';
 
 type StatusFilter = 'all' | 'active' | 'inactive';
 const PAGE_SIZE = 20;
@@ -49,6 +50,8 @@ export function EmailTemplatesPage() {
   const [page, setPage] = useState(1);
   const [templateToDelete, setTemplateToDelete] = useState<EmailTemplate | null>(null);
   const { isPending: isTemplatePending, run: runTemplateAction } = useKeyedSingleFlightAction<number>();
+  const { begin: beginDuplicateAttempt, release: releaseDuplicateAttempt, reset: resetDuplicateAttempt } =
+    useKeyedStableMutationKey<number>('email-template-duplicate');
   useEffect(() => {
     const timeout = window.setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
     return () => window.clearTimeout(timeout);
@@ -105,11 +108,21 @@ export function EmailTemplatesPage() {
   const handleDuplicate = async (template: EmailTemplate) => {
     if (!organizationId) return;
     await runTemplateAction(template.id, async () => {
+      const idempotencyKey = beginDuplicateAttempt(
+        template.id,
+        JSON.stringify({ organizationId, templateId: template.id }),
+      );
+      if (!idempotencyKey) return;
       try {
-        await duplicateEmailTemplate(template.id, organizationId);
-        await queryClient.invalidateQueries({ queryKey: templateCatalogQueryKeys.email(organizationId) });
-        toast({ title: 'Duplicated', description: 'Template duplicated successfully.' });
-      } catch { toast({ title: 'Unable to duplicate', description: 'The template was not duplicated.', variant: 'destructive' }); }
+        await duplicateEmailTemplate(template.id, idempotencyKey, organizationId);
+        resetDuplicateAttempt(template.id);
+      } catch {
+        releaseDuplicateAttempt(template.id);
+        toast({ title: 'Unable to duplicate', description: 'The template was not duplicated.', variant: 'destructive' });
+        return;
+      }
+      await queryClient.invalidateQueries({ queryKey: templateCatalogQueryKeys.email(organizationId) }).catch(() => undefined);
+      toast({ title: 'Duplicated', description: 'Template duplicated successfully.' });
     });
   };
 

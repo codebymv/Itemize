@@ -3,6 +3,10 @@ import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
 import { hasPaidEntitlement, PaidEntitlementState, signatureDocumentLimit } from '../billing/billing-entitlement';
 import { SignatureDocumentStatus } from './signature-document.enums';
+import {
+  SignatureCreationOutcome,
+  SignatureCreationReceiptRow,
+} from '../signature-creation/signature-creation.idempotency';
 
 export type SignatureDocumentRow = {
   id: number; organization_id: number; title: string; document_number: string | null;
@@ -216,8 +220,32 @@ export class SignatureDocumentsRepository {
     });
   }
 
-  async createDraft(organizationId: number, userId: number, values: SignatureDocumentValues): Promise<SignatureDocumentRow> {
+  async createDraft(
+    organizationId: number,
+    userId: number,
+    values: SignatureDocumentValues,
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<SignatureCreationOutcome<SignatureDocumentRow>> {
     return this.transaction(async (client) => {
+      await client.query('SELECT id FROM organizations WHERE id=$1 FOR UPDATE', [organizationId]);
+      const receipt = await client.query<SignatureCreationReceiptRow>(
+        `SELECT action,request_fingerprint,result_document_id,result_template_id
+         FROM signature_creation_receipts
+         WHERE organization_id=$1 AND idempotency_key=$2 FOR UPDATE`,
+        [organizationId, idempotencyKey],
+      );
+      const replay = receipt.rows[0];
+      if (replay) {
+        if (replay.action !== 'create_document' || replay.request_fingerprint !== requestFingerprint) {
+          return { kind: 'idempotency_conflict' };
+        }
+        if (replay.result_document_id === null) return { kind: 'result_unavailable' };
+        const row = await this.selectDocumentOrNull(client, organizationId, replay.result_document_id);
+        return row
+          ? { kind: 'created', row, replayed: true }
+          : { kind: 'result_unavailable' };
+      }
       await this.lockQuota(client, organizationId);
       if (values.templateId !== null) {
         const template = await client.query('SELECT id FROM signature_templates WHERE id=$1 AND organization_id=$2', [values.templateId, organizationId]);
@@ -235,7 +263,15 @@ export class SignatureDocumentsRepository {
       const id = Number(inserted.rows[0].id);
       const recipients = values.recipients === undefined ? undefined : await this.replaceRecipients(client, organizationId, id, values.recipients);
       if (values.fields !== undefined) await this.replaceFields(client, organizationId, id, values.fields, recipients);
-      return this.selectDocument(client, organizationId, id);
+      const row = await this.selectDocument(client, organizationId, id);
+      await client.query(
+        `INSERT INTO signature_creation_receipts (
+           organization_id,requested_by_user_id,idempotency_key,action,
+           request_fingerprint,result_document_id
+         ) VALUES ($1,$2,$3,'create_document',$4,$5)`,
+        [organizationId, userId, idempotencyKey, requestFingerprint, id],
+      );
+      return { kind: 'created', row, replayed: false };
     });
   }
 
@@ -457,6 +493,14 @@ export class SignatureDocumentsRepository {
   private async selectDocument(client:PoolClient,organizationId:number,id:number):Promise<SignatureDocumentRow>{
     const result=await client.query<SignatureDocumentRow>(`SELECT ${documentColumns},(SELECT COUNT(*)::int FROM signature_recipients r WHERE r.document_id=d.id AND r.organization_id=d.organization_id) AS recipient_count FROM signature_documents d WHERE d.id=$1 AND d.organization_id=$2`,[id,organizationId]);
     return result.rows[0];
+  }
+
+  private async selectDocumentOrNull(
+    client: PoolClient,
+    organizationId: number,
+    id: number,
+  ): Promise<SignatureDocumentRow | null> {
+    return (await this.selectDocument(client, organizationId, id)) ?? null;
   }
 
   private async transaction<T>(work:(client:PoolClient)=>Promise<T>):Promise<T>{

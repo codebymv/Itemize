@@ -44,8 +44,16 @@ export class EstimatesResolver {
   @CsrfProtected()
   @OrganizationScoped()
   @Mutation(() => Estimate)
-  createEstimate(@Args('input') input: CreateEstimateInput): Promise<Estimate> {
-    return this.estimates.create(this.organizationId(), this.userId(), input);
+  createEstimate(
+    @Args('input') input: CreateEstimateInput,
+    @Args('idempotencyKey', { type: () => String }) idempotencyKey: string,
+  ): Promise<Estimate> {
+    return this.estimates.create(
+      this.organizationId(),
+      this.userId(),
+      input,
+      idempotencyKey,
+    );
   }
 
   @CsrfProtected()

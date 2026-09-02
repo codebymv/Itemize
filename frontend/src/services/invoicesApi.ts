@@ -277,9 +277,10 @@ export const createInvoice = async (
         terms_and_conditions?: string;
         payment_terms?: number | string;
     },
+    idempotencyKey: string,
     organizationId?: number
 ): Promise<Invoice> => {
-    return createInvoiceViaGraphql(invoice, organizationId);
+    return createInvoiceViaGraphql(invoice, idempotencyKey, organizationId);
 };
 
 export const updateInvoice = async (
@@ -384,11 +385,13 @@ export const createRecurringTemplateFromInvoice = async (
         start_date: string;
         end_date?: string;
     },
+    idempotencyKey: string,
     organizationId?: number
 ): Promise<{ recurring_template_id: number }> => {
     return createRecurringInvoiceFromInvoiceViaGraphql(
         invoiceId,
         data,
+        idempotencyKey,
         organizationId
     );
 };

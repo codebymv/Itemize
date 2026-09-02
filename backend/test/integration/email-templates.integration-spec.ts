@@ -110,10 +110,10 @@ describe('Email templates GraphQL PostgreSQL contract', () => {
     const created = await graphql(
       memberToken,
       organizationId,
-      `mutation Create($input: CreateEmailTemplateInput!) {
-        createEmailTemplate(input: $input) { ${fields} }
+      `mutation Create($input: CreateEmailTemplateInput!, $idempotencyKey: String!) {
+        createEmailTemplate(input: $input, idempotencyKey: $idempotencyKey) { ${fields} }
       }`,
-      { input: {
+      { idempotencyKey: 'email-create-catalog', input: {
         name: ' Welcome ',
         subject: 'Hello {{first_name}}',
         bodyHtml: '<p>{{company}} {{first_name}} {{link}}</p>',
@@ -214,8 +214,10 @@ describe('Email templates GraphQL PostgreSQL contract', () => {
     const duplicate = await graphql(
       memberToken,
       organizationId,
-      `mutation Duplicate($id: Int!) { duplicateEmailTemplate(id: $id) { ${fields} } }`,
-      { id },
+      `mutation Duplicate($id: Int!, $idempotencyKey: String!) {
+        duplicateEmailTemplate(id: $id, idempotencyKey: $idempotencyKey) { ${fields} }
+      }`,
+      { id, idempotencyKey: 'email-duplicate-concurrent-source' },
     ).expect(200);
     expect(duplicate.body.errors).toBeUndefined();
     expect(duplicate.body.data.duplicateEmailTemplate).toMatchObject({
@@ -227,10 +229,10 @@ describe('Email templates GraphQL PostgreSQL contract', () => {
     const created = await graphql(
       memberToken,
       organizationId,
-      `mutation Draft($input: CreateEmailTemplateInput!) {
-        createEmailTemplateDraft(input: $input) { ${fields} }
+      `mutation Draft($input: CreateEmailTemplateInput!, $idempotencyKey: String!) {
+        createEmailTemplateDraft(input: $input, idempotencyKey: $idempotencyKey) { ${fields} }
       }`,
-      { input: {
+      { idempotencyKey: 'email-create-draft-lifecycle', input: {
         name: 'Lifecycle', subject: 'Draft {{first_name}}', preheader: 'For {{company}}',
         bodyHtml: '<p>Draft {{first_name}}</p><script>alert(1)</script>',
         category: 'marketing', isActive: true,
@@ -327,7 +329,7 @@ describe('Email templates GraphQL PostgreSQL contract', () => {
     const noCsrf = await graphql(
       memberToken,
       organizationId,
-      'mutation { createEmailTemplate(input: { name: "Denied", subject: "No", bodyHtml: "<p>No</p>" }) { id } }',
+      'mutation { createEmailTemplate(input: { name: "Denied", subject: "No", bodyHtml: "<p>No</p>" }, idempotencyKey: "email-create-denied") { id } }',
       {},
       false,
     ).expect(200);
@@ -336,7 +338,7 @@ describe('Email templates GraphQL PostgreSQL contract', () => {
     const invalid = await graphql(
       memberToken,
       organizationId,
-      'mutation { createEmailTemplate(input: { name: "   ", subject: "Valid", bodyHtml: "<p>Valid</p>" }) { id } }',
+      'mutation { createEmailTemplate(input: { name: "   ", subject: "Valid", bodyHtml: "<p>Valid</p>" }, idempotencyKey: "email-create-invalid") { id } }',
     ).expect(200);
     expect(invalid.body.errors[0].extensions.code).toBe('BAD_USER_INPUT');
   });
@@ -363,5 +365,83 @@ describe('Email templates GraphQL PostgreSQL contract', () => {
       { id },
     ).expect(200);
     expect(second.body.errors[0].extensions.code).toBe('NOT_FOUND');
+  });
+
+  it('replays concurrent creates and rejects changed payloads for the same key', async () => {
+    const document = `mutation Create(
+      $input: CreateEmailTemplateInput!
+      $idempotencyKey: String!
+    ) {
+      createEmailTemplate(input: $input, idempotencyKey: $idempotencyKey) { ${fields} }
+    }`;
+    const variables = {
+      idempotencyKey: 'email-create-replay',
+      input: {
+        name: 'Replay-safe email', subject: 'Hello {{first_name}}',
+        bodyHtml: '<p>Welcome {{first_name}}</p>', category: 'general', isActive: true,
+      },
+    };
+    const [created, replayed] = await Promise.all([
+      graphql(memberToken, organizationId, document, variables).expect(200),
+      graphql(memberToken, organizationId, document, variables).expect(200),
+    ]);
+    expect(created.body.errors).toBeUndefined();
+    expect(replayed.body.errors).toBeUndefined();
+    expect(replayed.body.data.createEmailTemplate).toEqual(created.body.data.createEmailTemplate);
+    const count = await pool.query<{ count: number }>(
+      `SELECT COUNT(*)::int AS count FROM email_templates
+       WHERE organization_id = $1 AND name = 'Replay-safe email'`,
+      [organizationId],
+    );
+    expect(count.rows[0].count).toBe(1);
+
+    const conflict = await graphql(memberToken, organizationId, document, {
+      ...variables,
+      input: { ...variables.input, subject: 'Changed request' },
+    }).expect(200);
+    expect(conflict.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', reason: 'IDEMPOTENCY_KEY_REUSED',
+    });
+  });
+
+  it('replays one duplicate and preserves a missing-result receipt', async () => {
+    const source = await pool.query<{ id: number }>(
+      `INSERT INTO email_templates (organization_id, name, subject, body_html, created_by)
+       VALUES ($1, 'Replay duplicate source', 'Source', '<p>Source</p>', $2) RETURNING id`,
+      [organizationId, memberId],
+    );
+    const sourceId = Number(source.rows[0].id);
+    const document = `mutation Duplicate($id: Int!, $idempotencyKey: String!) {
+      duplicateEmailTemplate(id: $id, idempotencyKey: $idempotencyKey) { ${fields} }
+    }`;
+    const variables = { id: sourceId, idempotencyKey: 'email-duplicate-replay' };
+    const [duplicated, replayed] = await Promise.all([
+      graphql(memberToken, organizationId, document, variables).expect(200),
+      graphql(memberToken, organizationId, document, variables).expect(200),
+    ]);
+    expect(duplicated.body.errors).toBeUndefined();
+    expect(replayed.body.data.duplicateEmailTemplate).toEqual(
+      duplicated.body.data.duplicateEmailTemplate,
+    );
+    const copyId = Number(duplicated.body.data.duplicateEmailTemplate.id);
+    const count = await pool.query<{ count: number }>(
+      `SELECT COUNT(*)::int AS count FROM email_templates
+       WHERE organization_id = $1 AND name = 'Replay duplicate source (Copy)'`,
+      [organizationId],
+    );
+    expect(count.rows[0].count).toBe(1);
+
+    await graphql(
+      memberToken,
+      organizationId,
+      'mutation Delete($id: Int!) { deleteEmailTemplate(id: $id) { success } }',
+      { id: copyId },
+    ).expect(200);
+    const unavailable = await graphql(
+      memberToken, organizationId, document, variables,
+    ).expect(200);
+    expect(unavailable.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', reason: 'IDEMPOTENT_RESULT_UNAVAILABLE',
+    });
   });
 });

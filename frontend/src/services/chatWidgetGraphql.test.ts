@@ -124,6 +124,7 @@ describe('chat widget GraphQL consumer', () => {
         is_active: false,
       },
       3,
+      'create-widget-key',
     );
     await updateChatWidgetViaGraphql(
       { business_hours: undefined, default_assigned_to: 8 },
@@ -142,6 +143,7 @@ describe('chat widget GraphQL consumer', () => {
           primaryColor: '#3B82F6',
           isActive: false,
         },
+        idempotencyKey: 'create-widget-key',
       },
       3,
     );

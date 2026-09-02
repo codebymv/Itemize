@@ -57,8 +57,10 @@ describe('SMS templates GraphQL PostgreSQL contract', () => {
 
   it('creates, lists, aggregates, and calculates message segments', async () => {
     const created = await graphql(memberToken, organizationId,
-      `mutation Create($input: CreateSmsTemplateInput!) { createSmsTemplate(input: $input) { ${fields} } }`,
-      { input: { name: ' Reminder ', message: 'Hi {{first_name}} {}', category: 'Reminders' } }).expect(200);
+      `mutation Create($input: CreateSmsTemplateInput!, $idempotencyKey: String!) {
+        createSmsTemplate(input: $input, idempotencyKey: $idempotencyKey) { ${fields} }
+      }`,
+      { idempotencyKey: 'sms-create-catalog', input: { name: ' Reminder ', message: 'Hi {{first_name}} {}', category: 'Reminders' } }).expect(200);
     expect(created.body.errors).toBeUndefined();
     expect(created.body.data.createSmsTemplate).toMatchObject({ name: 'Reminder', variables: ['first_name'], category: 'Reminders', isActive: true });
     const id = Number(created.body.data.createSmsTemplate.id);
@@ -96,7 +98,9 @@ describe('SMS templates GraphQL PostgreSQL contract', () => {
     expect(name.body.errors).toBeUndefined(); expect(message.body.errors).toBeUndefined();
     const detail = await graphql(memberToken, organizationId, `query($id: Int!) { smsTemplate(id: $id) { ${fields} } }`, { id }, false).expect(200);
     expect(detail.body.data.smsTemplate).toMatchObject({ name: 'Renamed', message: '{{company}} 🙂', variables: ['company'] });
-    const duplicate = await graphql(memberToken, organizationId, `mutation($id: Int!) { duplicateSmsTemplate(id: $id) { ${fields} } }`, { id }).expect(200);
+    const duplicate = await graphql(memberToken, organizationId, `mutation($id: Int!, $idempotencyKey: String!) {
+      duplicateSmsTemplate(id: $id, idempotencyKey: $idempotencyKey) { ${fields} }
+    }`, { id, idempotencyKey: 'sms-duplicate-concurrent-source' }).expect(200);
     expect(duplicate.body.data.duplicateSmsTemplate).toMatchObject({ name: 'Renamed (Copy)', isActive: false });
   });
 
@@ -108,10 +112,69 @@ describe('SMS templates GraphQL PostgreSQL contract', () => {
     const hidden = await graphql(memberToken, organizationId, 'query($id: Int!) { smsTemplate(id: $id) { id } }', { id }, false).expect(200);
     expect(hidden.body.errors[0].extensions.code).toBe('NOT_FOUND');
     const denied = await graphql(memberToken, organizationId,
-      'mutation { createSmsTemplate(input: { name: "Denied", message: "No" }) { id } }', {}, false).expect(200);
+      'mutation { createSmsTemplate(input: { name: "Denied", message: "No" }, idempotencyKey: "sms-create-denied") { id } }', {}, false).expect(200);
     expect(denied.body.errors[0].extensions.code).toBe('FORBIDDEN');
     const invalid = await graphql(outsiderToken, outsiderOrganizationId,
-      'mutation { createSmsTemplate(input: { name: "Bad", message: "   " }) { id } }').expect(200);
+      'mutation { createSmsTemplate(input: { name: "Bad", message: "   " }, idempotencyKey: "sms-create-invalid") { id } }').expect(200);
     expect(invalid.body.errors[0].extensions.code).toBe('BAD_USER_INPUT');
+  });
+
+  it('replays concurrent creates and rejects changed payloads for the same key', async () => {
+    const document = `mutation Create($input: CreateSmsTemplateInput!, $idempotencyKey: String!) {
+      createSmsTemplate(input: $input, idempotencyKey: $idempotencyKey) { ${fields} }
+    }`;
+    const variables = {
+      idempotencyKey: 'sms-create-replay',
+      input: { name: 'Replay-safe SMS', message: 'Hello {{first_name}}', category: 'general' },
+    };
+    const [created, replayed] = await Promise.all([
+      graphql(memberToken, organizationId, document, variables).expect(200),
+      graphql(memberToken, organizationId, document, variables).expect(200),
+    ]);
+    expect(created.body.errors).toBeUndefined();
+    expect(replayed.body.errors).toBeUndefined();
+    expect(replayed.body.data.createSmsTemplate).toEqual(created.body.data.createSmsTemplate);
+    const count = await pool.query<{ count: number }>(
+      `SELECT COUNT(*)::int AS count FROM sms_templates
+       WHERE organization_id = $1 AND name = 'Replay-safe SMS'`,
+      [organizationId],
+    );
+    expect(count.rows[0].count).toBe(1);
+
+    const conflict = await graphql(memberToken, organizationId, document, {
+      ...variables,
+      input: { ...variables.input, message: 'Changed request' },
+    }).expect(200);
+    expect(conflict.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', reason: 'IDEMPOTENCY_KEY_REUSED',
+    });
+  });
+
+  it('replays concurrent duplicates without creating extra copies', async () => {
+    const source = await pool.query<{ id: number }>(
+      `INSERT INTO sms_templates (organization_id, name, message, created_by)
+       VALUES ($1, 'Replay duplicate SMS', 'Source', $2) RETURNING id`,
+      [organizationId, memberId],
+    );
+    const document = `mutation Duplicate($id: Int!, $idempotencyKey: String!) {
+      duplicateSmsTemplate(id: $id, idempotencyKey: $idempotencyKey) { ${fields} }
+    }`;
+    const variables = {
+      id: Number(source.rows[0].id), idempotencyKey: 'sms-duplicate-replay',
+    };
+    const [duplicated, replayed] = await Promise.all([
+      graphql(memberToken, organizationId, document, variables).expect(200),
+      graphql(memberToken, organizationId, document, variables).expect(200),
+    ]);
+    expect(duplicated.body.errors).toBeUndefined();
+    expect(replayed.body.data.duplicateSmsTemplate).toEqual(
+      duplicated.body.data.duplicateSmsTemplate,
+    );
+    const count = await pool.query<{ count: number }>(
+      `SELECT COUNT(*)::int AS count FROM sms_templates
+       WHERE organization_id = $1 AND name = 'Replay duplicate SMS (Copy)'`,
+      [organizationId],
+    );
+    expect(count.rows[0].count).toBe(1);
   });
 });

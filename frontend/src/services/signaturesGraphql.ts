@@ -683,8 +683,8 @@ export const getSignatureTemplateViaGraphql = async (
   };
 };
 
-export const createSignatureDocumentViaGraphql = async (payload: DocumentMutationPayload, organizationId?: number): Promise<SignatureDocument> => {
-  const data = await mutationWithLegacyReliabilitySelection<{createSignatureDocument:GqlDocument},{input:ReturnType<typeof documentInput>}>(fields=>`mutation CreateSignatureDocument($input:CreateSignatureDocumentInput!){createSignatureDocument(input:$input){${fields}}}`,{input:documentInput(payload)},organizationId);
+export const createSignatureDocumentViaGraphql = async (payload: DocumentMutationPayload, idempotencyKey: string, organizationId?: number): Promise<SignatureDocument> => {
+  const data = await mutationWithLegacyReliabilitySelection<{createSignatureDocument:GqlDocument},{input:ReturnType<typeof documentInput>;idempotencyKey:string}>(fields=>`mutation CreateSignatureDocument($input:CreateSignatureDocumentInput!,$idempotencyKey:String!){createSignatureDocument(input:$input,idempotencyKey:$idempotencyKey){${fields}}}`,{input:documentInput(payload),idempotencyKey},organizationId);
   return mapDocument(data.createSignatureDocument);
 };
 
@@ -734,8 +734,8 @@ export const getSignatureEmailPreviewViaGraphql=async(input:SignatureEmailPrevie
   return data.previewSignatureEmail;
 };
 
-export const createSignatureTemplateViaGraphql=async(payload:Partial<SignatureTemplate>,organizationId?:number):Promise<SignatureTemplate>=>{
-  const data=await mutationWithLegacyReliabilitySelection<{createSignatureTemplate:GqlTemplate},{input:ReturnType<typeof templateInput>}>(fields=>`mutation CreateSignatureTemplate($input:CreateSignatureTemplateInput!){createSignatureTemplate(input:$input){${fields}}}`,{input:templateInput(payload)},organizationId,templateFields,legacyTemplateFields,'template');
+export const createSignatureTemplateViaGraphql=async(payload:Partial<SignatureTemplate>,idempotencyKey:string,organizationId?:number):Promise<SignatureTemplate>=>{
+  const data=await mutationWithLegacyReliabilitySelection<{createSignatureTemplate:GqlTemplate},{input:ReturnType<typeof templateInput>;idempotencyKey:string}>(fields=>`mutation CreateSignatureTemplate($input:CreateSignatureTemplateInput!,$idempotencyKey:String!){createSignatureTemplate(input:$input,idempotencyKey:$idempotencyKey){${fields}}}`,{input:templateInput(payload),idempotencyKey},organizationId,templateFields,legacyTemplateFields,'template');
   return mapTemplate(data.createSignatureTemplate);
 };
 
@@ -749,9 +749,9 @@ export const deleteSignatureTemplateViaGraphql=async(id:number,organizationId?:n
   return mapTemplate(data.deleteSignatureTemplate);
 };
 
-export const instantiateSignatureTemplateViaGraphql=async(id:number,payload:Record<string,unknown>,organizationId?:number):Promise<SignatureDocument>=>{
+export const instantiateSignatureTemplateViaGraphql=async(id:number,payload:Record<string,unknown>,idempotencyKey:string,organizationId?:number):Promise<SignatureDocument>=>{
   const source=payload as {title?:string;description?:string;message?:string;routing_mode?:string;expiration_days?:number;sender_name?:string;sender_email?:string;recipients?:SignatureRecipient[]};
   const input={...(source.title===undefined?{}:{title:source.title}),...(source.description===undefined?{}:{description:source.description}),...(source.message===undefined?{}:{message:source.message}),...(source.routing_mode===undefined?{}:{routingMode:source.routing_mode}),...(source.expiration_days===undefined?{}:{expirationDays:source.expiration_days}),...(source.sender_name===undefined?{}:{senderName:source.sender_name}),...(source.sender_email===undefined?{}:{senderEmail:source.sender_email}),...(source.recipients===undefined?{}:{recipients:source.recipients.map(recipientInput)})};
-  const data=await mutationWithLegacyReliabilitySelection<{instantiateSignatureTemplate:GqlDocument},{id:number;input:typeof input}>(fields=>`mutation InstantiateSignatureTemplate($id:Int!,$input:InstantiateSignatureTemplateInput!){instantiateSignatureTemplate(id:$id,input:$input){${fields}}}`,{id,input},organizationId);
+  const data=await mutationWithLegacyReliabilitySelection<{instantiateSignatureTemplate:GqlDocument},{id:number;input:typeof input;idempotencyKey:string}>(fields=>`mutation InstantiateSignatureTemplate($id:Int!,$input:InstantiateSignatureTemplateInput!,$idempotencyKey:String!){instantiateSignatureTemplate(id:$id,input:$input,idempotencyKey:$idempotencyKey){${fields}}}`,{id,input,idempotencyKey},organizationId);
   return mapDocument(data.instantiateSignatureTemplate);
 };

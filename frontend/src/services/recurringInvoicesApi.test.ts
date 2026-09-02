@@ -104,7 +104,8 @@ describe('recurring invoice API transport', () => {
       replayed: false,
     });
 
-    await expect(createRecurringInvoice(createInput, 4)).resolves.toEqual(recurring);
+    await expect(createRecurringInvoice(createInput, 'recurring-create-8', 4))
+      .resolves.toEqual(recurring);
     await expect(updateRecurringInvoice(8, { notes: 'Updated' }, 4))
       .resolves.toEqual(recurring);
     await expect(deleteRecurringInvoice(8, 4)).resolves.toEqual({ success: true });
@@ -118,7 +119,8 @@ describe('recurring invoice API transport', () => {
         replayed: false,
       });
 
-    expect(createRecurringInvoiceViaGraphql).toHaveBeenCalledWith(createInput, 4);
+    expect(createRecurringInvoiceViaGraphql)
+      .toHaveBeenCalledWith(createInput, 'recurring-create-8', 4);
     expect(updateRecurringInvoiceViaGraphql)
       .toHaveBeenCalledWith(8, { notes: 'Updated' }, 4);
     expect(deleteRecurringInvoiceViaGraphql).toHaveBeenCalledWith(8, 4);

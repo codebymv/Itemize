@@ -71,4 +71,32 @@ describe('SmsTemplatesService', () => {
     });
     await expect(service.list(4)).rejects.toThrow('Unsafe SMS-template count');
   });
+
+  it('normalizes create content and forwards a replay-safe request identity', async () => {
+    repository.create.mockResolvedValue({ kind: 'created', row: row(), replayed: false });
+
+    await expect(service.create(4, 7, {
+      name: ' Reminder ', message: 'Hi {{first_name}}', category: ' Reminders ', isActive: true,
+    }, 'sms-create-9')).resolves.toMatchObject({ id: 9, variables: ['first_name'] });
+
+    expect(repository.create).toHaveBeenCalledWith(
+      4,
+      7,
+      expect.objectContaining({
+        name: 'Reminder', category: 'Reminders', variables: ['first_name'],
+      }),
+      'sms-create-9',
+      expect.stringMatching(/^[a-f0-9]{64}$/),
+    );
+  });
+
+  it('maps duplicate misses and creation-key conflicts without leaking tenant data', async () => {
+    repository.duplicate.mockResolvedValueOnce({ kind: 'not_found' });
+    await expect(service.duplicate(4, 99, 7, 'sms-duplicate-99'))
+      .rejects.toMatchObject({ extensions: { code: 'NOT_FOUND' } });
+
+    repository.duplicate.mockResolvedValueOnce({ kind: 'idempotency_conflict' });
+    await expect(service.duplicate(4, 9, 7, 'sms-duplicate-9'))
+      .rejects.toMatchObject({ extensions: { reason: 'IDEMPOTENCY_KEY_REUSED' } });
+  });
 });

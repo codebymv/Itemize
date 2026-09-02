@@ -130,15 +130,30 @@ describe('Segments GraphQL PostgreSQL contract', () => {
       count: 1, sample: [{ id: activeContactId, firstName: 'Active', status: 'active' }],
     });
 
+    const createMutation = `mutation Create(
+      $input: CreateSegmentInput!, $idempotencyKey: String!
+    ) { createSegment(input: $input, idempotencyKey: $idempotencyKey) { ${fields} } }`;
+    const createInput = { name: ' Gold ', segmentType: 'dynamic', ...input };
     const created = await graphql(
-      `mutation Create($input: CreateSegmentInput!) { createSegment(input: $input) { ${fields} } }`,
-      { input: { name: ' Gold ', segmentType: 'dynamic', ...input } },
+      createMutation,
+      { input: createInput, idempotencyKey: 'gold-segment-create' },
     ).expect(200);
     expect(created.body.errors).toBeUndefined();
     expect(created.body.data.createSegment).toMatchObject({
       name: 'Gold', organizationId, contactCount: 1, segmentType: 'dynamic',
     });
     const id = Number(created.body.data.createSegment.id);
+    const replay = await graphql(createMutation, {
+      input: createInput, idempotencyKey: 'gold-segment-create',
+    }).expect(200);
+    expect(replay.body.errors).toBeUndefined();
+    expect(Number(replay.body.data.createSegment.id)).toBe(id);
+    const conflict = await graphql(createMutation, {
+      input: { ...createInput, name: 'Changed' }, idempotencyKey: 'gold-segment-create',
+    }).expect(200);
+    expect(conflict.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', reason: 'IDEMPOTENCY_KEY_REUSED',
+    });
     const detail = await graphql(
       `query Detail($id: Int!) { segment(id: $id) {
         ${fields} history { contactCount contactsAdded contactsRemoved }
@@ -243,15 +258,20 @@ describe('Segments GraphQL PostgreSQL contract', () => {
 
   it('fails closed on invalid references, requires CSRF, and conflicts on campaign use', async () => {
     const invalid = await graphql(
-      `mutation Create($input: CreateSegmentInput!) { createSegment(input: $input) { id } }`,
-      { input: { name: 'Foreign', segmentType: 'static', staticContactIds: [inactiveContactId + 999999] } },
+      `mutation Create($input: CreateSegmentInput!, $idempotencyKey: String!) {
+        createSegment(input: $input, idempotencyKey: $idempotencyKey) { id }
+      }`,
+      {
+        input: { name: 'Foreign', segmentType: 'static', staticContactIds: [inactiveContactId + 999999] },
+        idempotencyKey: 'foreign-segment-create',
+      },
     ).expect(200);
     expect(invalid.body.errors[0].extensions.code).toBe('BAD_USER_INPUT');
 
     const noCsrf = await graphql(
       `mutation { createSegment(input: {
         name: "Denied", segmentType: "static", staticContactIds: []
-      }) { id } }`, {}, { csrf: false },
+      }, idempotencyKey: "denied-segment-create") { id } }`, {}, { csrf: false },
     ).expect(200);
     expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
 
@@ -273,5 +293,20 @@ describe('Segments GraphQL PostgreSQL contract', () => {
       'mutation Delete($id: Int!) { deleteSegment(id: $id) { deletedId } }', { id },
     ).expect(200);
     expect(deleted.body.data.deleteSegment.deletedId).toBe(id);
+    const unavailable = await graphql(
+      `mutation Create($input: CreateSegmentInput!, $idempotencyKey: String!) {
+        createSegment(input: $input, idempotencyKey: $idempotencyKey) { id }
+      }`,
+      {
+        input: {
+          name: ' Gold ', segmentType: 'dynamic', filterType: 'and',
+          filters: [{ field: 'custom_field', operator: 'equals', customFieldKey: 'tier', value: 'gold' }],
+        },
+        idempotencyKey: 'gold-segment-create',
+      },
+    ).expect(200);
+    expect(unavailable.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE',
+    });
   });
 });

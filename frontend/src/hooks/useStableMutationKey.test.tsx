@@ -1,6 +1,9 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { useStableMutationKey } from './useStableMutationKey';
+import {
+  useKeyedStableMutationKey,
+  useStableMutationKey,
+} from './useStableMutationKey';
 
 describe('useStableMutationKey', () => {
   beforeEach(() => {
@@ -31,5 +34,24 @@ describe('useStableMutationKey', () => {
     expect(result.current.begin('same-payload')).toBeNull();
     act(() => result.current.release());
     expect(result.current.begin('same-payload')).toBe('request-1');
+  });
+});
+
+describe('useKeyedStableMutationKey', () => {
+  it('retains failed row attempts without blocking unrelated rows', () => {
+    const { result } = renderHook(() =>
+      useKeyedStableMutationKey<number>('duplicate-form'),
+    );
+    const first = result.current.begin(7, 'same');
+    expect(first).toBeTruthy();
+    expect(result.current.begin(7, 'same')).toBeNull();
+    const other = result.current.begin(8, 'other');
+    expect(other).toBeTruthy();
+    expect(other).not.toBe(first);
+
+    result.current.release(7);
+    expect(result.current.begin(7, 'same')).toBe(first);
+    result.current.reset(7);
+    expect(result.current.begin(7, 'same')).not.toBe(first);
   });
 });

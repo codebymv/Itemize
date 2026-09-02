@@ -383,9 +383,10 @@ export const getWidgets = async (organizationId?: number): Promise<ReviewWidget[
 
 export const createWidget = async (
     widget: Partial<ReviewWidget>,
-    organizationId?: number
+    organizationId: number,
+    idempotencyKey: string
 ): Promise<ReviewWidget> => {
-    return createWidgetViaGraphql(widget, organizationId);
+    return createWidgetViaGraphql(widget, organizationId, idempotencyKey);
 };
 
 export const updateWidget = async (

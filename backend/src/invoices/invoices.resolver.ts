@@ -56,11 +56,13 @@ export class InvoicesResolver {
   @Mutation(() => Invoice)
   createInvoice(
     @Args('input') input: CreateInvoiceInput,
+    @Args('idempotencyKey') idempotencyKey: string,
   ): Promise<Invoice> {
     return this.invoices.create(
       this.organizationId(),
       this.userId(),
       input,
+      idempotencyKey,
     );
   }
 

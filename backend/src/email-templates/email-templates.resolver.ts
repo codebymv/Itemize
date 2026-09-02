@@ -50,15 +50,21 @@ export class EmailTemplatesResolver {
   @CsrfProtected()
   @OrganizationScoped()
   @Mutation(() => EmailTemplate)
-  createEmailTemplate(@Args('input') input: CreateEmailTemplateInput): Promise<EmailTemplate> {
-    return this.templates.create(this.organizationId(), this.userId(), input);
+  createEmailTemplate(
+    @Args('input') input: CreateEmailTemplateInput,
+    @Args('idempotencyKey', { type: () => String }) idempotencyKey: string,
+  ): Promise<EmailTemplate> {
+    return this.templates.create(this.organizationId(), this.userId(), input, idempotencyKey);
   }
 
   @CsrfProtected()
   @OrganizationScoped()
   @Mutation(() => EmailTemplate)
-  createEmailTemplateDraft(@Args('input') input: CreateEmailTemplateInput): Promise<EmailTemplate> {
-    return this.templates.createDraft(this.organizationId(), this.userId(), input);
+  createEmailTemplateDraft(
+    @Args('input') input: CreateEmailTemplateInput,
+    @Args('idempotencyKey', { type: () => String }) idempotencyKey: string,
+  ): Promise<EmailTemplate> {
+    return this.templates.createDraft(this.organizationId(), this.userId(), input, idempotencyKey);
   }
 
   @CsrfProtected()
@@ -109,8 +115,11 @@ export class EmailTemplatesResolver {
   @CsrfProtected()
   @OrganizationScoped()
   @Mutation(() => EmailTemplate)
-  duplicateEmailTemplate(@Args('id', { type: () => Int }) id: number): Promise<EmailTemplate> {
-    return this.templates.duplicate(this.organizationId(), id, this.userId());
+  duplicateEmailTemplate(
+    @Args('id', { type: () => Int }) id: number,
+    @Args('idempotencyKey', { type: () => String }) idempotencyKey: string,
+  ): Promise<EmailTemplate> {
+    return this.templates.duplicate(this.organizationId(), id, this.userId(), idempotencyKey);
   }
 
   @CsrfProtected()

@@ -112,12 +112,13 @@ describe('segments GraphQL consumer', () => {
     await createSegmentViaGraphql({
       name: 'Active contacts', segment_type: 'dynamic', filter_type: 'and',
       filters: [{ field: 'custom_field', operator: 'equals', value: 'gold', custom_field_key: 'tier' }],
-    }, 3);
+    }, 3, 'create-segment-key');
     await expect(deleteSegmentViaGraphql(7, 3)).resolves.toEqual({ success: true });
     const bodies = vi.mocked(fetch).mock.calls.map((call) => JSON.parse(String((call[1] as RequestInit).body)));
     expect(bodies[0].variables.input.filters[0]).toEqual({
       field: 'custom_field', operator: 'equals', value: 'gold', customFieldKey: 'tier',
     });
+    expect(bodies[0].variables.idempotencyKey).toBe('create-segment-key');
     expect(fetchCsrfToken).toHaveBeenCalledTimes(2);
   });
 

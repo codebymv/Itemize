@@ -154,7 +154,7 @@ describe('recurring invoice GraphQL adapter', () => {
       template_name: 'Retainer', frequency: 'monthly', start_date: '2026-07-20',
       discount_type: 'fixed', discount_value: 1,
       items: [{ product_id: 3, name: 'Service', quantity: 2, unit_price: 12.5 }],
-    }, 4);
+    }, 'recurring-create-8', 4);
     await updateRecurringInvoiceViaGraphql(8, { end_date: null, notes: '' }, 4);
     expect(vi.mocked(graphqlMutationRequest).mock.calls[0][1]).toEqual({
       input: {
@@ -165,6 +165,7 @@ describe('recurring invoice GraphQL adapter', () => {
           unitPrice: '12.5', taxRate: '0',
         }],
       },
+      idempotencyKey: 'recurring-create-8',
     });
     expect(vi.mocked(graphqlMutationRequest).mock.calls[1][1]).toEqual({
       id: 8, input: { endDate: null, notes: '' },
@@ -237,6 +238,7 @@ describe('recurring invoice GraphQL adapter', () => {
         start_date: '2026-07-21',
         end_date: '2026-12-21',
       },
+      'recurring-clone-12',
       4,
     )).resolves.toEqual({ recurring_template_id: 42 });
     expect(graphqlRequest).toHaveBeenCalledWith(
@@ -249,6 +251,7 @@ describe('recurring invoice GraphQL adapter', () => {
       expect.stringContaining('createRecurringInvoiceFromInvoice'),
       {
         invoiceId: 12,
+        idempotencyKey: 'recurring-clone-12',
         input: {
           templateName: 'Monthly support',
           frequency: 'monthly',

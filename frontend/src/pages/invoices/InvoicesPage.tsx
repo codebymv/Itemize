@@ -174,6 +174,7 @@ export function InvoicesPage() {
     const [selectedInvoiceForRecurring, setSelectedInvoiceForRecurring] = useState<Invoice | null>(null);
     const [fullInvoiceDataForRecurring, setFullInvoiceDataForRecurring] = useState<ApiInvoice | null>(null);
     const [converting, setConverting] = useState(false);
+    const recurringCloneAttempt = useStableMutationKey('recurring-invoice-clone');
 
     // Record payment modal state
     const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -340,20 +341,27 @@ export function InvoicesPage() {
     // Create recurring template from invoice
     const handleMakeRecurring = async (options: RecurringOptions) => {
         if (!organizationId || !selectedInvoiceForRecurring) return;
-        
+        const payload = {
+            template_name: options.template_name,
+            frequency: options.frequency,
+            start_date: options.start_date,
+            end_date: options.end_date,
+        };
+        const idempotencyKey = recurringCloneAttempt.begin(JSON.stringify({
+            organizationId,
+            invoiceId: selectedInvoiceForRecurring.id,
+            recurringInvoice: payload,
+        }));
+        if (!idempotencyKey) return;
         setConverting(true);
         try {
             await createRecurringTemplateFromInvoice(
                 selectedInvoiceForRecurring.id,
-                {
-                    template_name: options.template_name,
-                    frequency: options.frequency,
-                    start_date: options.start_date,
-                    end_date: options.end_date,
-                },
+                payload,
+                idempotencyKey,
                 organizationId
             );
-            
+            recurringCloneAttempt.reset();
             toast({
                 title: 'Recurring schedule created',
                 description: 'The original invoice is unchanged. Manage future invoices under Recurring schedules.',
@@ -366,6 +374,7 @@ export function InvoicesPage() {
             fetchInvoices();
             
         } catch (error: unknown) {
+            recurringCloneAttempt.release();
             const errorMessage = getApiErrorMessage(error, 'Failed to create recurring template');
             toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
         } finally {
@@ -1212,8 +1221,10 @@ export function InvoicesPage() {
                 <MakeRecurringModal
                     open={showRecurringModal}
                     onOpenChange={(open) => {
+                        if (!open && converting) return;
                         setShowRecurringModal(open);
                         if (!open) {
+                            recurringCloneAttempt.reset();
                             setSelectedInvoiceForRecurring(null);
                             setFullInvoiceDataForRecurring(null);
                         }

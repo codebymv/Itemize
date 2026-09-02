@@ -86,8 +86,9 @@ describe('LandingPagesService', () => {
 
   it('normalizes create input and distinguishes generated from explicit slugs', async () => {
     repository.create.mockResolvedValue({
-      page: pageRow,
-      sections: [sectionRow],
+      kind: 'created',
+      value: { page: pageRow, sections: [sectionRow] },
+      replayed: false,
     });
 
     await expect(
@@ -100,7 +101,7 @@ describe('LandingPagesService', () => {
             content: { heading: 'Hello' },
           },
         ],
-      }),
+      }, 'page-create-generated'),
     ).resolves.toMatchObject({
       id: 12,
       organizationId: 4,
@@ -121,13 +122,15 @@ describe('LandingPagesService', () => {
           }),
         ],
       }),
+      'page-create-generated',
+      expect.stringMatching(/^[a-f0-9]{64}$/),
     );
 
     repository.create.mockClear();
     await service.create(4, 7, {
       name: 'Launch page',
       slug: 'custom-launch',
-    });
+    }, 'page-create-explicit');
     expect(repository.create).toHaveBeenCalledWith(
       4,
       7,
@@ -135,15 +138,17 @@ describe('LandingPagesService', () => {
         slug: 'custom-launch',
         autoAllocateSlug: false,
       }),
+      'page-create-explicit',
+      expect.stringMatching(/^[a-f0-9]{64}$/),
     );
   });
 
   it('maps plan limits and duplicate slugs to stable GraphQL errors', async () => {
     repository.create.mockResolvedValueOnce({
-      limit: { current: 10, limit: 10, plan: 'starter' },
+      kind: 'limit', limit: { current: 10, limit: 10, plan: 'starter' },
     });
     await expect(
-      service.create(4, 7, { name: 'Over limit' }),
+      service.create(4, 7, { name: 'Over limit' }, 'page-create-limited'),
     ).rejects.toMatchObject({
       extensions: expect.objectContaining({
         code: 'FORBIDDEN',
@@ -154,7 +159,7 @@ describe('LandingPagesService', () => {
 
     repository.create.mockRejectedValueOnce({ code: '23505' });
     await expect(
-      service.create(4, 7, { name: 'Conflict', slug: 'existing' }),
+      service.create(4, 7, { name: 'Conflict', slug: 'existing' }, 'page-create-conflict'),
     ).rejects.toMatchObject({
       extensions: expect.objectContaining({
         code: 'CONFLICT',

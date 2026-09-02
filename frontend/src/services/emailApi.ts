@@ -105,8 +105,9 @@ export const getEmailTemplate = async (
 
 export const createEmailTemplateDraft = async (
     input: EmailTemplateDraftInput,
+    idempotencyKey: string,
     organizationId?: number
-): Promise<EmailTemplate> => createEmailTemplateDraftViaGraphql(input, organizationId);
+): Promise<EmailTemplate> => createEmailTemplateDraftViaGraphql(input, idempotencyKey, organizationId);
 
 export const saveEmailTemplateDraft = async (
     templateId: number,
@@ -175,9 +176,10 @@ export const deleteEmailTemplate = async (
  */
 export const duplicateEmailTemplate = async (
     templateId: number,
+    idempotencyKey: string,
     organizationId?: number
 ): Promise<EmailTemplate> => {
-    return duplicateEmailTemplateViaGraphql(templateId, organizationId);
+    return duplicateEmailTemplateViaGraphql(templateId, idempotencyKey, organizationId);
 };
 
 export default {

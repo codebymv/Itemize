@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchCsrfToken } from '@/lib/api';
 import {
   createFormViaGraphql,
+  duplicateFormViaGraphql,
   getFormPageViaGraphql,
   getFormSubmissionsViaGraphql,
   getFormViaGraphql,
@@ -67,6 +68,7 @@ const response = (payload: unknown): Response =>
 
 describe('forms GraphQL consumer', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     resetFormListCapability();
     vi.stubEnv('VITE_GRAPHQL_URL', 'https://graphql.test.itemize/graphql');
     vi.stubGlobal('fetch', vi.fn());
@@ -208,7 +210,7 @@ describe('forms GraphQL consumer', () => {
         },
       ],
       organization_id: 42,
-    });
+    }, 'create-form-key');
     await updateFormViaGraphql(
       7,
       { description: null, redirect_url: null },
@@ -230,6 +232,7 @@ describe('forms GraphQL consumer', () => {
         }),
       ],
     });
+    expect(createBody.variables.idempotencyKey).toBe('create-form-key');
     const updateBody = JSON.parse(
       String((vi.mocked(fetch).mock.calls[1][1] as RequestInit).body),
     );
@@ -241,6 +244,23 @@ describe('forms GraphQL consumer', () => {
     expect(vi.mocked(fetch).mock.calls[0][1]).toMatchObject({
       headers: expect.objectContaining({ 'x-csrf-token': 'forms-csrf' }),
     });
+  });
+
+  it('passes the stable key through form duplication', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      response({ data: { duplicateForm: form } }),
+    );
+
+    await duplicateFormViaGraphql(7, 'duplicate-form-key', 42);
+
+    const body = JSON.parse(
+      String((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body),
+    );
+    expect(body.variables).toEqual({
+      id: 7,
+      idempotencyKey: 'duplicate-form-key',
+    });
+    expect(fetchCsrfToken).toHaveBeenCalledOnce();
   });
 
   it('maps field replacement including conditional IDs', async () => {

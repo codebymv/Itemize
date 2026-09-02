@@ -30,6 +30,9 @@ import {
   SegmentValues,
   SegmentsRepository,
 } from './segments.repository';
+import { segmentCreationFingerprint } from './segment-creation.idempotency';
+
+const IDEMPOTENCY_KEY = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 
 const FILTER_FIELDS = [
   { id: 'status', label: 'Status', type: 'select', operators: ['equals', 'not_equals', 'in'], options: ['active', 'inactive', 'archived'] },
@@ -89,10 +92,33 @@ export class SegmentsService {
     } catch (error) { this.rethrow(error); }
   }
 
-  async create(organizationId: number, userId: number, input: CreateSegmentInput): Promise<Segment> {
+  async create(
+    organizationId: number,
+    userId: number,
+    input: CreateSegmentInput,
+    idempotencyKey: string,
+  ): Promise<Segment> {
     const values = this.normalizeValues(input);
+    const key = this.idempotencyKey(idempotencyKey);
     try {
-      return this.mapSegment(await this.repository.create(organizationId, userId, values));
+      const outcome = await this.repository.create(
+        organizationId, userId, values, key, segmentCreationFingerprint(values),
+      );
+      if (outcome.kind === 'idempotency_conflict') {
+        throw itemizeGraphqlError(
+          'idempotencyKey was already used for a different segment creation request',
+          'CONFLICT',
+          { field: 'idempotencyKey', reason: 'IDEMPOTENCY_KEY_REUSED' },
+        );
+      }
+      if (outcome.kind === 'result_unavailable') {
+        throw itemizeGraphqlError(
+          'The segment created by this request is no longer available',
+          'CONFLICT',
+          { field: 'idempotencyKey', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE' },
+        );
+      }
+      return this.mapSegment(outcome.row);
     } catch (error) { this.rethrow(error); }
   }
 
@@ -242,6 +268,18 @@ export class SegmentsService {
 
   private validateId(id: number): void {
     if (!Number.isSafeInteger(id) || id < 1) this.badInput('Segment ID must be a positive integer', 'id');
+  }
+
+  private idempotencyKey(value: string): string {
+    const normalized = String(value ?? '').trim();
+    if (!IDEMPOTENCY_KEY.test(normalized)) {
+      throw itemizeGraphqlError(
+        'idempotencyKey must be 1-128 safe ASCII characters',
+        'BAD_USER_INPUT',
+        { field: 'idempotencyKey', reason: 'INVALID_IDEMPOTENCY_KEY' },
+      );
+    }
+    return normalized;
   }
 
   private mapSegment(row: SegmentRow, history: SegmentHistoryRow[] = []): Segment {

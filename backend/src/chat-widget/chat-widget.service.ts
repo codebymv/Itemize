@@ -21,6 +21,7 @@ import {
   ChatWidgetEmbedCode,
   ConvertChatSessionResult,
 } from './chat-widget.types';
+import { chatWidgetCreationFingerprint } from './chat-widget-creation.idempotency';
 
 const POSITIONS = new Set([
   'bottom-right',
@@ -56,13 +57,19 @@ export class ChatWidgetService {
 
   async createWidget(
     organizationId: number,
+    userId: number,
     input: ChatWidgetConfigInput,
+    idempotencyKey: string,
   ): Promise<ChatWidgetConfig> {
     const values = this.values(input, false);
+    const key = this.idempotencyKey(idempotencyKey, 'idempotencyKey');
     try {
       const outcome = await this.repository.createWidget(
         organizationId,
+        userId,
         values,
+        key,
+        chatWidgetCreationFingerprint(values),
       );
       if (outcome.kind === 'already_exists') {
         throw itemizeGraphqlError(
@@ -76,6 +83,20 @@ export class ChatWidgetService {
           'Default assignee is not a member of this organization',
           'input.defaultAssignedTo',
           'INVALID_ASSIGNEE',
+        );
+      }
+      if (outcome.kind === 'idempotency_conflict') {
+        throw itemizeGraphqlError(
+          'idempotencyKey was already used for a different chat widget creation request',
+          'CONFLICT',
+          { field: 'idempotencyKey', reason: 'IDEMPOTENCY_KEY_REUSED' },
+        );
+      }
+      if (outcome.kind === 'result_unavailable') {
+        throw itemizeGraphqlError(
+          'The chat widget created by this request is no longer available',
+          'CONFLICT',
+          { field: 'idempotencyKey', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE' },
         );
       }
       if (outcome.kind !== 'ok') {
@@ -218,14 +239,10 @@ ichat('init', ${key});
         'INVALID_CHAT_MESSAGE',
       );
     }
-    const idempotencyKey = String(input.idempotencyKey ?? '').trim();
-    if (!IDEMPOTENCY_KEY.test(idempotencyKey)) {
-      this.bad(
-        'input.idempotencyKey must be 1-128 safe ASCII characters',
-        'input.idempotencyKey',
-        'INVALID_IDEMPOTENCY_KEY',
-      );
-    }
+    const idempotencyKey = this.idempotencyKey(
+      input.idempotencyKey,
+      'input.idempotencyKey',
+    );
     try {
       const outcome = await this.repository.sendAgentMessage(
         organizationId,
@@ -644,6 +661,18 @@ ichat('init', ${key});
       this.bad(`${field} must be a positive integer`, field, 'INVALID_ID');
     }
     return value;
+  }
+
+  private idempotencyKey(value: string, field: string): string {
+    const normalized = String(value ?? '').trim();
+    if (!IDEMPOTENCY_KEY.test(normalized)) {
+      this.bad(
+        `${field} must be 1-128 safe ASCII characters`,
+        field,
+        'INVALID_IDEMPOTENCY_KEY',
+      );
+    }
+    return normalized;
   }
 
   private limit(value: number): number {

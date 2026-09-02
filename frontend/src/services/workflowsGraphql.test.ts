@@ -5,6 +5,7 @@ import {
   cancelWorkflowEnrollmentViaGraphql,
   createWorkflowViaGraphql,
   deleteWorkflowViaGraphql,
+  duplicateWorkflowViaGraphql,
   enrollContactInWorkflowViaGraphql,
   getWorkflowEnrollmentsViaGraphql,
   getWorkflowsViaGraphql,
@@ -110,21 +111,27 @@ describe('workflow GraphQL consumer', () => {
       .mockResolvedValueOnce(response({ data: { createWorkflow: workflow } }))
       .mockResolvedValueOnce(response({ data: { updateWorkflow: workflow } }))
       .mockResolvedValueOnce(response({ data: { activateWorkflow: { ...workflow, isActive: true } } }))
+      .mockResolvedValueOnce(response({ data: { duplicateWorkflow: { ...workflow, id: 10 } } }))
       .mockResolvedValueOnce(response({ data: { deleteWorkflow: { deletedId: 9, success: true } } }));
     await createWorkflowViaGraphql({
       organization_id: 4, name: 'Welcome', trigger_type: 'contact_added', trigger_config: {},
       steps: [{ step_order: 1, step_type: 'condition', step_config: {}, condition_config: {}, true_branch_step: 2 }],
-    });
+    }, 'workflow-create-key');
     await updateWorkflowViaGraphql(9, { description: null, steps: [] }, 4);
     await activateWorkflowViaGraphql(9, 4);
+    await duplicateWorkflowViaGraphql(9, 'workflow-duplicate-key', 4);
     await deleteWorkflowViaGraphql(9, 4);
     const bodies = vi.mocked(fetch).mock.calls.map((call) => JSON.parse(String((call[1] as RequestInit).body)));
     expect(bodies[0].variables.input).toEqual({
       name: 'Welcome', triggerType: 'contact_added', triggerConfig: {},
       steps: [{ stepType: 'condition', stepConfig: {}, conditionConfig: {}, trueBranchStep: 2 }],
     });
+    expect(bodies[0].variables.idempotencyKey).toBe('workflow-create-key');
     expect(bodies[1].variables).toEqual({ id: 9, input: { description: null, steps: [] } });
-    expect(fetchCsrfToken).toHaveBeenCalledTimes(4);
+    expect(bodies[3].variables).toEqual({
+      id: 9, idempotencyKey: 'workflow-duplicate-key',
+    });
+    expect(fetchCsrfToken).toHaveBeenCalledTimes(5);
   });
 
   it('maps enrollment paging, enrollment input, and lifecycle mutations to the REST contract', async () => {

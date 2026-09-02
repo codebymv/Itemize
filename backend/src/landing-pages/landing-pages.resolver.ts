@@ -59,8 +59,11 @@ export class LandingPagesResolver {
   @Mutation(() => LandingPage)
   createLandingPage(
     @Args('input') input: CreateLandingPageInput,
+    @Args('idempotencyKey', { type: () => String }) idempotencyKey: string,
   ): Promise<LandingPage> {
-    return this.pages.create(this.organizationId(), this.userId(), input);
+    return this.pages.create(
+      this.organizationId(), this.userId(), input, idempotencyKey,
+    );
   }
 
   @CsrfProtected()
@@ -106,8 +109,11 @@ export class LandingPagesResolver {
   @Mutation(() => LandingPage)
   duplicateLandingPage(
     @Args('id', { type: () => Int }) id: number,
+    @Args('idempotencyKey', { type: () => String }) idempotencyKey: string,
   ): Promise<LandingPage> {
-    return this.pages.duplicate(this.organizationId(), this.userId(), id);
+    return this.pages.duplicate(
+      this.organizationId(), this.userId(), id, idempotencyKey,
+    );
   }
 
   @CsrfProtected()

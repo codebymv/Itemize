@@ -17,7 +17,7 @@ export class SignatureDocumentsResolver {
   @OrganizationScoped() @Query(() => [SignatureAuditEvent])
   signatureAuditTrail(@Args('id',{type:()=>Int}) id:number):Promise<SignatureAuditEvent[]>{return this.service.auditTrail(this.organizationId(),id);}
   @CsrfProtected() @OrganizationScoped() @Mutation(() => SignatureDocument)
-  createSignatureDocument(@Args('input') input:CreateSignatureDocumentInput):Promise<SignatureDocument>{return this.service.create(this.organizationId(),this.userId(),input);}
+  createSignatureDocument(@Args('input') input:CreateSignatureDocumentInput,@Args('idempotencyKey')idempotencyKey:string):Promise<SignatureDocument>{return this.service.create(this.organizationId(),this.userId(),input,idempotencyKey);}
   @CsrfProtected() @OrganizationScoped() @Mutation(() => SignatureDocument)
   updateSignatureDraft(@Args('id',{type:()=>Int}) id:number,@Args('input') input:UpdateSignatureDraftInput):Promise<SignatureDocument>{return this.service.update(this.organizationId(),id,input);}
   @CsrfProtected() @OrganizationScoped() @Mutation(() => SignatureDocument)

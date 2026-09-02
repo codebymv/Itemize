@@ -53,4 +53,82 @@ describe('FormsService', () => {
       offset: 10,
     });
   });
+
+  it('normalizes create intent before assigning its durable request fingerprint', async () => {
+    const repository = {
+      create: jest.fn().mockResolvedValue({
+        kind: 'created',
+        value: { form: row, fields: [] },
+        replayed: false,
+      }),
+    } as unknown as jest.Mocked<FormsRepository>;
+    const service = new FormsService(repository);
+
+    await expect(
+      service.create(
+        4,
+        2,
+        {
+          name: '  Registration  ',
+          notificationEmails: ['OWNER@example.com', 'owner@example.com'],
+        },
+        'form-create-7',
+      ),
+    ).resolves.toMatchObject({ id: 7, name: 'Registration' });
+
+    expect(repository.create).toHaveBeenCalledWith(
+      4,
+      2,
+      expect.objectContaining({
+        name: 'Registration',
+        slug: expect.stringMatching(/^registration-/),
+        notificationEmails: ['owner@example.com'],
+      }),
+      'form-create-7',
+      expect.stringMatching(/^[a-f0-9]{64}$/),
+    );
+  });
+
+  it('rejects invalid creation keys before the repository can write', async () => {
+    const repository = {
+      create: jest.fn(),
+    } as unknown as jest.Mocked<FormsRepository>;
+    const service = new FormsService(repository);
+
+    await expect(
+      service.create(4, 2, { name: 'Registration' }, 'unsafe key'),
+    ).rejects.toMatchObject({
+      extensions: {
+        code: 'BAD_USER_INPUT',
+        reason: 'INVALID_IDEMPOTENCY_KEY',
+      },
+    });
+    expect(repository.create).not.toHaveBeenCalled();
+  });
+
+  it('surfaces changed duplicate intent as an idempotency conflict', async () => {
+    const repository = {
+      duplicate: jest.fn().mockResolvedValue({
+        kind: 'idempotency_conflict',
+      }),
+    } as unknown as jest.Mocked<FormsRepository>;
+    const service = new FormsService(repository);
+
+    await expect(
+      service.duplicate(4, 2, 7, 'form-duplicate-7'),
+    ).rejects.toMatchObject({
+      extensions: {
+        code: 'CONFLICT',
+        reason: 'IDEMPOTENCY_KEY_REUSED',
+      },
+    });
+    expect(repository.duplicate).toHaveBeenCalledWith(
+      4,
+      2,
+      7,
+      expect.stringMatching(/^form-copy-/),
+      'form-duplicate-7',
+      expect.stringMatching(/^[a-f0-9]{64}$/),
+    );
+  });
 });

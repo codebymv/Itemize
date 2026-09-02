@@ -104,13 +104,24 @@ describe('Workflow definitions GraphQL PostgreSQL contract', () => {
     steps { id workflowId stepOrder stepType stepConfig conditionConfig trueBranchStep falseBranchStep }`;
 
   it('creates the retained ordered definition representation', async () => {
-    const response = await graphql(memberToken, organizationId,
-      `mutation Create($input: CreateWorkflowInput!) { createWorkflow(input: $input) { ${fields} } }`,
-      { input: { name: ' Welcome ', triggerType: 'contact_created', triggerConfig: {}, steps: [
+    const createDocument = `mutation Create(
+      $input: CreateWorkflowInput!
+      $idempotencyKey: String!
+    ) { createWorkflow(input: $input, idempotencyKey: $idempotencyKey) { ${fields} } }`;
+    const createVariables = {
+      idempotencyKey: 'workflow-create-welcome',
+      input: { name: ' Welcome ', triggerType: 'contact_created', triggerConfig: {}, steps: [
         { stepType: 'condition', stepConfig: {}, conditionConfig: { field: 'status' }, trueBranchStep: 2 },
         { stepType: 'add_tag', stepConfig: { tag_name: 'welcome' } },
-      ] } }).expect(200);
+      ] },
+    };
+    const [response, replayed] = await Promise.all([
+      graphql(memberToken, organizationId, createDocument, createVariables).expect(200),
+      graphql(memberToken, organizationId, createDocument, createVariables).expect(200),
+    ]);
     expect(response.body.errors).toBeUndefined();
+    expect(replayed.body.errors).toBeUndefined();
+    expect(replayed.body.data.createWorkflow).toEqual(response.body.data.createWorkflow);
     expect(response.body.data.createWorkflow).toMatchObject({
       organizationId, name: 'Welcome', triggerType: 'contact_added', isActive: false, stepCount: 2,
       steps: [{ stepOrder: 1, trueBranchStep: 2 }, { stepOrder: 2, stepType: 'add_tag' }],
@@ -126,6 +137,24 @@ describe('Workflow definitions GraphQL PostgreSQL contract', () => {
     );
     expect(retained.rows[0]).toMatchObject({
       id, organization_id: organizationId, trigger_type: 'contact_added', step_orders: [1, 2],
+    });
+    const createdCount = await pool.query<{ count: number }>(
+      `SELECT COUNT(*)::int AS count FROM workflows
+       WHERE organization_id = $1 AND name = 'Welcome'`,
+      [organizationId],
+    );
+    expect(createdCount.rows[0].count).toBe(1);
+    const conflicting = await graphql(
+      memberToken,
+      organizationId,
+      createDocument,
+      {
+        ...createVariables,
+        input: { ...createVariables.input, name: 'Changed' },
+      },
+    ).expect(200);
+    expect(conflicting.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', reason: 'IDEMPOTENCY_KEY_REUSED',
     });
   });
 
@@ -192,22 +221,69 @@ describe('Workflow definitions GraphQL PostgreSQL contract', () => {
         `foreign-${Date.now()}@test.itemize`, memberId, outsiderId],
     );
     const scheduledAt = new Date(Date.now() + 60_000).toISOString();
-    const create = `mutation Create($input: CreateWorkflowInput!) { createWorkflow(input: $input) { ${fields} } }`;
-    const denied = await graphql(memberToken, organizationId, create, { input: {
+    const create = `mutation Create($input: CreateWorkflowInput!, $idempotencyKey: String!) {
+      createWorkflow(input: $input, idempotencyKey: $idempotencyKey) { ${fields} }
+    }`;
+    const denied = await graphql(memberToken, organizationId, create, {
+      idempotencyKey: 'workflow-create-foreign-schedule', input: {
       name: 'Foreign', triggerType: 'scheduled',
       triggerConfig: { contact_id: contacts.rows[1].id, scheduled_at: scheduledAt }, steps: [],
     } }).expect(200);
     expect(denied.body.errors[0].extensions).toMatchObject({ code: 'BAD_USER_INPUT', reason: 'INVALID_WORKFLOW_SCHEDULE' });
-    const created = await graphql(memberToken, organizationId, create, { input: {
+    const created = await graphql(memberToken, organizationId, create, {
+      idempotencyKey: 'workflow-create-owned-schedule', input: {
       name: 'Scheduled', triggerType: 'scheduled',
       triggerConfig: { contact_id: contacts.rows[0].id, scheduled_at: scheduledAt },
       steps: [{ stepType: 'wait', stepConfig: { delay_hours: 1 } }],
     } }).expect(200);
     const id = Number(created.body.data.createWorkflow.id);
-    const duplicated = await graphql(memberToken, organizationId,
-      `mutation Duplicate($id: Int!) { duplicateWorkflow(id: $id) { ${fields} } }`, { id }).expect(200);
+    const duplicateDocument = `mutation Duplicate($id: Int!, $idempotencyKey: String!) {
+      duplicateWorkflow(id: $id, idempotencyKey: $idempotencyKey) { ${fields} }
+    }`;
+    const duplicateVariables = {
+      id,
+      idempotencyKey: 'workflow-duplicate-scheduled',
+    };
+    const [duplicated, duplicateReplay] = await Promise.all([
+      graphql(memberToken, organizationId, duplicateDocument, duplicateVariables).expect(200),
+      graphql(memberToken, organizationId, duplicateDocument, duplicateVariables).expect(200),
+    ]);
+    expect(duplicateReplay.body.data.duplicateWorkflow).toEqual(
+      duplicated.body.data.duplicateWorkflow,
+    );
     expect(duplicated.body.data.duplicateWorkflow).toMatchObject({
       name: 'Scheduled (Copy)', isActive: false, scheduledContactId: Number(contacts.rows[0].id), stepCount: 1,
+    });
+    const copyId = Number(duplicated.body.data.duplicateWorkflow.id);
+    const copyCount = await pool.query<{ count: number }>(
+      `SELECT COUNT(*)::int AS count FROM workflows
+       WHERE organization_id = $1 AND name = 'Scheduled (Copy)'`,
+      [organizationId],
+    );
+    expect(copyCount.rows[0].count).toBe(1);
+    const conflictingDuplicate = await graphql(
+      memberToken,
+      organizationId,
+      duplicateDocument,
+      { ...duplicateVariables, id: copyId },
+    ).expect(200);
+    expect(conflictingDuplicate.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', reason: 'IDEMPOTENCY_KEY_REUSED',
+    });
+    await graphql(
+      memberToken,
+      organizationId,
+      'mutation Delete($id: Int!) { deleteWorkflow(id: $id) { success } }',
+      { id: copyId },
+    ).expect(200);
+    const unavailableReplay = await graphql(
+      memberToken,
+      organizationId,
+      duplicateDocument,
+      duplicateVariables,
+    ).expect(200);
+    expect(unavailableReplay.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', reason: 'IDEMPOTENT_RESULT_UNAVAILABLE',
     });
   });
 
@@ -247,7 +323,9 @@ describe('Workflow definitions GraphQL PostgreSQL contract', () => {
       'mutation Delete($id: Int!) { deleteWorkflow(id: $id) { success } }', { id: Number(foreign.rows[0].id) }, false).expect(200);
     expect(csrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
     const branch = await graphql(memberToken, organizationId,
-      'mutation Create($input: CreateWorkflowInput!) { createWorkflow(input: $input) { id } }', { input: {
+      `mutation Create($input: CreateWorkflowInput!, $idempotencyKey: String!) {
+        createWorkflow(input: $input, idempotencyKey: $idempotencyKey) { id }
+      }`, { idempotencyKey: 'workflow-create-invalid-branch', input: {
         name: 'Loop', triggerType: 'manual', triggerConfig: {},
         steps: [{ stepType: 'condition', stepConfig: {}, trueBranchStep: 1 }, { stepType: 'wait', stepConfig: {} }],
       } }).expect(200);
@@ -255,10 +333,18 @@ describe('Workflow definitions GraphQL PostgreSQL contract', () => {
 
     await pool.query('DELETE FROM workflows WHERE organization_id = $1', [organizationId]);
     await pool.query('UPDATE organizations SET workflows_limit = 1 WHERE id = $1', [organizationId]);
-    const document = 'mutation Create($input: CreateWorkflowInput!) { createWorkflow(input: $input) { id } }';
+    const document = `mutation Create($input: CreateWorkflowInput!, $idempotencyKey: String!) {
+      createWorkflow(input: $input, idempotencyKey: $idempotencyKey) { id }
+    }`;
     const [first, second] = await Promise.all([
-      graphql(memberToken, organizationId, document, { input: { name: 'One', triggerType: 'manual', steps: [] } }),
-      graphql(memberToken, organizationId, document, { input: { name: 'Two', triggerType: 'manual', steps: [] } }),
+      graphql(memberToken, organizationId, document, {
+        idempotencyKey: 'workflow-limit-one',
+        input: { name: 'One', triggerType: 'manual', steps: [] },
+      }),
+      graphql(memberToken, organizationId, document, {
+        idempotencyKey: 'workflow-limit-two',
+        input: { name: 'Two', triggerType: 'manual', steps: [] },
+      }),
     ]);
     const responses = [first.body, second.body];
     expect(responses.filter((body) => body.data?.createWorkflow)).toHaveLength(1);

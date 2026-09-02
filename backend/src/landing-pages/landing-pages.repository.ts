@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
+import type { LandingPageCreationAction } from './landing-page-creation.idempotency';
 
 export type LandingPageRow = {
   id: number;
@@ -84,6 +85,19 @@ export type UpdatePageValue = Partial<{
 export type PageAggregate = {
   page: LandingPageRow;
   sections: LandingPageSectionRow[];
+};
+
+export type LandingPageCreationOutcome =
+  | { kind: 'created'; value: PageAggregate; replayed: boolean }
+  | { kind: 'limit'; limit: { current: number; limit: number; plan: string } }
+  | { kind: 'not_found' }
+  | { kind: 'idempotency_conflict' }
+  | { kind: 'result_unavailable' };
+
+type LandingPageCreationReceiptRow = {
+  action: LandingPageCreationAction;
+  request_fingerprint: string;
+  result_page_id: number | null;
 };
 
 export type AnalyticsRows = {
@@ -193,7 +207,9 @@ export class LandingPagesRepository {
     organizationId: number,
     userId: number,
     value: PageValue,
-  ): Promise<PageAggregate | { limit: { current: number; limit: number; plan: string } }> {
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<LandingPageCreationOutcome> {
     return this.transaction(async (client) => {
       const organization = await client.query<{
         plan: string | null;
@@ -203,6 +219,10 @@ export class LandingPagesRepository {
          FROM organizations WHERE id = $1 FOR UPDATE`,
         [organizationId],
       );
+      const replay = await this.replayCreationReceipt(
+        client, organizationId, idempotencyKey, 'create', requestFingerprint,
+      );
+      if (replay) return replay;
       const plan = organization.rows[0]?.plan ?? 'starter';
       const limit = organization.rows[0]?.landing_pages_limit ?? 10;
       const count = await client.query<{ count: number }>(
@@ -211,7 +231,7 @@ export class LandingPagesRepository {
       );
       const current = count.rows[0]?.count ?? 0;
       if (limit >= 0 && current >= limit) {
-        return { limit: { current, limit, plan } };
+        return { kind: 'limit', limit: { current, limit, plan } };
       }
       const slug = value.autoAllocateSlug
         ? await this.availableSlug(client, organizationId, value.name)
@@ -237,7 +257,11 @@ export class LandingPagesRepository {
         ],
       );
       await this.insertSections(client, organizationId, inserted.rows[0].id, value.sections);
-      return (await this.findWithClient(client, organizationId, inserted.rows[0].id))!;
+      const result = (await this.findWithClient(client, organizationId, inserted.rows[0].id))!;
+      await this.insertCreationReceipt(
+        client, organizationId, userId, idempotencyKey, 'create', requestFingerprint, result.page.id,
+      );
+      return { kind: 'created', value: result, replayed: false };
     });
   }
 
@@ -336,12 +360,18 @@ export class LandingPagesRepository {
     organizationId: number,
     userId: number,
     pageId: number,
-  ): Promise<PageAggregate | null | { limit: { current: number; limit: number; plan: string } }> {
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<LandingPageCreationOutcome> {
     return this.transaction(async (client) => {
       const organization = await client.query<{
         plan: string | null;
         landing_pages_limit: number | null;
       }>('SELECT plan, landing_pages_limit FROM organizations WHERE id = $1 FOR UPDATE', [organizationId]);
+      const replay = await this.replayCreationReceipt(
+        client, organizationId, idempotencyKey, 'duplicate', requestFingerprint,
+      );
+      if (replay) return replay;
       const plan = organization.rows[0]?.plan ?? 'starter';
       const limit = organization.rows[0]?.landing_pages_limit ?? 10;
       const count = await client.query<{ count: number }>(
@@ -349,9 +379,11 @@ export class LandingPagesRepository {
         [organizationId],
       );
       const current = count.rows[0]?.count ?? 0;
-      if (limit >= 0 && current >= limit) return { limit: { current, limit, plan } };
+      if (limit >= 0 && current >= limit) {
+        return { kind: 'limit', limit: { current, limit, plan } };
+      }
       const original = await this.findWithClient(client, organizationId, pageId);
-      if (!original) return null;
+      if (!original) return { kind: 'not_found' };
       const slug = await this.availableSlug(
         client,
         organizationId,
@@ -393,8 +425,56 @@ export class LandingPagesRepository {
           settings: section.settings ?? {},
         })),
       );
-      return this.findWithClient(client, organizationId, inserted.rows[0].id);
+      const result = await this.findWithClient(client, organizationId, inserted.rows[0].id);
+      if (!result) throw new Error('Duplicated landing page could not be reloaded');
+      await this.insertCreationReceipt(
+        client, organizationId, userId, idempotencyKey, 'duplicate', requestFingerprint, result.page.id,
+      );
+      return { kind: 'created', value: result, replayed: false };
     });
+  }
+
+  private async replayCreationReceipt(
+    client: PoolClient,
+    organizationId: number,
+    idempotencyKey: string,
+    action: LandingPageCreationAction,
+    requestFingerprint: string,
+  ): Promise<LandingPageCreationOutcome | null> {
+    const receipt = await client.query<LandingPageCreationReceiptRow>(
+      `SELECT action, request_fingerprint, result_page_id
+       FROM landing_page_creation_receipts
+       WHERE organization_id=$1 AND idempotency_key=$2 FOR UPDATE`,
+      [organizationId, idempotencyKey],
+    );
+    const existing = receipt.rows[0];
+    if (!existing) return null;
+    if (existing.action !== action || existing.request_fingerprint !== requestFingerprint) {
+      return { kind: 'idempotency_conflict' };
+    }
+    if (existing.result_page_id === null) return { kind: 'result_unavailable' };
+    const value = await this.findWithClient(client, organizationId, existing.result_page_id);
+    return value
+      ? { kind: 'created', value, replayed: true }
+      : { kind: 'result_unavailable' };
+  }
+
+  private async insertCreationReceipt(
+    client: PoolClient,
+    organizationId: number,
+    userId: number,
+    idempotencyKey: string,
+    action: LandingPageCreationAction,
+    requestFingerprint: string,
+    resultPageId: number,
+  ): Promise<void> {
+    await client.query(
+      `INSERT INTO landing_page_creation_receipts (
+         organization_id,requested_by_user_id,idempotency_key,action,
+         request_fingerprint,result_page_id
+       ) VALUES ($1,$2,$3,$4,$5,$6)`,
+      [organizationId, userId, idempotencyKey, action, requestFingerprint, resultPageId],
+    );
   }
 
   async replaceSections(

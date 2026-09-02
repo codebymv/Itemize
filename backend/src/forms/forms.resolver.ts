@@ -57,8 +57,16 @@ export class FormsResolver {
   @CsrfProtected()
   @OrganizationScoped()
   @Mutation(() => Form)
-  createForm(@Args('input') input: CreateFormInput): Promise<Form> {
-    return this.forms.create(this.organizationId(), this.userId(), input);
+  createForm(
+    @Args('input') input: CreateFormInput,
+    @Args('idempotencyKey', { type: () => String }) idempotencyKey: string,
+  ): Promise<Form> {
+    return this.forms.create(
+      this.organizationId(),
+      this.userId(),
+      input,
+      idempotencyKey,
+    );
   }
 
   @CsrfProtected()
@@ -83,8 +91,16 @@ export class FormsResolver {
   @CsrfProtected()
   @OrganizationScoped()
   @Mutation(() => Form)
-  duplicateForm(@Args('id', { type: () => Int }) id: number): Promise<Form> {
-    return this.forms.duplicate(this.organizationId(), this.userId(), id);
+  duplicateForm(
+    @Args('id', { type: () => Int }) id: number,
+    @Args('idempotencyKey', { type: () => String }) idempotencyKey: string,
+  ): Promise<Form> {
+    return this.forms.duplicate(
+      this.organizationId(),
+      this.userId(),
+      id,
+      idempotencyKey,
+    );
   }
 
   @CsrfProtected()

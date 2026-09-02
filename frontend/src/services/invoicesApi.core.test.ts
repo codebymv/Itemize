@@ -81,10 +81,15 @@ describe('core invoice API transport selection', () => {
       start_date: '2026-07-21',
       end_date: '2026-12-21',
     };
-    await expect(createRecurringTemplateFromInvoice(12, input, 4))
+    await expect(createRecurringTemplateFromInvoice(
+      12,
+      input,
+      'recurring-clone-12',
+      4,
+    ))
       .resolves.toEqual({ recurring_template_id: 22 });
     expect(createRecurringInvoiceFromInvoiceViaGraphql)
-      .toHaveBeenCalledWith(12, input, 4);
+      .toHaveBeenCalledWith(12, input, 'recurring-clone-12', 4);
     expect(api.post).not.toHaveBeenCalled();
   });
 
@@ -99,13 +104,14 @@ describe('core invoice API transport selection', () => {
     vi.mocked(deleteInvoiceViaGraphql).mockResolvedValue({ success: true });
     await getInvoices({ search: 'INV' }, 4);
     await getInvoice(12, 4);
-    await createInvoice({ items: invoice.items }, 4);
+    await createInvoice({ items: invoice.items }, 'invoice-create-12', 4);
     await updateInvoice(12, { notes: 'Updated' }, 4);
     await deleteInvoice(12, 4);
     expect(getInvoicesViaGraphql).toHaveBeenCalledWith({ search: 'INV' }, 4);
     expect(getInvoiceViaGraphql).toHaveBeenCalledWith(12, 4);
     expect(createInvoiceViaGraphql).toHaveBeenCalledWith(
       { items: invoice.items },
+      'invoice-create-12',
       4,
     );
     expect(updateInvoiceViaGraphql).toHaveBeenCalledWith(

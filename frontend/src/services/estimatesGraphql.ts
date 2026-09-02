@@ -216,16 +216,19 @@ export const getEstimateViaGraphql = async (
 
 export const createEstimateViaGraphql = async (
   input: EstimateWriteInput & { items: EstimateItem[] },
+  idempotencyKey: string,
   organizationId?: number,
 ): Promise<Estimate> => {
   const data = await graphqlMutationRequest<
     { createEstimate: GraphqlEstimate },
-    { input: ReturnType<typeof mapInput> }
+    { input: ReturnType<typeof mapInput>; idempotencyKey: string }
   >(
-    `mutation CreateEstimate($input: CreateEstimateInput!) {
-      createEstimate(input: $input) { ${estimateDetailFields} }
+    `mutation CreateEstimate($input: CreateEstimateInput!, $idempotencyKey: String!) {
+      createEstimate(input: $input, idempotencyKey: $idempotencyKey) {
+        ${estimateDetailFields}
+      }
     }`,
-    { input: mapInput(input) },
+    { input: mapInput(input), idempotencyKey },
     organizationId,
   );
   return mapEstimate(data.createEstimate);

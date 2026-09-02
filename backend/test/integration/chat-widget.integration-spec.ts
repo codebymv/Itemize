@@ -163,8 +163,10 @@ describe('Authenticated Chat Widget GraphQL PostgreSQL contract', () => {
     ).expect(200);
     expect(empty.body).toEqual({ data: { chatWidget: null } });
 
-    const mutation = `mutation Create($input: ChatWidgetConfigInput!) {
-      createChatWidget(input: $input) {
+    const mutation = `mutation Create(
+      $input: ChatWidgetConfigInput!, $idempotencyKey: String!
+    ) {
+      createChatWidget(input: $input, idempotencyKey: $idempotencyKey) {
         id organizationId widgetKey primaryColor isActive requireEmail
         allowedDomains
       }
@@ -173,7 +175,7 @@ describe('Authenticated Chat Widget GraphQL PostgreSQL contract', () => {
       memberToken,
       organizationId,
       mutation,
-      { input: { name: 'Support' } },
+      { input: { name: 'Support' }, idempotencyKey: 'blocked-create' },
     ).expect(200);
     expect(withoutCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
 
@@ -189,6 +191,7 @@ describe('Authenticated Chat Widget GraphQL PostgreSQL contract', () => {
           requireEmail: false,
           allowedDomains: ['Example.COM'],
         },
+        idempotencyKey: 'support-widget-create',
       },
       true,
     ).expect(200);
@@ -202,11 +205,41 @@ describe('Authenticated Chat Widget GraphQL PostgreSQL contract', () => {
     });
     widgetId = created.body.data.createChatWidget.id;
 
+    const replay = await graphql(
+      memberToken,
+      organizationId,
+      mutation,
+      {
+        input: {
+          name: 'Support', primaryColor: '#1a2b3c', isActive: false,
+          requireEmail: false, allowedDomains: ['Example.COM'],
+        },
+        idempotencyKey: 'support-widget-create',
+      },
+      true,
+    ).expect(200);
+    expect(replay.body.errors).toBeUndefined();
+    expect(replay.body.data.createChatWidget).toMatchObject({
+      id: widgetId,
+      widgetKey: created.body.data.createChatWidget.widgetKey,
+    });
+
+    const keyConflict = await graphql(
+      memberToken,
+      organizationId,
+      mutation,
+      { input: { name: 'Changed' }, idempotencyKey: 'support-widget-create' },
+      true,
+    ).expect(200);
+    expect(keyConflict.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', reason: 'IDEMPOTENCY_KEY_REUSED',
+    });
+
     const duplicate = await graphql(
       memberToken,
       organizationId,
       mutation,
-      { input: { name: 'Duplicate' } },
+      { input: { name: 'Duplicate' }, idempotencyKey: 'duplicate-widget-create' },
       true,
     ).expect(200);
     expect(duplicate.body.errors[0].extensions).toMatchObject({

@@ -198,9 +198,10 @@ export const getCampaign = async (
  */
 export const createCampaign = async (
     campaign: Partial<EmailCampaign>,
+    idempotencyKey: string,
     organizationId?: number
 ): Promise<EmailCampaign> => {
-    return createCampaignViaGraphql(campaign, organizationId);
+    return createCampaignViaGraphql(campaign, idempotencyKey, organizationId);
 };
 
 /**
@@ -229,9 +230,10 @@ export const deleteCampaign = async (
  */
 export const duplicateCampaign = async (
     campaignId: number,
+    idempotencyKey: string,
     organizationId?: number
 ): Promise<EmailCampaign> => {
-    return duplicateCampaignViaGraphql(campaignId, organizationId);
+    return duplicateCampaignViaGraphql(campaignId, idempotencyKey, organizationId);
 };
 
 /**

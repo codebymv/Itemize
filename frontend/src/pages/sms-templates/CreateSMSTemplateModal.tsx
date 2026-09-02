@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +24,7 @@ import { useToast } from '@/hooks/use-toast';
 import { createSmsTemplate, getMessageInfo, MessageInfo, updateSmsTemplate, type SmsTemplate } from '@/services/smsApi';
 import { debounce } from 'lodash';
 import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
+import { useStableMutationKey } from '@/hooks/useStableMutationKey';
 
 interface CreateSMSTemplateModalProps {
   organizationId: number;
@@ -63,6 +64,8 @@ export function CreateSMSTemplateModal({
   const isEditing = Boolean(template);
   const { toast } = useToast();
   const { pending: loading, run, dismissIfIdle } = useSingleFlightAction();
+  const { begin: beginCreateAttempt, release: releaseCreateAttempt, reset: resetCreateAttempt } =
+    useStableMutationKey('sms-template-create-modal');
   const [formData, setFormData] = useState({
     name: template?.name ?? '',
     message: template?.message ?? '',
@@ -77,8 +80,8 @@ export function CreateSMSTemplateModal({
   });
 
   // Debounced function to fetch message info from API
-  const fetchMessageInfo = useCallback(
-    debounce(async (message: string) => {
+  const fetchMessageInfo = useMemo(
+    () => debounce(async (message: string) => {
       if (!message) {
         setMessageInfo({
           length: 0,
@@ -143,23 +146,28 @@ export function CreateSMSTemplateModal({
     }
 
     await run(async () => {
+      const values = {
+        organization_id: organizationId,
+        name: formData.name.trim(),
+        message: formData.message,
+        category: formData.category || undefined,
+        is_active: formData.is_active,
+      };
+      let savedTemplate: SmsTemplate;
       try {
-        const values = {
-          organization_id: organizationId,
-          name: formData.name.trim(),
-          message: formData.message,
-          category: formData.category || undefined,
-          is_active: formData.is_active,
-        };
-        const savedTemplate = template
-          ? await updateSmsTemplate(template.id, values)
-          : await createSmsTemplate(values);
-        toast({
-          title: isEditing ? 'Template updated' : 'Template created',
-          description: isEditing ? 'Your SMS template changes have been saved.' : 'SMS template has been created successfully',
-        });
-        if (isEditing) onUpdated?.(savedTemplate);
-        else onCreated(savedTemplate);
+        if (template) {
+          savedTemplate = await updateSmsTemplate(template.id, values);
+        } else {
+          const idempotencyKey = beginCreateAttempt(JSON.stringify(values));
+          if (!idempotencyKey) return;
+          try {
+            savedTemplate = await createSmsTemplate(values, idempotencyKey);
+            resetCreateAttempt();
+          } catch (error) {
+            releaseCreateAttempt();
+            throw error;
+          }
+        }
       } catch (error) {
         console.error(`Error ${isEditing ? 'updating' : 'creating'} template:`, error);
         toast({
@@ -167,7 +175,14 @@ export function CreateSMSTemplateModal({
           description: getApiErrorMessage(error, `Failed to ${isEditing ? 'update' : 'create'} template`),
           variant: 'destructive',
         });
+        return;
       }
+      toast({
+        title: isEditing ? 'Template updated' : 'Template created',
+        description: isEditing ? 'Your SMS template changes have been saved.' : 'SMS template has been created successfully',
+      });
+      if (isEditing) onUpdated?.(savedTemplate);
+      else onCreated(savedTemplate);
     });
   };
 

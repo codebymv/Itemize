@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
+import type { WorkflowCreationAction } from './workflow-creation.idempotency';
 
 export type WorkflowRow = {
   id: number; organization_id: number; name: string; description: string | null;
@@ -27,6 +28,19 @@ export type WorkflowStepValue = {
 };
 export type ScheduleValue = { contactId: number | null; nextTriggerAt: Date | null };
 export type WorkflowLimit = { current: number; limit: number; plan: string };
+export type WorkflowCreationOutcome =
+  | { kind: 'created'; value: WorkflowValue; replayed: boolean }
+  | { kind: 'limit'; limit: WorkflowLimit }
+  | { kind: 'contact' }
+  | { kind: 'not_found' }
+  | { kind: 'idempotency_conflict' }
+  | { kind: 'result_unavailable' };
+
+type WorkflowCreationReceiptRow = {
+  action: WorkflowCreationAction;
+  request_fingerprint: string;
+  result_workflow_id: number | null;
+};
 
 type CreateValues = {
   name: string; description: string | null; triggerType: string;
@@ -108,11 +122,23 @@ export class WorkflowsRepository {
     try { return await this.selectById(client, organizationId, id); } finally { client.release(); }
   }
 
-  async create(organizationId: number, userId: number, values: CreateValues): Promise<
-    { kind: 'created'; value: WorkflowValue } | { kind: 'limit'; limit: WorkflowLimit } | { kind: 'contact' }
-  > {
+  async create(
+    organizationId: number,
+    userId: number,
+    values: CreateValues,
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<WorkflowCreationOutcome> {
     return this.transaction(async (client) => {
       await client.query('SELECT pg_advisory_xact_lock($1)', [organizationId]);
+      const replay = await this.replayCreationReceipt(
+        client,
+        organizationId,
+        idempotencyKey,
+        'create',
+        requestFingerprint,
+      );
+      if (replay) return replay;
       const limit = await this.workflowLimit(client, organizationId);
       if (limit.limit !== -1 && limit.current >= limit.limit) return { kind: 'limit', limit };
       if (!(await this.contactExists(client, organizationId, values.schedule.contactId))) return { kind: 'contact' };
@@ -128,7 +154,15 @@ export class WorkflowsRepository {
       await this.insertSteps(client, inserted.rows[0].id, values.steps);
       const created = await this.selectById(client, organizationId, inserted.rows[0].id);
       if (!created) throw new Error('Created workflow could not be reloaded');
-      return { kind: 'created', value: created };
+      await this.insertCreationReceipt(client, {
+        organizationId,
+        userId,
+        idempotencyKey,
+        action: 'create',
+        requestFingerprint,
+        resultWorkflowId: created.workflow.id,
+      });
+      return { kind: 'created', value: created, replayed: false };
     });
   }
 
@@ -168,11 +202,23 @@ export class WorkflowsRepository {
     });
   }
 
-  async duplicate(organizationId: number, id: number, userId: number): Promise<
-    { kind: 'duplicated'; value: WorkflowValue } | { kind: 'not_found' } | { kind: 'limit'; limit: WorkflowLimit }
-  > {
+  async duplicate(
+    organizationId: number,
+    id: number,
+    userId: number,
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<WorkflowCreationOutcome> {
     return this.transaction(async (client) => {
       await client.query('SELECT pg_advisory_xact_lock($1)', [organizationId]);
+      const replay = await this.replayCreationReceipt(
+        client,
+        organizationId,
+        idempotencyKey,
+        'duplicate',
+        requestFingerprint,
+      );
+      if (replay) return replay;
       const limit = await this.workflowLimit(client, organizationId);
       if (limit.limit !== -1 && limit.current >= limit.limit) return { kind: 'limit', limit };
       const source = await client.query<WorkflowRow>(
@@ -202,7 +248,15 @@ export class WorkflowsRepository {
       );
       const duplicated = await this.selectById(client, organizationId, inserted.rows[0].id);
       if (!duplicated) throw new Error('Duplicated workflow could not be reloaded');
-      return { kind: 'duplicated', value: duplicated };
+      await this.insertCreationReceipt(client, {
+        organizationId,
+        userId,
+        idempotencyKey,
+        action: 'duplicate',
+        requestFingerprint,
+        resultWorkflowId: duplicated.workflow.id,
+      });
+      return { kind: 'created', value: duplicated, replayed: false };
     });
   }
 
@@ -249,6 +303,68 @@ export class WorkflowsRepository {
       [id, organizationId],
     );
     return result.rows.length === 1;
+  }
+
+  private async replayCreationReceipt(
+    client: PoolClient,
+    organizationId: number,
+    idempotencyKey: string,
+    action: WorkflowCreationAction,
+    requestFingerprint: string,
+  ): Promise<WorkflowCreationOutcome | null> {
+    const receipt = await client.query<WorkflowCreationReceiptRow>(
+      `SELECT action, request_fingerprint, result_workflow_id
+       FROM workflow_creation_receipts
+       WHERE organization_id = $1 AND idempotency_key = $2
+       FOR UPDATE`,
+      [organizationId, idempotencyKey],
+    );
+    const existing = receipt.rows[0];
+    if (!existing) return null;
+    if (
+      existing.action !== action ||
+      existing.request_fingerprint !== requestFingerprint
+    ) {
+      return { kind: 'idempotency_conflict' };
+    }
+    if (existing.result_workflow_id === null) {
+      return { kind: 'result_unavailable' };
+    }
+    const value = await this.selectById(
+      client,
+      organizationId,
+      existing.result_workflow_id,
+    );
+    return value
+      ? { kind: 'created', value, replayed: true }
+      : { kind: 'result_unavailable' };
+  }
+
+  private async insertCreationReceipt(
+    client: PoolClient,
+    values: {
+      organizationId: number;
+      userId: number;
+      idempotencyKey: string;
+      action: WorkflowCreationAction;
+      requestFingerprint: string;
+      resultWorkflowId: number;
+    },
+  ): Promise<void> {
+    await client.query(
+      `INSERT INTO workflow_creation_receipts (
+         organization_id, requested_by_user_id, idempotency_key, action,
+         request_fingerprint, result_workflow_id
+       ) VALUES ($1,$2,$3,$4,$5,$6)`,
+      [
+        values.organizationId,
+        values.userId,
+        values.idempotencyKey,
+        values.action,
+        values.requestFingerprint,
+        values.resultWorkflowId,
+      ],
+    );
   }
 
   private async selectById(client: PoolClient, organizationId: number, id: number): Promise<WorkflowValue | null> {

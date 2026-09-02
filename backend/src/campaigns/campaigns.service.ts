@@ -16,6 +16,7 @@ import {
   CampaignValidationError,
 } from './campaigns.repository';
 import { AudienceValidationError } from './audience.compiler';
+import { campaignCreationFingerprint } from './campaign-creation.idempotency';
 
 const CAMPAIGN_STATUSES = ['draft', 'scheduled', 'sending', 'sent', 'paused', 'cancelled', 'failed'];
 
@@ -70,9 +71,14 @@ export class CampaignsService {
     }
   }
 
-  async create(organizationId: number, userId: number, input: CreateCampaignInput): Promise<Campaign> {
+  async create(
+    organizationId: number,
+    userId: number,
+    input: CreateCampaignInput,
+    idempotencyKey: string,
+  ): Promise<Campaign> {
     try {
-      return this.map(await this.campaigns.create(organizationId, userId, {
+      const values = {
         name: this.required(input.name, 'name', 255),
         subject: this.required(input.subject, 'subject', 500, false),
         fromName: this.optional(input.fromName, 'fromName', 255),
@@ -86,7 +92,15 @@ export class CampaignsService {
         segmentFilter: this.jsonObject(input.segmentFilter ?? {}, 'segmentFilter'),
         tagIds: this.ids(input.tagIds, 'tagIds'),
         excludedTagIds: this.ids(input.excludedTagIds, 'excludedTagIds'),
-      }));
+      };
+      const outcome = await this.campaigns.create(
+        organizationId,
+        userId,
+        values,
+        this.idempotencyKey(idempotencyKey),
+        campaignCreationFingerprint('create', values),
+      );
+      return this.creationOutcome(outcome);
     } catch (error) {
       return this.validation(error);
     }
@@ -124,11 +138,21 @@ export class CampaignsService {
     }
   }
 
-  async duplicate(organizationId: number, id: number, userId: number): Promise<Campaign> {
+  async duplicate(
+    organizationId: number,
+    id: number,
+    userId: number,
+    idempotencyKey: string,
+  ): Promise<Campaign> {
     this.id(id);
-    const row = await this.campaigns.duplicate(organizationId, id, userId);
-    if (!row) this.notFound();
-    return this.map(row);
+    const outcome = await this.campaigns.duplicate(
+      organizationId,
+      id,
+      userId,
+      this.idempotencyKey(idempotencyKey),
+      campaignCreationFingerprint('duplicate', { sourceCampaignId: id }),
+    );
+    return this.creationOutcome(outcome);
   }
 
   async delete(organizationId: number, id: number): Promise<DeleteCampaignResult> {
@@ -190,6 +214,39 @@ export class CampaignsService {
         field: 'id', reason: 'INVALID_CAMPAIGN_ID',
       });
     }
+  }
+
+  private idempotencyKey(value: string): string {
+    const key = String(value ?? '').trim();
+    if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(key)) {
+      throw itemizeGraphqlError(
+        'idempotencyKey must be 1-128 safe ASCII characters',
+        'BAD_USER_INPUT',
+        { field: 'idempotencyKey', reason: 'INVALID_IDEMPOTENCY_KEY' },
+      );
+    }
+    return key;
+  }
+
+  private creationOutcome(
+    outcome: Awaited<ReturnType<CampaignsRepository['create']>>,
+  ): Campaign {
+    if (outcome.kind === 'not_found') this.notFound();
+    if (outcome.kind === 'idempotency_conflict') {
+      throw itemizeGraphqlError(
+        'idempotencyKey was already used for a different campaign creation request',
+        'CONFLICT',
+        { field: 'idempotencyKey', reason: 'IDEMPOTENCY_KEY_REUSED' },
+      );
+    }
+    if (outcome.kind === 'result_unavailable') {
+      throw itemizeGraphqlError(
+        'The original campaign creation result is no longer available',
+        'CONFLICT',
+        { reason: 'IDEMPOTENT_RESULT_UNAVAILABLE' },
+      );
+    }
+    return this.map(outcome.row);
   }
 
   private stats(row: { total: number | string; failed: number | string; draft: number | string; in_progress: number | string; delivered: number | string }): CampaignStats {

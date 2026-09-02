@@ -129,7 +129,18 @@ describe('reputation configuration GraphQL adapters', () => {
     await expect(getWidgetsViaGraphql(3)).resolves.toEqual([expect.objectContaining({
       id: 8, organization_id: 3, widget_key: 'a'.repeat(32), widget_type: 'grid',
     })]);
-    await createWidgetViaGraphql({ name: 'Homepage', widget_type: 'grid' }, 3);
+    await createWidgetViaGraphql(
+      { name: 'Homepage', widget_type: 'grid' }, 3, 'create-widget-key',
+    );
+    expect(graphqlMutationRequest).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('idempotencyKey: $idempotencyKey'),
+      {
+        input: { name: 'Homepage', widgetType: 'grid' },
+        idempotencyKey: 'create-widget-key',
+      },
+      3,
+    );
     await updateWidgetViaGraphql(8, { is_active: false, max_reviews: 5 }, 3);
     expect(graphqlMutationRequest).toHaveBeenNthCalledWith(2, expect.stringContaining('UpdateReputationWidget'), {
       id: 8, input: { maxReviews: 5, isActive: false },

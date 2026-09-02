@@ -208,7 +208,7 @@ export type InvoiceCriteria = {
 };
 
 export type InvoiceWriteOutcome =
-  | { kind: 'saved'; aggregate: InvoiceAggregate }
+  | { kind: 'saved'; aggregate: InvoiceAggregate; replayed?: boolean }
   | { kind: 'not-found' }
   | { kind: 'not-editable' }
   | { kind: 'contact-not-found' }
@@ -216,6 +216,15 @@ export type InvoiceWriteOutcome =
   | { kind: 'product-not-found' }
   | { kind: 'invalid-date-order' }
   | { kind: 'negative-total' };
+
+export type InvoiceCreationOutcome = InvoiceWriteOutcome
+  | { kind: 'idempotency-conflict' }
+  | { kind: 'result-unavailable' };
+
+type InvoiceCreationReceiptRow = {
+  request_fingerprint: string;
+  result_invoice_id: number | null;
+};
 
 const selection = `
   i.id, i.organization_id, i.invoice_number, i.contact_id, i.business_id,
@@ -349,8 +358,28 @@ export class InvoicesRepository {
     organizationId: number,
     userId: number,
     values: InvoiceValues,
-  ): Promise<InvoiceWriteOutcome> {
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<InvoiceCreationOutcome> {
     return this.transaction(async (client) => {
+      await client.query('SELECT id FROM organizations WHERE id=$1 FOR UPDATE', [organizationId]);
+      const receipt = await client.query<InvoiceCreationReceiptRow>(
+        `SELECT request_fingerprint,result_invoice_id
+         FROM invoice_creation_receipts
+         WHERE organization_id=$1 AND idempotency_key=$2 FOR UPDATE`,
+        [organizationId, idempotencyKey],
+      );
+      const replay = receipt.rows[0];
+      if (replay) {
+        if (replay.request_fingerprint !== requestFingerprint) {
+          return { kind: 'idempotency-conflict' };
+        }
+        if (replay.result_invoice_id === null) return { kind: 'result-unavailable' };
+        const aggregate = await this.load(client, organizationId, replay.result_invoice_id);
+        return aggregate
+          ? { kind: 'saved', aggregate, replayed: true }
+          : { kind: 'result-unavailable' };
+      }
       const businessId = values.businessId ??
         await this.defaultBusinessId(client, organizationId);
       const effectiveValues = { ...values, businessId };
@@ -424,7 +453,14 @@ export class InvoicesRepository {
       await this.touchBusiness(client, organizationId, effectiveValues.businessId);
       const aggregate = await this.load(client, organizationId, invoiceId);
       if (!aggregate) throw new Error('Created invoice could not be reloaded');
-      return { kind: 'saved', aggregate };
+      await client.query(
+        `INSERT INTO invoice_creation_receipts (
+           organization_id,requested_by_user_id,idempotency_key,
+           request_fingerprint,result_invoice_id
+         ) VALUES ($1,$2,$3,$4,$5)`,
+        [organizationId, userId, idempotencyKey, requestFingerprint, invoiceId],
+      );
+      return { kind: 'saved', aggregate, replayed: false };
     });
   }
 

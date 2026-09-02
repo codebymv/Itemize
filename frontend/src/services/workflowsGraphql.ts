@@ -241,10 +241,18 @@ export const getWorkflowViaGraphql = async (id: number, organizationId: number):
   return mapWorkflow(data.workflow);
 };
 
-export const createWorkflowViaGraphql = async (input: WorkflowWriteInput): Promise<Workflow> => {
-  const data = await graphqlMutationRequest<{ createWorkflow: GraphqlWorkflow }, { input: ReturnType<typeof mapCreateInput> }>(
-    `mutation CreateWorkflow($input: CreateWorkflowInput!) { createWorkflow(input: $input) { ${fields} } }`,
-    { input: mapCreateInput(input) }, input.organization_id,
+export const createWorkflowViaGraphql = async (
+  input: WorkflowWriteInput,
+  idempotencyKey: string,
+): Promise<Workflow> => {
+  const data = await graphqlMutationRequest<
+    { createWorkflow: GraphqlWorkflow },
+    { input: ReturnType<typeof mapCreateInput>; idempotencyKey: string }
+  >(
+    `mutation CreateWorkflow($input: CreateWorkflowInput!, $idempotencyKey: String!) {
+      createWorkflow(input: $input, idempotencyKey: $idempotencyKey) { ${fields} }
+    }`,
+    { input: mapCreateInput(input), idempotencyKey }, input.organization_id,
   );
   return mapWorkflow(data.createWorkflow);
 };
@@ -266,13 +274,9 @@ const activateWorkflowMutation = `mutation ActivateWorkflow($id: Int!) {
 const deactivateWorkflowMutation = `mutation DeactivateWorkflow($id: Int!) {
   deactivateWorkflow(id: $id) { ${fields} }
 }`;
-const duplicateWorkflowMutation = `mutation DuplicateWorkflow($id: Int!) {
-  duplicateWorkflow(id: $id) { ${fields} }
-}`;
-
 const lifecycleMutation = async (
   document: string,
-  operation: 'activateWorkflow' | 'deactivateWorkflow' | 'duplicateWorkflow',
+  operation: 'activateWorkflow' | 'deactivateWorkflow',
   id: number,
   organizationId: number,
 ) => {
@@ -284,7 +288,23 @@ const lifecycleMutation = async (
 
 export const activateWorkflowViaGraphql = (id: number, organizationId: number) => lifecycleMutation(activateWorkflowMutation, 'activateWorkflow', id, organizationId);
 export const deactivateWorkflowViaGraphql = (id: number, organizationId: number) => lifecycleMutation(deactivateWorkflowMutation, 'deactivateWorkflow', id, organizationId);
-export const duplicateWorkflowViaGraphql = (id: number, organizationId: number) => lifecycleMutation(duplicateWorkflowMutation, 'duplicateWorkflow', id, organizationId);
+export const duplicateWorkflowViaGraphql = async (
+  id: number,
+  idempotencyKey: string,
+  organizationId: number,
+): Promise<Workflow> => {
+  const data = await graphqlMutationRequest<
+    { duplicateWorkflow: GraphqlWorkflow },
+    { id: number; idempotencyKey: string }
+  >(
+    `mutation DuplicateWorkflow($id: Int!, $idempotencyKey: String!) {
+      duplicateWorkflow(id: $id, idempotencyKey: $idempotencyKey) { ${fields} }
+    }`,
+    { id, idempotencyKey },
+    organizationId,
+  );
+  return mapWorkflow(data.duplicateWorkflow);
+};
 
 export const deleteWorkflowViaGraphql = async (id: number, organizationId: number): Promise<void> => {
   const data = await graphqlMutationRequest<{ deleteWorkflow: { deletedId: number; success: boolean } }, { id: number }>(

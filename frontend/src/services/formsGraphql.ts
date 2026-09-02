@@ -127,8 +127,10 @@ const formQuery = `
 `;
 
 const createFormMutation = `
-  mutation CreateForm($input: CreateFormInput!) {
-    createForm(input: $input) { ${formFields} fields { ${fieldFields} } }
+  mutation CreateForm($input: CreateFormInput!, $idempotencyKey: String!) {
+    createForm(input: $input, idempotencyKey: $idempotencyKey) {
+      ${formFields} fields { ${fieldFields} }
+    }
   }
 `;
 
@@ -145,8 +147,10 @@ const deleteFormMutation = `
 `;
 
 const duplicateFormMutation = `
-  mutation DuplicateForm($id: Int!) {
-    duplicateForm(id: $id) { ${formFields} fields { ${fieldFields} } }
+  mutation DuplicateForm($id: Int!, $idempotencyKey: String!) {
+    duplicateForm(id: $id, idempotencyKey: $idempotencyKey) {
+      ${formFields} fields { ${fieldFields} }
+    }
   }
 `;
 
@@ -411,11 +415,16 @@ export const getFormViaGraphql = async (
 
 export const createFormViaGraphql = async (
   data: FormCreateData,
+  idempotencyKey: string,
 ): Promise<Form> => {
   const response = await graphqlMutationRequest<
     { createForm: GraphqlForm },
-    { input: ReturnType<typeof mapFormInput> }
-  >(createFormMutation, { input: mapFormInput(data) }, data.organization_id);
+    { input: ReturnType<typeof mapFormInput>; idempotencyKey: string }
+  >(
+    createFormMutation,
+    { input: mapFormInput(data), idempotencyKey },
+    data.organization_id,
+  );
   return mapForm(response.createForm);
 };
 
@@ -443,12 +452,13 @@ export const deleteFormViaGraphql = async (
 
 export const duplicateFormViaGraphql = async (
   id: number,
+  idempotencyKey: string,
   organizationId?: number,
 ): Promise<Form> => {
   const response = await graphqlMutationRequest<
     { duplicateForm: GraphqlForm },
-    { id: number }
-  >(duplicateFormMutation, { id }, organizationId);
+    { id: number; idempotencyKey: string }
+  >(duplicateFormMutation, { id, idempotencyKey }, organizationId);
   return mapForm(response.duplicateForm);
 };
 

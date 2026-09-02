@@ -264,16 +264,17 @@ export const getEmailTemplateCategoriesViaGraphql = async (
 
 export const createEmailTemplateViaGraphql = async (
   input: EmailTemplateInput,
+  idempotencyKey: string,
   organizationId?: number,
 ): Promise<EmailTemplate> => {
   const data = await graphqlMutationRequest<
     { createEmailTemplate: GraphqlEmailTemplate },
-    { input: ReturnType<typeof mapCreateInput> }
+    { input: ReturnType<typeof mapCreateInput>; idempotencyKey: string }
   >(
-    `mutation CreateEmailTemplate($input: CreateEmailTemplateInput!) {
-      createEmailTemplate(input: $input) { ${emailTemplateFields} }
+    `mutation CreateEmailTemplate($input: CreateEmailTemplateInput!, $idempotencyKey: String!) {
+      createEmailTemplate(input: $input, idempotencyKey: $idempotencyKey) { ${emailTemplateFields} }
     }`,
-    { input: mapCreateInput(input) },
+    { input: mapCreateInput(input), idempotencyKey },
     organizationId,
   );
   return mapEmailTemplate(data.createEmailTemplate);
@@ -281,16 +282,17 @@ export const createEmailTemplateViaGraphql = async (
 
 export const createEmailTemplateDraftViaGraphql = async (
   input: EmailTemplateInput,
+  idempotencyKey: string,
   organizationId?: number,
 ): Promise<EmailTemplate> => {
   const data = await graphqlMutationRequest<
     { createEmailTemplateDraft: GraphqlEmailTemplate },
-    { input: ReturnType<typeof mapCreateInput> }
+    { input: ReturnType<typeof mapCreateInput>; idempotencyKey: string }
   >(
-    `mutation CreateEmailTemplateDraft($input: CreateEmailTemplateInput!) {
-      createEmailTemplateDraft(input: $input) { ${emailTemplateFields} }
+    `mutation CreateEmailTemplateDraft($input: CreateEmailTemplateInput!, $idempotencyKey: String!) {
+      createEmailTemplateDraft(input: $input, idempotencyKey: $idempotencyKey) { ${emailTemplateFields} }
     }`,
-    { input: mapCreateInput(input) },
+    { input: mapCreateInput(input), idempotencyKey },
     organizationId,
   );
   return mapEmailTemplate(data.createEmailTemplateDraft);
@@ -384,16 +386,17 @@ export const previewEmailTemplateViaGraphql = async (
 
 export const duplicateEmailTemplateViaGraphql = async (
   id: number,
+  idempotencyKey: string,
   organizationId?: number,
 ): Promise<EmailTemplate> => {
   const data = await graphqlMutationRequest<
     { duplicateEmailTemplate: GraphqlEmailTemplate },
-    { id: number }
+    { id: number; idempotencyKey: string }
   >(
-    `mutation DuplicateEmailTemplate($id: Int!) {
-      duplicateEmailTemplate(id: $id) { ${emailTemplateFields} }
+    `mutation DuplicateEmailTemplate($id: Int!, $idempotencyKey: String!) {
+      duplicateEmailTemplate(id: $id, idempotencyKey: $idempotencyKey) { ${emailTemplateFields} }
     }`,
-    { id },
+    { id, idempotencyKey },
     organizationId,
   );
   return mapEmailTemplate(data.duplicateEmailTemplate);

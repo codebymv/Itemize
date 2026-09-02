@@ -68,13 +68,17 @@ export type RecurringInvoiceRow = {
 };
 
 export type RecurringInvoiceWriteOutcome =
-  | { kind: 'saved'; row: RecurringInvoiceRow }
+  | { kind: 'saved'; row: RecurringInvoiceRow; replayed?: boolean }
   | { kind: 'not-found' }
   | { kind: 'contact-not-found' }
   | { kind: 'product-not-found' }
   | { kind: 'invalid-date-order' }
   | { kind: 'invalid-discount' }
   | { kind: 'negative-total' };
+
+export type RecurringInvoiceCreationOutcome = RecurringInvoiceWriteOutcome
+  | { kind: 'idempotency-conflict' }
+  | { kind: 'result-unavailable' };
 
 export type RecurringInvoiceLifecycleOutcome =
   | { kind: 'saved'; row: RecurringInvoiceRow }
@@ -101,13 +105,22 @@ export type RecurringInvoiceCloneValues = {
 };
 
 export type RecurringInvoiceCloneOutcome =
-  | { kind: 'saved'; row: RecurringInvoiceRow }
+  | { kind: 'saved'; row: RecurringInvoiceRow; replayed?: boolean }
   | { kind: 'not-found' }
   | { kind: 'invalid-state'; actualStatus: string }
   | { kind: 'no-items' }
   | { kind: 'invalid-source' }
   | { kind: 'invalid-discount' }
   | { kind: 'negative-total' };
+
+export type RecurringInvoiceCloneCreationOutcome = RecurringInvoiceCloneOutcome
+  | { kind: 'idempotency-conflict' }
+  | { kind: 'result-unavailable' };
+
+type RecurringInvoiceCreationReceiptRow = {
+  request_fingerprint: string;
+  result_recurring_invoice_id: number | null;
+};
 
 export type RecurringInvoiceGeneration = {
   invoiceId: number;
@@ -275,8 +288,38 @@ export class RecurringInvoicesRepository {
     organizationId: number,
     userId: number,
     values: RecurringInvoiceValues,
-  ): Promise<RecurringInvoiceWriteOutcome> {
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<RecurringInvoiceCreationOutcome> {
     return this.transaction(async (client) => {
+      await client.query(
+        'SELECT id FROM organizations WHERE id=$1 FOR UPDATE',
+        [organizationId],
+      );
+      const receipt = await client.query<RecurringInvoiceCreationReceiptRow>(
+        `SELECT request_fingerprint, result_recurring_invoice_id
+         FROM recurring_invoice_creation_receipts
+         WHERE organization_id=$1 AND idempotency_key=$2
+         FOR UPDATE`,
+        [organizationId, idempotencyKey],
+      );
+      const replay = receipt.rows[0];
+      if (replay) {
+        if (replay.request_fingerprint !== requestFingerprint) {
+          return { kind: 'idempotency-conflict' };
+        }
+        if (replay.result_recurring_invoice_id === null) {
+          return { kind: 'result-unavailable' };
+        }
+        const row = await this.load(
+          client,
+          organizationId,
+          replay.result_recurring_invoice_id,
+        );
+        return row
+          ? { kind: 'saved', row, replayed: true }
+          : { kind: 'result-unavailable' };
+      }
       const reference = await this.references(client, organizationId, values);
       if (reference) return reference;
       if (values.endDate !== null && values.endDate < values.startDate) {
@@ -309,7 +352,14 @@ export class RecurringInvoicesRepository {
       );
       const row = await this.load(client, organizationId, Number(inserted.rows[0].id));
       if (!row) throw new Error('Created recurring invoice could not be reloaded');
-      return { kind: 'saved', row };
+      await client.query(
+        `INSERT INTO recurring_invoice_creation_receipts (
+           organization_id, requested_by_user_id, idempotency_key,
+           request_fingerprint, result_recurring_invoice_id
+         ) VALUES ($1,$2,$3,$4,$5)`,
+        [organizationId, userId, idempotencyKey, requestFingerprint, row.id],
+      );
+      return { kind: 'saved', row, replayed: false };
     });
   }
 
@@ -318,8 +368,38 @@ export class RecurringInvoicesRepository {
     userId: number,
     invoiceId: number,
     values: RecurringInvoiceCloneValues,
-  ): Promise<RecurringInvoiceCloneOutcome> {
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<RecurringInvoiceCloneCreationOutcome> {
     return this.transaction(async (client) => {
+      await client.query(
+        'SELECT id FROM organizations WHERE id=$1 FOR UPDATE',
+        [organizationId],
+      );
+      const receipt = await client.query<RecurringInvoiceCreationReceiptRow>(
+        `SELECT request_fingerprint, result_recurring_invoice_id
+         FROM recurring_invoice_creation_receipts
+         WHERE organization_id=$1 AND idempotency_key=$2
+         FOR UPDATE`,
+        [organizationId, idempotencyKey],
+      );
+      const replay = receipt.rows[0];
+      if (replay) {
+        if (replay.request_fingerprint !== requestFingerprint) {
+          return { kind: 'idempotency-conflict' };
+        }
+        if (replay.result_recurring_invoice_id === null) {
+          return { kind: 'result-unavailable' };
+        }
+        const row = await this.load(
+          client,
+          organizationId,
+          replay.result_recurring_invoice_id,
+        );
+        return row
+          ? { kind: 'saved', row, replayed: true }
+          : { kind: 'result-unavailable' };
+      }
       const invoiceResult = await client.query<{
         status: string;
         contact_id: number | null;
@@ -415,7 +495,14 @@ export class RecurringInvoicesRepository {
         client, organizationId, Number(inserted.rows[0].id),
       );
       if (!row) throw new Error('Cloned recurring invoice could not be reloaded');
-      return { kind: 'saved', row };
+      await client.query(
+        `INSERT INTO recurring_invoice_creation_receipts (
+           organization_id, requested_by_user_id, idempotency_key,
+           request_fingerprint, result_recurring_invoice_id
+         ) VALUES ($1,$2,$3,$4,$5)`,
+        [organizationId, userId, idempotencyKey, requestFingerprint, row.id],
+      );
+      return { kind: 'saved', row, replayed: false };
     });
   }
 

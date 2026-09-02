@@ -48,25 +48,29 @@ describe('workflow API GraphQL dispatch', () => {
 
     await getWorkflows(4, { search: 'welcome', is_active: false });
     await getWorkflow(9, 4);
-    await createWorkflow(created);
+    await createWorkflow(created, 'workflow-create-key');
     await updateWorkflow(9, updated);
     await deleteWorkflow(9, 4);
     await activateWorkflow(9, 4);
     await deactivateWorkflow(9, 4);
-    await duplicateWorkflow(9, 4);
+    await duplicateWorkflow(9, 'workflow-duplicate-key', 4);
 
     expect(graphql.getWorkflowsViaGraphql).toHaveBeenCalledWith(
       4, { search: 'welcome', is_active: false },
     );
     expect(graphql.getWorkflowViaGraphql).toHaveBeenCalledWith(9, 4);
-    expect(graphql.createWorkflowViaGraphql).toHaveBeenCalledWith(created);
+    expect(graphql.createWorkflowViaGraphql).toHaveBeenCalledWith(
+      created, 'workflow-create-key',
+    );
     expect(graphql.updateWorkflowViaGraphql).toHaveBeenCalledWith(
       9, { name: 'Renamed', steps: [] }, 4,
     );
     expect(graphql.deleteWorkflowViaGraphql).toHaveBeenCalledWith(9, 4);
     expect(graphql.activateWorkflowViaGraphql).toHaveBeenCalledWith(9, 4);
     expect(graphql.deactivateWorkflowViaGraphql).toHaveBeenCalledWith(9, 4);
-    expect(graphql.duplicateWorkflowViaGraphql).toHaveBeenCalledWith(9, 4);
+    expect(graphql.duplicateWorkflowViaGraphql).toHaveBeenCalledWith(
+      9, 'workflow-duplicate-key', 4,
+    );
   });
 
   it('routes every workflow enrollment operation through GraphQL', async () => {

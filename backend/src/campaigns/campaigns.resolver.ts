@@ -45,8 +45,16 @@ export class CampaignsResolver {
   @CsrfProtected()
   @OrganizationScoped()
   @Mutation(() => Campaign)
-  createCampaign(@Args('input') input: CreateCampaignInput): Promise<Campaign> {
-    return this.campaignsService.create(this.organizationId(), this.userId(), input);
+  createCampaign(
+    @Args('input') input: CreateCampaignInput,
+    @Args('idempotencyKey', { type: () => String }) idempotencyKey: string,
+  ): Promise<Campaign> {
+    return this.campaignsService.create(
+      this.organizationId(),
+      this.userId(),
+      input,
+      idempotencyKey,
+    );
   }
 
   @CsrfProtected()
@@ -62,8 +70,16 @@ export class CampaignsResolver {
   @CsrfProtected()
   @OrganizationScoped()
   @Mutation(() => Campaign)
-  duplicateCampaign(@Args('id', { type: () => Int }) id: number): Promise<Campaign> {
-    return this.campaignsService.duplicate(this.organizationId(), id, this.userId());
+  duplicateCampaign(
+    @Args('id', { type: () => Int }) id: number,
+    @Args('idempotencyKey', { type: () => String }) idempotencyKey: string,
+  ): Promise<Campaign> {
+    return this.campaignsService.duplicate(
+      this.organizationId(),
+      id,
+      this.userId(),
+      idempotencyKey,
+    );
   }
 
   @CsrfProtected()

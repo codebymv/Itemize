@@ -282,10 +282,11 @@ describe('Calendar GraphQL PostgreSQL contract', () => {
   });
 
   it('creates a validated calendar with custom availability', async () => {
-    const response = await mutation(
-      organizationId,
-      `mutation CreateCalendar($input: CreateCalendarInput!) {
-        createCalendar(input: $input) {
+    const createDocument = `mutation CreateCalendar(
+      $input: CreateCalendarInput!
+      $idempotencyKey: String!
+    ) {
+        createCalendar(input: $input, idempotencyKey: $idempotencyKey) {
           ${calendarFields}
           durationMinutes
           bufferBeforeMinutes
@@ -298,34 +299,42 @@ describe('Calendar GraphQL PostgreSQL contract', () => {
             isActive
           }
         }
-      }`,
-      {
-        input: {
-          name: '  Discovery call  ',
-          description: '  New lead review  ',
-          timezone: 'America/Los_Angeles',
-          durationMinutes: 45,
-          bufferBeforeMinutes: 10,
-          assignedToId: userId,
-          color: '#aabbcc',
-          availabilityWindows: [
-            {
-              dayOfWeek: 3,
-              startTime: '13:30',
-              endTime: '16:00',
-            },
-            {
-              dayOfWeek: 1,
-              startTime: '08:00:00',
-              endTime: '12:00:00',
-              isActive: false,
-            },
-          ],
-        },
+      }`;
+    const createVariables = {
+      idempotencyKey: 'calendar-create-discovery',
+      input: {
+        name: '  Discovery call  ',
+        description: '  New lead review  ',
+        timezone: 'America/Los_Angeles',
+        durationMinutes: 45,
+        bufferBeforeMinutes: 10,
+        assignedToId: userId,
+        color: '#aabbcc',
+        availabilityWindows: [
+          {
+            dayOfWeek: 3,
+            startTime: '13:30',
+            endTime: '16:00',
+          },
+          {
+            dayOfWeek: 1,
+            startTime: '08:00:00',
+            endTime: '12:00:00',
+            isActive: false,
+          },
+        ],
       },
-    ).expect(200);
+    };
+    const [response, replayed] = await Promise.all([
+      mutation(organizationId, createDocument, createVariables).expect(200),
+      mutation(organizationId, createDocument, createVariables).expect(200),
+    ]);
 
     expect(response.body.errors).toBeUndefined();
+    expect(replayed.body.errors).toBeUndefined();
+    expect(replayed.body.data.createCalendar).toEqual(
+      response.body.data.createCalendar,
+    );
     expect(response.body.data.createCalendar).toMatchObject({
       organizationId,
       name: 'Discovery call',
@@ -351,6 +360,42 @@ describe('Calendar GraphQL PostgreSQL contract', () => {
           isActive: true,
         },
       ],
+    });
+    const createdCount = await pool.query<{ count: number }>(
+      `SELECT COUNT(*)::int AS count
+       FROM calendars
+       WHERE organization_id = $1 AND name = 'Discovery call'`,
+      [organizationId],
+    );
+    expect(createdCount.rows[0].count).toBe(1);
+
+    const conflicting = await mutation(
+      organizationId,
+      createDocument,
+      {
+        ...createVariables,
+        input: { ...createVariables.input, durationMinutes: 60 },
+      },
+    ).expect(200);
+    expect(conflicting.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_KEY_REUSED',
+    });
+
+    const createdId = response.body.data.createCalendar.id;
+    const deleted = await mutation(
+      organizationId,
+      `mutation { deleteCalendar(id: ${createdId}) }`,
+    ).expect(200);
+    expect(deleted.body.data.deleteCalendar).toBe(true);
+    const unavailable = await mutation(
+      organizationId,
+      createDocument,
+      createVariables,
+    ).expect(200);
+    expect(unavailable.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENT_RESULT_UNAVAILABLE',
     });
   });
 
@@ -759,10 +804,14 @@ describe('Calendar GraphQL PostgreSQL contract', () => {
 
     const overlapping = await mutation(
       organizationId,
-      `mutation CreateCalendar($input: CreateCalendarInput!) {
-        createCalendar(input: $input) { id }
+      `mutation CreateCalendar(
+        $input: CreateCalendarInput!
+        $idempotencyKey: String!
+      ) {
+        createCalendar(input: $input, idempotencyKey: $idempotencyKey) { id }
       }`,
       {
+        idempotencyKey: 'calendar-create-overlap',
         input: {
           name: 'Overlap',
           availabilityWindows: [
@@ -787,7 +836,12 @@ describe('Calendar GraphQL PostgreSQL contract', () => {
     );
     const limited = await mutation(
       organizationId,
-      `mutation { createCalendar(input: { name: "Limit blocked" }) { id } }`,
+      `mutation {
+        createCalendar(
+          input: { name: "Limit blocked" }
+          idempotencyKey: "calendar-create-limited"
+        ) { id }
+      }`,
     ).expect(200);
     expect(limited.body.errors[0].extensions).toMatchObject({
       code: 'FORBIDDEN',
