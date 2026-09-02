@@ -212,13 +212,17 @@ export interface PublicBookingData {
 
 export const submitPublicBooking = async (
     slug: string,
-    data: PublicBookingData
+    data: PublicBookingData,
+    idempotencyKey: string,
 ): Promise<{
     success: boolean;
     booking: Booking & { cancellation_token: string };
     message: string;
 }> => {
-    const response = await api.post(`/api/bookings/public/book/${slug}`, data);
+    const response = await api.post(`/api/bookings/public/book/${slug}`, data, {
+        headers: { 'Idempotency-Key': idempotencyKey },
+        retryOnNetworkError: true,
+    });
     return unwrapResponse<{
         success: boolean;
         booking: Booking & { cancellation_token: string };

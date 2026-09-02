@@ -24,6 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
+import { useStableMutationKey } from '@/hooks/useStableMutationKey';
 import {
   cancelPublicBooking,
   getAvailableSlots,
@@ -81,6 +82,8 @@ export default function PublicBookingPage() {
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [activeAction, setActiveAction] = useState<'book' | 'cancel' | null>(null);
   const { pending, run } = useSingleFlightAction();
+  const { keyFor: bookingKeyFor, reset: resetBookingKey } =
+    useStableMutationKey('public-booking');
   const submitting = pending && activeAction === 'book';
   const [error, setError] = useState('');
   const [slotError, setSlotError] = useState('');
@@ -143,7 +146,7 @@ export default function PublicBookingPage() {
     await run(async () => {
       setActiveAction('book');
       try {
-        const result = await submitPublicBooking(identifier, {
+        const payload = {
           start_time: selectedSlot.start_time,
           end_time: selectedSlot.end_time,
           timezone: calendar.timezone,
@@ -151,7 +154,13 @@ export default function PublicBookingPage() {
           attendee_email: attendee.email.trim(),
           attendee_phone: attendee.phone.trim() || undefined,
           notes: attendee.notes.trim() || undefined,
-        });
+        };
+        const result = await submitPublicBooking(
+          identifier,
+          payload,
+          bookingKeyFor(JSON.stringify({ identifier, payload })),
+        );
+        resetBookingKey();
         setConfirmed(result.booking);
       } catch (errorValue) {
         const message = apiError(errorValue, 'Your booking could not be completed. Please try again.');

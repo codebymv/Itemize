@@ -4,12 +4,14 @@ import {
   convertSessionToContact,
   createChatWidget,
   createPublicChatSession,
+  endPublicChatSession,
   getChatSession,
   getChatSessions,
   getChatWidget,
   getEmbedCode,
   getPublicChatWidgetConfig,
   sendAgentMessage,
+  sendPublicChatMessage,
   updateChatWidget,
 } from './chatWidgetApi';
 import {
@@ -104,19 +106,53 @@ describe('Chat Widget transport boundary', () => {
     vi.mocked(api.get).mockResolvedValueOnce({
       data: { widget_key: 'cw_public', is_active: true },
     });
-    vi.mocked(api.post).mockResolvedValueOnce({
-      data: { session_token: 'cs_capability', session_id: 9, resumed: false },
-    });
+    vi.mocked(api.post)
+      .mockResolvedValueOnce({
+        data: { session_token: 'cs_capability', session_id: 9, resumed: false },
+      })
+      .mockResolvedValueOnce({ data: { id: 12, content: 'Hello' } })
+      .mockResolvedValueOnce({ data: { success: true } });
     await getPublicChatWidgetConfig('cw_public');
     await expect(
-      createPublicChatSession({ widget_key: 'cw_public' }),
+      createPublicChatSession({ widget_key: 'cw_public' }, 'session-attempt'),
     ).resolves.toMatchObject({ session_id: 9 });
+    await sendPublicChatMessage(
+      { session_token: 'cs_capability', content: 'Hello' },
+      'message-attempt',
+    );
+    await endPublicChatSession('cs_capability');
     expect(api.get).toHaveBeenCalledWith(
       '/api/chat-widget/public/config/cw_public',
+      { publicRequest: true, withCredentials: false },
     );
     expect(api.post).toHaveBeenCalledWith(
       '/api/chat-widget/public/session',
       { widget_key: 'cw_public' },
+      {
+        headers: { 'Idempotency-Key': 'session-attempt' },
+        publicRequest: true,
+        retryOnNetworkError: true,
+        withCredentials: false,
+      },
+    );
+    expect(api.post).toHaveBeenCalledWith(
+      '/api/chat-widget/public/messages',
+      { session_token: 'cs_capability', content: 'Hello' },
+      {
+        headers: { 'Idempotency-Key': 'message-attempt' },
+        publicRequest: true,
+        retryOnNetworkError: true,
+        withCredentials: false,
+      },
+    );
+    expect(api.post).toHaveBeenCalledWith(
+      '/api/chat-widget/public/end-session',
+      { session_token: 'cs_capability' },
+      {
+        publicRequest: true,
+        retryOnNetworkError: true,
+        withCredentials: false,
+      },
     );
   });
 });

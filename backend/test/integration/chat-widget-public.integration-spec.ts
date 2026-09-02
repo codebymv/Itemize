@@ -208,6 +208,45 @@ describe('Chat widget public protocol (legacy behavior pinned)', () => {
     agent.disconnect();
   });
 
+  it('replays keyed session starts without duplicating anonymous sessions', async () => {
+    const idempotencyKey = `session-${crypto.randomUUID()}`;
+    const payload = {
+      widget_key: widgetKey,
+      visitor_name: 'Anonymous visitor',
+      current_page_url: 'https://example.test/pricing',
+    };
+    const created = await request(baseUrl)
+      .post('/api/chat-widget/public/session')
+      .set('Idempotency-Key', idempotencyKey)
+      .send(payload);
+    expect(created.status).toBe(201);
+    expect(created.body).toMatchObject({ resumed: false });
+
+    const replayed = await request(baseUrl)
+      .post('/api/chat-widget/public/session')
+      .set('Idempotency-Key', idempotencyKey)
+      .send(payload);
+    expect(replayed.status).toBe(201);
+    expect(replayed.body).toEqual(created.body);
+
+    const conflicting = await request(baseUrl)
+      .post('/api/chat-widget/public/session')
+      .set('Idempotency-Key', idempotencyKey)
+      .send({ ...payload, visitor_name: 'Changed visitor' });
+    expect(conflicting.status).toBe(409);
+    expect(conflicting.body.code).toBe('IDEMPOTENCY_CONFLICT');
+
+    const persisted = await pool.query<{ count: number }>(
+      `SELECT COUNT(*)::int AS count
+       FROM chat_sessions
+       WHERE widget_id = (SELECT id FROM chat_widgets WHERE widget_key = $1)
+         AND visitor_name = $2
+         AND current_page_url = $3`,
+      [widgetKey, payload.visitor_name, payload.current_page_url],
+    );
+    expect(persisted.rows[0].count).toBe(1);
+  });
+
   it('sends visitor messages with agent notification and lists them', async () => {
     const session = await request(baseUrl)
       .post('/api/chat-widget/public/session')
@@ -222,12 +261,28 @@ describe('Chat widget public protocol (legacy behavior pinned)', () => {
 
     const agent = await connectAgent();
     const notified = once<{ message: { content: string } }>(agent, 'newChatMessage');
+    const idempotencyKey = `message-${crypto.randomUUID()}`;
     const sent = await request(baseUrl)
       .post('/api/chat-widget/public/messages')
+      .set('Idempotency-Key', idempotencyKey)
       .send({ session_token: sessionToken, content: '  Hello agents  ' });
     expect(sent.status).toBe(201);
     expect(sent.body).toMatchObject({ sender_type: 'visitor', content: 'Hello agents' });
     expect((await notified).message.content).toBe('Hello agents');
+
+    const replayed = await request(baseUrl)
+      .post('/api/chat-widget/public/messages')
+      .set('Idempotency-Key', idempotencyKey)
+      .send({ session_token: sessionToken, content: '  Hello agents  ' });
+    expect(replayed.status).toBe(201);
+    expect(replayed.body).toEqual(sent.body);
+
+    const conflicting = await request(baseUrl)
+      .post('/api/chat-widget/public/messages')
+      .set('Idempotency-Key', idempotencyKey)
+      .send({ session_token: sessionToken, content: 'Different message' });
+    expect(conflicting.status).toBe(409);
+    expect(conflicting.body.code).toBe('IDEMPOTENCY_CONFLICT');
 
     const listed = await request(baseUrl).get(
       `/api/chat-widget/public/messages/${sessionToken}`,
@@ -266,7 +321,7 @@ describe('Chat widget public protocol (legacy behavior pinned)', () => {
     agent.disconnect();
   });
 
-  it('ends sessions with agent notification, visitor eviction, and replay denial', async () => {
+  it('ends sessions with agent notification, visitor eviction, and safe replay', async () => {
     const session = await request(baseUrl)
       .post('/api/chat-widget/public/session')
       .send({ widget_key: widgetKey, visitor_email: `end-${Date.now()}@t.test` });
@@ -297,8 +352,8 @@ describe('Chat widget public protocol (legacy behavior pinned)', () => {
     const replay = await request(baseUrl)
       .post('/api/chat-widget/public/end-session')
       .send({ session_token: sessionToken });
-    expect(replay.status).toBe(404);
-    expect(replay.body).toEqual({ error: 'Session not found' });
+    expect(replay.status).toBe(200);
+    expect(replay.body).toEqual({ success: true });
     agent.disconnect();
     visitor.disconnect();
   });

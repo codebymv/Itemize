@@ -102,7 +102,7 @@ describe('PublicBookingPage', () => {
       attendee_name: 'Maya Patel',
       attendee_email: 'maya@example.com',
       timezone: 'America/Phoenix',
-    })));
+    }), expect.any(String)));
     expect(await screen.findByRole('heading', { name: 'You’re booked' })).toBeInTheDocument();
   });
 
@@ -139,5 +139,25 @@ describe('PublicBookingPage', () => {
     expect(api.submitPublicBooking).toHaveBeenCalledTimes(1);
     await act(async () => resolveBooking(bookingResponse));
     expect(await screen.findByRole('heading', { name: /booked/i })).toBeInTheDocument();
+  });
+
+  it('retains one booking key when an unchanged submission is retried', async () => {
+    api.submitPublicBooking
+      .mockRejectedValueOnce(new Error('network'))
+      .mockResolvedValueOnce(bookingResponse);
+    renderPage();
+
+    fireEvent.click(await screen.findByRole('button', { name: '9:00 AM' }));
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Maya Patel' } });
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'maya@example.com' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm booking' }));
+    expect(await screen.findByText(/could not be completed/i)).toBeInTheDocument();
+
+    const firstKey = api.submitPublicBooking.mock.calls[0][2];
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm booking' }));
+
+    expect(await screen.findByRole('heading', { name: /booked/i })).toBeInTheDocument();
+    expect(api.submitPublicBooking).toHaveBeenCalledTimes(2);
+    expect(api.submitPublicBooking.mock.calls[1][2]).toBe(firstKey);
   });
 });

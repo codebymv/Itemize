@@ -116,6 +116,10 @@ describe('Public bookings protocol (legacy behavior pinned)', () => {
   }, 60000);
 
   const getPath = async (path: string) => request(app.getHttpServer()).get(path);
+  const createRequest = (identifier: string, idempotencyKey = crypto.randomUUID()) =>
+    request(app.getHttpServer())
+      .post(`/api/bookings/public/book/${identifier}`)
+      .set('idempotency-key', idempotencyKey);
 
   it('serves the public booking page identically by global ID and unambiguous slug', async () => {
     const calendar = await insertCalendar('Parity Page');
@@ -190,9 +194,7 @@ describe('Public bookings protocol (legacy behavior pinned)', () => {
         attendee_email: 'sam@example.com',
       },
     ]) {
-      const nest = await request(app.getHttpServer())
-          .post(`/api/bookings/public/book/${calendar.public_id}`)
-          .send(body);
+      const nest = await createRequest(calendar.public_id).send(body);
       expect(nest.status).toBe(400);
     }
   });
@@ -203,17 +205,33 @@ describe('Public bookings protocol (legacy behavior pinned)', () => {
     const nestSlot = futureSlot(48);
     const legacySlot = futureSlot(96);
 
-    const nest = await request(app.getHttpServer())
-      .post(`/api/bookings/public/book/${calendar.public_id}`)
-      .send({
-        ...nestSlot,
-        attendee_name: 'Parity Attendee',
-        attendee_email: email,
-        notes: 'via nest',
-      })
+    const firstKey = crypto.randomUUID();
+    const firstBody = {
+      ...nestSlot,
+      attendee_name: 'Parity Attendee',
+      attendee_email: email,
+      notes: 'via nest',
+    };
+    const nest = await createRequest(calendar.public_id, firstKey)
+      .send(firstBody)
       .expect(201);
-    const legacy = await request(app.getHttpServer())
-      .post(`/api/bookings/public/book/${calendar.public_id}`)
+    const replay = await createRequest(calendar.public_id, firstKey)
+      .send(firstBody)
+      .expect(201);
+    expect(replay.body).toMatchObject({
+      replayed: true,
+      booking: {
+        id: nest.body.booking.id,
+        cancellation_token: nest.body.booking.cancellation_token,
+      },
+    });
+    await createRequest(calendar.public_id, firstKey)
+      .send({
+        ...firstBody,
+        notes: 'different payload',
+      })
+      .expect(409);
+    const legacy = await createRequest(calendar.public_id)
       .send({
         ...legacySlot,
         attendee_name: 'Parity Attendee',
@@ -293,14 +311,11 @@ describe('Public bookings protocol (legacy behavior pinned)', () => {
       attendee_name: 'First Attendee',
       attendee_email: `first-${Date.now()}@test.itemize`,
     };
-    await request(app.getHttpServer())
-      .post(`/api/bookings/public/book/${calendar.public_id}`)
+    await createRequest(calendar.public_id)
       .send(body)
       .expect(201);
 
-    const nest = await request(app.getHttpServer())
-        .post(`/api/bookings/public/book/${calendar.public_id}`)
-        .send(body);
+    const nest = await createRequest(calendar.public_id).send(body);
     expect(nest.status).toBe(409);
     expect(nest.body).toMatchObject({
       error: 'This time slot is no longer available',
@@ -310,8 +325,7 @@ describe('Public bookings protocol (legacy behavior pinned)', () => {
   it('binds cancellation capabilities to their calendar and denies replay identically', async () => {
     const calendar = await insertCalendar('Parity Cancel');
     const otherCalendar = await insertCalendar('Parity Cancel Other');
-    const created = await request(app.getHttpServer())
-      .post(`/api/bookings/public/book/${calendar.public_id}`)
+    const created = await createRequest(calendar.public_id)
       .send({
         ...futureSlot(144),
         attendee_name: 'Cancel Attendee',
@@ -381,8 +395,7 @@ describe('Public bookings protocol (legacy behavior pinned)', () => {
 
   it('cancels a legacy-issued capability through the legacy route with the same contract', async () => {
     const calendar = await insertCalendar('Parity Cancel Legacy');
-    const created = await request(app.getHttpServer())
-      .post(`/api/bookings/public/book/${calendar.public_id}`)
+    const created = await createRequest(calendar.public_id)
       .send({
         ...futureSlot(168),
         attendee_name: 'Legacy Attendee',

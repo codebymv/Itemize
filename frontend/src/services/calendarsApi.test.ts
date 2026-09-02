@@ -12,6 +12,7 @@ import {
   getCalendars,
   removeDateOverride,
   rescheduleBooking,
+  submitPublicBooking,
   updateCalendar,
   updateCalendarAvailability,
 } from './calendarsApi';
@@ -230,5 +231,28 @@ describe('calendar API transport selection', () => {
     );
     expect(api.post).not.toHaveBeenCalled();
     expect(api.patch).not.toHaveBeenCalled();
+  });
+
+  it('submits public bookings with durable replay metadata', async () => {
+    vi.mocked(api.post).mockResolvedValue({
+      data: { success: true, booking, message: 'Confirmed' },
+    });
+    const input = {
+      start_time: booking.start_time,
+      end_time: booking.end_time,
+      attendee_name: 'Maya Patel',
+      attendee_email: 'maya@example.test',
+    };
+
+    await submitPublicBooking('cal_public', input, 'booking-request-1');
+
+    expect(api.post).toHaveBeenCalledWith(
+      '/api/bookings/public/book/cal_public',
+      input,
+      {
+        headers: { 'Idempotency-Key': 'booking-request-1' },
+        retryOnNetworkError: true,
+      },
+    );
   });
 });

@@ -9,9 +9,26 @@ import {
 } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { PublicBookingsRepository } from './public-bookings.repository';
+import { publicBookingCancellationToken } from './public-booking.token';
 
 const CANCELLATION_TOKEN = /^[a-f0-9]{64}$/;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const IDEMPOTENCY_KEY = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
+
+const canonicalJson = (value: unknown): unknown => {
+  if (Array.isArray(value)) return value.map(canonicalJson);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.keys(value as Record<string, unknown>)
+        .sort()
+        .map((key) => [
+          key,
+          canonicalJson((value as Record<string, unknown>)[key]),
+        ]),
+    );
+  }
+  return value;
+};
 
 const calendarNotFound = () =>
   new NotFoundException({ error: 'Calendar not found' });
@@ -94,7 +111,11 @@ export class PublicBookingsService {
     };
   }
 
-  async createPublicBooking(identifier: string, body: CreatePublicBookingBody) {
+  async createPublicBooking(
+    identifier: string,
+    body: CreatePublicBookingBody,
+    rawIdempotencyKey?: string,
+  ) {
     const startTime = body.start_time;
     const attendeeName = body.attendee_name;
     const attendeeEmail = body.attendee_email;
@@ -109,22 +130,37 @@ export class PublicBookingsService {
       });
     }
 
-    const cancellationToken = crypto.randomBytes(32).toString('hex');
+    const idempotencyKey = String(rawIdempotencyKey ?? '').trim();
+    if (!IDEMPOTENCY_KEY.test(idempotencyKey)) {
+      throw new BadRequestException({
+        error: 'Idempotency-Key must contain 1-128 safe ASCII characters',
+        code: 'INVALID_IDEMPOTENCY_KEY',
+      });
+    }
+    const values = {
+      startTime: String(startTime),
+      endTime: body.end_time ? String(body.end_time) : null,
+      timezone: body.timezone ? String(body.timezone) : null,
+      attendeeName: String(attendeeName),
+      attendeeEmail: String(attendeeEmail),
+      attendeePhone: body.attendee_phone ? String(body.attendee_phone) : null,
+      notes: body.notes ? String(body.notes) : null,
+      customFields:
+        body.custom_fields && typeof body.custom_fields === 'object'
+          ? (body.custom_fields as Record<string, unknown>)
+          : {},
+    };
+    const requestFingerprint = crypto.createHash('sha256')
+      .update(JSON.stringify(canonicalJson(values)))
+      .digest('hex');
+    const cancellationToken = publicBookingCancellationToken(idempotencyKey);
     const outcome = await this.guard(
       () =>
         this.repository.createPublicBooking(identifier, {
-          startTime: String(startTime),
-          endTime: body.end_time ? String(body.end_time) : null,
-          timezone: body.timezone ? String(body.timezone) : null,
-          attendeeName: String(attendeeName),
-          attendeeEmail: String(attendeeEmail),
-          attendeePhone: body.attendee_phone ? String(body.attendee_phone) : null,
-          notes: body.notes ? String(body.notes) : null,
-          customFields:
-            body.custom_fields && typeof body.custom_fields === 'object'
-              ? (body.custom_fields as Record<string, unknown>)
-              : {},
+          ...values,
           cancellationTokenHash: this.hashToken(cancellationToken),
+          idempotencyKey,
+          requestFingerprint,
         }),
       'Error creating public booking',
       'Failed to create booking',
@@ -142,9 +178,19 @@ export class PublicBookingsService {
         reason: outcome.reason,
       });
     }
+    if (outcome.kind === 'idempotency_conflict') {
+      throw new ConflictException({
+        error: 'Idempotency key was already used for a different booking',
+        code: 'IDEMPOTENCY_CONFLICT',
+      });
+    }
     return {
       success: true,
-      booking: { ...outcome.booking, cancellation_token: cancellationToken },
+      booking: {
+        ...outcome.booking,
+        cancellation_token: cancellationToken,
+      },
+      replayed: outcome.replayed,
       message: 'Booking confirmed! Check your email for confirmation details.',
     };
   }

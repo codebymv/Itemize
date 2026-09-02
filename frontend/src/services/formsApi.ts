@@ -149,7 +149,10 @@ export const submitPublicForm = async (
     const response = await api.post(
         `/api/forms/public/form/${identifier}`,
         { data },
-        { headers: { 'Idempotency-Key': idempotencyKey } },
+        {
+            headers: { 'Idempotency-Key': idempotencyKey },
+            retryOnNetworkError: true,
+        },
     );
     return unwrapResponse<{ success: boolean; message: string; redirect_url?: string }>(response.data);
 };

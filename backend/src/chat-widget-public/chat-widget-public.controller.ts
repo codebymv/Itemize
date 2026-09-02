@@ -18,6 +18,10 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { RealtimeHostService } from '../realtime-host/realtime-host.service';
+import {
+  normalizePublicChatIdempotencyKey,
+  publicChatRequestFingerprint,
+} from './chat-widget-public.idempotency';
 import { ChatWidgetPublicRepository } from './chat-widget-public.repository';
 
 const serverFailure = (response: Response, message: string): void => {
@@ -93,16 +97,46 @@ export class ChatWidgetPublicController {
         return;
       }
 
+      const idempotencyKey = normalizePublicChatIdempotencyKey(
+        request.get('idempotency-key'),
+      );
+      if (idempotencyKey === null) {
+        response.status(400).json({
+          error: 'Idempotency-Key must contain 1-128 safe ASCII characters',
+          code: 'INVALID_IDEMPOTENCY_KEY',
+        });
+        return;
+      }
+
+      const visitorName = (body?.visitor_name as string) || null;
+      const visitorEmail = (body?.visitor_email as string) || null;
+      const visitorPhone = (body?.visitor_phone as string) || null;
+      const currentPageUrl = (body?.current_page_url as string) || null;
+      const referrerUrl = (body?.referrer_url as string) || null;
+      const requestFingerprint = idempotencyKey
+        ? publicChatRequestFingerprint({
+            widgetKey: String(widgetKey),
+            visitorName,
+            visitorEmail,
+            visitorPhone,
+            customData: body?.custom_data ?? null,
+            currentPageUrl,
+            referrerUrl,
+          })
+        : null;
+
       const outcome = await this.repository.startSession({
         widgetKey: String(widgetKey),
-        visitorName: (body?.visitor_name as string) || null,
-        visitorEmail: (body?.visitor_email as string) || null,
-        visitorPhone: (body?.visitor_phone as string) || null,
+        visitorName,
+        visitorEmail,
+        visitorPhone,
         customData: body?.custom_data,
-        currentPageUrl: (body?.current_page_url as string) || null,
-        referrerUrl: (body?.referrer_url as string) || null,
+        currentPageUrl,
+        referrerUrl,
         ipAddress: request.ip ?? null,
         userAgent: request.headers['user-agent'] ?? null,
+        idempotencyKey: idempotencyKey ?? null,
+        requestFingerprint,
       });
 
       if (outcome.status === 'widget_not_found') {
@@ -113,13 +147,28 @@ export class ChatWidgetPublicController {
         response.status(400).json({ error: outcome.message });
         return;
       }
+      if (outcome.status === 'idempotency_conflict') {
+        response.status(409).json({
+          error: 'Idempotency key was already used for a different session request',
+          code: 'IDEMPOTENCY_CONFLICT',
+        });
+        return;
+      }
 
-      this.realtimeHost.emitToOrgChat(outcome.organizationId, 'newChatSession', {
-        session_id: outcome.data.session_id,
-        visitor_name: (body?.visitor_name as string) || undefined,
-        visitor_email: (body?.visitor_email as string) || undefined,
-        timestamp: new Date().toISOString(),
-      });
+      if (!outcome.replayed && !outcome.data.resumed) {
+        try {
+          this.realtimeHost.emitToOrgChat(outcome.organizationId, 'newChatSession', {
+            session_id: outcome.data.session_id,
+            visitor_name: visitorName || undefined,
+            visitor_email: visitorEmail || undefined,
+            timestamp: new Date().toISOString(),
+          });
+        } catch (error) {
+          this.logger.warn(
+            `Chat session ${outcome.data.session_id} committed without realtime announcement: ${(error as Error).message}`,
+          );
+        }
+      }
       response.status(outcome.httpStatus).json(outcome.data);
     } catch (error) {
       this.logger.error(
@@ -154,6 +203,7 @@ export class ChatWidgetPublicController {
   @Post('messages')
   async sendMessage(
     @Body() body: Record<string, unknown>,
+    @Req() request: Request,
     @Res() response: Response,
   ): Promise<void> {
     try {
@@ -170,24 +220,56 @@ export class ChatWidgetPublicController {
         return;
       }
 
+      const idempotencyKey = normalizePublicChatIdempotencyKey(
+        request.get('idempotency-key'),
+      );
+      if (idempotencyKey === null) {
+        response.status(400).json({
+          error: 'Idempotency-Key must contain 1-128 safe ASCII characters',
+          code: 'INVALID_IDEMPOTENCY_KEY',
+        });
+        return;
+      }
+
+      const normalizedContent = String(content).trim();
+
       const outcome = await this.repository.recordVisitorMessage(
         String(sessionToken),
-        String(content).trim(),
+        normalizedContent,
+        idempotencyKey ?? null,
+        idempotencyKey
+          ? publicChatRequestFingerprint({ content: normalizedContent })
+          : null,
       );
       if (outcome.status === 'session_not_found') {
         response.status(404).json({ error: 'Session not found or ended' });
         return;
       }
+      if (outcome.status === 'idempotency_conflict') {
+        response.status(409).json({
+          error: 'Idempotency key was already used for a different chat message',
+          code: 'IDEMPOTENCY_CONFLICT',
+        });
+        return;
+      }
 
-      this.realtimeHost.emitToOrgChat(
-        outcome.session.organization_id,
-        'newChatMessage',
-        {
-          session_id: outcome.session.id,
-          message: outcome.message,
-          timestamp: new Date().toISOString(),
-        },
-      );
+      if (!outcome.replayed) {
+        try {
+          this.realtimeHost.emitToOrgChat(
+            outcome.session.organization_id,
+            'newChatMessage',
+            {
+              session_id: outcome.session.id,
+              message: outcome.message,
+              timestamp: new Date().toISOString(),
+            },
+          );
+        } catch (error) {
+          this.logger.warn(
+            `Visitor message ${String(outcome.message.id)} committed without realtime announcement: ${(error as Error).message}`,
+          );
+        }
+      }
       response.status(201).json(outcome.message);
     } catch (error) {
       this.logger.error(
@@ -209,23 +291,31 @@ export class ChatWidgetPublicController {
         return;
       }
 
-      const ended = await this.repository.endSession(String(sessionToken));
-      if (!ended) {
+      const outcome = await this.repository.endSession(String(sessionToken));
+      if (outcome.status === 'session_not_found') {
         response.status(404).json({ error: 'Session not found' });
         return;
       }
 
-      this.realtimeHost.emitToOrgChat(
-        ended.organization_id,
-        'chatSessionEnded',
-        {
-          session_id: ended.id,
-          timestamp: new Date().toISOString(),
-        },
-      );
-      await this.realtimeHost
-        .broadcast()
-        ?.endChatSession(String(sessionToken));
+      if (!outcome.replayed) {
+        try {
+          this.realtimeHost.emitToOrgChat(
+            outcome.session.organization_id,
+            'chatSessionEnded',
+            {
+              session_id: outcome.session.id,
+              timestamp: new Date().toISOString(),
+            },
+          );
+          await this.realtimeHost
+            .broadcast()
+            ?.endChatSession(String(sessionToken));
+        } catch (error) {
+          this.logger.warn(
+            `Chat session ${outcome.session.id} ended without complete realtime delivery: ${(error as Error).message}`,
+          );
+        }
+      }
 
       response.status(200).json({ success: true });
     } catch (error) {

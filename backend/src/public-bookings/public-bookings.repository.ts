@@ -46,6 +46,8 @@ export type CreatePublicBookingValues = {
   notes: string | null;
   customFields: Record<string, unknown>;
   cancellationTokenHash: string;
+  idempotencyKey: string;
+  requestFingerprint: string;
 };
 
 export type CreatedPublicBookingRow = {
@@ -61,7 +63,12 @@ export type CreatePublicBookingOutcome =
   | { kind: 'calendar_not_found' }
   | { kind: 'invalid_time_range' }
   | { kind: 'slot_unavailable'; reason: string }
-  | { kind: 'created'; booking: CreatedPublicBookingRow };
+  | { kind: 'idempotency_conflict' }
+  | {
+      kind: 'created';
+      booking: CreatedPublicBookingRow;
+      replayed: boolean;
+    };
 
 export type CancelPublicBookingOutcome =
   | { kind: 'not_found' }
@@ -188,6 +195,24 @@ export class PublicBookingsRepository {
       if (current.rows.length === 0) return { kind: 'calendar_not_found' };
       calendar = current.rows[0];
 
+      const replay = await client.query<
+        CreatedPublicBookingRow & { request_fingerprint: string }
+      >(
+        `SELECT
+           id, start_time, end_time, timezone, attendee_name, attendee_email,
+           request_fingerprint
+         FROM bookings
+         WHERE calendar_id = $1 AND idempotency_key = $2`,
+        [calendar.id, values.idempotencyKey],
+      );
+      if (replay.rows.length > 0) {
+        if (replay.rows[0].request_fingerprint !== values.requestFingerprint) {
+          return { kind: 'idempotency_conflict' };
+        }
+        const { request_fingerprint: _fingerprint, ...booking } = replay.rows[0];
+        return { kind: 'created', booking, replayed: true };
+      }
+
       const policy = await client.query<{ reason: string | null }>(
         `SELECT booking_slot_policy_reason(
            $1, $2, $3, $4, $5, CURRENT_TIMESTAMP
@@ -209,10 +234,11 @@ export class PublicBookingsRepository {
            start_time, end_time, timezone,
            attendee_name, attendee_email, attendee_phone,
            assigned_to, notes, custom_fields,
-           cancellation_token_hash, cancellation_token_expires_at, source
+           cancellation_token_hash, cancellation_token_expires_at, source,
+           idempotency_key, request_fingerprint
          ) VALUES (
            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
-           $13, $5::timestamptz + INTERVAL '1 day', 'booking_page'
+           $13, $5::timestamptz + INTERVAL '1 day', 'booking_page', $14, $15
          )
          RETURNING id, start_time, end_time, timezone, attendee_name, attendee_email`,
         [
@@ -229,6 +255,8 @@ export class PublicBookingsRepository {
           values.notes,
           JSON.stringify(values.customFields),
           values.cancellationTokenHash,
+          values.idempotencyKey,
+          values.requestFingerprint,
         ],
       );
       const booking = inserted.rows[0];
@@ -240,7 +268,7 @@ export class PublicBookingsRepository {
         eventKey: `domain:booking_created:${booking.id}`,
         payload: { booking_id: booking.id, calendar_id: calendar.id },
       });
-      return { kind: 'created', booking };
+      return { kind: 'created', booking, replayed: false };
     });
   }
 

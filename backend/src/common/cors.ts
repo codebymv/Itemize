@@ -47,13 +47,16 @@ export const isCorsOriginAllowed = (
 export const publicReviewWidgetPath =
   /^\/api\/reputation\/public\/widget\/[a-f0-9]{32}$/i;
 
+export const publicChatWidgetPath =
+  /^\/api\/chat-widget\/public\/(?:config\/[A-Za-z0-9_-]{1,128}|session|messages(?:\/[A-Za-z0-9_-]{1,128})?|end-session|typing)$/;
+
 /**
  * Request-aware CORS delegate mirroring the legacy origin's
- * backend/src/config/cors-options.js: the embeddable public review
- * widget read is served credential-free to any origin
- * (Access-Control-Allow-Origin: *), while every other path keeps the
- * credentialed allowlist. Required before this runtime serves browsers
- * directly — the widget embeds on arbitrary third-party sites.
+ * backend/src/config/cors-options.js: embeddable public widget capabilities
+ * are served credential-free to any origin (Access-Control-Allow-Origin: *),
+ * while authenticated paths keep the credentialed allowlist. Required before
+ * this runtime serves browsers directly because widgets can run on arbitrary
+ * third-party sites.
  */
 export const corsOptionsDelegate = (
   environment: CorsEnvironment = process.env,
@@ -70,6 +73,25 @@ export const corsOptionsDelegate = (
         credentials: false,
         methods: ['GET', 'OPTIONS'],
         allowedHeaders: ['Accept', 'Content-Type', 'Origin', 'X-Request-Id'],
+        exposedHeaders: ['X-Request-Id'],
+      });
+      return;
+    }
+    if (
+      ['GET', 'POST', 'OPTIONS'].includes(request.method ?? '')
+      && publicChatWidgetPath.test(path)
+    ) {
+      callback(null, {
+        origin: '*',
+        credentials: false,
+        methods: ['GET', 'POST', 'OPTIONS'],
+        allowedHeaders: [
+          'Accept',
+          'Content-Type',
+          'Origin',
+          'Idempotency-Key',
+          'X-Request-Id',
+        ],
         exposedHeaders: ['X-Request-Id'],
       });
       return;
@@ -97,6 +119,7 @@ export const graphqlCorsOptions = (
     'X-Organization-Id',
     'X-Request-Id',
     'X-CSRF-Token',
+    'Idempotency-Key',
   ],
   exposedHeaders: ['X-Request-Id'],
 });

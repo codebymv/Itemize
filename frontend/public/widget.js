@@ -21,6 +21,36 @@
   let unreadCount = 0;
   let isAgentTyping = false;
   let visitorInfo = {};
+  let sessionStartAttempt = null;
+  let sessionStartInFlight = false;
+  let messageAttempt = null;
+  let messageInFlight = false;
+
+  function newMutationKey(scope) {
+    return window.crypto?.randomUUID?.()
+      || `${scope}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  }
+
+  function mutationAttempt(scope, signature, current) {
+    return current?.signature === signature
+      ? current
+      : { signature, key: newMutationKey(scope) };
+  }
+
+  async function replaySafeFetch(url, options) {
+    let lastError;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        return await fetch(url, options);
+      } catch (error) {
+        lastError = error;
+        if (attempt < 2) {
+          await new Promise(resolve => setTimeout(resolve, 300 * (2 ** attempt)));
+        }
+      }
+    }
+    throw lastError;
+  }
 
   // DOM Elements
   let container = null;
@@ -461,6 +491,7 @@
 
   // Start chat session
   async function startChat() {
+    if (sessionStartInFlight) return;
     const nameEl = document.getElementById('itemize-visitor-name');
     const emailEl = document.getElementById('itemize-visitor-email');
     const phoneEl = document.getElementById('itemize-visitor-phone');
@@ -481,18 +512,29 @@
       return;
     }
 
+    const payload = {
+      widget_key: widgetKey,
+      visitor_name: visitorInfo.name,
+      visitor_email: visitorInfo.email,
+      visitor_phone: visitorInfo.phone,
+      current_page_url: window.location.href,
+      referrer_url: document.referrer
+    };
+    sessionStartAttempt = mutationAttempt(
+      'chat-session',
+      JSON.stringify(payload),
+      sessionStartAttempt
+    );
+    sessionStartInFlight = true;
+
     try {
-      const response = await fetch(`${API_BASE}/api/chat-widget/public/session`, {
+      const response = await replaySafeFetch(`${API_BASE}/api/chat-widget/public/session`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          widget_key: widgetKey,
-          visitor_name: visitorInfo.name,
-          visitor_email: visitorInfo.email,
-          visitor_phone: visitorInfo.phone,
-          current_page_url: window.location.href,
-          referrer_url: document.referrer
-        })
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': sessionStartAttempt.key
+        },
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
@@ -503,6 +545,7 @@
 
       const data = await response.json();
       sessionToken = data.session_token;
+      sessionStartAttempt = null;
       
       // Save session
       localStorage.setItem('itemize_chat_session', JSON.stringify({
@@ -527,6 +570,8 @@
     } catch (error) {
       console.error('Itemize Chat: Failed to start session', error);
       alert('Failed to start chat. Please try again.');
+    } finally {
+      sessionStartInFlight = false;
     }
   }
 
@@ -616,7 +661,15 @@
   // Send message
   async function sendMessage() {
     const content = inputField.value.trim();
-    if (!content) return;
+    if (!content || messageInFlight) return;
+
+    const payload = { session_token: sessionToken, content };
+    messageAttempt = mutationAttempt(
+      'chat-message',
+      JSON.stringify(payload),
+      messageAttempt
+    );
+    messageInFlight = true;
 
     // Add to UI immediately
     const tempMsg = {
@@ -631,25 +684,36 @@
     inputField.style.height = 'auto';
 
     try {
-      const response = await fetch(`${API_BASE}/api/chat-widget/public/messages`, {
+      const response = await replaySafeFetch(`${API_BASE}/api/chat-widget/public/messages`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_token: sessionToken,
-          content
-        })
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': messageAttempt.key
+        },
+        body: JSON.stringify(payload)
       });
 
       if (!response.ok) {
         // Remove temp message on error
         messages = messages.filter(m => m.id !== tempMsg.id);
         renderMessages();
+        if (inputField && !inputField.value) inputField.value = content;
         alert('Failed to send message');
+      } else {
+        const sentMessage = await response.json();
+        messages = messages.map(message =>
+          message.id === tempMsg.id ? sentMessage : message
+        );
+        messageAttempt = null;
+        renderMessages();
       }
     } catch (error) {
       console.error('Itemize Chat: Failed to send message', error);
       messages = messages.filter(m => m.id !== tempMsg.id);
       renderMessages();
+      if (inputField && !inputField.value) inputField.value = content;
+    } finally {
+      messageInFlight = false;
     }
   }
 
@@ -750,7 +814,7 @@
   async function endChat() {
     if (sessionToken) {
       try {
-        await fetch(`${API_BASE}/api/chat-widget/public/end-session`, {
+        await replaySafeFetch(`${API_BASE}/api/chat-widget/public/end-session`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ session_token: sessionToken })
@@ -760,6 +824,8 @@
       localStorage.removeItem('itemize_chat_session');
       sessionToken = null;
       messages = [];
+      sessionStartAttempt = null;
+      messageAttempt = null;
       
       if (socket) {
         socket.close();

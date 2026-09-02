@@ -1,5 +1,9 @@
-import axios, { AxiosHeaders, AxiosError, InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosHeaders, AxiosError } from 'axios';
 import { getUserFriendlyError } from './error-messages';
+import {
+  type RetryConfig,
+  shouldRetryTransport,
+} from './transportRetryPolicy';
 
 type UserFriendlyAxiosError = AxiosError & {
   userFriendlyError?: ReturnType<typeof getUserFriendlyError>;
@@ -22,15 +26,6 @@ const PRODUCTION_DOMAIN = import.meta.env.VITE_PRODUCTION_DOMAIN;
 const MAX_RETRIES = 3;
 const INITIAL_RETRY_DELAY = 1000; // 1 second
 
-// HTTP status codes that should trigger a retry
-const RETRYABLE_STATUS_CODES = [408, 429, 500, 502, 503, 504];
-
-// Extend axios config to track retry count
-export interface RetryConfig extends InternalAxiosRequestConfig {
-  __retryCount?: number;
-  retryOn429?: boolean;
-}
-
 /**
  * Calculate delay with exponential backoff and jitter
  */
@@ -40,40 +35,6 @@ const getRetryDelay = (retryCount: number): number => {
   // Add random jitter (0-500ms) to prevent thundering herd
   const jitter = Math.random() * 500;
   return exponentialDelay + jitter;
-};
-
-/**
- * Check if a request should be retried
- */
-const shouldRetry = (error: AxiosError, config: RetryConfig): boolean => {
-  // Don't retry if max retries reached
-  const retryCount = config.__retryCount || 0;
-  if (retryCount >= MAX_RETRIES) {
-    return false;
-  }
-
-  // Don't retry cancelled requests
-  if (axios.isCancel(error)) {
-    return false;
-  }
-
-  // Don't retry non-idempotent requests (POST, PUT, DELETE) by default
-  // unless they're explicitly marked as retryable or are specific safe endpoints
-  const method = config.method?.toUpperCase();
-  const isIdempotent = method === 'GET' || method === 'HEAD' || method === 'OPTIONS';
-  
-  // Only retry idempotent requests or network errors
-  if (!isIdempotent && error.response) {
-    return config.retryOn429 === true && error.response.status === 429;
-  }
-
-  // Retry network errors (no response)
-  if (!error.response) {
-    return true;
-  }
-
-  // Retry specific status codes
-  return RETRYABLE_STATUS_CODES.includes(error.response.status);
 };
 
 // Create axios instance with dynamic baseURL
@@ -236,7 +197,7 @@ api.interceptors.request.use(
       source.cancel(`Request to ${requestPath} was blocked by interceptor`);
     }
 
-    if (isMutatingMethod(config.method)) {
+    if (isMutatingMethod(config.method) && config.publicRequest !== true) {
       const token = await fetchCsrfToken();
       if (!config.headers) {
         config.headers = new AxiosHeaders();
@@ -371,6 +332,9 @@ api.interceptors.response.use(
     
     // Handle 401 unauthorized - attempt token refresh
     if (error.response?.status === 401 && config) {
+      if (config.publicRequest === true) {
+        return Promise.reject(error);
+      }
       // Guests / marketing: never attempt a session refresh.
       if (isLoggedOut() || !hasSessionHint()) {
         return Promise.reject(error);
@@ -401,7 +365,7 @@ api.interceptors.response.use(
     }
 
     // Handle retry logic for other errors
-    if (config && shouldRetry(error, config)) {
+    if (config && shouldRetryTransport(error, config, MAX_RETRIES)) {
       config.__retryCount = (config.__retryCount || 0) + 1;
       
       const delay = getRetryDelay(config.__retryCount - 1);

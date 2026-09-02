@@ -242,7 +242,10 @@ export const getEmbedCode = async (organizationId?: number): Promise<EmbedCode> 
  * Get public widget configuration for first-party marketing pages or external embeds.
  */
 export const getPublicChatWidgetConfig = async (widgetKey: string): Promise<PublicChatWidgetConfig> => {
-    const response = await api.get(`/api/chat-widget/public/config/${widgetKey}`);
+    const response = await api.get(`/api/chat-widget/public/config/${widgetKey}`, {
+        publicRequest: true,
+        withCredentials: false,
+    });
     return response.data;
 };
 
@@ -250,9 +253,15 @@ export const getPublicChatWidgetConfig = async (widgetKey: string): Promise<Publ
  * Create or resume a public visitor chat session.
  */
 export const createPublicChatSession = async (
-    payload: CreatePublicChatSessionPayload
+    payload: CreatePublicChatSessionPayload,
+    idempotencyKey: string,
 ): Promise<PublicChatSessionResponse> => {
-    const response = await api.post('/api/chat-widget/public/session', payload);
+    const response = await api.post('/api/chat-widget/public/session', payload, {
+        headers: { 'Idempotency-Key': idempotencyKey },
+        publicRequest: true,
+        retryOnNetworkError: true,
+        withCredentials: false,
+    });
     return response.data;
 };
 
@@ -260,7 +269,10 @@ export const createPublicChatSession = async (
  * Load public visitor messages for a chat session.
  */
 export const getPublicChatMessages = async (sessionToken: string): Promise<PublicChatMessage[]> => {
-    const response = await api.get(`/api/chat-widget/public/messages/${sessionToken}`);
+    const response = await api.get(`/api/chat-widget/public/messages/${sessionToken}`, {
+        publicRequest: true,
+        withCredentials: false,
+    });
     return response.data;
 };
 
@@ -268,9 +280,15 @@ export const getPublicChatMessages = async (sessionToken: string): Promise<Publi
  * Send a message as a public visitor.
  */
 export const sendPublicChatMessage = async (
-    payload: SendPublicChatMessagePayload
+    payload: SendPublicChatMessagePayload,
+    idempotencyKey: string,
 ): Promise<PublicChatMessage> => {
-    const response = await api.post('/api/chat-widget/public/messages', payload);
+    const response = await api.post('/api/chat-widget/public/messages', payload, {
+        headers: { 'Idempotency-Key': idempotencyKey },
+        publicRequest: true,
+        retryOnNetworkError: true,
+        withCredentials: false,
+    });
     return response.data;
 };
 
@@ -278,7 +296,15 @@ export const sendPublicChatMessage = async (
  * End a public visitor chat session.
  */
 export const endPublicChatSession = async (sessionToken: string): Promise<{ success: boolean }> => {
-    const response = await api.post('/api/chat-widget/public/end-session', { session_token: sessionToken });
+    const response = await api.post(
+        '/api/chat-widget/public/end-session',
+        { session_token: sessionToken },
+        {
+            publicRequest: true,
+            retryOnNetworkError: true,
+            withCredentials: false,
+        },
+    );
     return response.data;
 };
 

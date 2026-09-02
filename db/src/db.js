@@ -83,6 +83,9 @@ const {
   runBookingPublicCapabilityMigration,
 } = require('./db_booking_public_capability_migrations');
 const {
+  runBookingIdempotencyMigration,
+} = require('./db_booking_idempotency_migrations');
+const {
   runCalendarTokenEncryptionMigration,
 } = require('./db_calendar_token_encryption_migrations');
 const {
@@ -175,6 +178,9 @@ const {
 const {
   runChatInboxBridgeMigration,
 } = require('./db_chat_inbox_bridge_migrations');
+const {
+  runChatWidgetPublicIdempotencyMigration,
+} = require('./db_chat_widget_public_idempotency_migrations');
 
 // Import Email Campaign migrations
 const { runAllCampaignMigrations } = require('./db_campaign_migrations');
@@ -615,6 +621,11 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'module_calendar', runAllCalendarMigrations);
     await runMigrationOnce(pool, 'booking_availability_policy', runBookingAvailabilityPolicyMigration);
     await runMigrationOnce(pool, 'booking_public_capabilities', runBookingPublicCapabilityMigration);
+    await runMigrationOnce(
+      pool,
+      'booking_public_idempotency_v1',
+      runBookingIdempotencyMigration,
+    );
     await runMigrationOnce(pool, 'calendar_token_encryption', runCalendarTokenEncryptionMigration);
     await runMigrationOnce(pool, 'calendar_sync_jobs', runCalendarSyncJobMigration);
     await runMigrationOnce(pool, 'module_forms', runAllFormsMigrations);
@@ -653,6 +664,11 @@ const initializeDatabase = async (pool) => {
       pool,
       'chat_inbox_bridge_v1',
       runChatInboxBridgeMigration,
+    );
+    await runMigrationOnce(
+      pool,
+      'chat_widget_public_idempotency_v1',
+      runChatWidgetPublicIdempotencyMigration,
     );
     await runMigrationOnce(pool, 'module_campaigns', runAllCampaignMigrations);
     await runMigrationOnce(pool, 'email_webhook_events', runEmailWebhookMigration);

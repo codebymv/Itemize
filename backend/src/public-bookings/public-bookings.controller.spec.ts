@@ -8,6 +8,7 @@ import { PublicBookingsService } from './public-bookings.service';
 
 describe('PublicBookingsController retained HTTP contract', () => {
   let app: INestApplication;
+  const previousJwtSecret = process.env.JWT_SECRET;
   const repository = {
     publicCalendar: jest.fn(),
     publicSlots: jest.fn(),
@@ -16,6 +17,7 @@ describe('PublicBookingsController retained HTTP contract', () => {
   };
 
   beforeAll(async () => {
+    process.env.JWT_SECRET = 'public-booking-controller-test-secret';
     const moduleRef = await Test.createTestingModule({
       controllers: [PublicBookingsController],
       providers: [
@@ -29,6 +31,8 @@ describe('PublicBookingsController retained HTTP contract', () => {
 
   afterAll(async () => {
     await app.close();
+    if (previousJwtSecret === undefined) delete process.env.JWT_SECRET;
+    else process.env.JWT_SECRET = previousJwtSecret;
   });
 
   beforeEach(() => {
@@ -153,6 +157,7 @@ describe('PublicBookingsController retained HTTP contract', () => {
   it('requires the mandatory booking fields', async () => {
     const response = await request(app.getHttpServer())
       .post('/api/bookings/public/book/cal_abc123')
+      .set('idempotency-key', 'slot-conflict-request')
       .send({ attendee_name: 'Sam' })
       .expect(400);
     expect(response.body).toEqual({
@@ -182,6 +187,7 @@ describe('PublicBookingsController retained HTTP contract', () => {
     });
     const response = await request(app.getHttpServer())
       .post('/api/bookings/public/book/cal_abc123')
+      .set('idempotency-key', 'slot-policy-conflict-request')
       .send({
         start_time: '2026-09-01T13:00:00.000Z',
         attendee_name: 'Sam',
@@ -197,6 +203,7 @@ describe('PublicBookingsController retained HTTP contract', () => {
   it('creates a booking and returns the cancellation capability exactly once', async () => {
     repository.createPublicBooking.mockResolvedValue({
       kind: 'created',
+      replayed: false,
       booking: {
         id: 42,
         start_time: new Date('2026-09-01T13:00:00.000Z'),
@@ -208,6 +215,7 @@ describe('PublicBookingsController retained HTTP contract', () => {
     });
     const response = await request(app.getHttpServer())
       .post('/api/bookings/public/book/cal_abc123')
+      .set('idempotency-key', 'created-booking-request')
       .send({
         start_time: '2026-09-01T13:00:00.000Z',
         attendee_name: 'Sam',
@@ -216,6 +224,7 @@ describe('PublicBookingsController retained HTTP contract', () => {
       .expect(201);
     expect(response.body).toMatchObject({
       success: true,
+      replayed: false,
       message: 'Booking confirmed! Check your email for confirmation details.',
       booking: {
         id: 42,
@@ -235,6 +244,7 @@ describe('PublicBookingsController retained HTTP contract', () => {
     repository.createPublicBooking.mockRejectedValue(new Error('deadlock'));
     const response = await request(app.getHttpServer())
       .post('/api/bookings/public/book/cal_abc123')
+      .set('idempotency-key', 'failed-booking-request')
       .send({
         start_time: '2026-09-01T13:00:00.000Z',
         attendee_name: 'Sam',
@@ -245,6 +255,19 @@ describe('PublicBookingsController retained HTTP contract', () => {
       success: false,
       error: { message: 'Failed to create booking', code: 'ERROR' },
     });
+  });
+
+  it('requires a safe idempotency key for otherwise valid bookings', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/bookings/public/book/cal_abc123')
+      .send({
+        start_time: '2026-09-01T13:00:00.000Z',
+        attendee_name: 'Sam',
+        attendee_email: 'sam@example.com',
+      })
+      .expect(400);
+    expect(response.body).toMatchObject({ code: 'INVALID_IDEMPOTENCY_KEY' });
+    expect(repository.createPublicBooking).not.toHaveBeenCalled();
   });
 
   it('rejects malformed cancellation capabilities without touching the database', async () => {

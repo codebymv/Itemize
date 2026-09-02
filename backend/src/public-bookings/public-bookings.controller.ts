@@ -6,7 +6,9 @@ import {
   Param,
   Post,
   Query,
+  Req,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { PublicBookingsService } from './public-bookings.service';
 
 @Controller('api/bookings/public/book')
@@ -32,8 +34,13 @@ export class PublicBookingsController {
   async create(
     @Param('slug') slug: string,
     @Body() body: Record<string, unknown>,
+    @Req() request: Request,
   ) {
-    return this.bookings.createPublicBooking(slug, body ?? {});
+    return this.bookings.createPublicBooking(
+      slug,
+      body ?? {},
+      request.get('idempotency-key'),
+    );
   }
 
   @Post(':slug/cancel/:token')

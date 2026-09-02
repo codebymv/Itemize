@@ -326,6 +326,7 @@ export const importContactsCSV = async (
         'Idempotency-Key': idempotencyKey,
         'x-organization-id': organizationId.toString(),
       },
+      retryOnNetworkError: true,
     },
   );
   return unwrapResponse<ImportResult>(response.data);

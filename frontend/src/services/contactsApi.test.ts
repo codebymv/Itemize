@@ -340,6 +340,7 @@ describe('contacts API GraphQL transport', () => {
           'Idempotency-Key': 'contact-import-attempt-1',
           'x-organization-id': '42',
         },
+        retryOnNetworkError: true,
       },
     );
   });

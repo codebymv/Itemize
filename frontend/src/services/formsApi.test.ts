@@ -99,7 +99,10 @@ describe('forms transport boundary', () => {
         expect(api.post).toHaveBeenCalledWith(
             '/api/forms/public/form/frm_test',
             { data: { answer: 'yes' } },
-            { headers: { 'Idempotency-Key': 'submission-key' } },
+            {
+                headers: { 'Idempotency-Key': 'submission-key' },
+                retryOnNetworkError: true,
+            },
         );
     });
 });

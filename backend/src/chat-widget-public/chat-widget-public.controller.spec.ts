@@ -1,5 +1,5 @@
 import { Test } from '@nestjs/testing';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { RealtimeHostService } from '../realtime-host/realtime-host.service';
 import { ChatWidgetPublicController } from './chat-widget-public.controller';
 import { ChatWidgetPublicRepository } from './chat-widget-public.repository';
@@ -15,6 +15,14 @@ const mockResponse = (): MockResponse => {
   response.json = jest.fn().mockReturnValue(response);
   return response;
 };
+
+const mockRequest = (idempotencyKey?: string): Request =>
+  ({
+    get: jest.fn((name: string) =>
+      name.toLowerCase() === 'idempotency-key' ? idempotencyKey : undefined,
+    ),
+    headers: {},
+  }) as unknown as Request;
 
 describe('ChatWidgetPublicController', () => {
   let controller: ChatWidgetPublicController;
@@ -72,12 +80,70 @@ describe('ChatWidgetPublicController', () => {
     const response = mockResponse();
     await controller.sendMessage(
       { session_token: 'cs_' + 'a'.repeat(48), content: 'hi' },
+      mockRequest('message-attempt'),
       response,
     );
     expect(response.status).toHaveBeenCalledWith(500);
     const body = response.json.mock.calls[0][0];
     expect(JSON.stringify(body)).not.toContain('relation');
     expect(body.error.message).toBe('Failed to send message');
+  });
+
+  it('rejects malformed public mutation keys before persistence', async () => {
+    const response = mockResponse();
+    await controller.sendMessage(
+      { session_token: 'cs_' + 'a'.repeat(48), content: 'hi' },
+      mockRequest('spaces are unsafe'),
+      response,
+    );
+    expect(response.status).toHaveBeenCalledWith(400);
+    expect(response.json).toHaveBeenCalledWith(
+      expect.objectContaining({ code: 'INVALID_IDEMPOTENCY_KEY' }),
+    );
+    expect(repository.recordVisitorMessage).not.toHaveBeenCalled();
+  });
+
+  it('returns keyed session replays without repeating realtime effects', async () => {
+    repository.startSession.mockResolvedValue({
+      status: 'ok',
+      httpStatus: 201,
+      data: { session_token: 'cs_' + 'c'.repeat(48), session_id: 7, resumed: false },
+      organizationId: 9,
+      replayed: true,
+    });
+    const response = mockResponse();
+    await controller.startSession(
+      { widget_key: 'cw_public', visitor_name: 'Visitor' },
+      mockRequest('session-attempt'),
+      response,
+    );
+    expect(response.status).toHaveBeenCalledWith(201);
+    expect(realtimeHost.emitToOrgChat).not.toHaveBeenCalled();
+  });
+
+  it('keeps a committed visitor message successful if realtime delivery fails', async () => {
+    repository.recordVisitorMessage.mockResolvedValue({
+      status: 'ok',
+      session: {
+        id: 7,
+        organization_id: 9,
+        visitor_name: 'Visitor',
+        visitor_email: null,
+      },
+      message: { id: 11, content: 'Hello' },
+      replayed: false,
+    });
+    realtimeHost.emitToOrgChat.mockImplementation(() => {
+      throw new Error('socket host unavailable');
+    });
+    const response = mockResponse();
+    await controller.sendMessage(
+      { session_token: 'cs_' + 'a'.repeat(48), content: 'Hello' },
+      mockRequest('message-attempt'),
+      response,
+    );
+    expect(response.status).toHaveBeenCalledWith(201);
+    expect(response.json).toHaveBeenCalledWith({ id: 11, content: 'Hello' });
   });
 
   it('skips realtime emission entirely on validation rejections', async () => {
@@ -88,7 +154,11 @@ describe('ChatWidgetPublicController', () => {
   });
 
   it('survives an unattached realtime host on end-session', async () => {
-    repository.endSession.mockResolvedValue({ id: 5, organization_id: 9 });
+    repository.endSession.mockResolvedValue({
+      status: 'ok',
+      session: { id: 5, organization_id: 9 },
+      replayed: false,
+    });
     const response = mockResponse();
     await controller.endSession(
       { session_token: 'cs_' + 'b'.repeat(48) },
@@ -101,5 +171,21 @@ describe('ChatWidgetPublicController', () => {
     );
     expect(response.status).toHaveBeenCalledWith(200);
     expect(response.json).toHaveBeenCalledWith({ success: true });
+  });
+
+  it('treats an already-ended session as success without duplicate broadcasts', async () => {
+    repository.endSession.mockResolvedValue({
+      status: 'ok',
+      session: { id: 5, organization_id: 9 },
+      replayed: true,
+    });
+    const response = mockResponse();
+    await controller.endSession(
+      { session_token: 'cs_' + 'b'.repeat(48) },
+      response,
+    );
+    expect(response.status).toHaveBeenCalledWith(200);
+    expect(realtimeHost.emitToOrgChat).not.toHaveBeenCalled();
+    expect(realtimeHost.broadcast).not.toHaveBeenCalled();
   });
 });
