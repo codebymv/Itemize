@@ -9,6 +9,7 @@ import {
   LandingPageVersionRow,
   LandingPageVersionsRepository,
 } from './landing-page-versions.repository';
+import { landingPageVersionMutationFingerprint } from './landing-page-version.idempotency';
 
 @Injectable()
 export class LandingPageVersionsService {
@@ -42,31 +43,49 @@ export class LandingPageVersionsService {
     organizationId: number,
     pageId: number,
     userId: number,
-    description?: string | null,
+    description: string | null | undefined,
+    idempotencyKey: string,
   ): Promise<LandingPageVersion> {
     this.id(pageId, 'pageId');
     const normalized = this.description(description);
-    const row = await this.versions.create(
+    const key = this.idempotencyKey(idempotencyKey);
+    const result = await this.versions.create(
       organizationId,
       pageId,
       userId,
       normalized,
+      key,
+      landingPageVersionMutationFingerprint('create', {
+        description: normalized,
+      }),
     );
-    if (!row) throw this.notFound('Landing page not found');
-    return this.map(row);
+    if (result.status === 'not_found') {
+      throw this.notFound('Landing page not found');
+    }
+    if (result.status === 'invalid_snapshot') {
+      throw new Error('Create page version returned an invalid snapshot outcome');
+    }
+    if (result.status !== 'ok') this.idempotencyResult(result.status);
+    return this.map(result.version);
   }
 
   async publish(
     organizationId: number,
     pageId: number,
     versionId: number,
+    userId: number,
+    idempotencyKey: string,
   ): Promise<LandingPageVersion> {
     this.ids(pageId, versionId);
+    const key = this.idempotencyKey(idempotencyKey);
     try {
       const result = await this.versions.publish(
         organizationId,
         pageId,
         versionId,
+        userId,
+        key,
+        landingPageVersionMutationFingerprint('publish', { versionId }),
       );
       if (result.status === 'not_found') {
         throw this.notFound('Landing page version not found');
@@ -78,6 +97,7 @@ export class LandingPageVersionsService {
           { reason: 'INVALID_VERSION_SNAPSHOT' },
         );
       }
+      if (result.status !== 'ok') this.idempotencyResult(result.status);
       return this.map(result.version);
     } catch (error) {
       if (this.pgCode(error) === '23505') {
@@ -120,16 +140,26 @@ export class LandingPageVersionsService {
     pageId: number,
     versionId: number,
     userId: number,
+    idempotencyKey: string,
   ): Promise<LandingPageVersion> {
     this.ids(pageId, versionId);
-    const row = await this.versions.restore(
+    const key = this.idempotencyKey(idempotencyKey);
+    const result = await this.versions.restore(
       organizationId,
       pageId,
       versionId,
       userId,
+      key,
+      landingPageVersionMutationFingerprint('restore', { versionId }),
     );
-    if (!row) throw this.notFound('Landing page version not found');
-    return this.map(row);
+    if (result.status === 'not_found') {
+      throw this.notFound('Landing page version not found');
+    }
+    if (result.status === 'invalid_snapshot') {
+      throw new Error('Restore page version returned an invalid snapshot outcome');
+    }
+    if (result.status !== 'ok') this.idempotencyResult(result.status);
+    return this.map(result.version);
   }
 
   private map(row: LandingPageVersionRow): LandingPageVersion {
@@ -182,6 +212,44 @@ export class LandingPageVersionsService {
       );
     }
     return normalized;
+  }
+
+  private idempotencyKey(value?: string | null): string {
+    const key = String(value ?? '').trim();
+    if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(key)) {
+      throw itemizeGraphqlError(
+        'idempotencyKey must be 1-128 safe ASCII characters',
+        'BAD_USER_INPUT',
+        {
+          field: 'idempotencyKey',
+          reason: 'INVALID_IDEMPOTENCY_KEY',
+        },
+      );
+    }
+    return key;
+  }
+
+  private idempotencyResult(
+    status: 'idempotency_conflict' | 'result_unavailable',
+  ): never {
+    if (status === 'idempotency_conflict') {
+      throw itemizeGraphqlError(
+        'idempotencyKey was already used for a different page version action',
+        'CONFLICT',
+        {
+          field: 'idempotencyKey',
+          reason: 'IDEMPOTENCY_KEY_REUSED',
+        },
+      );
+    }
+    if (status === 'result_unavailable') {
+      throw itemizeGraphqlError(
+        'The original page version result is no longer available',
+        'CONFLICT',
+        { reason: 'IDEMPOTENT_RESULT_UNAVAILABLE' },
+      );
+    }
+    throw new Error(`Unhandled page version idempotency outcome: ${status}`);
   }
 
   private ids(pageId: number, versionId: number): void {

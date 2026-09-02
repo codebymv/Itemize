@@ -38,6 +38,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { defineStatus } from '@/lib/statusVisuals';
 import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
+import { useStableMutationKey } from '@/hooks/useStableMutationKey';
 
 const CURRENT_VERSION_VISUAL = defineStatus('Current', 'blue', Play);
 const PUBLISHED_VERSION_VISUAL = defineStatus('Published', 'green', Eye);
@@ -59,6 +60,11 @@ export function PageVersionHistory({ pageId, pageName, open, onOpenChange, onPre
     const [loadError, setLoadError] = useState(false);
     const [deleteVersionId, setDeleteVersionId] = useState<number | null>(null);
     const { pending: mutationPending, run: runMutation } = useSingleFlightAction();
+    const {
+        begin: beginVersionAttempt,
+        release: releaseVersionAttempt,
+        reset: resetVersionAttempt,
+    } = useStableMutationKey(`landing-page-version:${pageId}`);
 
     const loadVersions = useCallback(async () => {
         if (!organizationId) return;
@@ -85,11 +91,19 @@ export function PageVersionHistory({ pageId, pageName, open, onOpenChange, onPre
     const handleCreateVersion = async () => {
         if (!organizationId) return;
         await runMutation(async () => {
+            const idempotencyKey = beginVersionAttempt(JSON.stringify({
+                action: 'create', pageId,
+            }));
+            if (!idempotencyKey) return;
             try {
-                await createPageVersion(pageId, `Version from ${new Date().toLocaleDateString()}`, organizationId);
+                await createPageVersion(
+                    pageId, undefined, idempotencyKey, organizationId,
+                );
+                resetVersionAttempt();
                 toast({ title: 'Version Created', description: 'New version saved successfully' });
                 await loadVersions();
             } catch (error) {
+                releaseVersionAttempt();
                 toast({ title: 'Error', description: 'Failed to create version', variant: 'destructive' });
             }
         });
@@ -98,11 +112,19 @@ export function PageVersionHistory({ pageId, pageName, open, onOpenChange, onPre
     const handlePublish = async (versionId: number) => {
         if (!organizationId) return;
         await runMutation(async () => {
+            const idempotencyKey = beginVersionAttempt(JSON.stringify({
+                action: 'publish', pageId, versionId,
+            }));
+            if (!idempotencyKey) return;
             try {
-                await publishPageVersion(pageId, versionId, organizationId);
+                await publishPageVersion(
+                    pageId, versionId, idempotencyKey, organizationId,
+                );
+                resetVersionAttempt();
                 toast({ title: 'Published', description: 'Version published to production' });
                 await loadVersions();
             } catch (error) {
+                releaseVersionAttempt();
                 toast({ title: 'Error', description: 'Failed to publish version', variant: 'destructive' });
             }
         });
@@ -130,11 +152,19 @@ export function PageVersionHistory({ pageId, pageName, open, onOpenChange, onPre
         if (!organizationId) return;
         if (!confirm('This will create a new version from the selected one. Continue?')) return;
         await runMutation(async () => {
+            const idempotencyKey = beginVersionAttempt(JSON.stringify({
+                action: 'restore', pageId, versionId,
+            }));
+            if (!idempotencyKey) return;
             try {
-                await restorePageVersion(pageId, versionId, organizationId);
+                await restorePageVersion(
+                    pageId, versionId, idempotencyKey, organizationId,
+                );
+                resetVersionAttempt();
                 toast({ title: 'Restored', description: 'Version restored successfully as new version' });
                 await loadVersions();
             } catch (error) {
+                releaseVersionAttempt();
                 toast({ title: 'Error', description: 'Failed to restore version', variant: 'destructive' });
             }
         });
@@ -150,7 +180,10 @@ export function PageVersionHistory({ pageId, pageName, open, onOpenChange, onPre
 
     return (
         <Dialog open={open} onOpenChange={nextOpen => {
-            if (nextOpen || !mutationPending) onOpenChange(nextOpen);
+            if (nextOpen || !mutationPending) {
+                if (!nextOpen) resetVersionAttempt();
+                onOpenChange(nextOpen);
+            }
         }}>
             <DialogContent className="max-w-4xl h-[80vh] p-0 flex flex-col">
                 <DialogHeader className="border-b px-6 py-4 pr-12">

@@ -123,9 +123,15 @@ describe('landing-page version GraphQL consumers', () => {
         response({ data: { deleteLandingPageVersion: { deletedId: 32 } } }),
       );
 
-    await createLandingPageVersionViaGraphql(12, 'Snapshot', 4);
-    await publishLandingPageVersionViaGraphql(12, 31, 4);
-    await restoreLandingPageVersionViaGraphql(12, 31, 4);
+    await createLandingPageVersionViaGraphql(
+      12, 'Snapshot', 'create-request-1', 4,
+    );
+    await publishLandingPageVersionViaGraphql(
+      12, 31, 'publish-request-1', 4,
+    );
+    await restoreLandingPageVersionViaGraphql(
+      12, 31, 'restore-request-1', 4,
+    );
     await expect(
       deleteLandingPageVersionViaGraphql(12, 32, 4),
     ).resolves.toEqual({ success: true });
@@ -139,6 +145,17 @@ describe('landing-page version GraphQL consumers', () => {
     expect(bodies()[0].variables).toEqual({
       pageId: 12,
       description: 'Snapshot',
+      idempotencyKey: 'create-request-1',
+    });
+    expect(bodies()[1].variables).toEqual({
+      pageId: 12,
+      versionId: 31,
+      idempotencyKey: 'publish-request-1',
+    });
+    expect(bodies()[2].variables).toEqual({
+      pageId: 12,
+      versionId: 31,
+      idempotencyKey: 'restore-request-1',
     });
     expect(fetchCsrfToken).toHaveBeenCalledTimes(4);
     for (const call of vi.mocked(fetch).mock.calls) {

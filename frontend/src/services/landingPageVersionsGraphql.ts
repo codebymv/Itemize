@@ -85,16 +85,27 @@ export const getLandingPageVersionViaGraphql = async (
 
 export const createLandingPageVersionViaGraphql = async (
   pageId: number,
-  description?: string,
+  description: string | undefined,
+  idempotencyKey: string,
   organizationId?: number,
 ): Promise<PageVersion> => {
-  const variables = { pageId, ...(description === undefined ? {} : { description }) };
+  const variables = {
+    pageId,
+    idempotencyKey,
+    ...(description === undefined ? {} : { description }),
+  };
   const data = await graphqlMutationRequest<
     { createLandingPageVersion: GqlPageVersion },
     typeof variables
   >(
-    `mutation CreateLandingPageVersion($pageId: Int!, $description: String) {
-      createLandingPageVersion(pageId: $pageId, description: $description) {
+    `mutation CreateLandingPageVersion(
+      $pageId: Int!, $description: String, $idempotencyKey: String!
+    ) {
+      createLandingPageVersion(
+        pageId: $pageId
+        description: $description
+        idempotencyKey: $idempotencyKey
+      ) {
         ${versionFields}
       }
     }`,
@@ -108,16 +119,23 @@ const versionMutation = async (
   operation: 'publish' | 'restore',
   pageId: number,
   versionId: number,
+  idempotencyKey: string,
   organizationId?: number,
 ): Promise<PageVersion> => {
-  const variables = { pageId, versionId };
+  const variables = { pageId, versionId, idempotencyKey };
   if (operation === 'publish') {
     const data = await graphqlMutationRequest<
       { publishLandingPageVersion: GqlPageVersion },
       typeof variables
     >(
-      `mutation PublishLandingPageVersion($pageId: Int!, $versionId: Int!) {
-        publishLandingPageVersion(pageId: $pageId, versionId: $versionId) {
+      `mutation PublishLandingPageVersion(
+        $pageId: Int!, $versionId: Int!, $idempotencyKey: String!
+      ) {
+        publishLandingPageVersion(
+          pageId: $pageId
+          versionId: $versionId
+          idempotencyKey: $idempotencyKey
+        ) {
           ${versionFields}
         }
       }`,
@@ -130,8 +148,14 @@ const versionMutation = async (
     { restoreLandingPageVersion: GqlPageVersion },
     typeof variables
   >(
-    `mutation RestoreLandingPageVersion($pageId: Int!, $versionId: Int!) {
-      restoreLandingPageVersion(pageId: $pageId, versionId: $versionId) {
+    `mutation RestoreLandingPageVersion(
+      $pageId: Int!, $versionId: Int!, $idempotencyKey: String!
+    ) {
+      restoreLandingPageVersion(
+        pageId: $pageId
+        versionId: $versionId
+        idempotencyKey: $idempotencyKey
+      ) {
         ${versionFields}
       }
     }`,
@@ -144,14 +168,20 @@ const versionMutation = async (
 export const publishLandingPageVersionViaGraphql = (
   pageId: number,
   versionId: number,
+  idempotencyKey: string,
   organizationId?: number,
-) => versionMutation('publish', pageId, versionId, organizationId);
+) => versionMutation(
+  'publish', pageId, versionId, idempotencyKey, organizationId,
+);
 
 export const restoreLandingPageVersionViaGraphql = (
   pageId: number,
   versionId: number,
+  idempotencyKey: string,
   organizationId?: number,
-) => versionMutation('restore', pageId, versionId, organizationId);
+) => versionMutation(
+  'restore', pageId, versionId, idempotencyKey, organizationId,
+);
 
 export const deleteLandingPageVersionViaGraphql = async (
   pageId: number,

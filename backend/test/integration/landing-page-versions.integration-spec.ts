@@ -158,15 +158,28 @@ describe('Landing-page version GraphQL PostgreSQL coverage', () => {
   `;
 
   it('creates complete snapshots and returns them through both version queries', async () => {
-    const created = await mutation(
-      `mutation Create($pageId: Int!, $description: String) {
-        createLandingPageVersion(pageId: $pageId, description: $description) {
-          ${fields}
-        }
-      }`,
-      { pageId, description: '  Original snapshot  ' },
-    ).expect(200);
+    const createMutation = `mutation Create(
+      $pageId: Int!, $description: String, $idempotencyKey: String!
+    ) {
+      createLandingPageVersion(
+        pageId: $pageId
+        description: $description
+        idempotencyKey: $idempotencyKey
+      ) {
+        ${fields}
+      }
+    }`;
+    const createVariables = {
+        pageId,
+        description: '  Original snapshot  ',
+        idempotencyKey: 'page-version-create-1',
+    };
+    const [created, replayed] = await Promise.all([
+      mutation(createMutation, createVariables).expect(200),
+      mutation(createMutation, createVariables).expect(200),
+    ]);
     expect(created.body.errors).toBeUndefined();
+    expect(replayed.body.errors).toBeUndefined();
     expect(created.body.data.createLandingPageVersion).toMatchObject({
       pageId,
       versionNumber: 1,
@@ -190,6 +203,23 @@ describe('Landing-page version GraphQL PostgreSQL coverage', () => {
       },
     });
     const versionId = created.body.data.createLandingPageVersion.id;
+    expect(replayed.body.data.createLandingPageVersion).toEqual(
+      created.body.data.createLandingPageVersion,
+    );
+    const changedReplay = await mutation(createMutation, {
+      pageId,
+      description: 'Changed snapshot',
+      idempotencyKey: 'page-version-create-1',
+    }).expect(200);
+    expect(changedReplay.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_KEY_REUSED',
+    });
+    const createCount = await pool.query<{ count: string }>(
+      'SELECT COUNT(*) AS count FROM page_versions WHERE page_id = $1',
+      [pageId],
+    );
+    expect(createCount.rows[0].count).toBe('1');
 
     const target = await graphql(
       memberToken,
@@ -249,7 +279,11 @@ describe('Landing-page version GraphQL PostgreSQL coverage', () => {
       memberToken,
       organizationId,
       `mutation {
-        publishLandingPageVersion(pageId: ${pageId}, versionId: ${versionId}) {
+        publishLandingPageVersion(
+          pageId: ${pageId}
+          versionId: ${versionId}
+          idempotencyKey: "page-version-publish-1"
+        ) {
           id
         }
       }`,
@@ -258,7 +292,11 @@ describe('Landing-page version GraphQL PostgreSQL coverage', () => {
 
     const published = await mutation(
       `mutation {
-        publishLandingPageVersion(pageId: ${pageId}, versionId: ${versionId}) {
+        publishLandingPageVersion(
+          pageId: ${pageId}
+          versionId: ${versionId}
+          idempotencyKey: "page-version-publish-1"
+        ) {
           ${fields}
         }
       }`,
@@ -269,6 +307,19 @@ describe('Landing-page version GraphQL PostgreSQL coverage', () => {
       isCurrent: true,
       publishedAt: expect.any(String),
     });
+    const publishedReplay = await mutation(
+      `mutation {
+        publishLandingPageVersion(
+          pageId: ${pageId}
+          versionId: ${versionId}
+          idempotencyKey: "page-version-publish-1"
+        ) { ${fields} }
+      }`,
+    ).expect(200);
+    expect(publishedReplay.body.errors).toBeUndefined();
+    expect(publishedReplay.body.data.publishLandingPageVersion).toEqual(
+      published.body.data.publishLandingPageVersion,
+    );
     const page = await pool.query<{
       name: string;
       description: string;
@@ -299,7 +350,11 @@ describe('Landing-page version GraphQL PostgreSQL coverage', () => {
 
     const restored = await mutation(
       `mutation {
-        restoreLandingPageVersion(pageId: ${pageId}, versionId: ${versionId}) {
+        restoreLandingPageVersion(
+          pageId: ${pageId}
+          versionId: ${versionId}
+          idempotencyKey: "page-version-restore-1"
+        ) {
           ${fields}
         }
       }`,
@@ -312,6 +367,24 @@ describe('Landing-page version GraphQL PostgreSQL coverage', () => {
       isCurrent: false,
     });
     const restoredId = restored.body.data.restoreLandingPageVersion.id;
+    const restoredReplay = await mutation(
+      `mutation {
+        restoreLandingPageVersion(
+          pageId: ${pageId}
+          versionId: ${versionId}
+          idempotencyKey: "page-version-restore-1"
+        ) { ${fields} }
+      }`,
+    ).expect(200);
+    expect(restoredReplay.body.errors).toBeUndefined();
+    expect(restoredReplay.body.data.restoreLandingPageVersion).toEqual(
+      restored.body.data.restoreLandingPageVersion,
+    );
+    const restoredCount = await pool.query<{ count: string }>(
+      'SELECT COUNT(*) AS count FROM page_versions WHERE page_id = $1',
+      [pageId],
+    );
+    expect(restoredCount.rows[0].count).toBe('2');
 
     const currentDelete = await mutation(
       `mutation {

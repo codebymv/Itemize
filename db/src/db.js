@@ -224,6 +224,9 @@ const {
 
 // Import Pages migrations
 const { runAllPagesMigrations } = require('./db_pages_migrations');
+const {
+  runLandingPageVersionReceiptMigration,
+} = require('./db_landing_page_version_receipt_migrations');
 
 // Import Index migrations (performance optimization)
 const { runAllIndexMigrations } = require('./db_indexes_migrations');
@@ -805,6 +808,11 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'social_inbox_bridge_v1', runSocialInboxBridgeMigration);
     
     await runMigrationOnce(pool, 'module_pages', runAllPagesMigrations);
+    await runMigrationOnce(
+      pool,
+      'landing_page_version_mutation_receipts_v1',
+      runLandingPageVersionReceiptMigration,
+    );
     
     // Performance and schema optimization (run last)
     await runMigrationOnce(pool, 'optimization_indexes', runAllIndexMigrations);

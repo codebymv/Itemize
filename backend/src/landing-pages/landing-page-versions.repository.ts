@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
+import type { LandingPageVersionMutationAction } from './landing-page-version.idempotency';
 
 export type LandingPageVersionRow = {
   id: number;
@@ -37,10 +38,18 @@ type PageSnapshot = {
   }>;
 };
 
-type PublishResult =
-  | { status: 'ok'; version: LandingPageVersionRow }
+export type VersionMutationResult =
+  | { status: 'ok'; version: LandingPageVersionRow; replayed: boolean }
   | { status: 'not_found' }
-  | { status: 'invalid_snapshot' };
+  | { status: 'invalid_snapshot' }
+  | { status: 'idempotency_conflict' }
+  | { status: 'result_unavailable' };
+
+type VersionMutationReceiptRow = {
+  action: LandingPageVersionMutationAction;
+  request_fingerprint: string;
+  result_version_id: number | null;
+};
 
 const VERSION_COLUMNS = `
   pv.id, pv.page_id, pv.version_number, pv.content, pv.description,
@@ -100,7 +109,9 @@ export class LandingPageVersionsRepository {
     pageId: number,
     userId: number,
     description: string | null,
-  ): Promise<LandingPageVersionRow | null> {
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<VersionMutationResult> {
     return this.transaction(async (client) => {
       const page = await client.query<{
         name: string;
@@ -123,7 +134,16 @@ export class LandingPageVersionsRepository {
          FROM pages WHERE id = $1 AND organization_id = $2 FOR UPDATE`,
         [pageId, organizationId],
       );
-      if (page.rowCount === 0) return null;
+      if (page.rowCount === 0) return { status: 'not_found' };
+      const replay = await this.replayReceipt(
+        client,
+        organizationId,
+        pageId,
+        idempotencyKey,
+        'create',
+        requestFingerprint,
+      );
+      if (replay) return replay;
       const sections = await client.query<{
         section_type: string;
         name: string | null;
@@ -164,7 +184,16 @@ export class LandingPageVersionsRepository {
           userId,
         ],
       );
-      return inserted.rows[0];
+      await this.insertReceipt(client, {
+        organizationId,
+        pageId,
+        userId,
+        idempotencyKey,
+        action: 'create',
+        requestFingerprint,
+        resultVersionId: inserted.rows[0].id,
+      });
+      return { status: 'ok', version: inserted.rows[0], replayed: false };
     });
   }
 
@@ -172,7 +201,10 @@ export class LandingPageVersionsRepository {
     organizationId: number,
     pageId: number,
     versionId: number,
-  ): Promise<PublishResult> {
+    userId: number,
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<VersionMutationResult> {
     return this.transaction(async (client) => {
       const page = await client.query(
         `SELECT id FROM pages
@@ -180,6 +212,15 @@ export class LandingPageVersionsRepository {
         [pageId, organizationId],
       );
       if (page.rowCount === 0) return { status: 'not_found' };
+      const replay = await this.replayReceipt(
+        client,
+        organizationId,
+        pageId,
+        idempotencyKey,
+        'publish',
+        requestFingerprint,
+      );
+      if (replay) return replay;
       const found = await client.query<LandingPageVersionRow>(
         `SELECT ${VERSION_COLUMNS} FROM page_versions pv
          WHERE pv.id = $1 AND pv.page_id = $2 FOR UPDATE`,
@@ -245,7 +286,16 @@ export class LandingPageVersionsRepository {
         `SELECT ${VERSION_COLUMNS} FROM page_versions pv WHERE pv.id = $1`,
         [versionId],
       );
-      return { status: 'ok', version: updated.rows[0] };
+      await this.insertReceipt(client, {
+        organizationId,
+        pageId,
+        userId,
+        idempotencyKey,
+        action: 'publish',
+        requestFingerprint,
+        resultVersionId: updated.rows[0].id,
+      });
+      return { status: 'ok', version: updated.rows[0], replayed: false };
     });
   }
 
@@ -275,20 +325,31 @@ export class LandingPageVersionsRepository {
     pageId: number,
     versionId: number,
     userId: number,
-  ): Promise<LandingPageVersionRow | null> {
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<VersionMutationResult> {
     return this.transaction(async (client) => {
       const page = await client.query(
         `SELECT id FROM pages
          WHERE id = $1 AND organization_id = $2 FOR UPDATE`,
         [pageId, organizationId],
       );
-      if (page.rowCount === 0) return null;
+      if (page.rowCount === 0) return { status: 'not_found' };
+      const replay = await this.replayReceipt(
+        client,
+        organizationId,
+        pageId,
+        idempotencyKey,
+        'restore',
+        requestFingerprint,
+      );
+      if (replay) return replay;
       const source = await client.query<LandingPageVersionRow>(
         `SELECT ${VERSION_COLUMNS} FROM page_versions pv
          WHERE pv.id = $1 AND pv.page_id = $2`,
         [versionId, pageId],
       );
-      if (source.rowCount === 0) return null;
+      if (source.rowCount === 0) return { status: 'not_found' };
       const next = await client.query<{ version_number: number }>(
         `SELECT COALESCE(MAX(version_number), 0)::int + 101 AS version_number
          FROM page_versions WHERE page_id = $1`,
@@ -307,8 +368,81 @@ export class LandingPageVersionsRepository {
           userId,
         ],
       );
-      return inserted.rows[0];
+      await this.insertReceipt(client, {
+        organizationId,
+        pageId,
+        userId,
+        idempotencyKey,
+        action: 'restore',
+        requestFingerprint,
+        resultVersionId: inserted.rows[0].id,
+      });
+      return { status: 'ok', version: inserted.rows[0], replayed: false };
     });
+  }
+
+  private async replayReceipt(
+    client: PoolClient,
+    organizationId: number,
+    pageId: number,
+    idempotencyKey: string,
+    action: LandingPageVersionMutationAction,
+    requestFingerprint: string,
+  ): Promise<VersionMutationResult | null> {
+    const receipt = await client.query<VersionMutationReceiptRow>(
+      `SELECT action, request_fingerprint, result_version_id
+       FROM landing_page_version_mutation_receipts
+       WHERE organization_id = $1 AND page_id = $2 AND idempotency_key = $3
+       FOR UPDATE`,
+      [organizationId, pageId, idempotencyKey],
+    );
+    const existing = receipt.rows[0];
+    if (!existing) return null;
+    if (
+      existing.action !== action ||
+      existing.request_fingerprint !== requestFingerprint
+    ) {
+      return { status: 'idempotency_conflict' };
+    }
+    if (existing.result_version_id === null) {
+      return { status: 'result_unavailable' };
+    }
+    const result = await client.query<LandingPageVersionRow>(
+      `SELECT ${VERSION_COLUMNS} FROM page_versions pv
+       WHERE pv.id = $1 AND pv.page_id = $2`,
+      [existing.result_version_id, pageId],
+    );
+    if (!result.rows[0]) return { status: 'result_unavailable' };
+    return { status: 'ok', version: result.rows[0], replayed: true };
+  }
+
+  private async insertReceipt(
+    client: PoolClient,
+    values: {
+      organizationId: number;
+      pageId: number;
+      userId: number;
+      idempotencyKey: string;
+      action: LandingPageVersionMutationAction;
+      requestFingerprint: string;
+      resultVersionId: number;
+    },
+  ): Promise<void> {
+    await client.query(
+      `INSERT INTO landing_page_version_mutation_receipts (
+         organization_id, page_id, requested_by_user_id, idempotency_key,
+         action, request_fingerprint, result_version_id
+       ) VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+      [
+        values.organizationId,
+        values.pageId,
+        values.userId,
+        values.idempotencyKey,
+        values.action,
+        values.requestFingerprint,
+        values.resultVersionId,
+      ],
+    );
   }
 
   private snapshot(value: LandingPageVersionRow['content']): PageSnapshot | null {

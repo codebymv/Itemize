@@ -496,7 +496,11 @@ describe('Authenticated landing-pages GraphQL PostgreSQL contract', () => {
       memberToken,
       organizationId,
       `mutation {
-        createLandingPageVersion(pageId: ${pageId}, description: "Protected") {
+        createLandingPageVersion(
+          pageId: ${pageId}
+          description: "Protected"
+          idempotencyKey: "protected-page-version-1"
+        ) {
           content
         }
       }`,

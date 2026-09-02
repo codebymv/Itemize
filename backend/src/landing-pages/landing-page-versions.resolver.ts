@@ -38,6 +38,7 @@ export class LandingPageVersionsResolver {
   @Mutation(() => LandingPageVersion)
   createLandingPageVersion(
     @Args('pageId', { type: () => Int }) pageId: number,
+    @Args('idempotencyKey', { type: () => String }) idempotencyKey: string,
     @Args('description', { type: () => String, nullable: true })
     description?: string,
   ): Promise<LandingPageVersion> {
@@ -46,6 +47,7 @@ export class LandingPageVersionsResolver {
       pageId,
       this.userId(),
       description,
+      idempotencyKey,
     );
   }
 
@@ -55,8 +57,15 @@ export class LandingPageVersionsResolver {
   publishLandingPageVersion(
     @Args('pageId', { type: () => Int }) pageId: number,
     @Args('versionId', { type: () => Int }) versionId: number,
+    @Args('idempotencyKey', { type: () => String }) idempotencyKey: string,
   ): Promise<LandingPageVersion> {
-    return this.versions.publish(this.organizationId(), pageId, versionId);
+    return this.versions.publish(
+      this.organizationId(),
+      pageId,
+      versionId,
+      this.userId(),
+      idempotencyKey,
+    );
   }
 
   @CsrfProtected()
@@ -75,12 +84,14 @@ export class LandingPageVersionsResolver {
   restoreLandingPageVersion(
     @Args('pageId', { type: () => Int }) pageId: number,
     @Args('versionId', { type: () => Int }) versionId: number,
+    @Args('idempotencyKey', { type: () => String }) idempotencyKey: string,
   ): Promise<LandingPageVersion> {
     return this.versions.restore(
       this.organizationId(),
       pageId,
       versionId,
       this.userId(),
+      idempotencyKey,
     );
   }
 

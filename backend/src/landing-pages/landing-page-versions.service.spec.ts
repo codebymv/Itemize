@@ -47,9 +47,20 @@ describe('LandingPageVersionsService', () => {
       ],
     });
 
-    repository.create.mockResolvedValue(versionRow);
-    await service.create(4, 12, 7, '  Snapshot  ');
-    expect(repository.create).toHaveBeenCalledWith(4, 12, 7, 'Snapshot');
+    repository.create.mockResolvedValue({
+      status: 'ok',
+      version: versionRow,
+      replayed: false,
+    });
+    await service.create(4, 12, 7, '  Snapshot  ', 'create-request-1');
+    expect(repository.create).toHaveBeenCalledWith(
+      4,
+      12,
+      7,
+      'Snapshot',
+      'create-request-1',
+      expect.stringMatching(/^[a-f0-9]{64}$/),
+    );
   });
 
   it('redacts stored password hashes from version content', async () => {
@@ -85,7 +96,7 @@ describe('LandingPageVersionsService', () => {
       }),
     });
     await expect(
-      service.create(4, 12, 7, 'x'.repeat(1001)),
+      service.create(4, 12, 7, 'x'.repeat(1001), 'create-request-2'),
     ).rejects.toMatchObject({
       extensions: expect.objectContaining({
         code: 'BAD_USER_INPUT',
@@ -98,7 +109,9 @@ describe('LandingPageVersionsService', () => {
 
   it('exposes stable errors for invalid snapshots and current-version deletion', async () => {
     repository.publish.mockResolvedValue({ status: 'invalid_snapshot' });
-    await expect(service.publish(4, 12, 31)).rejects.toMatchObject({
+    await expect(
+      service.publish(4, 12, 31, 7, 'publish-request-1'),
+    ).rejects.toMatchObject({
       extensions: expect.objectContaining({
         code: 'CONFLICT',
         reason: 'INVALID_VERSION_SNAPSHOT',
@@ -116,10 +129,32 @@ describe('LandingPageVersionsService', () => {
 
   it('maps publish slug conflicts without masking other failures', async () => {
     repository.publish.mockRejectedValueOnce({ code: '23505' });
-    await expect(service.publish(4, 12, 31)).rejects.toMatchObject({
+    await expect(
+      service.publish(4, 12, 31, 7, 'publish-request-2'),
+    ).rejects.toMatchObject({
       extensions: expect.objectContaining({
         code: 'CONFLICT',
         reason: 'VERSION_SLUG_CONFLICT',
+      }),
+    });
+  });
+
+  it('rejects invalid keys and reports conflicting replays', async () => {
+    await expect(
+      service.create(4, 12, 7, 'Snapshot', 'unsafe key'),
+    ).rejects.toMatchObject({
+      extensions: expect.objectContaining({
+        code: 'BAD_USER_INPUT',
+        reason: 'INVALID_IDEMPOTENCY_KEY',
+      }),
+    });
+    repository.create.mockResolvedValue({ status: 'idempotency_conflict' });
+    await expect(
+      service.create(4, 12, 7, 'Snapshot', 'create-request-3'),
+    ).rejects.toMatchObject({
+      extensions: expect.objectContaining({
+        code: 'CONFLICT',
+        reason: 'IDEMPOTENCY_KEY_REUSED',
       }),
     });
   });

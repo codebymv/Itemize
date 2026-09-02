@@ -59,10 +59,13 @@ export const getPageVersions = async (
 
 export const createPageVersion = async (
     pageId: number,
-    description?: string,
-    organizationId?: number
+    description: string | undefined,
+    idempotencyKey: string,
+    organizationId?: number,
 ): Promise<PageVersion> => {
-    return createLandingPageVersionViaGraphql(pageId, description, organizationId);
+    return createLandingPageVersionViaGraphql(
+        pageId, description, idempotencyKey, organizationId,
+    );
 };
 
 export const getPageVersion = async (
@@ -76,9 +79,12 @@ export const getPageVersion = async (
 export const publishPageVersion = async (
     pageId: number,
     versionId: number,
-    organizationId?: number
+    idempotencyKey: string,
+    organizationId?: number,
 ): Promise<PageVersion> => {
-    return publishLandingPageVersionViaGraphql(pageId, versionId, organizationId);
+    return publishLandingPageVersionViaGraphql(
+        pageId, versionId, idempotencyKey, organizationId,
+    );
 };
 
 export const deletePageVersion = async (
@@ -92,9 +98,12 @@ export const deletePageVersion = async (
 export const restorePageVersion = async (
     pageId: number,
     versionId: number,
-    organizationId?: number
+    idempotencyKey: string,
+    organizationId?: number,
 ): Promise<PageVersion> => {
-    return restoreLandingPageVersionViaGraphql(pageId, versionId, organizationId);
+    return restoreLandingPageVersionViaGraphql(
+        pageId, versionId, idempotencyKey, organizationId,
+    );
 };
 
 export default {
