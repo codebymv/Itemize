@@ -1,6 +1,6 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CreateDealModal } from './CreateDealModal';
 
@@ -63,5 +63,39 @@ describe('CreateDealModal', () => {
     );
     fireEvent.click(screen.getByText('Select a contact (optional)'));
     expect(screen.getByText('No contact')).toBeInTheDocument();
+  });
+
+  it('retains the creation key when an unchanged request is retried', async () => {
+    apiMocks.createDeal
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce({ id: 9, title: 'Expansion' });
+    const onCreated = vi.fn();
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={queryClient}>
+        <CreateDealModal
+          pipelineId={1}
+          stages={[{ id: 'lead', name: 'Lead', color: '#3B82F6', order: 0 }]}
+          organizationId={42}
+          onClose={vi.fn()}
+          onCreated={onCreated}
+        />
+      </QueryClientProvider>,
+    );
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Deal Title *' }), {
+      target: { value: 'Expansion' },
+    });
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Value ($)' }), {
+      target: { value: '0' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Create deal' }));
+    await waitFor(() => expect(apiMocks.createDeal).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create deal' }));
+    await waitFor(() => expect(apiMocks.createDeal).toHaveBeenCalledTimes(2));
+
+    expect(apiMocks.createDeal.mock.calls[1][1]).toBe(apiMocks.createDeal.mock.calls[0][1]);
+    expect(onCreated).toHaveBeenCalledWith(expect.objectContaining({ id: 9 }));
   });
 });

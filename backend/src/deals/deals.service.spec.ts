@@ -78,10 +78,47 @@ describe('DealsService', () => {
       pipelineId: 4,
       title: 'Deal',
       ...invalid,
-    })).rejects.toMatchObject<Partial<GraphQLError>>({
+    }, 'deal-create-invalid')).rejects.toMatchObject<Partial<GraphQLError>>({
       extensions: expect.objectContaining({ code: 'BAD_USER_INPUT', field }),
     });
     expect(repository.create).not.toHaveBeenCalled();
+  });
+
+  it('normalizes create input and does not repeat onboarding on replay', async () => {
+    repository.create.mockResolvedValue({ kind: 'ok', row: row(), replayed: true });
+    await expect(service.create(3, 7, {
+      pipelineId: 4,
+      title: ' Expansion ',
+      value: '1250.50',
+    }, 'deal-create-1')).resolves.toMatchObject({ id: 9, title: 'Expansion' });
+    expect(repository.create).toHaveBeenCalledWith(
+      3,
+      7,
+      expect.objectContaining({ title: 'Expansion', currency: 'USD' }),
+      'deal-create-1',
+      expect.stringMatching(/^[a-f0-9]{64}$/),
+    );
+    expect(getStarted.record).not.toHaveBeenCalled();
+  });
+
+  it('surfaces conflicting and unavailable deal creation receipts', async () => {
+    repository.create
+      .mockResolvedValueOnce({ kind: 'idempotency-conflict' })
+      .mockResolvedValueOnce({ kind: 'result-unavailable' });
+    await expect(service.create(
+      3, 7, { pipelineId: 4, title: 'Deal' }, 'deal-create-2',
+    )).rejects.toMatchObject({
+      extensions: expect.objectContaining({
+        code: 'CONFLICT', reason: 'IDEMPOTENCY_KEY_REUSED',
+      }),
+    });
+    await expect(service.create(
+      3, 7, { pipelineId: 4, title: 'Deal' }, 'deal-create-3',
+    )).rejects.toMatchObject({
+      extensions: expect.objectContaining({
+        code: 'CONFLICT', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE',
+      }),
+    });
   });
 
   it('preserves omitted update fields and clears explicit nullable fields', async () => {
@@ -106,7 +143,7 @@ describe('DealsService', () => {
       pipelineId: 4,
       title: 'Deal',
       contactId: 99,
-    })).rejects.toMatchObject({
+    }, 'deal-create-foreign')).rejects.toMatchObject({
       extensions: expect.objectContaining({
         code: 'BAD_USER_INPUT',
         field: 'contactId',

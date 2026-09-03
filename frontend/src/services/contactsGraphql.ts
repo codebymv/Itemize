@@ -110,8 +110,8 @@ const contactQuery = `
 `;
 
 const createContactMutation = `
-  mutation CreateContact($input: CreateContactInput!) {
-    createContact(input: $input) { ${contactFields} }
+  mutation CreateContact($input: CreateContactInput!, $idempotencyKey: String!) {
+    createContact(input: $input, idempotencyKey: $idempotencyKey) { ${contactFields} }
   }
 `;
 
@@ -415,9 +415,10 @@ export const getContactViaGraphql = async (
 
 export const createContactViaGraphql = async (
   input: CreateContactData,
+  idempotencyKey: string,
 ): Promise<Contact> => {
   const organizationId = input.organization_id;
-  const variables = { input: contactInput(input) };
+  const variables = { input: contactInput(input), idempotencyKey };
   const data = await graphqlMutationRequest<
     { createContact: GraphqlContact },
     typeof variables

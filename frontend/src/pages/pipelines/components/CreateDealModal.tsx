@@ -28,6 +28,7 @@ import { createDealFormSchema, type CreateDealFormValues } from '@/lib/formSchem
 import logger from '@/lib/logger';
 import { ContactCatalogPicker } from '@/components/ContactCatalogPicker';
 import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
+import { useStableMutationKey } from '@/hooks/useStableMutationKey';
 
 const getApiErrorMessage = (error: unknown, fallback: string): string => {
   const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
@@ -53,6 +54,7 @@ export function CreateDealModal({
 }: CreateDealModalProps) {
   const { toast } = useToast();
   const { pending: loading, run, dismissIfIdle } = useSingleFlightAction();
+  const createAttempt = useStableMutationKey('deal-create');
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
 
   const form = useForm<CreateDealFormValues>({
@@ -69,33 +71,45 @@ export function CreateDealModal({
 
   const handleSubmit = async (values: CreateDealFormValues) => {
     await run(async () => {
+      const dealData = {
+        pipeline_id: pipelineId,
+        title: values.title.trim(),
+        value: values.value ? parseFloat(values.value) : 0,
+        stage_id: values.stage_id,
+        contact_id: values.contact_id ? parseInt(values.contact_id) : undefined,
+        probability: values.probability ? parseInt(values.probability) : 0,
+        expected_close_date: values.expected_close_date || undefined,
+        organization_id: organizationId,
+      };
+      const idempotencyKey = createAttempt.begin(JSON.stringify(dealData));
+      if (!idempotencyKey) return;
+      let deal: Deal;
       try {
-        const deal = await createDeal({
-          pipeline_id: pipelineId,
-          title: values.title.trim(),
-          value: values.value ? parseFloat(values.value) : 0,
-          stage_id: values.stage_id,
-          contact_id: values.contact_id ? parseInt(values.contact_id) : undefined,
-          probability: values.probability ? parseInt(values.probability) : 0,
-          expected_close_date: values.expected_close_date || undefined,
-          organization_id: organizationId,
-        });
-        onCreated(deal);
-        form.reset();
-        setSelectedContact(null);
+        deal = await createDeal(dealData, idempotencyKey);
       } catch (error) {
+        createAttempt.release();
         logger.error('Error creating deal:', error);
         toast({
           title: 'Error',
           description: getApiErrorMessage(error, 'Failed to create deal'),
           variant: 'destructive',
         });
+        return;
       }
+      createAttempt.reset();
+      onCreated(deal);
+      form.reset();
+      setSelectedContact(null);
     });
   };
 
+  const close = () => {
+    createAttempt.reset();
+    onClose();
+  };
+
   return (
-    <Dialog open onOpenChange={(open) => !open && dismissIfIdle(onClose)}>
+    <Dialog open onOpenChange={(open) => !open && dismissIfIdle(close)}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -237,7 +251,7 @@ export function CreateDealModal({
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => dismissIfIdle(onClose)} disabled={loading} style={{ fontFamily: '"Raleway", sans-serif' }} aria-label="Cancel">
+              <Button type="button" variant="outline" onClick={() => dismissIfIdle(close)} disabled={loading} style={{ fontFamily: '"Raleway", sans-serif' }} aria-label="Cancel">
                 Cancel
               </Button>
               <Button

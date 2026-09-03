@@ -148,14 +148,14 @@ describe('ContactsService', () => {
       firstName: '  Ada  ',
       email: 'ADA@EXAMPLE.COM',
       tags: [' vip ', 'vip'],
-    })).resolves.toMatchObject({ id: 11, firstName: 'Ada' });
+    }, 'contact-create-1')).resolves.toMatchObject({ id: 11, firstName: 'Ada' });
     expect(repository.create).toHaveBeenCalledWith(42, 7, expect.objectContaining({
       firstName: 'Ada',
       email: 'ada@example.com',
       source: 'manual',
       status: 'active',
       tags: ['vip'],
-    }));
+    }), 'contact-create-1', expect.stringMatching(/^[a-f0-9]{64}$/));
     expect(getStarted.record).toHaveBeenCalledWith(expect.objectContaining({
       organizationId: 42,
       name: 'first_contact',
@@ -165,18 +165,72 @@ describe('ContactsService', () => {
   it('still creates a contact when get started recording fails', async () => {
     repository.create.mockResolvedValue({ kind: 'created', row: row() });
     getStarted.record.mockResolvedValue(false);
-    await expect(service.create(42, 7, { firstName: 'Ada' })).resolves.toMatchObject({
+    await expect(service.create(
+      42,
+      7,
+      { firstName: 'Ada' },
+      'contact-create-2',
+    )).resolves.toMatchObject({
       id: 11,
     });
   });
 
+  it('does not repeat onboarding effects for a replayed contact', async () => {
+    repository.create.mockResolvedValue({ kind: 'created', row: row(), replayed: true });
+    await expect(service.create(
+      42,
+      7,
+      { firstName: 'Ada' },
+      'contact-create-replay',
+    )).resolves.toMatchObject({ id: 11 });
+    expect(getStarted.record).not.toHaveBeenCalled();
+  });
+
+  it('surfaces conflicting and unavailable contact creation receipts', async () => {
+    repository.create
+      .mockResolvedValueOnce({ kind: 'idempotency-conflict' })
+      .mockResolvedValueOnce({ kind: 'result-unavailable' });
+    await expect(service.create(
+      42,
+      7,
+      { firstName: 'Ada' },
+      'contact-create-3',
+    )).rejects.toMatchObject({
+      extensions: expect.objectContaining({
+        code: 'CONFLICT',
+        reason: 'IDEMPOTENCY_KEY_REUSED',
+      }),
+    });
+    await expect(service.create(
+      42,
+      7,
+      { firstName: 'Ada' },
+      'contact-create-4',
+    )).rejects.toMatchObject({
+      extensions: expect.objectContaining({
+        code: 'CONFLICT',
+        reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE',
+      }),
+    });
+  });
+
   it('rejects create without identity and invalid assignment outcomes', async () => {
-    expect(await codeFrom(service.create(42, 7, { phone: '+1 555 123 4567' })))
+    expect(await codeFrom(service.create(
+      42,
+      7,
+      { phone: '+1 555 123 4567' },
+      'contact-create-5',
+    )))
       .toBe('BAD_USER_INPUT');
     expect(repository.create).not.toHaveBeenCalled();
 
     repository.create.mockResolvedValue({ kind: 'invalid_assignee' });
-    expect(await codeFrom(service.create(42, 7, { firstName: 'Ada', assignedToId: 99 })))
+    expect(await codeFrom(service.create(
+      42,
+      7,
+      { firstName: 'Ada', assignedToId: 99 },
+      'contact-create-6',
+    )))
       .toBe('BAD_USER_INPUT');
   });
 

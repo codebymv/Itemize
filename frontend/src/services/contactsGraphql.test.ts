@@ -175,7 +175,7 @@ describe('contact GraphQL consumer', () => {
       status: 'active',
       source: 'manual',
       organization_id: 42,
-    });
+    }, 'contact-create-1');
     await updateContactViaGraphql(11, {
       company: 'New Engines',
       organization_id: 42,
@@ -185,6 +185,7 @@ describe('contact GraphQL consumer', () => {
     const createBody = JSON.parse(String(vi.mocked(fetch).mock.calls[0][1]?.body));
     expect(createBody.variables).toEqual({
       input: { firstName: 'Ada', status: 'ACTIVE', source: 'MANUAL' },
+      idempotencyKey: 'contact-create-1',
     });
     const updateBody = JSON.parse(String(vi.mocked(fetch).mock.calls[1][1]?.body));
     expect(updateBody.variables).toEqual({ id: 11, input: { company: 'New Engines' } });

@@ -259,11 +259,11 @@ describe('contacts API GraphQL transport', () => {
     vi.mocked(deleteContactViaGraphql).mockResolvedValue();
     const input = { first_name: 'Grace', organization_id: 42 };
 
-    await createContact(input);
+    await createContact(input, 'contact-create-1');
     await updateContact(12, input);
     await deleteContact(12, 42);
 
-    expect(createContactViaGraphql).toHaveBeenCalledWith(input);
+    expect(createContactViaGraphql).toHaveBeenCalledWith(input, 'contact-create-1');
     expect(updateContactViaGraphql).toHaveBeenCalledWith(12, input);
     expect(deleteContactViaGraphql).toHaveBeenCalledWith(12, 42);
     expect(api.post).not.toHaveBeenCalled();

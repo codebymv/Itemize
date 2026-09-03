@@ -38,8 +38,16 @@ export class DealsResolver {
   @CsrfProtected()
   @OrganizationScoped()
   @Mutation(() => Deal)
-  createDeal(@Args('input') input: CreateDealInput): Promise<Deal> {
-    return this.deals.create(this.organizationId(), this.userId(), input);
+  createDeal(
+    @Args('input') input: CreateDealInput,
+    @Args('idempotencyKey', { type: () => String }) idempotencyKey: string,
+  ): Promise<Deal> {
+    return this.deals.create(
+      this.organizationId(),
+      this.userId(),
+      input,
+      idempotencyKey,
+    );
   }
 
   @CsrfProtected()

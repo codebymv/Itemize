@@ -75,9 +75,16 @@ export type ContactUpdateValues = Partial<{
 }>;
 
 export type CreateContactOutcome =
-  | { kind: 'created'; row: ContactRow }
+  | { kind: 'created'; row: ContactRow; replayed?: boolean }
   | { kind: 'invalid_assignee' }
-  | { kind: 'limit'; current: number; limit: number; plan: string };
+  | { kind: 'limit'; current: number; limit: number; plan: string }
+  | { kind: 'idempotency-conflict' }
+  | { kind: 'result-unavailable' };
+
+type ContactCreationReceiptRow = {
+  request_fingerprint: string;
+  result_contact_id: number | null;
+};
 
 export type UpdateContactOutcome =
   | { kind: 'updated'; row: ContactRow; changedFields: string[] }
@@ -189,9 +196,35 @@ export class ContactsRepository {
     organizationId: number,
     userId: number,
     values: ContactCreateValues,
+    idempotencyKey: string,
+    requestFingerprint: string,
   ): Promise<CreateContactOutcome> {
     return this.transaction(async (client) => {
       await client.query('SELECT pg_advisory_xact_lock($1)', [organizationId]);
+      const receipt = await client.query<ContactCreationReceiptRow>(
+        `SELECT request_fingerprint, result_contact_id
+         FROM contact_creation_receipts
+         WHERE organization_id = $1 AND idempotency_key = $2
+         FOR UPDATE`,
+        [organizationId, idempotencyKey],
+      );
+      const replay = receipt.rows[0];
+      if (replay) {
+        if (replay.request_fingerprint !== requestFingerprint) {
+          return { kind: 'idempotency-conflict' };
+        }
+        if (replay.result_contact_id === null) {
+          return { kind: 'result-unavailable' };
+        }
+        const row = await this.findByIdWithClient(
+          client,
+          organizationId,
+          replay.result_contact_id,
+        );
+        return row
+          ? { kind: 'created', row, replayed: true }
+          : { kind: 'result-unavailable' };
+      }
       const organization = await client.query<{
         plan: string | null;
         contacts_limit: number | null;
@@ -257,7 +290,14 @@ export class ContactsRepository {
       );
       const row = await this.findByIdWithClient(client, organizationId, contactId);
       if (!row) throw new Error('Created contact could not be reloaded');
-      return { kind: 'created', row };
+      await client.query(
+        `INSERT INTO contact_creation_receipts (
+           organization_id, requested_by_user_id, idempotency_key,
+           request_fingerprint, result_contact_id
+         ) VALUES ($1, $2, $3, $4, $5)`,
+        [organizationId, userId, idempotencyKey, requestFingerprint, contactId],
+      );
+      return { kind: 'created', row, replayed: false };
     });
   }
 

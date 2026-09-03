@@ -187,8 +187,11 @@ export interface CreateContactData {
   organization_id?: number;
 }
 
-export const createContact = async (data: CreateContactData): Promise<Contact> => {
-  return createContactViaGraphql(data);
+export const createContact = async (
+  data: CreateContactData,
+  idempotencyKey: string,
+): Promise<Contact> => {
+  return createContactViaGraphql(data, idempotencyKey);
 };
 
 export const updateContact = async (id: number, data: Partial<CreateContactData>): Promise<Contact> => {

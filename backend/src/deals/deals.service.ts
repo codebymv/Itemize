@@ -11,6 +11,10 @@ import {
 import { DealSortDirection, DealSortField } from './deal.enums';
 import { Deal, DealPage } from './deal.types';
 import {
+  dealCreationFingerprint,
+  dealCreationKey,
+} from './deal-creation.idempotency';
+import {
   DealRow,
   DealsRepository,
   DealUpdates,
@@ -70,6 +74,7 @@ export class DealsService {
     organizationId: number,
     userId: number,
     input: CreateDealInput,
+    idempotencyKey: string,
   ): Promise<Deal> {
     this.id(input.pipelineId, 'pipelineId');
     const values: DealValues = {
@@ -85,14 +90,38 @@ export class DealsService {
       customFields: this.json(input.customFields),
       tags: this.tags(input.tags),
     };
-    const deal = this.outcome(await this.deals.create(organizationId, userId, values));
-    await this.getStarted.record({
+    const outcome = await this.deals.create(
       organizationId,
       userId,
-      name: 'first_deal',
-      source: 'create_deal',
-      properties: { dealId: deal.id },
-    });
+      values,
+      dealCreationKey(idempotencyKey),
+      dealCreationFingerprint(values),
+    );
+    if (outcome.kind === 'idempotency-conflict') {
+      throw itemizeGraphqlError(
+        'idempotencyKey was already used for a different deal creation request',
+        'CONFLICT',
+        { field: 'idempotencyKey', reason: 'IDEMPOTENCY_KEY_REUSED' },
+      );
+    }
+    if (outcome.kind === 'result-unavailable') {
+      throw itemizeGraphqlError(
+        'The deal created by this request is no longer available',
+        'CONFLICT',
+        { field: 'idempotencyKey', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE' },
+      );
+    }
+    const replayed = outcome.kind === 'ok' && outcome.replayed;
+    const deal = this.outcome(outcome);
+    if (!replayed) {
+      await this.getStarted.record({
+        organizationId,
+        userId,
+        name: 'first_deal',
+        source: 'create_deal',
+        properties: { dealId: deal.id },
+      });
+    }
     return deal;
   }
 

@@ -102,8 +102,16 @@ export class ContactsResolver {
   @CsrfProtected()
   @OrganizationScoped()
   @Mutation(() => Contact)
-  createContact(@Args('input') input: CreateContactInput): Promise<Contact> {
-    return this.contacts.create(this.organizationId(), this.userId(), input);
+  createContact(
+    @Args('input') input: CreateContactInput,
+    @Args('idempotencyKey', { type: () => String }) idempotencyKey: string,
+  ): Promise<Contact> {
+    return this.contacts.create(
+      this.organizationId(),
+      this.userId(),
+      input,
+      idempotencyKey,
+    );
   }
 
   @CsrfProtected()

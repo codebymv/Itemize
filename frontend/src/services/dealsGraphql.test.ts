@@ -91,7 +91,7 @@ describe('deal GraphQL consumer', () => {
       title: 'Expansion',
       value: 1250.5,
       organization_id: 42,
-    });
+    }, 'deal-create-1');
     await updateDealViaGraphql(91, {
       contact_id: undefined,
       expected_close_date: undefined,
@@ -107,6 +107,7 @@ describe('deal GraphQL consumer', () => {
       title: 'Expansion',
       value: '1250.5',
     });
+    expect(createBody.variables.idempotencyKey).toBe('deal-create-1');
     const updateBody = JSON.parse(String(
       (vi.mocked(fetch).mock.calls[1][1] as RequestInit).body,
     ));

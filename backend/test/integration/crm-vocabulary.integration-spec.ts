@@ -650,10 +650,13 @@ describe('Tag GraphQL and pipeline REST/GraphQL PostgreSQL parity', () => {
     const invalidValue = await mutation(
       memberToken,
       organizationId,
-      `mutation CreateDeal($input: CreateDealInput!) {
-        createDeal(input: $input) { id }
+      `mutation CreateDeal($input: CreateDealInput!, $idempotencyKey: String!) {
+        createDeal(input: $input, idempotencyKey: $idempotencyKey) { id }
       }`,
-      { input: { pipelineId, title: 'Invalid', value: '1.234' } },
+      {
+        input: { pipelineId, title: 'Invalid', value: '1.234' },
+        idempotencyKey: `deal-invalid-value-${Date.now()}`,
+      },
     ).expect(200);
     expect(invalidValue.body.errors[0].extensions).toMatchObject({
       code: 'BAD_USER_INPUT',
@@ -668,8 +671,8 @@ describe('Tag GraphQL and pipeline REST/GraphQL PostgreSQL parity', () => {
     const invalidReference = await mutation(
       memberToken,
       organizationId,
-      `mutation CreateDeal($input: CreateDealInput!) {
-        createDeal(input: $input) { id }
+      `mutation CreateDeal($input: CreateDealInput!, $idempotencyKey: String!) {
+        createDeal(input: $input, idempotencyKey: $idempotencyKey) { id }
       }`,
       {
         input: {
@@ -677,6 +680,7 @@ describe('Tag GraphQL and pipeline REST/GraphQL PostgreSQL parity', () => {
           title: 'Invalid reference',
           contactId: Number(foreignContact.rows[0].id),
         },
+        idempotencyKey: `deal-invalid-reference-${Date.now()}`,
       },
     ).expect(200);
     expect(invalidReference.body.errors[0].extensions).toMatchObject({
@@ -687,20 +691,79 @@ describe('Tag GraphQL and pipeline REST/GraphQL PostgreSQL parity', () => {
     const noCsrf = await graphql(
       memberToken,
       organizationId,
-      `mutation CreateDeal($input: CreateDealInput!) {
-        createDeal(input: $input) { id }
+      `mutation CreateDeal($input: CreateDealInput!, $idempotencyKey: String!) {
+        createDeal(input: $input, idempotencyKey: $idempotencyKey) { id }
       }`,
-      { input: { pipelineId, title: 'Blocked' } },
+      {
+        input: { pipelineId, title: 'Blocked' },
+        idempotencyKey: `deal-csrf-${Date.now()}`,
+      },
     ).expect(200);
     expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
+  });
+
+  it('durably replays deal creation and fails closed after conflicting reuse or deletion', async () => {
+    const suffix = `${Date.now()}-${process.pid}`;
+    const idempotencyKey = `deal-replay-${suffix}`;
+    const document = `mutation CreateDeal(
+      $input: CreateDealInput!,
+      $idempotencyKey: String!
+    ) {
+      createDeal(input: $input, idempotencyKey: $idempotencyKey) { id title }
+    }`;
+    const variables = {
+      input: { pipelineId, contactId, title: `Replay ${suffix}`, value: '250.00' },
+      idempotencyKey,
+    };
+
+    const first = await mutation(
+      memberToken, organizationId, document, variables,
+    ).expect(200);
+    const replay = await mutation(
+      memberToken, organizationId, document, variables,
+    ).expect(200);
+    expect(first.body.errors).toBeUndefined();
+    expect(replay.body.errors).toBeUndefined();
+    expect(replay.body.data.createDeal.id).toBe(first.body.data.createDeal.id);
+    const replayDealId = Number(first.body.data.createDeal.id);
+
+    const persisted = await pool.query<{ total: number }>(
+      `SELECT COUNT(*)::int AS total FROM deals
+       WHERE organization_id = $1 AND title = $2`,
+      [organizationId, variables.input.title],
+    );
+    expect(persisted.rows[0].total).toBe(1);
+
+    const conflict = await mutation(
+      memberToken,
+      organizationId,
+      document,
+      { ...variables, input: { ...variables.input, title: 'Changed replay' } },
+    ).expect(200);
+    expect(conflict.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_KEY_REUSED',
+    });
+
+    await pool.query(
+      'DELETE FROM deals WHERE organization_id = $1 AND id = $2',
+      [organizationId, replayDealId],
+    );
+    const unavailable = await mutation(
+      memberToken, organizationId, document, variables,
+    ).expect(200);
+    expect(unavailable.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE',
+    });
   });
 
   it('serializes deal changes and atomically records real transitions', async () => {
     const created = await mutation(
       memberToken,
       organizationId,
-      `mutation CreateDeal($input: CreateDealInput!) {
-        createDeal(input: $input) {
+      `mutation CreateDeal($input: CreateDealInput!, $idempotencyKey: String!) {
+        createDeal(input: $input, idempotencyKey: $idempotencyKey) {
           id title value currency probability stageId contactId wonAt lostAt
         }
       }`,
@@ -713,6 +776,7 @@ describe('Tag GraphQL and pipeline REST/GraphQL PostgreSQL parity', () => {
           currency: 'usd',
           probability: 55,
         },
+        idempotencyKey: `deal-lifecycle-${Date.now()}-${process.pid}`,
       },
     ).expect(200);
     expect(created.body.errors).toBeUndefined();

@@ -24,13 +24,17 @@ import { createContactFormSchema, type CreateContactFormValues } from '@/lib/for
 import { getApiErrorMessage } from '@/lib/error-messages';
 import logger from '@/lib/logger';
 import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
+import { useStableMutationKey } from '@/hooks/useStableMutationKey';
 
 interface CreateContactModalProps {
   organizationId: number;
   onClose: () => void;
   onCreated: (contact: Contact) => void;
   /** When provided, used instead of createContact() for optimistic-update support */
-  createContactAsync?: (data: CreateContactData) => Promise<Contact>;
+  createContactAsync?: (
+    data: CreateContactData,
+    idempotencyKey: string,
+  ) => Promise<Contact>;
 }
 
 export function CreateContactModal({
@@ -41,6 +45,7 @@ export function CreateContactModal({
 }: CreateContactModalProps) {
   const { toast } = useToast();
   const { pending: loading, run, dismissIfIdle } = useSingleFlightAction();
+  const createAttempt = useStableMutationKey('contact-create');
 
   const form = useForm<CreateContactFormValues>({
     resolver: zodResolver(createContactFormSchema),
@@ -58,28 +63,39 @@ export function CreateContactModal({
 
   const handleSubmit = async (values: CreateContactFormValues) => {
     await run(async () => {
+      const contactData: CreateContactData = {
+        ...values,
+        organization_id: organizationId,
+      };
+      const idempotencyKey = createAttempt.begin(JSON.stringify(contactData));
+      if (!idempotencyKey) return;
+      let contact: Contact;
       try {
-        const contactData: CreateContactData = {
-          ...values,
-          organization_id: organizationId,
-        };
         const doCreate = createContactAsync ?? createContact;
-        const contact = await doCreate(contactData);
-        onCreated(contact);
-        form.reset();
+        contact = await doCreate(contactData, idempotencyKey);
       } catch (error) {
+        createAttempt.release();
         logger.error('Error creating contact:', error);
         toast({
           title: 'Error',
           description: getApiErrorMessage(error, 'Failed to create contact'),
           variant: 'destructive',
         });
+        return;
       }
+      createAttempt.reset();
+      onCreated(contact);
+      form.reset();
     });
   };
 
+  const close = () => {
+    createAttempt.reset();
+    onClose();
+  };
+
   return (
-    <Dialog open onOpenChange={(open) => !open && dismissIfIdle(onClose)}>
+    <Dialog open onOpenChange={(open) => !open && dismissIfIdle(close)}>
       <ModalContent size="md">
         <ModalHeader
           icon={UserPlus}
@@ -247,7 +263,7 @@ export function CreateContactModal({
 
             </ModalBody>
             <ModalFooter>
-              <Button type="button" variant="outline" onClick={() => dismissIfIdle(onClose)} disabled={loading} style={{ fontFamily: '"Raleway", sans-serif' }} aria-label="Cancel">
+              <Button type="button" variant="outline" onClick={() => dismissIfIdle(close)} disabled={loading} style={{ fontFamily: '"Raleway", sans-serif' }} aria-label="Cancel">
                 Cancel
               </Button>
               <Button

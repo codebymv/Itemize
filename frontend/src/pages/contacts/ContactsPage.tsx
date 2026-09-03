@@ -111,8 +111,11 @@ export function ContactsPage() {
   }, [contactsData?.pagination]);
 
   const createContactMutation = useMutation({
-    mutationFn: (data: CreateContactData) => createContact(data),
-    onMutate: async (newContact) => {
+    mutationFn: ({ data, idempotencyKey }: {
+      data: CreateContactData;
+      idempotencyKey: string;
+    }) => createContact(data, idempotencyKey),
+    onMutate: async ({ data: newContact }) => {
       await queryClient.cancelQueries({ queryKey: contactsQueryKey });
       const previous = queryClient.getQueryData<ContactsResponse>(contactsQueryKey);
       const tempContact: Contact = {
@@ -497,7 +500,8 @@ export function ContactsPage() {
           organizationId={organizationId}
           onClose={() => setShowCreateModal(false)}
           onCreated={handleContactCreated}
-          createContactAsync={createContactMutation.mutateAsync}
+          createContactAsync={(data, idempotencyKey) =>
+            createContactMutation.mutateAsync({ data, idempotencyKey })}
         />
       )}
 

@@ -5,6 +5,10 @@ import { GetStartedService } from '../get-started/get-started.service';
 import { NormalizedPage, PageInput, pageInfo } from '../common/pagination';
 import { ContactSortField, SortDirection } from './contact.enums';
 import {
+  contactCreationFingerprint,
+  contactCreationKey,
+} from './contact-creation.idempotency';
+import {
   BulkUpdateContactsInput,
   ContactFilterInput,
   ContactSortInput,
@@ -85,10 +89,18 @@ export class ContactsService {
     organizationId: number,
     userId: number,
     input: CreateContactInput,
+    idempotencyKey: string,
   ): Promise<Contact> {
     const values = this.normalizeCreate(input);
+    const key = contactCreationKey(idempotencyKey);
     try {
-      const outcome = await this.contacts.create(organizationId, userId, values);
+      const outcome = await this.contacts.create(
+        organizationId,
+        userId,
+        values,
+        key,
+        contactCreationFingerprint(values),
+      );
       if (outcome.kind === 'invalid_assignee') {
         throw itemizeGraphqlError(
           'assignedToId must be a member of the active organization',
@@ -104,14 +116,30 @@ export class ContactsService {
           plan: outcome.plan,
         });
       }
+      if (outcome.kind === 'idempotency-conflict') {
+        throw itemizeGraphqlError(
+          'idempotencyKey was already used for a different contact creation request',
+          'CONFLICT',
+          { field: 'idempotencyKey', reason: 'IDEMPOTENCY_KEY_REUSED' },
+        );
+      }
+      if (outcome.kind === 'result-unavailable') {
+        throw itemizeGraphqlError(
+          'The contact created by this request is no longer available',
+          'CONFLICT',
+          { field: 'idempotencyKey', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE' },
+        );
+      }
       const contact = this.mapContact(outcome.row);
-      await this.getStarted.record({
-        organizationId,
-        userId,
-        name: 'first_contact',
-        source: 'create_contact',
-        properties: { contactId: contact.id },
-      });
+      if (!outcome.replayed) {
+        await this.getStarted.record({
+          organizationId,
+          userId,
+          name: 'first_contact',
+          source: 'create_contact',
+          properties: { contactId: contact.id },
+        });
+      }
       return contact;
     } catch (error) {
       if (error instanceof GraphQLError) throw error;

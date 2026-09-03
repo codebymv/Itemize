@@ -115,8 +115,11 @@ export interface CreateDealData {
   organization_id?: number;
 }
 
-export const createDeal = async (data: CreateDealData): Promise<Deal> => {
-  return createDealViaGraphql(data);
+export const createDeal = async (
+  data: CreateDealData,
+  idempotencyKey: string,
+): Promise<Deal> => {
+  return createDealViaGraphql(data, idempotencyKey);
 };
 
 export const updateDeal = async (id: number, data: Partial<CreateDealData>): Promise<Deal> => {

@@ -73,6 +73,17 @@ export type DealWriteOutcome =
   | { kind: 'invalid_contact' }
   | { kind: 'invalid_assignee' };
 
+export type DealCreationOutcome =
+  | { kind: 'ok'; row: DealRow; replayed: boolean }
+  | Exclude<DealWriteOutcome, { kind: 'ok'; row: DealRow }>
+  | { kind: 'idempotency-conflict' }
+  | { kind: 'result-unavailable' };
+
+type DealCreationReceiptRow = {
+  request_fingerprint: string;
+  result_deal_id: number | null;
+};
+
 type ReferenceOutcome =
   | { kind: 'ok'; firstStageId: string }
   | Exclude<DealWriteOutcome, { kind: 'ok'; row: DealRow } | { kind: 'not_found' }>;
@@ -151,8 +162,38 @@ export class DealsRepository {
     organizationId: number,
     userId: number,
     values: DealValues,
-  ): Promise<DealWriteOutcome> {
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<DealCreationOutcome> {
     return this.transaction(async (client) => {
+      await client.query(
+        'SELECT id FROM organizations WHERE id = $1 FOR UPDATE',
+        [organizationId],
+      );
+      const receipt = await client.query<DealCreationReceiptRow>(
+        `SELECT request_fingerprint, result_deal_id
+         FROM deal_creation_receipts
+         WHERE organization_id = $1 AND idempotency_key = $2
+         FOR UPDATE`,
+        [organizationId, idempotencyKey],
+      );
+      const replay = receipt.rows[0];
+      if (replay) {
+        if (replay.request_fingerprint !== requestFingerprint) {
+          return { kind: 'idempotency-conflict' };
+        }
+        if (replay.result_deal_id === null) {
+          return { kind: 'result-unavailable' };
+        }
+        const row = await this.findByIdWithClient(
+          client,
+          organizationId,
+          replay.result_deal_id,
+        );
+        return row
+          ? { kind: 'ok', row, replayed: true }
+          : { kind: 'result-unavailable' };
+      }
       const references = await this.validateReferences(client, organizationId, values);
       if (references.kind !== 'ok') return references;
       const inserted = await client.query<{ id: number }>(
@@ -180,10 +221,16 @@ export class DealsRepository {
           values.tags,
         ],
       );
-      return {
-        kind: 'ok',
-        row: await this.requireSelected(client, organizationId, Number(inserted.rows[0].id)),
-      };
+      const dealId = Number(inserted.rows[0].id);
+      const row = await this.requireSelected(client, organizationId, dealId);
+      await client.query(
+        `INSERT INTO deal_creation_receipts (
+           organization_id, requested_by_user_id, idempotency_key,
+           request_fingerprint, result_deal_id
+         ) VALUES ($1, $2, $3, $4, $5)`,
+        [organizationId, userId, idempotencyKey, requestFingerprint, dealId],
+      );
+      return { kind: 'ok', row, replayed: false };
     });
   }
 
@@ -493,6 +540,20 @@ export class DealsRepository {
     );
     if (!result.rows[0]) throw new Error('Deal disappeared inside its transaction');
     return result.rows[0];
+  }
+
+  private async findByIdWithClient(
+    client: PoolClient,
+    organizationId: number,
+    dealId: number,
+  ): Promise<DealRow | null> {
+    const result = await client.query<DealRow>(
+      `SELECT ${dealSelection}
+       ${this.joins()}
+       WHERE d.organization_id = $1 AND d.id = $2`,
+      [organizationId, dealId],
+    );
+    return result.rows[0] ?? null;
   }
 
   private async transaction<T>(operation: (client: PoolClient) => Promise<T>): Promise<T> {

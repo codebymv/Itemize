@@ -317,10 +317,10 @@ describe('Contacts GraphQL PostgreSQL contract', () => {
     const target = await graphql(
       memberToken,
       organizationId,
-      `mutation CreateContact($input: CreateContactInput!) {
-        createContact(input: $input) { id }
+      `mutation CreateContact($input: CreateContactInput!, $idempotencyKey: String!) {
+        createContact(input: $input, idempotencyKey: $idempotencyKey) { id }
       }`,
-      { input: { email } },
+      { input: { email }, idempotencyKey: `contact-csrf-${Date.now()}` },
     ).expect(200);
 
     expect(target.body.errors[0].extensions).toMatchObject({
@@ -343,16 +343,18 @@ describe('Contacts GraphQL PostgreSQL contract', () => {
       'UPDATE organizations SET contacts_limit = $1 WHERE id = $2',
       [count.rows[0].total + 1, organizationId],
     );
-    const mutation = `mutation CreateContact($input: CreateContactInput!) {
-      createContact(input: $input) { id email }
+    const mutation = `mutation CreateContact($input: CreateContactInput!, $idempotencyKey: String!) {
+      createContact(input: $input, idempotencyKey: $idempotencyKey) { id email }
     }`;
     const suffix = `${Date.now()}-${process.pid}`;
     const responses = await Promise.all([
       graphqlMutation(memberToken, organizationId, mutation, {
         input: { email: `limit-first-${suffix}@test.itemize` },
+        idempotencyKey: `contact-limit-first-${suffix}`,
       }),
       graphqlMutation(memberToken, organizationId, mutation, {
         input: { email: `limit-second-${suffix}@test.itemize` },
+        idempotencyKey: `contact-limit-second-${suffix}`,
       }),
     ]);
     const createdIds = responses
@@ -380,8 +382,8 @@ describe('Contacts GraphQL PostgreSQL contract', () => {
     const target = await graphqlMutation(
       memberToken,
       organizationId,
-      `mutation CreateContact($input: CreateContactInput!) {
-        createContact(input: $input) {
+      `mutation CreateContact($input: CreateContactInput!, $idempotencyKey: String!) {
+        createContact(input: $input, idempotencyKey: $idempotencyKey) {
           id organizationId firstName email source status tags assignedToId createdById
         }
       }`,
@@ -393,6 +395,7 @@ describe('Contacts GraphQL PostgreSQL contract', () => {
           tags: ['graphql', 'graphql'],
           assignedToId: memberId,
         },
+        idempotencyKey: `contact-atomic-${Date.now()}-${process.pid}`,
       },
     ).expect(200);
 
@@ -421,17 +424,82 @@ describe('Contacts GraphQL PostgreSQL contract', () => {
     expect(evidence.rows[0]).toEqual({ triggers: 1, activities: 1 });
   });
 
+  it('durably replays contact creation and fails closed after conflicting reuse or deletion', async () => {
+    const suffix = `${Date.now()}-${process.pid}`;
+    const email = `contact-replay-${suffix}@test.itemize`;
+    const idempotencyKey = `contact-replay-${suffix}`;
+    const document = `mutation CreateContact(
+      $input: CreateContactInput!,
+      $idempotencyKey: String!
+    ) {
+      createContact(input: $input, idempotencyKey: $idempotencyKey) { id email }
+    }`;
+    const variables = {
+      input: { firstName: 'Replay', email },
+      idempotencyKey,
+    };
+
+    const first = await graphqlMutation(
+      memberToken, organizationId, document, variables,
+    ).expect(200);
+    const replay = await graphqlMutation(
+      memberToken, organizationId, document, variables,
+    ).expect(200);
+    expect(first.body.errors).toBeUndefined();
+    expect(replay.body.errors).toBeUndefined();
+    expect(replay.body.data.createContact.id).toBe(first.body.data.createContact.id);
+    const contactId = Number(first.body.data.createContact.id);
+
+    const evidence = await pool.query(
+      `SELECT
+         (SELECT COUNT(*)::int FROM contacts
+          WHERE organization_id = $1 AND email = $2) AS contacts,
+         (SELECT COUNT(*)::int FROM workflow_triggers
+          WHERE organization_id = $1 AND contact_id = $3
+            AND trigger_type = 'contact_added') AS triggers,
+         (SELECT COUNT(*)::int FROM contact_activities
+          WHERE contact_id = $3 AND title = 'Contact Created') AS activities`,
+      [organizationId, email, contactId],
+    );
+    expect(evidence.rows[0]).toEqual({ contacts: 1, triggers: 1, activities: 1 });
+
+    const conflict = await graphqlMutation(
+      memberToken,
+      organizationId,
+      document,
+      { ...variables, input: { ...variables.input, firstName: 'Changed' } },
+    ).expect(200);
+    expect(conflict.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_KEY_REUSED',
+    });
+
+    await pool.query(
+      'DELETE FROM contacts WHERE organization_id = $1 AND id = $2',
+      [organizationId, contactId],
+    );
+    const unavailable = await graphqlMutation(
+      memberToken, organizationId, document, variables,
+    ).expect(200);
+    expect(unavailable.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE',
+    });
+  });
+
   it('preserves duplicate contacts while canonicalizing GraphQL email writes', async () => {
     const email = `graphql-duplicate-${Date.now()}-${process.pid}@test.itemize`;
-    const mutation = `mutation CreateContact($input: CreateContactInput!) {
-      createContact(input: $input) { id email }
+    const mutation = `mutation CreateContact($input: CreateContactInput!, $idempotencyKey: String!) {
+      createContact(input: $input, idempotencyKey: $idempotencyKey) { id email }
     }`;
     const [first, duplicate] = await Promise.all([
       graphqlMutation(memberToken, organizationId, mutation, {
         input: { firstName: 'Duplicate First', email: `  ${email.toUpperCase()}  ` },
+        idempotencyKey: `contact-duplicate-first-${Date.now()}-${process.pid}`,
       }),
       graphqlMutation(memberToken, organizationId, mutation, {
         input: { firstName: 'Duplicate Second', email },
+        idempotencyKey: `contact-duplicate-second-${Date.now()}-${process.pid}`,
       }),
     ]);
 

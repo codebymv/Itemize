@@ -35,6 +35,12 @@ const {
   runContactImportReceiptMigration,
 } = require('./db_contact_import_receipt_migrations');
 const {
+  runContactCreationReceiptMigration,
+} = require('./db_contact_creation_receipt_migrations');
+const {
+  runDealCreationReceiptMigration,
+} = require('./db_deal_creation_receipt_migrations');
+const {
   runOrganizationInvitationsMigration,
   runOrganizationOwnerInvariantMigration,
 } = require('./db_organization_lifecycle_migrations');
@@ -609,6 +615,16 @@ const initializeDatabase = async (pool) => {
 
     // Module migrations (each module handles its own tables)
     await runMigrationOnce(pool, 'module_crm', runAllCRMMigrations);
+    await runMigrationOnce(
+      pool,
+      'contact_creation_receipts_v1',
+      runContactCreationReceiptMigration,
+    );
+    await runMigrationOnce(
+      pool,
+      'deal_creation_receipts_v1',
+      runDealCreationReceiptMigration,
+    );
     await runMigrationOnce(
       pool,
       'contact_import_receipts_v1',

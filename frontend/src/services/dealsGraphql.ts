@@ -25,8 +25,8 @@ const dealsQuery = `query Deals($filter: DealFilterInput, $sort: DealSortInput, 
   }
 }`;
 const dealQuery = `query Deal($id: Int!) { deal(id: $id) { ${fields} } }`;
-const createMutation = `mutation CreateDeal($input: CreateDealInput!) {
-  createDeal(input: $input) { ${fields} }
+const createMutation = `mutation CreateDeal($input: CreateDealInput!, $idempotencyKey: String!) {
+  createDeal(input: $input, idempotencyKey: $idempotencyKey) { ${fields} }
 }`;
 const updateMutation = `mutation UpdateDeal($id: Int!, $input: UpdateDealInput!) {
   updateDeal(id: $id, input: $input) { ${fields} }
@@ -143,10 +143,14 @@ export const getDealViaGraphql = async (
   return mapDeal(data.deal);
 };
 
-export const createDealViaGraphql = async (data: CreateDealData): Promise<Deal> => {
+export const createDealViaGraphql = async (
+  data: CreateDealData,
+  idempotencyKey: string,
+): Promise<Deal> => {
   const response = await graphqlMutationRequest<
-    { createDeal: GraphqlDeal }, { input: ReturnType<typeof mapInput> }
-  >(createMutation, { input: mapInput(data) }, data.organization_id);
+    { createDeal: GraphqlDeal },
+    { input: ReturnType<typeof mapInput>; idempotencyKey: string }
+  >(createMutation, { input: mapInput(data), idempotencyKey }, data.organization_id);
   return mapDeal(response.createDeal);
 };
 
