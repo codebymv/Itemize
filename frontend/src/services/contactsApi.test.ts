@@ -175,7 +175,9 @@ describe('contacts API GraphQL transport', () => {
       canCreate: true,
     });
     await expect(getOrganization(4)).resolves.toEqual(organization);
-    await expect(createOrganization({ name: 'Alpha' })).resolves.toEqual(organization);
+    await expect(createOrganization(
+      { name: 'Alpha' }, 'organization-create-0001',
+    )).resolves.toEqual(organization);
     await expect(updateOrganization(4, { name: 'Alpha' })).resolves.toEqual(organization);
     await deleteOrganization(4);
     await expect(ensureDefaultOrganization()).resolves.toEqual(organization);
@@ -183,8 +185,12 @@ describe('contacts API GraphQL transport', () => {
     await expect(getOrganizationMembers(4)).resolves.toEqual([member]);
     await expect(getOrganizationInvitations(4)).resolves.toEqual([invitation]);
     await expect(getOrganizationActivity(4, 10)).resolves.toEqual([]);
-    await expect(inviteMember(4, member.email, 'member')).resolves.toEqual(invitation);
-    await expect(resendOrganizationInvitation(4, 12)).resolves.toEqual(invitation);
+    await expect(inviteMember(
+      4, member.email, 'member', 'invitation-create-0001',
+    )).resolves.toEqual(invitation);
+    await expect(resendOrganizationInvitation(
+      4, 12, 'invitation-resend-0001',
+    )).resolves.toEqual(invitation);
     await revokeOrganizationInvitation(4, 12);
     await expect(updateMemberRole(4, 8, 'viewer')).resolves.toEqual(member);
     await expect(transferOrganizationOwnership(4, 8)).resolves.toMatchObject({
@@ -193,7 +199,9 @@ describe('contacts API GraphQL transport', () => {
     await removeMember(4, 8);
     await leaveOrganization(4);
 
-    expect(createOrganizationViaGraphql).toHaveBeenCalledWith({ name: 'Alpha' });
+    expect(createOrganizationViaGraphql).toHaveBeenCalledWith(
+      { name: 'Alpha' }, 'organization-create-0001',
+    );
     expect(updateOrganizationViaGraphql).toHaveBeenCalledWith(4, { name: 'Alpha' });
     expect(deleteOrganizationViaGraphql).toHaveBeenCalledWith(4);
     expect(selectOrganizationViaGraphql).toHaveBeenCalledWith(4);
@@ -203,8 +211,11 @@ describe('contacts API GraphQL transport', () => {
       4,
       member.email,
       'member',
+      'invitation-create-0001',
     );
-    expect(resendOrganizationInvitationViaGraphql).toHaveBeenCalledWith(4, 12);
+    expect(resendOrganizationInvitationViaGraphql).toHaveBeenCalledWith(
+      4, 12, 'invitation-resend-0001',
+    );
     expect(revokeOrganizationInvitationViaGraphql).toHaveBeenCalledWith(4, 12);
     expect(updateOrganizationMemberRoleViaGraphql).toHaveBeenCalledWith(
       4,

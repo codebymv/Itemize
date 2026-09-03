@@ -24,7 +24,11 @@ const escapeHtml = (value: string): string =>
 export class OrganizationInvitationEmailService {
   private readonly logger = new Logger(OrganizationInvitationEmailService.name);
 
-  async send(invitation: InvitationEmail, token: string): Promise<boolean> {
+  async send(
+    invitation: InvitationEmail,
+    token: string,
+    idempotencyKey: string,
+  ): Promise<boolean> {
     const url = `${this.appUrl()}/invite/${encodeURIComponent(token)}`;
     const organizationName = escapeHtml(invitation.organizationName);
     const inviter = invitation.invitedByName
@@ -46,6 +50,7 @@ export class OrganizationInvitationEmailService {
       `You're invited to ${invitation.organizationName} on Itemize`,
       `Join ${invitation.organizationName} as ${invitation.role} within 7 days: ${url}`,
       html,
+      idempotencyKey,
     );
   }
 
@@ -54,6 +59,7 @@ export class OrganizationInvitationEmailService {
     subject: string,
     text: string,
     html: string,
+    idempotencyKey: string,
   ): Promise<boolean> {
     const apiKey = process.env.RESEND_API_KEY?.trim();
     if (!apiKey) {
@@ -68,6 +74,7 @@ export class OrganizationInvitationEmailService {
         headers: {
           Authorization: `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKey,
         },
         body: JSON.stringify({
           from: process.env.EMAIL_FROM || 'Itemize <noreply@itemize.cloud>',

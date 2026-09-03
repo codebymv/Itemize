@@ -20,6 +20,10 @@ import {
   OrganizationRow,
   OrganizationsRepository,
 } from './organizations.repository';
+import {
+  organizationMutationFingerprint,
+  organizationMutationKey,
+} from './organization-mutation.idempotency';
 
 const MEMBER_ROLES: OrganizationAccessRole[] = ['admin', 'member', 'viewer'];
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -58,14 +62,18 @@ export class OrganizationsService {
   async create(
     userId: number,
     input: CreateOrganizationInput,
+    idempotencyKey: string,
   ): Promise<Organization> {
     const name = this.name(input.name);
     const settings = this.settingsInput(input.settings ?? {});
     try {
-      const outcome = await this.organizations.create(userId, {
-        name,
-        settings,
-      });
+      const values = { name, settings };
+      const outcome = await this.organizations.create(
+        userId,
+        values,
+        organizationMutationKey(idempotencyKey),
+        organizationMutationFingerprint('create_organization', values),
+      );
       if (outcome.kind === 'not_found') {
         throw itemizeGraphqlError('User not found', 'NOT_FOUND');
       }
@@ -79,6 +87,20 @@ export class OrganizationsService {
             limit: outcome.limit,
             plan: outcome.plan,
           },
+        );
+      }
+      if (outcome.kind === 'idempotency_conflict') {
+        throw itemizeGraphqlError(
+          'idempotencyKey was already used for a different organization creation request',
+          'CONFLICT',
+          { field: 'idempotencyKey', reason: 'IDEMPOTENCY_KEY_REUSED' },
+        );
+      }
+      if (outcome.kind === 'result_unavailable') {
+        throw itemizeGraphqlError(
+          'The organization created by this request is no longer available',
+          'CONFLICT',
+          { field: 'idempotencyKey', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE' },
         );
       }
       return this.map(outcome.row);

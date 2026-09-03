@@ -12,6 +12,10 @@ import {
   OrganizationInvitationAcceptance,
   OrganizationInvitationPreview,
 } from './organization.types';
+import {
+  organizationMutationFingerprint,
+  organizationMutationKey,
+} from './organization-mutation.idempotency';
 
 @Injectable()
 export class OrganizationInvitationsService {
@@ -34,25 +38,50 @@ export class OrganizationInvitationsService {
     organizationId: number,
     rawEmail: string,
     rawRole: string,
+    idempotencyKey: string,
   ): Promise<OrganizationInvitation> {
     this.id(organizationId, 'organizationId');
     const email = this.email(rawEmail);
     const role = this.role(rawRole);
-    const outcome = await this.invitations.create(userId, organizationId, email, role);
+    const key = organizationMutationKey(idempotencyKey);
+    const outcome = await this.invitations.create(
+      userId,
+      organizationId,
+      email,
+      role,
+      key,
+      organizationMutationFingerprint('create_invitation', { email, role }),
+    );
     if (outcome.kind !== 'ok') this.failure(outcome);
-    return this.deliver(outcome.invitation);
+    if (outcome.invitation.replayed) return this.map(outcome.invitation.row);
+    return this.deliver(
+      outcome.invitation,
+      `organization-invitation:${organizationId}:${key}`,
+    );
   }
 
   async resend(
     userId: number,
     organizationId: number,
     invitationId: number,
+    idempotencyKey: string,
   ): Promise<OrganizationInvitation> {
     this.id(organizationId, 'organizationId');
     this.id(invitationId, 'invitationId');
-    const outcome = await this.invitations.resend(userId, organizationId, invitationId);
+    const key = organizationMutationKey(idempotencyKey);
+    const outcome = await this.invitations.resend(
+      userId,
+      organizationId,
+      invitationId,
+      key,
+      organizationMutationFingerprint('resend_invitation', { invitationId }),
+    );
     if (outcome.kind !== 'ok') this.failure(outcome);
-    return this.deliver(outcome.invitation);
+    if (outcome.invitation.replayed) return this.map(outcome.invitation.row);
+    return this.deliver(
+      outcome.invitation,
+      `organization-invitation:${organizationId}:${key}`,
+    );
   }
 
   async revoke(userId: number, organizationId: number, invitationId: number): Promise<boolean> {
@@ -112,14 +141,17 @@ export class OrganizationInvitationsService {
     });
   }
 
-  private async deliver(prepared: PreparedOrganizationInvitation): Promise<OrganizationInvitation> {
+  private async deliver(
+    prepared: Extract<PreparedOrganizationInvitation, { replayed: false }>,
+    idempotencyKey: string,
+  ): Promise<OrganizationInvitation> {
     const sent = await this.emails.send({
       email: prepared.row.email,
       organizationName: prepared.row.organization_name,
       invitedByName: prepared.row.invited_by_name,
       role: prepared.row.role,
-    }, prepared.token);
-    await this.invitations.markDelivery(
+    }, prepared.token, idempotencyKey);
+    const deliveredAt = await this.invitations.markDelivery(
       Number(prepared.row.id),
       prepared.tokenHash,
       sent,
@@ -127,8 +159,8 @@ export class OrganizationInvitationsService {
     const mapped = this.map(prepared.row);
     return {
       ...mapped,
-      lastSentAt: sent ? mapped.lastSentAt : null,
-      deliverySent: sent,
+      lastSentAt: deliveredAt,
+      deliverySent: deliveredAt !== null,
     };
   }
 
@@ -168,6 +200,20 @@ export class OrganizationInvitationsService {
       throw itemizeGraphqlError('Please wait before resending this invitation', 'BAD_USER_INPUT', {
         reason: 'INVITATION_RESEND_COOLDOWN', retryAt: outcome.retryAt.toISOString(),
       });
+    }
+    if (outcome.kind === 'idempotency_conflict') {
+      throw itemizeGraphqlError(
+        'idempotencyKey was already used for a different invitation request',
+        'CONFLICT',
+        { field: 'idempotencyKey', reason: 'IDEMPOTENCY_KEY_REUSED' },
+      );
+    }
+    if (outcome.kind === 'result_unavailable') {
+      throw itemizeGraphqlError(
+        'The invitation created by this request is no longer available',
+        'CONFLICT',
+        { field: 'idempotencyKey', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE' },
+      );
     }
     throw itemizeGraphqlError('Organization invitation not found', 'NOT_FOUND');
   }

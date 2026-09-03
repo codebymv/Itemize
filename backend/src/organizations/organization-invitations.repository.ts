@@ -21,9 +21,10 @@ export type OrganizationInvitationRow = {
 
 export type PreparedOrganizationInvitation = {
   row: OrganizationInvitationRow;
-  token: string;
-  tokenHash: string;
-};
+} & (
+  | { replayed: false; token: string; tokenHash: string }
+  | { replayed: true; token: null; tokenHash: null }
+);
 
 type InvitationOutcome =
   | { kind: 'ok'; invitation: PreparedOrganizationInvitation }
@@ -32,7 +33,9 @@ type InvitationOutcome =
   | { kind: 'already_invited'; invitationId: number }
   | { kind: 'not_found' }
   | { kind: 'cooldown'; retryAt: Date }
-  | { kind: 'limit_reached'; current: number; limit: number; plan: string };
+  | { kind: 'limit_reached'; current: number; limit: number; plan: string }
+  | { kind: 'idempotency_conflict' }
+  | { kind: 'result_unavailable' };
 
 export type InvitationAcceptanceOutcome =
   | { kind: 'ok'; organizationId: number; organizationName: string; role: string }
@@ -88,6 +91,8 @@ export class OrganizationInvitationsRepository {
     organizationId: number,
     email: string,
     role: Exclude<OrganizationAccessRole, 'owner'>,
+    idempotencyKey: string,
+    requestFingerprint: string,
   ): Promise<InvitationOutcome> {
     return this.transaction(async (client) => {
       const actor = await this.lockActor(client, actorUserId, organizationId);
@@ -96,6 +101,30 @@ export class OrganizationInvitationsRepository {
       }
       const organization = await this.lockOrganization(client, organizationId);
       if (!organization) return { kind: 'forbidden' };
+      const receipt = await client.query<{
+        action: string;
+        request_fingerprint: string;
+        result_invitation_id: number | null;
+      }>(
+        `SELECT action,request_fingerprint,result_invitation_id
+         FROM organization_invitation_mutation_receipts
+         WHERE organization_id=$1 AND idempotency_key=$2
+         FOR UPDATE`,
+        [organizationId, idempotencyKey],
+      );
+      if (receipt.rows[0]) {
+        const replay = receipt.rows[0];
+        if (replay.action !== 'create' || replay.request_fingerprint !== requestFingerprint) {
+          return { kind: 'idempotency_conflict' };
+        }
+        if (replay.result_invitation_id === null) return { kind: 'result_unavailable' };
+        const row = await this.findByIdWith(
+          client, organizationId, replay.result_invitation_id,
+        );
+        return row
+          ? { kind: 'ok', invitation: { row, replayed: true, token: null, tokenHash: null } }
+          : { kind: 'result_unavailable' };
+      }
       const member = await client.query(
         `SELECT 1 FROM organization_members member
          JOIN users account ON account.id = member.user_id
@@ -120,9 +149,8 @@ export class OrganizationInvitationsRepository {
       const result = await client.query<OrganizationInvitationRow>(
         `WITH inserted AS (
            INSERT INTO organization_invitations (
-             organization_id, email, role, token_hash, invited_by, expires_at,
-             last_sent_at
-           ) VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL '7 days', NOW())
+             organization_id, email, role, token_hash, invited_by, expires_at
+           ) VALUES ($1, $2, $3, $4, $5, NOW() + INTERVAL '7 days')
            RETURNING *
          )
          SELECT ${invitationSelection.replaceAll('invitation.', 'inserted.')}
@@ -140,9 +168,19 @@ export class OrganizationInvitationsRepository {
         dedupeKey: `organization-invitation-created:${result.rows[0].id}`,
         payload: { targetEmail: result.rows[0].email, role: result.rows[0].role },
       });
+      await client.query(
+        `INSERT INTO organization_invitation_mutation_receipts (
+           organization_id,requested_by_user_id,idempotency_key,action,
+           request_fingerprint,result_invitation_id
+         ) VALUES ($1,$2,$3,'create',$4,$5)`,
+        [organizationId, actorUserId, idempotencyKey, requestFingerprint, result.rows[0].id],
+      );
       return {
         kind: 'ok',
-        invitation: { row: result.rows[0], token: prepared.raw, tokenHash: prepared.hash },
+        invitation: {
+          row: result.rows[0], replayed: false,
+          token: prepared.raw, tokenHash: prepared.hash,
+        },
       };
     });
   }
@@ -151,12 +189,38 @@ export class OrganizationInvitationsRepository {
     actorUserId: number,
     organizationId: number,
     invitationId: number,
+    idempotencyKey: string,
+    requestFingerprint: string,
   ): Promise<InvitationOutcome> {
     return this.transaction(async (client) => {
       const actor = await this.lockActor(client, actorUserId, organizationId);
       if (!actor) return { kind: 'forbidden' };
       const organization = await this.lockOrganization(client, organizationId);
       if (!organization) return { kind: 'forbidden' };
+      const receipt = await client.query<{
+        action: string;
+        request_fingerprint: string;
+        result_invitation_id: number | null;
+      }>(
+        `SELECT action,request_fingerprint,result_invitation_id
+         FROM organization_invitation_mutation_receipts
+         WHERE organization_id=$1 AND idempotency_key=$2
+         FOR UPDATE`,
+        [organizationId, idempotencyKey],
+      );
+      if (receipt.rows[0]) {
+        const replay = receipt.rows[0];
+        if (replay.action !== 'resend' || replay.request_fingerprint !== requestFingerprint) {
+          return { kind: 'idempotency_conflict' };
+        }
+        if (replay.result_invitation_id === null) return { kind: 'result_unavailable' };
+        const row = await this.findByIdWith(
+          client, organizationId, replay.result_invitation_id,
+        );
+        return row
+          ? { kind: 'ok', invitation: { row, replayed: true, token: null, tokenHash: null } }
+          : { kind: 'result_unavailable' };
+      }
       const current = await client.query<OrganizationInvitationRow>(
         `SELECT ${invitationSelection}
          FROM organization_invitations invitation
@@ -185,7 +249,7 @@ export class OrganizationInvitationsRepository {
            SET token_hash = $1,
                expires_at = NOW() + INTERVAL '7 days',
                invited_by = $2,
-               last_sent_at = NOW(),
+               last_sent_at = NULL,
                updated_at = NOW()
            WHERE id = $3 AND organization_id = $4 AND status = 'pending'
            RETURNING *
@@ -205,9 +269,19 @@ export class OrganizationInvitationsRepository {
         dedupeKey: `organization-invitation-resent:${prepared.hash}`,
         payload: { targetEmail: updated.rows[0].email, role: updated.rows[0].role },
       });
+      await client.query(
+        `INSERT INTO organization_invitation_mutation_receipts (
+           organization_id,requested_by_user_id,idempotency_key,action,
+           request_fingerprint,result_invitation_id
+         ) VALUES ($1,$2,$3,'resend',$4,$5)`,
+        [organizationId, actorUserId, idempotencyKey, requestFingerprint, invitationId],
+      );
       return {
         kind: 'ok',
-        invitation: { row: updated.rows[0], token: prepared.raw, tokenHash: prepared.hash },
+        invitation: {
+          row: updated.rows[0], replayed: false,
+          token: prepared.raw, tokenHash: prepared.hash,
+        },
       };
     });
   }
@@ -216,14 +290,16 @@ export class OrganizationInvitationsRepository {
     invitationId: number,
     tokenHash: string,
     sent: boolean,
-  ): Promise<void> {
-    await this.pool.query(
+  ): Promise<Date | null> {
+    const result = await this.pool.query<{ last_sent_at: Date | null }>(
       `UPDATE organization_invitations
-       SET last_sent_at = CASE WHEN $3 THEN last_sent_at ELSE NULL END,
+       SET last_sent_at = CASE WHEN $3 THEN NOW() ELSE NULL END,
            updated_at = NOW()
-       WHERE id = $1 AND token_hash = $2 AND status = 'pending'`,
+       WHERE id = $1 AND token_hash = $2 AND status = 'pending'
+       RETURNING last_sent_at`,
       [invitationId, tokenHash, sent],
     );
+    return result.rows[0]?.last_sent_at ?? null;
   }
 
   async revoke(actorUserId: number, organizationId: number, invitationId: number) {
@@ -349,6 +425,22 @@ export class OrganizationInvitationsRepository {
         role: row.role,
       };
     });
+  }
+
+  private async findByIdWith(
+    client: PoolClient,
+    organizationId: number,
+    invitationId: number,
+  ): Promise<OrganizationInvitationRow | null> {
+    const result = await client.query<OrganizationInvitationRow>(
+      `SELECT ${invitationSelection}
+       FROM organization_invitations invitation
+       JOIN organizations organization ON organization.id = invitation.organization_id
+       LEFT JOIN users inviter ON inviter.id = invitation.invited_by
+       WHERE invitation.id=$1 AND invitation.organization_id=$2`,
+      [invitationId, organizationId],
+    );
+    return result.rows[0] ?? null;
   }
 
   private async lockActor(client: PoolClient, userId: number, organizationId: number) {

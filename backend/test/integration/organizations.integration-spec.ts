@@ -342,10 +342,10 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
 
     const freeBlocked = await mutation(
       memberToken,
-      `mutation Create($input: CreateOrganizationInput!) {
-        createOrganization(input: $input) { id }
+      `mutation Create($input: CreateOrganizationInput!, $key: String!) {
+        createOrganization(input: $input, idempotencyKey: $key) { id }
       }`,
-      { input: { name: 'Free overflow' } },
+      { input: { name: 'Free overflow' }, key: 'org-free-overflow' },
     ).expect(200);
     expect(freeBlocked.body.errors[0].extensions).toMatchObject({
       code: 'FORBIDDEN',
@@ -372,10 +372,10 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
     for (const name of ['Solo second', 'Solo third']) {
       const created = await mutation(
         memberToken,
-        `mutation Create($input: CreateOrganizationInput!) {
-          createOrganization(input: $input) { id name }
+        `mutation Create($input: CreateOrganizationInput!, $key: String!) {
+          createOrganization(input: $input, idempotencyKey: $key) { id name }
         }`,
-        { input: { name } },
+        { input: { name }, key: `org-${name.toLowerCase().replace(' ', '-')}` },
       ).expect(200);
       expect(created.body.errors).toBeUndefined();
       createdIds.push(Number(created.body.data.createOrganization.id));
@@ -411,10 +411,10 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
 
     const soloBlocked = await mutation(
       memberToken,
-      `mutation Create($input: CreateOrganizationInput!) {
-        createOrganization(input: $input) { id }
+      `mutation Create($input: CreateOrganizationInput!, $key: String!) {
+        createOrganization(input: $input, idempotencyKey: $key) { id }
       }`,
-      { input: { name: 'Solo fourth' } },
+      { input: { name: 'Solo fourth' }, key: 'org-solo-fourth' },
     ).expect(200);
     expect(soloBlocked.body.errors[0].extensions).toMatchObject({
       reason: 'ORGANIZATION_LIMIT_REACHED',
@@ -485,13 +485,74 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
     );
   });
 
+  it('makes organization creation retries durable and conflict-safe', async () => {
+    const document = `mutation Create($input: CreateOrganizationInput!, $key: String!) {
+      createOrganization(input: $input, idempotencyKey: $key) { id name }
+    }`;
+    const variables = {
+      input: { name: 'Retry-safe organization', settings: { source: 'integration' } },
+      key: 'org-retry-safe-integration',
+    };
+    const [first, concurrentReplay] = await Promise.all([
+      mutation(memberToken, document, variables).expect(200),
+      mutation(memberToken, document, variables).expect(200),
+    ]);
+    expect(first.body.errors).toBeUndefined();
+    expect(concurrentReplay.body.errors).toBeUndefined();
+    const organizationId = Number(first.body.data.createOrganization.id);
+    expect(Number(concurrentReplay.body.data.createOrganization.id)).toBe(organizationId);
+
+    const replay = await mutation(memberToken, document, variables).expect(200);
+    expect(Number(replay.body.data.createOrganization.id)).toBe(organizationId);
+    const persisted = await pool.query<{
+      organization_count: string;
+      membership_count: string;
+      activity_count: string;
+      receipt_count: string;
+    }>(
+      `SELECT
+         (SELECT COUNT(*) FROM organizations WHERE id = $1) AS organization_count,
+         (SELECT COUNT(*) FROM organization_members WHERE organization_id = $1) AS membership_count,
+         (SELECT COUNT(*) FROM notification_events
+          WHERE organization_id = $1 AND event_type = 'organization.created') AS activity_count,
+         (SELECT COUNT(*) FROM organization_creation_receipts
+          WHERE requested_by_user_id = $2 AND idempotency_key = $3) AS receipt_count`,
+      [organizationId, memberId, variables.key],
+    );
+    expect(persisted.rows[0]).toEqual({
+      organization_count: '1',
+      membership_count: '1',
+      activity_count: '1',
+      receipt_count: '1',
+    });
+
+    const changed = await mutation(memberToken, document, {
+      ...variables,
+      input: { name: 'Different organization' },
+    }).expect(200);
+    expect(changed.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_KEY_REUSED',
+    });
+
+    await pool.query('DELETE FROM organizations WHERE id = $1', [organizationId]);
+    const unavailable = await mutation(memberToken, document, variables).expect(200);
+    expect(unavailable.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE',
+    });
+  });
+
   it('owns organization CRUD, member administration, leave, and evidence-safe deletion', async () => {
     const created = await mutation(
       memberToken,
-      `mutation Create($input: CreateOrganizationInput!) {
-        createOrganization(input: $input) { ${fields} }
+      `mutation Create($input: CreateOrganizationInput!, $key: String!) {
+        createOrganization(input: $input, idempotencyKey: $key) { ${fields} }
       }`,
-      { input: { name: 'GraphQL Workspace', settings: { tier: 'test' } } },
+      {
+        input: { name: 'GraphQL Workspace', settings: { tier: 'test' } },
+        key: 'org-graphql-workspace',
+      },
     ).expect(200);
     expect(created.body.errors).toBeUndefined();
     const organizationId = Number(created.body.data.createOrganization.id);
@@ -846,6 +907,92 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
     );
   });
 
+  it('makes invitation creation retries durable across concurrency and deletion', async () => {
+    await pool.query(
+      `UPDATE organizations
+       SET plan = 'starter', subscription_status = 'active', users_limit = 3
+       WHERE id = $1`,
+      [alphaId],
+    );
+    const document = `mutation Invite(
+      $organizationId: Int!
+      $input: CreateOrganizationInvitationInput!
+      $key: String!
+    ) {
+      createOrganizationInvitation(
+        organizationId: $organizationId
+        input: $input
+        idempotencyKey: $key
+      ) { id email role status deliverySent }
+    }`;
+    const variables = {
+      organizationId: alphaId,
+      input: { email: `retry-invite-${memberId}@test.itemize`, role: 'member' },
+      key: 'invite-retry-safe-integration',
+    };
+    const [first, concurrentReplay] = await Promise.all([
+      mutation(memberToken, document, variables).expect(200),
+      mutation(memberToken, document, variables).expect(200),
+    ]);
+    expect(first.body.errors).toBeUndefined();
+    expect(concurrentReplay.body.errors).toBeUndefined();
+    const invitationId = Number(first.body.data.createOrganizationInvitation.id);
+    expect(Number(concurrentReplay.body.data.createOrganizationInvitation.id)).toBe(invitationId);
+
+    const replay = await mutation(memberToken, document, variables).expect(200);
+    expect(Number(replay.body.data.createOrganizationInvitation.id)).toBe(invitationId);
+    const persisted = await pool.query<{
+      invitation_count: string;
+      activity_count: string;
+      receipt_count: string;
+    }>(
+      `SELECT
+         (SELECT COUNT(*) FROM organization_invitations WHERE id = $1) AS invitation_count,
+         (SELECT COUNT(*) FROM notification_events
+          WHERE organization_id = $2 AND event_type = 'organization.invitation_created'
+            AND entity_id = $1) AS activity_count,
+         (SELECT COUNT(*) FROM organization_invitation_mutation_receipts
+          WHERE organization_id = $2 AND idempotency_key = $3) AS receipt_count`,
+      [invitationId, alphaId, variables.key],
+    );
+    expect(persisted.rows[0]).toEqual({
+      invitation_count: '1',
+      activity_count: '1',
+      receipt_count: '1',
+    });
+
+    const changed = await mutation(memberToken, document, {
+      ...variables,
+      input: { ...variables.input, role: 'viewer' },
+    }).expect(200);
+    expect(changed.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_KEY_REUSED',
+    });
+    const crossAction = await mutation(
+      memberToken,
+      `mutation Resend($organizationId: Int!, $invitationId: Int!, $key: String!) {
+        resendOrganizationInvitation(
+          organizationId: $organizationId
+          invitationId: $invitationId
+          idempotencyKey: $key
+        ) { id }
+      }`,
+      { organizationId: alphaId, invitationId, key: variables.key },
+    ).expect(200);
+    expect(crossAction.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_KEY_REUSED',
+    });
+
+    await pool.query('DELETE FROM organization_invitations WHERE id = $1', [invitationId]);
+    const unavailable = await mutation(memberToken, document, variables).expect(200);
+    expect(unavailable.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE',
+    });
+  });
+
   it('reserves seats and accepts, resends, and revokes secure email invitations', async () => {
     await pool.query(
       `UPDATE organizations
@@ -859,12 +1006,16 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
     `;
     const created = await mutation(
       memberToken,
-      `mutation Invite($organizationId: Int!, $input: CreateOrganizationInvitationInput!) {
-        createOrganizationInvitation(organizationId: $organizationId, input: $input) {
+      `mutation Invite($organizationId: Int!, $input: CreateOrganizationInvitationInput!, $key: String!) {
+        createOrganizationInvitation(organizationId: $organizationId, input: $input, idempotencyKey: $key) {
           ${invitationFields}
         }
       }`,
-      { organizationId: alphaId, input: { email: invitedEmail, role: 'member' } },
+      {
+        organizationId: alphaId,
+        input: { email: invitedEmail, role: 'member' },
+        key: 'invite-acceptance',
+      },
     ).expect(200);
     expect(created.body.errors).toBeUndefined();
     expect(created.body.data.createOrganizationInvitation).toMatchObject({
@@ -879,10 +1030,14 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
 
     const duplicate = await mutation(
       memberToken,
-      `mutation Invite($organizationId: Int!, $input: CreateOrganizationInvitationInput!) {
-        createOrganizationInvitation(organizationId: $organizationId, input: $input) { id }
+      `mutation Invite($organizationId: Int!, $input: CreateOrganizationInvitationInput!, $key: String!) {
+        createOrganizationInvitation(organizationId: $organizationId, input: $input, idempotencyKey: $key) { id }
       }`,
-      { organizationId: alphaId, input: { email: invitedEmail, role: 'viewer' } },
+      {
+        organizationId: alphaId,
+        input: { email: invitedEmail, role: 'viewer' },
+        key: 'invite-duplicate',
+      },
     ).expect(200);
     expect(duplicate.body.errors[0].extensions).toMatchObject({
       code: 'BAD_USER_INPUT',
@@ -891,10 +1046,14 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
 
     const reservedLimit = await mutation(
       memberToken,
-      `mutation Invite($organizationId: Int!, $input: CreateOrganizationInvitationInput!) {
-        createOrganizationInvitation(organizationId: $organizationId, input: $input) { id }
+      `mutation Invite($organizationId: Int!, $input: CreateOrganizationInvitationInput!, $key: String!) {
+        createOrganizationInvitation(organizationId: $organizationId, input: $input, idempotencyKey: $key) { id }
       }`,
-      { organizationId: alphaId, input: { email: 'another-invitee@test.itemize', role: 'member' } },
+      {
+        organizationId: alphaId,
+        input: { email: 'another-invitee@test.itemize', role: 'member' },
+        key: 'invite-over-limit',
+      },
     ).expect(200);
     expect(reservedLimit.body.errors[0].extensions).toMatchObject({
       code: 'FORBIDDEN',
@@ -909,13 +1068,14 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
     );
     const resent = await mutation(
       memberToken,
-      `mutation Resend($organizationId: Int!, $invitationId: Int!) {
+      `mutation Resend($organizationId: Int!, $invitationId: Int!, $key: String!) {
         resendOrganizationInvitation(
           organizationId: $organizationId
           invitationId: $invitationId
+          idempotencyKey: $key
         ) { id status deliverySent }
       }`,
-      { organizationId: alphaId, invitationId },
+      { organizationId: alphaId, invitationId, key: 'invite-resend-acceptance' },
     ).expect(200);
     expect(resent.body.errors).toBeUndefined();
     expect(resent.body.data.resendOrganizationInvitation).toMatchObject({
@@ -928,6 +1088,33 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
       [invitationId],
     );
     expect(afterResend.rows[0].token_hash).not.toBe(beforeResend.rows[0].token_hash);
+    const replayedResend = await mutation(
+      memberToken,
+      `mutation Resend($organizationId: Int!, $invitationId: Int!, $key: String!) {
+        resendOrganizationInvitation(
+          organizationId: $organizationId
+          invitationId: $invitationId
+          idempotencyKey: $key
+        ) { id status deliverySent }
+      }`,
+      { organizationId: alphaId, invitationId, key: 'invite-resend-acceptance' },
+    ).expect(200);
+    expect(replayedResend.body.errors).toBeUndefined();
+    expect(replayedResend.body.data.resendOrganizationInvitation.id).toBe(invitationId);
+    const afterReplay = await pool.query<{ token_hash: string; activity_count: string }>(
+      `SELECT invitation.token_hash,
+              (SELECT COUNT(*) FROM notification_events
+               WHERE organization_id = $2
+                 AND event_type = 'organization.invitation_resent'
+                 AND entity_id = $1) AS activity_count
+       FROM organization_invitations invitation
+       WHERE invitation.id = $1`,
+      [invitationId, alphaId],
+    );
+    expect(afterReplay.rows[0]).toEqual({
+      token_hash: afterResend.rows[0].token_hash,
+      activity_count: '1',
+    });
 
     const acceptanceToken = 'a'.repeat(64);
     await pool.query(
@@ -1003,10 +1190,14 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
     await pool.query('UPDATE organizations SET users_limit = 3 WHERE id = $1', [alphaId]);
     const revocable = await mutation(
       memberToken,
-      `mutation Invite($organizationId: Int!, $input: CreateOrganizationInvitationInput!) {
-        createOrganizationInvitation(organizationId: $organizationId, input: $input) { id }
+      `mutation Invite($organizationId: Int!, $input: CreateOrganizationInvitationInput!, $key: String!) {
+        createOrganizationInvitation(organizationId: $organizationId, input: $input, idempotencyKey: $key) { id }
       }`,
-      { organizationId: alphaId, input: { email: 'revoked@test.itemize', role: 'viewer' } },
+      {
+        organizationId: alphaId,
+        input: { email: 'revoked@test.itemize', role: 'viewer' },
+        key: 'invite-revocable',
+      },
     ).expect(200);
     const revocableId = Number(revocable.body.data.createOrganizationInvitation.id);
     const revoked = await mutation(

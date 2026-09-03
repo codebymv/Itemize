@@ -61,7 +61,14 @@ import { useAuthState } from '@/contexts/AuthContext';
 import { useOrganizationContext } from '@/contexts/organization-context';
 import { useSubscriptionFeatures, useSubscriptionState } from '@/contexts/SubscriptionContext';
 import { useToast } from '@/hooks/use-toast';
-import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
+import {
+  useKeyedSingleFlightAction,
+  useSingleFlightAction,
+} from '@/hooks/useSingleFlightAction';
+import {
+  useKeyedStableMutationKey,
+  useStableMutationKey,
+} from '@/hooks/useStableMutationKey';
 import {
   createOrganization,
   deleteOrganization,
@@ -197,7 +204,12 @@ export function OrganizationSettings({
   const { pending: saving, run: runSave } = useSingleFlightAction();
   const [memberSaving, setMemberSaving] = useState(false);
   const [memberActionId, setMemberActionId] = useState<number | null>(null);
-  const [invitationActionId, setInvitationActionId] = useState<number | null>(null);
+  const {
+    isPending: invitationActionPending,
+    run: runInvitationAction,
+  } = useKeyedSingleFlightAction<number>();
+  const resendInvitationAttempt = useKeyedStableMutationKey<number>('organization-invitation-resend');
+  const inviteMemberAttempt = useStableMutationKey('organization-invitation-create');
   const [email, setEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<'admin' | 'member' | 'viewer'>('member');
   const [lifecycleAction, setLifecycleAction] = useState<'leave' | 'delete' | null>(null);
@@ -207,6 +219,7 @@ export function OrganizationSettings({
   const [createOrganizationOpen, setCreateOrganizationOpen] = useState(false);
   const [organizationName, setOrganizationName] = useState('');
   const [creatingOrganization, setCreatingOrganization] = useState(false);
+  const createOrganizationAttempt = useStableMutationKey('organization-create');
 
   const currentRole = organization?.role ?? 'viewer';
   const canManage = currentRole === 'owner' || currentRole === 'admin';
@@ -371,16 +384,20 @@ export function OrganizationSettings({
   const handleCreateOrganization = async () => {
     const trimmedName = organizationName.trim();
     if (!trimmedName || !allowance?.canCreate) return;
+    const idempotencyKey = createOrganizationAttempt.begin(
+      JSON.stringify({ name: trimmedName }),
+    );
+    if (!idempotencyKey) return;
     setCreatingOrganization(true);
+    let created: Awaited<ReturnType<typeof createOrganization>> | null = null;
     try {
-      const created = await createOrganization({ name: trimmedName });
-      await refresh();
-      await selectOrganization(created.id);
-      await loadAllowance();
+      created = await createOrganization({ name: trimmedName }, idempotencyKey);
+      createOrganizationAttempt.reset();
       setOrganizationName('');
       setCreateOrganizationOpen(false);
       toast({ title: `${created.name} created`, description: 'Your new organization starts on Free.' });
     } catch (error) {
+      createOrganizationAttempt.release();
       toast({
         title: 'Could not create organization',
         description: error instanceof Error ? error.message : 'Please try again.',
@@ -389,22 +406,46 @@ export function OrganizationSettings({
     } finally {
       setCreatingOrganization(false);
     }
+    if (!created) return;
+    try {
+      await refresh();
+      await selectOrganization(created.id);
+      await loadAllowance();
+    } catch {
+      toast({
+        title: `${created.name} was created`,
+        description: 'Refresh to switch to the new organization.',
+      });
+    }
   };
 
   const handleAddMember = async () => {
     if (!organizationId || !email.trim() || !canManage) return;
+    const normalizedEmail = email.trim().toLowerCase();
+    const idempotencyKey = inviteMemberAttempt.begin(
+      JSON.stringify({ organizationId, email: normalizedEmail, role: inviteRole }),
+    );
+    if (!idempotencyKey) return;
     setMemberSaving(true);
     try {
-      const invitation = await inviteMember(organizationId, email.trim(), inviteRole);
+      const invitation = await inviteMember(
+        organizationId, normalizedEmail, inviteRole, idempotencyKey,
+      );
+      inviteMemberAttempt.reset();
       setEmail('');
-      await loadDetails();
+      setInvitations((current) => [
+        invitation,
+        ...current.filter((entry) => entry.id !== invitation.id),
+      ]);
       toast({
         title: invitation.delivery_sent ? 'Invitation sent' : 'Invitation created',
         description: invitation.delivery_sent
           ? `A secure link was sent to ${invitation.email}.`
           : 'Email unavailable. Resend when delivery returns.',
       });
+      void loadDetails();
     } catch (error) {
+      inviteMemberAttempt.release();
       toast({
         title: 'Could not send invitation',
         description: error instanceof Error ? error.message : 'Please try again.',
@@ -420,30 +461,45 @@ export function OrganizationSettings({
     action: 'resend' | 'revoke',
   ) => {
     if (!organizationId) return;
-    setInvitationActionId(invitation.id);
-    try {
+    await runInvitationAction(invitation.id, async () => {
+      let resendKey: string | null = null;
       if (action === 'resend') {
-        const resent = await resendOrganizationInvitation(organizationId, invitation.id);
-        toast({
-          title: resent.delivery_sent ? 'Invitation resent' : 'Invitation renewed',
-          description: resent.delivery_sent
-            ? `A new secure link was sent to ${invitation.email}.`
-            : 'Link renewed, but email delivery is unavailable.',
-        });
-      } else {
-        await revokeOrganizationInvitation(organizationId, invitation.id);
-        toast({ title: 'Invitation revoked' });
+        resendKey = resendInvitationAttempt.begin(
+          invitation.id,
+          JSON.stringify({ organizationId, invitationId: invitation.id }),
+        );
+        if (!resendKey) return;
       }
-      await loadDetails();
-    } catch (error) {
-      toast({
-        title: action === 'resend' ? 'Could not resend invitation' : 'Could not revoke invitation',
-        description: error instanceof Error ? error.message : 'Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setInvitationActionId(null);
-    }
+      try {
+        if (action === 'resend') {
+          const resent = await resendOrganizationInvitation(
+            organizationId, invitation.id, resendKey as string,
+          );
+          resendInvitationAttempt.reset(invitation.id);
+          setInvitations((current) => current.map((entry) =>
+            entry.id === resent.id ? resent : entry,
+          ));
+          toast({
+            title: resent.delivery_sent ? 'Invitation resent' : 'Invitation renewed',
+            description: resent.delivery_sent
+              ? `A new secure link was sent to ${invitation.email}.`
+              : 'Link renewed, but email delivery is unavailable.',
+          });
+        } else {
+          await revokeOrganizationInvitation(organizationId, invitation.id);
+          setInvitations((current) => current.filter((entry) => entry.id !== invitation.id));
+          toast({ title: 'Invitation revoked' });
+        }
+        void loadDetails();
+      } catch (error) {
+        if (action === 'resend') resendInvitationAttempt.release(invitation.id);
+        toast({
+          title: action === 'resend' ? 'Could not resend invitation' : 'Could not revoke invitation',
+          description: error instanceof Error ? error.message : 'Please try again.',
+          variant: 'destructive',
+        });
+      }
+    });
   };
 
   const handleRoleChange = async (member: OrganizationMember, role: string) => {
@@ -552,7 +608,14 @@ export function OrganizationSettings({
               </SettingsInfoTooltip>
             </div>
             {allowance?.canCreate ? (
-              <Dialog open={createOrganizationOpen} onOpenChange={setCreateOrganizationOpen}>
+              <Dialog
+                open={createOrganizationOpen}
+                onOpenChange={(open) => {
+                  if (!open && creatingOrganization) return;
+                  if (!open) createOrganizationAttempt.reset();
+                  setCreateOrganizationOpen(open);
+                }}
+              >
                 <DialogTrigger asChild>
                   <Button type="button" className="w-fit" disabled={allowanceLoading}>
                     <Plus className="mr-2 h-4 w-4" />
@@ -781,10 +844,10 @@ export function OrganizationSettings({
                         variant="ghost"
                         size="icon"
                         aria-label={`Resend invitation to ${invitation.email}`}
-                        disabled={invitationActionId === invitation.id}
+                        disabled={invitationActionPending(invitation.id)}
                         onClick={() => void handleInvitationAction(invitation, 'resend')}
                       >
-                        {invitationActionId === invitation.id
+                        {invitationActionPending(invitation.id)
                           ? <Loader2 className="h-4 w-4 animate-spin" />
                           : <RefreshCw className="h-4 w-4" />}
                       </Button>
@@ -793,7 +856,7 @@ export function OrganizationSettings({
                         variant="ghost"
                         size="icon"
                         aria-label={`Revoke invitation to ${invitation.email}`}
-                        disabled={invitationActionId === invitation.id}
+                        disabled={invitationActionPending(invitation.id)}
                         onClick={() => void handleInvitationAction(invitation, 'revoke')}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />

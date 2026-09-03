@@ -104,12 +104,24 @@ describe('OrganizationSettings', () => {
     mocks.refreshSubscription.mockResolvedValue(undefined);
     mocks.invite.mockResolvedValue({
       id: 31,
+      organization_id: 7,
+      organization_name: 'Ada Studio',
       email: 'invitee@example.com',
+      role: 'member',
+      status: 'pending',
+      invited_at: '2026-08-27T12:00:00.000Z',
+      expires_at: '2026-09-03T12:00:00.000Z',
       delivery_sent: true,
     });
     mocks.resendInvitation.mockResolvedValue({
       id: 31,
+      organization_id: 7,
+      organization_name: 'Ada Studio',
       email: 'invitee@example.com',
+      role: 'member',
+      status: 'pending',
+      invited_at: '2026-08-27T12:00:00.000Z',
+      expires_at: '2026-09-03T12:00:00.000Z',
       delivery_sent: true,
     });
     mocks.revokeInvitation.mockResolvedValue(undefined);
@@ -201,7 +213,10 @@ describe('OrganizationSettings', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create organization' }));
 
     await waitFor(() => {
-      expect(mocks.createOrganization).toHaveBeenCalledWith({ name: 'Second Studio' });
+      expect(mocks.createOrganization).toHaveBeenCalledWith(
+        { name: 'Second Studio' },
+        expect.any(String),
+      );
       expect(mocks.selectOrganization).toHaveBeenCalledWith(8);
     });
     expect(mocks.refresh).toHaveBeenCalled();
@@ -379,7 +394,11 @@ describe('OrganizationSettings', () => {
     expect(screen.getByRole('button', { name: 'Plan limit reached' })).toBeDisabled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Resend invitation to invitee@example.com' }));
-    await waitFor(() => expect(mocks.resendInvitation).toHaveBeenCalledWith(7, 31));
+    await waitFor(() => expect(mocks.resendInvitation).toHaveBeenCalledWith(
+      7,
+      31,
+      expect.any(String),
+    ));
     fireEvent.click(screen.getByRole('button', { name: 'Revoke invitation to invitee@example.com' }));
     await waitFor(() => expect(mocks.revokeInvitation).toHaveBeenCalledWith(7, 31));
   });

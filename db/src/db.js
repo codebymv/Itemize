@@ -45,6 +45,9 @@ const {
   runOrganizationOwnerInvariantMigration,
 } = require('./db_organization_lifecycle_migrations');
 const {
+  runOrganizationMutationReceiptMigration,
+} = require('./db_organization_mutation_receipt_migrations');
+const {
   runOrganizationAllowanceMigration,
 } = require('./db_organization_allowance_migrations');
 
@@ -653,6 +656,11 @@ const initializeDatabase = async (pool) => {
       pool,
       'organization_invitations_v1',
       runOrganizationInvitationsMigration,
+    );
+    await runMigrationOnce(
+      pool,
+      'organization_mutation_receipts_v1',
+      runOrganizationMutationReceiptMigration,
     );
     await runMigrationOnce(pool, 'feature_get_started', runGetStartedMigration);
     await runMigrationOnce(pool, 'activation_events_v1', runActivationEventsMigration);

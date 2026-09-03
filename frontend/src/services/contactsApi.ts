@@ -64,8 +64,11 @@ export const getOrganization = async (id: number): Promise<Organization> => {
   return getOrganizationViaGraphql(id);
 };
 
-export const createOrganization = async (data: { name: string; settings?: JsonRecord }): Promise<Organization> => {
-  return createOrganizationViaGraphql(data);
+export const createOrganization = async (
+  data: { name: string; settings?: JsonRecord },
+  idempotencyKey: string,
+): Promise<Organization> => {
+  return createOrganizationViaGraphql(data, idempotencyKey);
 };
 
 export const updateOrganization = async (id: number, data: Partial<Organization>): Promise<Organization> => {
@@ -94,15 +97,24 @@ export const getOrganizationActivity = async (
   first = 20,
 ): Promise<OrganizationActivity[]> => getOrganizationActivityViaGraphql(orgId, first);
 
-export const inviteMember = async (orgId: number, email: string, role: string): Promise<OrganizationInvitation> => {
-  return createOrganizationInvitationViaGraphql(orgId, email, role);
+export const inviteMember = async (
+  orgId: number,
+  email: string,
+  role: string,
+  idempotencyKey: string,
+): Promise<OrganizationInvitation> => {
+  return createOrganizationInvitationViaGraphql(orgId, email, role, idempotencyKey);
 };
 
 export const getOrganizationInvitations = async (orgId: number): Promise<OrganizationInvitation[]> =>
   getOrganizationInvitationsViaGraphql(orgId);
 
-export const resendOrganizationInvitation = async (orgId: number, invitationId: number): Promise<OrganizationInvitation> =>
-  resendOrganizationInvitationViaGraphql(orgId, invitationId);
+export const resendOrganizationInvitation = async (
+  orgId: number,
+  invitationId: number,
+  idempotencyKey: string,
+): Promise<OrganizationInvitation> =>
+  resendOrganizationInvitationViaGraphql(orgId, invitationId, idempotencyKey);
 
 export const revokeOrganizationInvitation = async (orgId: number, invitationId: number): Promise<void> =>
   revokeOrganizationInvitationViaGraphql(orgId, invitationId);

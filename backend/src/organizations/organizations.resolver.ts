@@ -80,8 +80,9 @@ export class OrganizationsResolver {
   @Mutation(() => Organization)
   createOrganization(
     @Args('input') input: CreateOrganizationInput,
+    @Args('idempotencyKey') idempotencyKey: string,
   ): Promise<Organization> {
-    return this.organizations.create(this.userId(), input);
+    return this.organizations.create(this.userId(), input, idempotencyKey);
   }
 
   @CsrfProtected()
@@ -115,12 +116,14 @@ export class OrganizationsResolver {
   createOrganizationInvitation(
     @Args('organizationId', { type: () => Int }) organizationId: number,
     @Args('input') input: CreateOrganizationInvitationInput,
+    @Args('idempotencyKey') idempotencyKey: string,
   ): Promise<OrganizationInvitation> {
     return this.invitations.create(
       this.userId(),
       organizationId,
       input.email,
       input.role,
+      idempotencyKey,
     );
   }
 
@@ -129,8 +132,11 @@ export class OrganizationsResolver {
   resendOrganizationInvitation(
     @Args('organizationId', { type: () => Int }) organizationId: number,
     @Args('invitationId', { type: () => Int }) invitationId: number,
+    @Args('idempotencyKey') idempotencyKey: string,
   ): Promise<OrganizationInvitation> {
-    return this.invitations.resend(this.userId(), organizationId, invitationId);
+    return this.invitations.resend(
+      this.userId(), organizationId, invitationId, idempotencyKey,
+    );
   }
 
   @CsrfProtected()

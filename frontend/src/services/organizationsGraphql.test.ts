@@ -195,7 +195,10 @@ describe('organization GraphQL consumer', () => {
         email: 'member@test.itemize',
       },
     ]);
-    await createOrganizationViaGraphql({ name: 'Alpha', settings: { tier: 1 } });
+    await createOrganizationViaGraphql(
+      { name: 'Alpha', settings: { tier: 1 } },
+      'organization-create-0001',
+    );
     await updateOrganizationViaGraphql(4, {
       name: 'Renamed',
       logo_url: undefined,
@@ -214,6 +217,7 @@ describe('organization GraphQL consumer', () => {
     );
     expect(bodies[2].variables).toEqual({
       input: { name: 'Alpha', settings: { tier: 1 } },
+      idempotencyKey: 'organization-create-0001',
     });
     expect(bodies[3].variables).toEqual({
       id: 4,
@@ -268,8 +272,10 @@ describe('organization GraphQL consumer', () => {
     ]);
     await expect(getOrganizationInvitationPreviewViaGraphql('a'.repeat(64)))
       .resolves.toMatchObject({ organization_name: 'Alpha', email: invitation.email });
-    await createOrganizationInvitationViaGraphql(4, invitation.email, 'member');
-    await resendOrganizationInvitationViaGraphql(4, 15);
+    await createOrganizationInvitationViaGraphql(
+      4, invitation.email, 'member', 'invitation-create-0001',
+    );
+    await resendOrganizationInvitationViaGraphql(4, 15, 'invitation-resend-0001');
     await revokeOrganizationInvitationViaGraphql(4, 15);
     await expect(acceptOrganizationInvitationViaGraphql('a'.repeat(64)))
       .resolves.toMatchObject({ organizationId: 4, role: 'member' });
@@ -280,8 +286,13 @@ describe('organization GraphQL consumer', () => {
     expect(bodies[2].variables).toEqual({
       organizationId: 4,
       input: { email: invitation.email, role: 'member' },
+      idempotencyKey: 'invitation-create-0001',
     });
-    expect(bodies[3].variables).toEqual({ organizationId: 4, invitationId: 15 });
+    expect(bodies[3].variables).toEqual({
+      organizationId: 4,
+      invitationId: 15,
+      idempotencyKey: 'invitation-resend-0001',
+    });
     expect(bodies[4].variables).toEqual({ organizationId: 4, invitationId: 15 });
     expect(bodies[5].variables).toEqual({ token: 'a'.repeat(64) });
     expect(vi.mocked(fetchCsrfToken).mock.calls.length - csrfCallsBefore).toBe(4);

@@ -71,8 +71,8 @@ describe('OrganizationsService', () => {
       sourcePlan: 'starter',
     });
 
-    repository.create.mockResolvedValue({ kind: 'ok', row: row() });
-    await expect(service.create(7, { name: 'Alpha' })).resolves.toMatchObject({
+    repository.create.mockResolvedValue({ kind: 'ok', row: row(), replayed: false });
+    await expect(service.create(7, { name: 'Alpha' }, 'organization-create-0001')).resolves.toMatchObject({
       id: 3,
       role: 'owner',
     });
@@ -83,7 +83,9 @@ describe('OrganizationsService', () => {
       limit: 3,
       plan: 'starter',
     });
-    await expect(service.create(7, { name: 'Fourth organization' })).rejects.toMatchObject({
+    await expect(service.create(
+      7, { name: 'Fourth organization' }, 'organization-create-0002',
+    )).rejects.toMatchObject({
       extensions: {
         code: 'FORBIDDEN',
         reason: 'ORGANIZATION_LIMIT_REACHED',
@@ -91,6 +93,20 @@ describe('OrganizationsService', () => {
         limit: 3,
       },
     });
+  });
+
+  it('surfaces conflicting and unavailable organization creation receipts', async () => {
+    repository.create
+      .mockResolvedValueOnce({ kind: 'idempotency_conflict' })
+      .mockResolvedValueOnce({ kind: 'result_unavailable' });
+    await expect(service.create(7, { name: 'Alpha' }, 'organization-create-0003'))
+      .rejects.toMatchObject({
+        extensions: { code: 'CONFLICT', reason: 'IDEMPOTENCY_KEY_REUSED' },
+      });
+    await expect(service.create(7, { name: 'Alpha' }, 'organization-create-0004'))
+      .rejects.toMatchObject({
+        extensions: { code: 'CONFLICT', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE' },
+      });
   });
 
   it('maps membership rows into the bounded GraphQL organization shape', async () => {

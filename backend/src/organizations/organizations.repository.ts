@@ -41,9 +41,11 @@ export type OrganizationAccessOutcome<T> =
   | { kind: 'invalid_default_business' };
 
 export type OrganizationCreateOutcome =
-  | { kind: 'ok'; row: OrganizationRow }
+  | { kind: 'ok'; row: OrganizationRow; replayed: boolean }
   | { kind: 'not_found' }
-  | { kind: 'limit_reached'; current: number; limit: number; plan: string };
+  | { kind: 'limit_reached'; current: number; limit: number; plan: string }
+  | { kind: 'idempotency_conflict' }
+  | { kind: 'result_unavailable' };
 
 export type OrganizationAllowanceRow = {
   ownedCount: number;
@@ -224,6 +226,8 @@ export class OrganizationsRepository {
   create(
     userId: number,
     values: { name: string; settings: Record<string, unknown> },
+    idempotencyKey: string,
+    requestFingerprint: string,
   ): Promise<OrganizationCreateOutcome> {
     return this.transaction(async (client) => {
       const user = await client.query<{ id: number }>(
@@ -231,6 +235,37 @@ export class OrganizationsRepository {
         [userId],
       );
       if (!user.rows[0]) return { kind: 'not_found' };
+
+      const receipt = await client.query<{
+        request_fingerprint: string;
+        result_organization_id: number | null;
+      }>(
+        `SELECT request_fingerprint,result_organization_id
+         FROM organization_creation_receipts
+         WHERE requested_by_user_id=$1 AND idempotency_key=$2
+         FOR UPDATE`,
+        [userId, idempotencyKey],
+      );
+      const replay = receipt.rows[0];
+      if (replay) {
+        if (replay.request_fingerprint !== requestFingerprint) {
+          return { kind: 'idempotency_conflict' };
+        }
+        if (replay.result_organization_id === null) {
+          return { kind: 'result_unavailable' };
+        }
+        const existing = await client.query<OrganizationRow>(
+          `SELECT ${organizationSelection}
+           FROM organization_members om
+           JOIN organizations o ON o.id = om.organization_id
+           JOIN users u ON u.id = om.user_id
+           WHERE om.user_id=$1 AND om.organization_id=$2`,
+          [userId, replay.result_organization_id],
+        );
+        return existing.rows[0]
+          ? { kind: 'ok', row: existing.rows[0], replayed: true }
+          : { kind: 'result_unavailable' };
+      }
 
       const allowance = await this.allowanceWithClient(client, userId);
       if (!allowance.canCreate) {
@@ -273,7 +308,7 @@ export class OrganizationsRepository {
         eventType: 'organization.created',
         entityType: 'organization',
         entityId: Number(organization.id),
-        dedupeKey: `organization-created:${randomUUID()}`,
+        dedupeKey: `organization-created:${organization.id}`,
         payload: { targetUserId: userId },
       });
       const selected = await client.query<{ selected: boolean }>(
@@ -283,12 +318,20 @@ export class OrganizationsRepository {
          RETURNING true AS selected`,
         [organization.id, userId],
       );
+      await client.query(
+        `INSERT INTO organization_creation_receipts (
+           requested_by_user_id,idempotency_key,request_fingerprint,
+           result_organization_id
+         ) VALUES ($1,$2,$3,$4)`,
+        [userId, idempotencyKey, requestFingerprint, organization.id],
+      );
       return {
         kind: 'ok',
         row: {
           ...organization,
           is_default: selected.rows[0]?.selected === true,
         },
+        replayed: false,
       };
     });
   }

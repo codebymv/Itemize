@@ -21,7 +21,7 @@ describe('OrganizationInvitationEmailService', () => {
       organizationName: 'Alpha & Co',
       invitedByName: 'Ada <Owner>',
       role: 'member',
-    }, token)).resolves.toBe(true);
+    }, token, 'organization-invitation:4:request-1')).resolves.toBe(true);
 
     const request = JSON.parse(String((fetchMock.mock.calls[0][1] as RequestInit).body));
     expect(request.to).toEqual(['invitee@example.com']);
@@ -29,6 +29,11 @@ describe('OrganizationInvitationEmailService', () => {
     expect(request.text).toContain(`https://itemize.test/invite/${token}`);
     expect(request.html).toContain('Alpha &amp; Co');
     expect(request.html).not.toContain('Ada <Owner>');
+    expect(fetchMock.mock.calls[0][1]).toEqual(expect.objectContaining({
+      headers: expect.objectContaining({
+        'Idempotency-Key': 'organization-invitation:4:request-1',
+      }),
+    }));
   });
 
   it('does not contact a provider when delivery is not configured', async () => {
@@ -39,7 +44,7 @@ describe('OrganizationInvitationEmailService', () => {
       organizationName: 'Alpha',
       invitedByName: null,
       role: 'viewer',
-    }, 'a'.repeat(64))).resolves.toBe(false);
+    }, 'a'.repeat(64), 'organization-invitation:4:request-2')).resolves.toBe(false);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

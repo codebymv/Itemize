@@ -38,31 +38,92 @@ describe('OrganizationInvitationsService', () => {
   it('delivers a secure invitation and records successful delivery', async () => {
     repository.create.mockResolvedValue({
       kind: 'ok',
-      invitation: { row, token: 'a'.repeat(64), tokenHash: 'b'.repeat(64) },
+      invitation: {
+        row, replayed: false, token: 'a'.repeat(64), tokenHash: 'b'.repeat(64),
+      },
     });
     emails.send.mockResolvedValue(true);
+    repository.markDelivery.mockResolvedValue(new Date('2026-08-27T12:01:00.000Z'));
 
-    await expect(service.create(7, 4, ' Invitee@Example.com ', 'member'))
+    await expect(service.create(
+      7, 4, ' Invitee@Example.com ', 'member', 'invitation-create-0001',
+    ))
       .resolves.toMatchObject({
         id: 9,
         email: 'invitee@example.com',
         deliverySent: true,
+        lastSentAt: new Date('2026-08-27T12:01:00.000Z'),
       });
-    expect(repository.create).toHaveBeenCalledWith(7, 4, 'invitee@example.com', 'member');
+    expect(repository.create).toHaveBeenCalledWith(
+      7, 4, 'invitee@example.com', 'member', 'invitation-create-0001',
+      expect.stringMatching(/^[a-f0-9]{64}$/),
+    );
+    expect(emails.send).toHaveBeenCalledWith(
+      expect.objectContaining({ email: 'invitee@example.com' }),
+      'a'.repeat(64),
+      'organization-invitation:4:invitation-create-0001',
+    );
     expect(repository.markDelivery).toHaveBeenCalledWith(9, 'b'.repeat(64), true);
   });
 
   it('maps duplicate and plan-limit outcomes into stable GraphQL reasons', async () => {
     repository.create.mockResolvedValue({ kind: 'already_invited', invitationId: 9 });
-    await expect(service.create(7, 4, row.email, 'member')).rejects.toMatchObject({
+    await expect(service.create(
+      7, 4, row.email, 'member', 'invitation-create-0002',
+    )).rejects.toMatchObject({
       extensions: { reason: 'INVITATION_ALREADY_PENDING', invitationId: 9 },
     });
 
     repository.create.mockResolvedValue({
       kind: 'limit_reached', current: 3, limit: 3, plan: 'starter',
     });
-    await expect(service.create(7, 4, 'other@example.com', 'viewer')).rejects.toMatchObject({
+    await expect(service.create(
+      7, 4, 'other@example.com', 'viewer', 'invitation-create-0003',
+    )).rejects.toMatchObject({
       extensions: { reason: 'PLAN_LIMIT_REACHED', current: 3, limit: 3 },
+    });
+  });
+
+  it('replays invitation results without delivering twice', async () => {
+    repository.create.mockResolvedValue({
+      kind: 'ok',
+      invitation: { row, replayed: true, token: null, tokenHash: null },
+    });
+    await expect(service.create(
+      7, 4, row.email, 'member', 'invitation-create-0004',
+    )).resolves.toMatchObject({ id: 9, deliverySent: false });
+    expect(emails.send).not.toHaveBeenCalled();
+    expect(repository.markDelivery).not.toHaveBeenCalled();
+  });
+
+  it('does not report delivery when the prepared token was replaced before persistence', async () => {
+    repository.create.mockResolvedValue({
+      kind: 'ok',
+      invitation: {
+        row, replayed: false, token: 'a'.repeat(64), tokenHash: 'b'.repeat(64),
+      },
+    });
+    emails.send.mockResolvedValue(true);
+    repository.markDelivery.mockResolvedValue(null);
+
+    await expect(service.create(
+      7, 4, row.email, 'member', 'invitation-create-replaced-token',
+    )).resolves.toMatchObject({ deliverySent: false, lastSentAt: null });
+  });
+
+  it('surfaces conflicting and unavailable invitation receipts', async () => {
+    repository.create
+      .mockResolvedValueOnce({ kind: 'idempotency_conflict' })
+      .mockResolvedValueOnce({ kind: 'result_unavailable' });
+    await expect(service.create(
+      7, 4, row.email, 'member', 'invitation-create-0005',
+    )).rejects.toMatchObject({
+      extensions: { code: 'CONFLICT', reason: 'IDEMPOTENCY_KEY_REUSED' },
+    });
+    await expect(service.create(
+      7, 4, row.email, 'member', 'invitation-create-0006',
+    )).rejects.toMatchObject({
+      extensions: { code: 'CONFLICT', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE' },
     });
   });
 

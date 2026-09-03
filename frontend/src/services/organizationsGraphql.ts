@@ -145,18 +145,28 @@ const createOrganizationInvitationMutation = `
   mutation CreateOrganizationInvitation(
     $organizationId: Int!
     $input: CreateOrganizationInvitationInput!
+    $idempotencyKey: String!
   ) {
-    createOrganizationInvitation(organizationId: $organizationId, input: $input) {
+    createOrganizationInvitation(
+      organizationId: $organizationId
+      input: $input
+      idempotencyKey: $idempotencyKey
+    ) {
       ${invitationFields}
     }
   }
 `;
 
 const resendOrganizationInvitationMutation = `
-  mutation ResendOrganizationInvitation($organizationId: Int!, $invitationId: Int!) {
+  mutation ResendOrganizationInvitation(
+    $organizationId: Int!
+    $invitationId: Int!
+    $idempotencyKey: String!
+  ) {
     resendOrganizationInvitation(
       organizationId: $organizationId
       invitationId: $invitationId
+      idempotencyKey: $idempotencyKey
     ) { ${invitationFields} }
   }
 `;
@@ -179,8 +189,8 @@ const acceptOrganizationInvitationMutation = `
 `;
 
 const createOrganizationMutation = `
-  mutation CreateOrganization($input: CreateOrganizationInput!) {
-    createOrganization(input: $input) { ${organizationFields} }
+  mutation CreateOrganization($input: CreateOrganizationInput!, $idempotencyKey: String!) {
+    createOrganization(input: $input, idempotencyKey: $idempotencyKey) { ${organizationFields} }
   }
 `;
 
@@ -396,22 +406,27 @@ export const createOrganizationInvitationViaGraphql = async (
   organizationId: number,
   email: string,
   role: string,
+  idempotencyKey: string,
 ): Promise<OrganizationInvitation> => {
   const data = await graphqlMutationRequest<
     { createOrganizationInvitation: GraphqlOrganizationInvitation },
-    { organizationId: number; input: { email: string; role: string } }
-  >(createOrganizationInvitationMutation, { organizationId, input: { email, role } });
+    { organizationId: number; input: { email: string; role: string }; idempotencyKey: string }
+  >(
+    createOrganizationInvitationMutation,
+    { organizationId, input: { email, role }, idempotencyKey },
+  );
   return mapOrganizationInvitation(data.createOrganizationInvitation);
 };
 
 export const resendOrganizationInvitationViaGraphql = async (
   organizationId: number,
   invitationId: number,
+  idempotencyKey: string,
 ): Promise<OrganizationInvitation> => {
   const data = await graphqlMutationRequest<
     { resendOrganizationInvitation: GraphqlOrganizationInvitation },
-    { organizationId: number; invitationId: number }
-  >(resendOrganizationInvitationMutation, { organizationId, invitationId });
+    { organizationId: number; invitationId: number; idempotencyKey: string }
+  >(resendOrganizationInvitationMutation, { organizationId, invitationId, idempotencyKey });
   return mapOrganizationInvitation(data.resendOrganizationInvitation);
 };
 
@@ -439,11 +454,11 @@ export const acceptOrganizationInvitationViaGraphql = async (token: string) => {
 export const createOrganizationViaGraphql = async (input: {
   name: string;
   settings?: JsonRecord;
-}): Promise<Organization> => {
+}, idempotencyKey: string): Promise<Organization> => {
   const data = await graphqlMutationRequest<
     { createOrganization: GraphqlOrganization },
-    { input: { name: string; settings?: JsonRecord } }
-  >(createOrganizationMutation, { input });
+    { input: { name: string; settings?: JsonRecord }; idempotencyKey: string }
+  >(createOrganizationMutation, { input, idempotencyKey });
   return mapOrganization(data.createOrganization);
 };
 
