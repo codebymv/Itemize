@@ -37,6 +37,9 @@ export class RecordInvoicePaymentInput {
   paymentMethod = PaymentMethod.OTHER;
 
   @Field(() => String, { nullable: true })
+  paymentDate?: string;
+
+  @Field(() => String, { nullable: true })
   notes?: string | null;
 }
 

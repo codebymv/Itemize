@@ -349,10 +349,11 @@ describe('Payment history GraphQL PostgreSQL contract', () => {
     const standalone = await mutate(
       memberToken,
       organizationId,
-      `mutation Record($input: RecordPaymentInput!) {
-        recordPayment(input: $input) { ${paymentFields} }
+      `mutation Record($input: RecordPaymentInput!, $key: String!) {
+        recordPayment(input: $input, idempotencyKey: $key) { ${paymentFields} }
       }`,
       {
+        key: 'payment-record-standalone-0001',
         input: {
           contactId,
           amount: '12.34',
@@ -379,14 +380,37 @@ describe('Payment history GraphQL PostgreSQL contract', () => {
       },
       invoice: null,
     });
+    const standaloneReplay = await mutate(
+      memberToken,
+      organizationId,
+      `mutation Record($input: RecordPaymentInput!, $key: String!) {
+        recordPayment(input: $input, idempotencyKey: $key) { ${paymentFields} }
+      }`,
+      {
+        key: 'payment-record-standalone-0001',
+        input: {
+          contactId,
+          amount: '12.34',
+          currency: 'usd',
+          paymentMethod: 'CHECK',
+          status: 'PENDING',
+          paymentDate: '2026-07-18',
+          notes: ' Check 42 ',
+        },
+      },
+    ).expect(200);
+    expect(standaloneReplay.body.errors).toBeUndefined();
+    expect(standaloneReplay.body.data.recordPayment.payment.id)
+      .toBe(standalone.body.data.recordPayment.payment.id);
 
     const failedLinked = await mutate(
       memberToken,
       organizationId,
-      `mutation Record($input: RecordPaymentInput!) {
-        recordPayment(input: $input) { ${paymentFields} }
+      `mutation Record($input: RecordPaymentInput!, $key: String!) {
+        recordPayment(input: $input, idempotencyKey: $key) { ${paymentFields} }
       }`,
       {
+        key: 'payment-record-failed-0001',
         input: {
           invoiceId,
           amount: '5.00',
@@ -414,10 +438,10 @@ describe('Payment history GraphQL PostgreSQL contract', () => {
     const noCsrf = await mutate(
       memberToken,
       organizationId,
-      `mutation Record($input: RecordPaymentInput!) {
-        recordPayment(input: $input) { payment { id } }
+      `mutation Record($input: RecordPaymentInput!, $key: String!) {
+        recordPayment(input: $input, idempotencyKey: $key) { payment { id } }
       }`,
-      { input: { amount: '1.00' } },
+      { key: 'payment-record-no-csrf-0001', input: { amount: '1.00' } },
       false,
     ).expect(200);
     expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
@@ -425,20 +449,67 @@ describe('Payment history GraphQL PostgreSQL contract', () => {
     const foreignContact = await mutate(
       outsiderToken,
       outsiderOrganizationId,
-      `mutation Record($input: RecordPaymentInput!) {
-        recordPayment(input: $input) { payment { id } }
+      `mutation Record($input: RecordPaymentInput!, $key: String!) {
+        recordPayment(input: $input, idempotencyKey: $key) { payment { id } }
       }`,
-      { input: { contactId, amount: '1.00' } },
+      {
+        key: 'payment-record-foreign-contact-0001',
+        input: { contactId, amount: '1.00' },
+      },
     ).expect(200);
     expect(foreignContact.body.errors[0].extensions.code).toBe('NOT_FOUND');
+  });
+
+  it('coalesces concurrent payment retries and never recreates a missing result', async () => {
+    const document = `mutation Record($input: RecordPaymentInput!, $key: String!) {
+      recordPayment(input: $input, idempotencyKey: $key) { payment { id amount } }
+    }`;
+    const variables = {
+      key: 'payment-record-concurrent-0001',
+      input: { amount: '8.88', paymentMethod: 'CASH', status: 'PENDING' },
+    };
+    const [first, second] = await Promise.all([
+      mutate(memberToken, organizationId, document, variables),
+      mutate(memberToken, organizationId, document, variables),
+    ]);
+    expect(first.body.errors).toBeUndefined();
+    expect(second.body.errors).toBeUndefined();
+    expect(second.body.data.recordPayment.payment.id)
+      .toBe(first.body.data.recordPayment.payment.id);
+    const count = await pool.query<{ count: string }>(
+      `SELECT COUNT(*) AS count FROM payments
+       WHERE organization_id=$1 AND amount=8.88 AND invoice_id IS NULL`,
+      [organizationId],
+    );
+    expect(Number(count.rows[0].count)).toBe(1);
+
+    await pool.query(
+      'DELETE FROM payments WHERE id=$1 AND organization_id=$2',
+      [first.body.data.recordPayment.payment.id, organizationId],
+    );
+    const unavailable = await mutate(
+      memberToken,
+      organizationId,
+      document,
+      variables,
+    ).expect(200);
+    expect(unavailable.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE',
+    });
   });
 
   it('serializes invoice balances and emits invoice_paid exactly once', async () => {
     const document = `mutation Pay(
       $invoiceId: Int!,
-      $input: RecordInvoicePaymentInput!
+      $input: RecordInvoicePaymentInput!,
+      $key: String!
     ) {
-      recordInvoicePayment(invoiceId: $invoiceId, input: $input) {
+      recordInvoicePayment(
+        invoiceId: $invoiceId,
+        input: $input,
+        idempotencyKey: $key
+      ) {
         ${paymentFields}
       }
     }`;
@@ -448,9 +519,11 @@ describe('Payment history GraphQL PostgreSQL contract', () => {
       document,
       {
         invoiceId,
+        key: 'invoice-payment-record-first-0001',
         input: {
           amount: '40.00',
           paymentMethod: 'CASH',
+          paymentDate: '2026-07-18',
           notes: 'Deposit',
         },
       },
@@ -473,10 +546,12 @@ describe('Payment history GraphQL PostgreSQL contract', () => {
     const [second, third] = await Promise.all([
       mutate(memberToken, organizationId, document, {
         invoiceId,
+        key: 'invoice-payment-record-second-0001',
         input: { amount: '30.00', paymentMethod: 'CARD' },
       }),
       mutate(memberToken, organizationId, document, {
         invoiceId,
+        key: 'invoice-payment-record-third-0001',
         input: { amount: '30.00', paymentMethod: 'BANK_TRANSFER' },
       }),
     ]);
@@ -507,12 +582,54 @@ describe('Payment history GraphQL PostgreSQL contract', () => {
     );
     expect(Number(events.rows[0].count)).toBe(1);
 
+    const countBeforeReplay = await pool.query<{ count: string }>(
+      `SELECT COUNT(*) AS count FROM payments
+       WHERE organization_id=$1 AND invoice_id=$2`,
+      [organizationId, invoiceId],
+    );
+
+    const replay = await mutate(memberToken, organizationId, document, {
+      invoiceId,
+      key: 'invoice-payment-record-first-0001',
+      input: {
+        amount: '40.00',
+        paymentMethod: 'CASH',
+        paymentDate: '2026-07-18',
+        notes: 'Deposit',
+      },
+    }).expect(200);
+    expect(replay.body.errors).toBeUndefined();
+    expect(replay.body.data.recordInvoicePayment.payment.id)
+      .toBe(first.body.data.recordInvoicePayment.payment.id);
+    expect(replay.body.data.recordInvoicePayment.invoice).toEqual({
+      amountPaid: '100.00',
+      amountDue: '0.00',
+      status: 'paid',
+    });
+    const paymentCount = await pool.query<{ count: string }>(
+      `SELECT COUNT(*) AS count FROM payments
+       WHERE organization_id=$1 AND invoice_id=$2`,
+      [organizationId, invoiceId],
+    );
+    expect(paymentCount.rows[0].count).toBe(countBeforeReplay.rows[0].count);
+
+    const conflictingReplay = await mutate(memberToken, organizationId, document, {
+      invoiceId,
+      key: 'invoice-payment-record-first-0001',
+      input: { amount: '1.00', paymentMethod: 'CASH' },
+    }).expect(200);
+    expect(conflictingReplay.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_KEY_REUSED',
+    });
+
     const foreignInvoice = await mutate(
       outsiderToken,
       outsiderOrganizationId,
       document,
       {
         invoiceId,
+        key: 'invoice-payment-record-foreign-0001',
         input: { amount: '1.00', paymentMethod: 'OTHER' },
       },
     ).expect(200);

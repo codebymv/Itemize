@@ -13,6 +13,7 @@ import {
 import type { SendOptions } from '../components/SendInvoiceModal';
 import type { RecurringOptions } from '../components/MakeRecurringModal';
 import type { PaymentData } from '../components/RecordPaymentModal';
+import { useStableMutationKey } from '@/hooks/useStableMutationKey';
 
 const getApiErrorMessage = (error: unknown, fallback: string): string => {
   if (error && typeof error === 'object') {
@@ -39,6 +40,7 @@ export interface InvoiceActions {
 export function useInvoiceActions(organizationId: number | null | undefined, fetchInvoices: () => void) {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const manualPaymentAttempt = useStableMutationKey('invoice-payment-record');
 
   const handleOpenSendModal = useCallback(async (invoice: Invoice, setStates: (invoice: Invoice) => void) => {
     if (!organizationId) return;
@@ -128,27 +130,32 @@ export function useInvoiceActions(organizationId: number | null | undefined, fet
 
   const handleRecordPayment = useCallback(async (paymentData: PaymentData, selectedInvoice: Invoice, setStates: () => void) => {
     if (!organizationId) return;
-    
+    const signature = JSON.stringify({ invoiceId: selectedInvoice.id, ...paymentData });
+    const idempotencyKey = manualPaymentAttempt.begin(signature);
+    if (!idempotencyKey) return;
     try {
       await recordPayment(
         selectedInvoice.id,
         {
           amount: paymentData.amount,
           payment_method: paymentData.payment_method,
+          payment_date: paymentData.payment_date,
           notes: paymentData.notes,
         },
-        organizationId
+        organizationId,
+        idempotencyKey,
       );
-       
+      manualPaymentAttempt.reset();
       toast({ title: 'Payment Recorded', description: `Payment of $${paymentData.amount.toFixed(2)} has been recorded.` });
       setStates();
        
       fetchInvoices();
     } catch (error: unknown) {
+      manualPaymentAttempt.release();
       const errorMessage = getApiErrorMessage(error, 'Failed to record payment');
       toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
     }
-  }, [organizationId, toast, fetchInvoices]);
+  }, [organizationId, toast, fetchInvoices, manualPaymentAttempt]);
 
   const handleCreatePaymentLink = useCallback((invoice: Invoice, setSelectedInvoice: (invoice: Invoice) => void) => {
     if (!organizationId) return;

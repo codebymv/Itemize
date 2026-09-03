@@ -23,6 +23,11 @@ import {
   RefundPaymentInput,
 } from './payment.inputs';
 import { StripeRefundProvider } from './stripe-refund.provider';
+import {
+  paymentRecordingFingerprint,
+  paymentRecordingKey,
+  type PaymentRecordingAction,
+} from './payment-recording.idempotency';
 
 const ORGANIZATION_PAYMENT_METHODS = new Set<PaymentMethod>([
   PaymentMethod.CARD,
@@ -164,7 +169,9 @@ export class PaymentsService {
 
   async record(
     organizationId: number,
+    userId: number,
     input: RecordPaymentInput,
+    idempotencyKey: string,
   ): Promise<RecordPaymentResult> {
     if (input.invoiceId !== undefined) this.id(input.invoiceId, 'invoiceId');
     if (input.contactId !== undefined) this.id(input.contactId, 'contactId');
@@ -174,7 +181,7 @@ export class PaymentsService {
     if (!ORGANIZATION_PAYMENT_STATUSES.has(input.status)) {
       this.invalid('status', 'INVALID_PAYMENT_STATUS');
     }
-    return this.persist(organizationId, {
+    return this.persist(organizationId, userId, 'record_payment', {
       invoiceId: input.invoiceId ?? null,
       contactId: input.contactId ?? null,
       amount: this.amount(input.amount),
@@ -183,25 +190,27 @@ export class PaymentsService {
       status: input.status,
       paymentDate: this.paymentDate(input.paymentDate),
       notes: this.notes(input.notes),
-    });
+    }, idempotencyKey);
   }
 
   async recordInvoice(
     organizationId: number,
+    userId: number,
     invoiceId: number,
     input: RecordInvoicePaymentInput,
+    idempotencyKey: string,
   ): Promise<RecordPaymentResult> {
     this.id(invoiceId, 'invoiceId');
-    return this.persist(organizationId, {
+    return this.persist(organizationId, userId, 'record_invoice_payment', {
       invoiceId,
       contactId: null,
       amount: this.amount(input.amount),
       currency: 'USD',
       paymentMethod: input.paymentMethod,
       status: PaymentStatus.SUCCEEDED,
-      paymentDate: null,
+      paymentDate: this.paymentDate(input.paymentDate),
       notes: this.notes(input.notes),
-    });
+    }, idempotencyKey);
   }
 
   async refund(
@@ -266,14 +275,38 @@ export class PaymentsService {
 
   private async persist(
     organizationId: number,
+    userId: number,
+    action: PaymentRecordingAction,
     values: RecordPaymentValues,
+    idempotencyKey: string,
   ): Promise<RecordPaymentResult> {
-    const outcome = await this.payments.record(organizationId, values);
+    const key = paymentRecordingKey(idempotencyKey);
+    const outcome = await this.payments.record(
+      organizationId,
+      userId,
+      values,
+      key,
+      paymentRecordingFingerprint(action, values),
+    );
     if (outcome.kind === 'invoice-not-found') {
       throw itemizeGraphqlError('Invoice not found', 'NOT_FOUND');
     }
     if (outcome.kind === 'contact-not-found') {
       throw itemizeGraphqlError('Contact not found', 'NOT_FOUND');
+    }
+    if (outcome.kind === 'idempotency-conflict') {
+      throw itemizeGraphqlError(
+        'idempotencyKey was already used for a different payment recording request',
+        'CONFLICT',
+        { field: 'idempotencyKey', reason: 'IDEMPOTENCY_KEY_REUSED' },
+      );
+    }
+    if (outcome.kind === 'result-unavailable') {
+      throw itemizeGraphqlError(
+        'The payment recorded by this request is no longer available',
+        'CONFLICT',
+        { field: 'idempotencyKey', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE' },
+      );
     }
     return {
       payment: this.map(outcome.payment),

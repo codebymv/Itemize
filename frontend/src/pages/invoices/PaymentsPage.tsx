@@ -86,6 +86,7 @@ import { getPaymentStatusVisual } from './constants/paymentConstants';
 import { ExpandedRowActionLabel, ExpandedRowActions } from '@/components/ui/expanded-row';
 import { useRevenueFlowPreferences } from '@/hooks/useRevenueFlowPreferences';
 import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
+import { useStableMutationKey } from '@/hooks/useStableMutationKey';
 
 type Payment = InvoicePayment;
 
@@ -171,6 +172,7 @@ export function PaymentsPage() {
         run: runCreatePayment,
         dismissIfIdle: dismissCreateIfIdle,
     } = useSingleFlightAction();
+    const createPaymentAttempt = useStableMutationKey('payment-record');
     const [refundRequest, setRefundRequest] = useState<{ payment: Payment; key: string } | null>(null);
     const [refundAmount, setRefundAmount] = useState('');
     const [refundReason, setRefundReason] = useState('');
@@ -335,15 +337,23 @@ export function PaymentsPage() {
         if (!organizationId) return;
         
         await runCreatePayment(async () => {
+            const signature = JSON.stringify({
+                ...paymentData,
+                status: 'succeeded',
+            });
+            const idempotencyKey = createPaymentAttempt.begin(signature);
+            if (!idempotencyKey) return;
             try {
                 await createInvoicePayment(organizationId, {
                     ...paymentData,
                     status: 'succeeded',
-                });
+                }, idempotencyKey);
+                createPaymentAttempt.reset();
                 toast({ title: 'Payment recorded' });
                 setShowCreateModal(false);
                 void fetchPayments();
             } catch (error) {
+                createPaymentAttempt.release();
                 toast({ title: 'Error', description: 'Failed to record payment', variant: 'destructive' });
             }
         });
@@ -1001,7 +1011,10 @@ export function PaymentsPage() {
             open={showCreateModal}
             onOpenChange={(nextOpen) => {
                 if (nextOpen) setShowCreateModal(true);
-                else dismissCreateIfIdle(() => setShowCreateModal(false));
+                else dismissCreateIfIdle(() => {
+                    createPaymentAttempt.reset();
+                    setShowCreateModal(false);
+                });
             }}
             onConfirm={handleCreatePayment}
             creating={creating}

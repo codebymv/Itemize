@@ -84,8 +84,11 @@ export class PaymentsResolver {
   @Mutation(() => RecordPaymentResult)
   recordPayment(
     @Args('input') input: RecordPaymentInput,
+    @Args('idempotencyKey') idempotencyKey: string,
   ): Promise<RecordPaymentResult> {
-    return this.paymentService.record(this.organizationId(), input);
+    return this.paymentService.record(
+      this.organizationId(), this.userId(), input, idempotencyKey,
+    );
   }
 
   @CsrfProtected()
@@ -94,11 +97,14 @@ export class PaymentsResolver {
   recordInvoicePayment(
     @Args('invoiceId', { type: () => Int }) invoiceId: number,
     @Args('input') input: RecordInvoicePaymentInput,
+    @Args('idempotencyKey') idempotencyKey: string,
   ): Promise<RecordPaymentResult> {
     return this.paymentService.recordInvoice(
       this.organizationId(),
+      this.userId(),
       invoiceId,
       input,
+      idempotencyKey,
     );
   }
 
@@ -131,5 +137,11 @@ export class PaymentsResolver {
       );
     }
     return organization.organizationId;
+  }
+
+  private userId(): number {
+    const identity = this.requestContext.current().identity;
+    if (!identity) throw new Error('Verified identity context is unavailable');
+    return identity.userId;
   }
 }

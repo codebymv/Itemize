@@ -198,28 +198,35 @@ describe('PaymentsService', () => {
         paid_at: null,
       },
       invoice: null,
+      replayed: false,
     });
-    await expect(service.record(3, {
+    await expect(service.record(3, 4, {
       amount: '25.00',
       currency: 'usd',
       paymentMethod: PaymentMethod.CASH,
       status: PaymentStatus.PENDING,
       paymentDate: '2026-07-18',
       notes: ' Check 42 ',
-    })).resolves.toMatchObject({
+    }, 'payment-record-0001')).resolves.toMatchObject({
       payment: { amount: '25.00', status: PaymentStatus.PENDING },
       invoice: null,
     });
-    expect(repository.record).toHaveBeenCalledWith(3, {
-      invoiceId: null,
-      contactId: null,
-      amount: '25.00',
-      currency: 'USD',
-      paymentMethod: PaymentMethod.CASH,
-      status: PaymentStatus.PENDING,
-      paymentDate: '2026-07-18',
-      notes: 'Check 42',
-    });
+    expect(repository.record).toHaveBeenCalledWith(
+      3,
+      4,
+      {
+        invoiceId: null,
+        contactId: null,
+        amount: '25.00',
+        currency: 'USD',
+        paymentMethod: PaymentMethod.CASH,
+        status: PaymentStatus.PENDING,
+        paymentDate: '2026-07-18',
+        notes: 'Check 42',
+      },
+      'payment-record-0001',
+      expect.stringMatching(/^[a-f0-9]{64}$/),
+    );
   });
 
   it('records a successful invoice payment and returns decimal balances', async () => {
@@ -231,12 +238,14 @@ describe('PaymentsService', () => {
         amount_due: '0.00',
         status: 'paid',
       },
+      replayed: false,
     });
-    await expect(service.recordInvoice(3, 9, {
+    await expect(service.recordInvoice(3, 4, 9, {
       amount: '125.50',
       paymentMethod: PaymentMethod.CARD,
+      paymentDate: '2026-07-18',
       notes: null,
-    })).resolves.toMatchObject({
+    }, 'invoice-payment-record-0001')).resolves.toMatchObject({
       payment: { id: 7 },
       invoice: {
         amountPaid: '125.50',
@@ -247,29 +256,49 @@ describe('PaymentsService', () => {
   });
 
   it('rejects malformed writes and tenant-hidden references', async () => {
-    await expect(service.record(3, {
+    await expect(service.record(3, 4, {
       amount: '0',
       currency: 'USD',
       paymentMethod: PaymentMethod.OTHER,
       status: PaymentStatus.SUCCEEDED,
-    })).rejects.toMatchObject({
+    }, 'payment-record-0002')).rejects.toMatchObject({
       extensions: { reason: 'INVALID_PAYMENT_AMOUNT' },
     });
-    await expect(service.record(3, {
+    await expect(service.record(3, 4, {
       amount: '1.00',
       currency: 'USD',
       paymentMethod: PaymentMethod.STRIPE,
       status: PaymentStatus.SUCCEEDED,
-    })).rejects.toMatchObject({
+    }, 'payment-record-0003')).rejects.toMatchObject({
       extensions: { reason: 'INVALID_PAYMENT_METHOD' },
     });
     repository.record.mockResolvedValue({ kind: 'invoice-not-found' });
-    await expect(service.recordInvoice(3, 999, {
+    await expect(service.recordInvoice(3, 4, 999, {
       amount: '1.00',
       paymentMethod: PaymentMethod.OTHER,
-    })).rejects.toMatchObject({
+    }, 'invoice-payment-record-0002')).rejects.toMatchObject({
       extensions: { code: 'NOT_FOUND' },
     });
+  });
+
+  it('surfaces reused and unavailable payment recording receipts', async () => {
+    repository.record
+      .mockResolvedValueOnce({ kind: 'idempotency-conflict' })
+      .mockResolvedValueOnce({ kind: 'result-unavailable' });
+    const input = {
+      amount: '1.00',
+      currency: 'USD',
+      paymentMethod: PaymentMethod.OTHER,
+      status: PaymentStatus.SUCCEEDED,
+    };
+    await expect(service.record(3, 4, input, 'payment-record-0004'))
+      .rejects.toMatchObject({
+        extensions: { code: 'CONFLICT', reason: 'IDEMPOTENCY_KEY_REUSED' },
+      });
+    await expect(service.record(3, 4, input, 'payment-record-0005'))
+      .rejects.toMatchObject({
+        extensions: { code: 'CONFLICT', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE' },
+      });
   });
 
   it('submits a bounded Stripe refund and returns recalculated balances', async () => {

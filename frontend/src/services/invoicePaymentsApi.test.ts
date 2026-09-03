@@ -206,11 +206,12 @@ describe('invoice payment GraphQL transport', () => {
       payment_method: 'check',
       payment_date: '2026-07-18',
       status: 'succeeded',
-    });
+    }, 'payment-record-0001');
     await expect(recordInvoicePaymentViaGraphql(
       8,
-      { amount: 20, payment_method: 'cash' },
+      { amount: 20, payment_method: 'cash', payment_date: '2026-07-18' },
       4,
+      'invoice-payment-record-0001',
     )).resolves.toMatchObject({
       payment: {
         amount: 20,
@@ -223,6 +224,7 @@ describe('invoice payment GraphQL transport', () => {
       1,
       expect.stringContaining('mutation RecordPayment'),
       {
+        idempotencyKey: 'payment-record-0001',
         input: expect.objectContaining({
           amount: '10',
           paymentMethod: 'CHECK',
@@ -237,9 +239,11 @@ describe('invoice payment GraphQL transport', () => {
       expect.stringContaining('mutation RecordInvoicePayment'),
       expect.objectContaining({
         invoiceId: 8,
+        idempotencyKey: 'invoice-payment-record-0001',
         input: expect.objectContaining({
           amount: '20',
           paymentMethod: 'CASH',
+          paymentDate: '2026-07-18',
         }),
       }),
       4,

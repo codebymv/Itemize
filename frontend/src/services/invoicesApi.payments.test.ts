@@ -25,11 +25,17 @@ describe('invoice payment action transport', () => {
       payment: { id: 7 } as never,
       invoice: { amount_paid: 20, amount_due: 80, status: 'partial' },
     });
-    await recordPayment(8, { amount: 20, payment_method: 'cash' }, 4);
+    await recordPayment(
+      8,
+      { amount: 20, payment_method: 'cash', payment_date: '2026-07-18' },
+      4,
+      'invoice-payment-record-0001',
+    );
     expect(recordInvoicePaymentViaGraphql).toHaveBeenCalledWith(
       8,
-      { amount: 20, payment_method: 'cash' },
+      { amount: 20, payment_method: 'cash', payment_date: '2026-07-18' },
       4,
+      'invoice-payment-record-0001',
     );
     expect(api.post).not.toHaveBeenCalled();
   });

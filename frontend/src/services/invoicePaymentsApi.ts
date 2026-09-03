@@ -483,15 +483,17 @@ export const refundInvoicePayment = async (
 export const createInvoicePayment = async (
   organizationId: number,
   payment: ManualPaymentInput,
+  idempotencyKey: string,
 ): Promise<void> => {
   await graphqlMutationRequest(
-    `mutation RecordPayment($input: RecordPaymentInput!) {
-      recordPayment(input: $input) {
+    `mutation RecordPayment($input: RecordPaymentInput!, $idempotencyKey: String!) {
+      recordPayment(input: $input, idempotencyKey: $idempotencyKey) {
         payment { id }
         invoice { amountPaid amountDue status }
       }
     }`,
     {
+      idempotencyKey,
       input: {
         ...(payment.invoice_id === undefined
           ? {}
@@ -518,9 +520,11 @@ export const recordInvoicePaymentViaGraphql = async (
   payment: {
     amount: number;
     payment_method?: InvoicePayment['payment_method'];
+    payment_date?: string;
     notes?: string;
   },
-  organizationId?: number,
+  organizationId: number | undefined,
+  idempotencyKey: string,
 ): Promise<{
   payment: InvoicePayment;
   invoice: { amount_paid: number; amount_due: number; status: string };
@@ -541,24 +545,35 @@ export const recordInvoicePaymentViaGraphql = async (
       input: {
         amount: string;
         paymentMethod?: string;
+        paymentDate?: string;
         notes?: string;
       };
+      idempotencyKey: string;
     }
   >(
     `mutation RecordInvoicePayment(
       $invoiceId: Int!,
-      $input: RecordInvoicePaymentInput!
+      $input: RecordInvoicePaymentInput!,
+      $idempotencyKey: String!
     ) {
-      recordInvoicePayment(invoiceId: $invoiceId, input: $input) {
+      recordInvoicePayment(
+        invoiceId: $invoiceId,
+        input: $input,
+        idempotencyKey: $idempotencyKey
+      ) {
         payment { ${fields} }
         invoice { amountPaid amountDue status }
       }
     }`,
     {
       invoiceId,
+      idempotencyKey,
       input: {
         amount: String(payment.amount),
         paymentMethod: enumValue(payment.payment_method ?? 'other'),
+        ...(payment.payment_date === undefined
+          ? {}
+          : { paymentDate: payment.payment_date }),
         ...(payment.notes === undefined ? {} : { notes: payment.notes }),
       },
     },

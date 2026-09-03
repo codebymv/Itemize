@@ -60,9 +60,12 @@ export type RecordPaymentOutcome =
       kind: 'recorded';
       payment: PaymentRow;
       invoice: InvoiceBalanceRow | null;
+      replayed: boolean;
     }
   | { kind: 'invoice-not-found' }
-  | { kind: 'contact-not-found' };
+  | { kind: 'contact-not-found' }
+  | { kind: 'idempotency-conflict' }
+  | { kind: 'result-unavailable' };
 
 export type RefundPreparation =
   | {
@@ -639,9 +642,54 @@ export class PaymentsRepository {
 
   async record(
     organizationId: number,
+    userId: number,
     values: RecordPaymentValues,
+    idempotencyKey: string,
+    requestFingerprint: string,
   ): Promise<RecordPaymentOutcome> {
     return this.transaction(async (client) => {
+      await client.query(
+        'SELECT pg_advisory_xact_lock($1::int, hashtext($2))',
+        [organizationId, `payment-record:${idempotencyKey}`],
+      );
+      const receipt = await client.query<{
+        request_fingerprint: string;
+        result_payment_id: number | null;
+      }>(
+        `SELECT request_fingerprint,result_payment_id
+         FROM payment_recording_receipts
+         WHERE organization_id=$1 AND idempotency_key=$2
+         FOR UPDATE`,
+        [organizationId, idempotencyKey],
+      );
+      const replay = receipt.rows[0];
+      if (replay) {
+        if (replay.request_fingerprint !== requestFingerprint) {
+          return { kind: 'idempotency-conflict' };
+        }
+        if (replay.result_payment_id === null) {
+          return { kind: 'result-unavailable' };
+        }
+        const payment = await this.findByIdWith(
+          client,
+          organizationId,
+          replay.result_payment_id,
+        );
+        if (!payment) return { kind: 'result-unavailable' };
+        let invoiceBalance: InvoiceBalanceRow | null = null;
+        if (payment.invoice_id !== null && payment.status === PaymentStatus.SUCCEEDED) {
+          const currentInvoice = await client.query<InvoiceBalanceRow>(
+            `SELECT amount_paid,amount_due,status
+             FROM invoices
+             WHERE id=$1 AND organization_id=$2`,
+            [payment.invoice_id, organizationId],
+          );
+          if (!currentInvoice.rows[0]) return { kind: 'result-unavailable' };
+          invoiceBalance = currentInvoice.rows[0];
+        }
+        return { kind: 'recorded', payment, invoice: invoiceBalance, replayed: true };
+      }
+
       let invoice: LockedInvoiceRow | null = null;
       if (values.invoiceId !== null) {
         const result = await client.query<LockedInvoiceRow>(
@@ -751,10 +799,18 @@ export class PaymentsRepository {
         Number(inserted.rows[0].id),
       );
       if (!payment) throw new Error('Payment disappeared inside transaction');
+      await client.query(
+        `INSERT INTO payment_recording_receipts (
+           organization_id,requested_by_user_id,idempotency_key,
+           request_fingerprint,result_payment_id
+         ) VALUES ($1,$2,$3,$4,$5)`,
+        [organizationId, userId, idempotencyKey, requestFingerprint, payment.id],
+      );
       return {
         kind: 'recorded',
         payment,
         invoice: invoiceBalance,
+        replayed: false,
       };
     });
   }

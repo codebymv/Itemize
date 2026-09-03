@@ -348,14 +348,17 @@ export const recordPayment = async (
     payment: {
         amount: number;
         payment_method?: Payment['payment_method'];
+        payment_date?: string;
         notes?: string;
     },
-    organizationId?: number
+    organizationId: number | undefined,
+    idempotencyKey: string,
 ): Promise<{ payment: Payment; invoice: { amount_paid: number; amount_due: number; status: string } }> => {
     const result = await recordInvoicePaymentViaGraphql(
         invoiceId,
         payment,
-        organizationId
+        organizationId,
+        idempotencyKey,
     );
     return {
         payment: {

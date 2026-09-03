@@ -181,6 +181,7 @@ export function InvoicesPage() {
     const [selectedInvoiceForPayment, setSelectedInvoiceForPayment] = useState<Invoice | null>(null);
     const [fullInvoiceDataForPayment, setFullInvoiceDataForPayment] = useState<ApiInvoice | null>(null);
     const [recordingPayment, setRecordingPayment] = useState(false);
+    const manualPaymentAttempt = useStableMutationKey('invoice-payment-record');
 
     // Payment link modal state
     const [showPaymentLinkModal, setShowPaymentLinkModal] = useState(false);
@@ -410,6 +411,9 @@ export function InvoicesPage() {
     const handleRecordPayment = async (paymentData: PaymentData) => {
         if (!organizationId || !selectedInvoiceForPayment) return;
         const inv = selectedInvoiceForPayment;
+        const signature = JSON.stringify({ invoiceId: inv.id, ...paymentData });
+        const idempotencyKey = manualPaymentAttempt.begin(signature);
+        if (!idempotencyKey) return;
         const newAmountPaid = inv.amount_paid + paymentData.amount;
         const newAmountDue = inv.amount_due - paymentData.amount;
         const newStatus = newAmountDue <= 0 ? 'paid' : 'partial';
@@ -433,9 +437,11 @@ export function InvoicesPage() {
                 {
                     amount: paymentData.amount,
                     payment_method: paymentData.payment_method,
+                    payment_date: paymentData.payment_date,
                     notes: paymentData.notes,
                 },
-                organizationId
+                organizationId,
+                idempotencyKey,
             );
             setInvoices((prev) =>
                 prev.map((invoice) =>
@@ -453,11 +459,13 @@ export function InvoicesPage() {
                 )
             );
             toast({ title: 'Payment Recorded', description: `Payment of $${paymentData.amount.toFixed(2)} has been recorded.` });
+            manualPaymentAttempt.reset();
             setShowPaymentModal(false);
             setSelectedInvoiceForPayment(null);
             setFullInvoiceDataForPayment(null);
             fetchInvoices();
         } catch (error: unknown) {
+            manualPaymentAttempt.release();
             setInvoices(previousInvoices);
             const errorMessage = getApiErrorMessage(error, 'Failed to record payment');
             toast({ title: 'Error', description: errorMessage, variant: 'destructive' });
@@ -1244,8 +1252,10 @@ export function InvoicesPage() {
                 <RecordPaymentModal
                     open={showPaymentModal}
                     onOpenChange={(open) => {
+                        if (!open && recordingPayment) return;
                         setShowPaymentModal(open);
                         if (!open) {
+                            manualPaymentAttempt.reset();
                             setSelectedInvoiceForPayment(null);
                             setFullInvoiceDataForPayment(null);
                         }
