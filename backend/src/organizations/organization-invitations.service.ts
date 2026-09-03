@@ -84,11 +84,32 @@ export class OrganizationInvitationsService {
     );
   }
 
-  async revoke(userId: number, organizationId: number, invitationId: number): Promise<boolean> {
+  async revoke(
+    userId: number,
+    organizationId: number,
+    invitationId: number,
+    idempotencyKey: string,
+  ): Promise<boolean> {
     this.id(organizationId, 'organizationId');
     this.id(invitationId, 'invitationId');
-    const outcome = await this.invitations.revoke(userId, organizationId, invitationId);
+    const key = organizationMutationKey(idempotencyKey);
+    const outcome = await this.invitations.revoke(
+      userId,
+      organizationId,
+      invitationId,
+      key,
+      organizationMutationFingerprint('revoke_invitation', {
+        organizationId,
+        invitationId,
+      }),
+    );
     if (outcome.kind === 'revoked') return true;
+    if (outcome.kind === 'idempotency_conflict') {
+      this.idempotencyFailure('IDEMPOTENCY_KEY_REUSED');
+    }
+    if (outcome.kind === 'result_unavailable') {
+      this.idempotencyFailure('IDEMPOTENCY_RESULT_UNAVAILABLE');
+    }
     if (outcome.kind === 'not_found' || outcome.kind === 'forbidden') {
       throw itemizeGraphqlError('Organization invitation not found', 'NOT_FOUND');
     }
@@ -223,6 +244,18 @@ export class OrganizationInvitationsService {
       `You've reached your team member limit (${outcome.current}/${outcome.limit}). Please upgrade your plan.`,
       'FORBIDDEN',
       { reason: 'PLAN_LIMIT_REACHED', ...outcome },
+    );
+  }
+
+  private idempotencyFailure(
+    reason: 'IDEMPOTENCY_KEY_REUSED' | 'IDEMPOTENCY_RESULT_UNAVAILABLE',
+  ): never {
+    throw itemizeGraphqlError(
+      reason === 'IDEMPOTENCY_KEY_REUSED'
+        ? 'idempotencyKey was already used for a different organization lifecycle request'
+        : 'The result for this organization lifecycle request is unavailable',
+      'CONFLICT',
+      { field: 'idempotencyKey', reason },
     );
   }
 

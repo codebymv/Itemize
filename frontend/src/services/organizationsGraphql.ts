@@ -172,10 +172,11 @@ const resendOrganizationInvitationMutation = `
 `;
 
 const revokeOrganizationInvitationMutation = `
-  mutation RevokeOrganizationInvitation($organizationId: Int!, $invitationId: Int!) {
+  mutation RevokeOrganizationInvitation($organizationId: Int!, $invitationId: Int!, $idempotencyKey: String!) {
     revokeOrganizationInvitation(
       organizationId: $organizationId
       invitationId: $invitationId
+      idempotencyKey: $idempotencyKey
     )
   }
 `;
@@ -201,8 +202,8 @@ const updateOrganizationMutation = `
 `;
 
 const deleteOrganizationMutation = `
-  mutation DeleteOrganization($id: Int!) {
-    deleteOrganization(id: $id) { deletedId }
+  mutation DeleteOrganization($id: Int!, $idempotencyKey: String!) {
+    deleteOrganization(id: $id, idempotencyKey: $idempotencyKey) { deletedId }
   }
 `;
 
@@ -222,11 +223,13 @@ const updateOrganizationMemberRoleMutation = `
     $organizationId: Int!
     $memberId: Int!
     $role: String!
+    $idempotencyKey: String!
   ) {
     updateOrganizationMemberRole(
       organizationId: $organizationId
       memberId: $memberId
       role: $role
+      idempotencyKey: $idempotencyKey
     ) {
       id organizationId userId role invitedAt joinedAt invitedBy userName email
     }
@@ -234,10 +237,11 @@ const updateOrganizationMemberRoleMutation = `
 `;
 
 const removeOrganizationMemberMutation = `
-  mutation RemoveOrganizationMember($organizationId: Int!, $memberId: Int!) {
+  mutation RemoveOrganizationMember($organizationId: Int!, $memberId: Int!, $idempotencyKey: String!) {
     removeOrganizationMember(
       organizationId: $organizationId
       memberId: $memberId
+      idempotencyKey: $idempotencyKey
     ) { removedMemberId }
   }
 `;
@@ -246,10 +250,12 @@ const transferOrganizationOwnershipMutation = `
   mutation TransferOrganizationOwnership(
     $organizationId: Int!
     $memberId: Int!
+    $idempotencyKey: String!
   ) {
     transferOrganizationOwnership(
       organizationId: $organizationId
       memberId: $memberId
+      idempotencyKey: $idempotencyKey
     ) {
       id organizationId userId role invitedAt joinedAt invitedBy userName email
     }
@@ -257,8 +263,8 @@ const transferOrganizationOwnershipMutation = `
 `;
 
 const leaveOrganizationMutation = `
-  mutation LeaveOrganization($organizationId: Int!) {
-    leaveOrganization(organizationId: $organizationId)
+  mutation LeaveOrganization($organizationId: Int!, $idempotencyKey: String!) {
+    leaveOrganization(organizationId: $organizationId, idempotencyKey: $idempotencyKey)
   }
 `;
 
@@ -433,11 +439,14 @@ export const resendOrganizationInvitationViaGraphql = async (
 export const revokeOrganizationInvitationViaGraphql = async (
   organizationId: number,
   invitationId: number,
+  idempotencyKey: string,
 ): Promise<void> => {
   await graphqlMutationRequest<
     { revokeOrganizationInvitation: boolean },
-    { organizationId: number; invitationId: number }
-  >(revokeOrganizationInvitationMutation, { organizationId, invitationId });
+    { organizationId: number; invitationId: number; idempotencyKey: string }
+  >(revokeOrganizationInvitationMutation, {
+    organizationId, invitationId, idempotencyKey,
+  });
 };
 
 export const acceptOrganizationInvitationViaGraphql = async (token: string) => {
@@ -480,11 +489,12 @@ export const updateOrganizationViaGraphql = async (
 
 export const deleteOrganizationViaGraphql = async (
   id: number,
+  idempotencyKey: string,
 ): Promise<void> => {
   await graphqlMutationRequest<
     { deleteOrganization: { deletedId: number } },
-    { id: number }
-  >(deleteOrganizationMutation, { id });
+    { id: number; idempotencyKey: string }
+  >(deleteOrganizationMutation, { id, idempotencyKey });
 };
 
 export const addOrganizationMemberViaGraphql = async (
@@ -506,14 +516,16 @@ export const updateOrganizationMemberRoleViaGraphql = async (
   organizationId: number,
   memberId: number,
   role: string,
+  idempotencyKey: string,
 ): Promise<OrganizationMember> => {
   const data = await graphqlMutationRequest<
     { updateOrganizationMemberRole: GraphqlOrganizationMember },
-    { organizationId: number; memberId: number; role: string }
+    { organizationId: number; memberId: number; role: string; idempotencyKey: string }
   >(updateOrganizationMemberRoleMutation, {
     organizationId,
     memberId,
     role,
+    idempotencyKey,
   });
   return mapOrganizationMember(data.updateOrganizationMemberRole);
 };
@@ -521,31 +533,34 @@ export const updateOrganizationMemberRoleViaGraphql = async (
 export const removeOrganizationMemberViaGraphql = async (
   organizationId: number,
   memberId: number,
+  idempotencyKey: string,
 ): Promise<void> => {
   await graphqlMutationRequest<
     { removeOrganizationMember: { removedMemberId: number } },
-    { organizationId: number; memberId: number }
-  >(removeOrganizationMemberMutation, { organizationId, memberId });
+    { organizationId: number; memberId: number; idempotencyKey: string }
+  >(removeOrganizationMemberMutation, { organizationId, memberId, idempotencyKey });
 };
 
 export const transferOrganizationOwnershipViaGraphql = async (
   organizationId: number,
   memberId: number,
+  idempotencyKey: string,
 ): Promise<OrganizationMember> => {
   const data = await graphqlMutationRequest<
     { transferOrganizationOwnership: GraphqlOrganizationMember },
-    { organizationId: number; memberId: number }
-  >(transferOrganizationOwnershipMutation, { organizationId, memberId });
+    { organizationId: number; memberId: number; idempotencyKey: string }
+  >(transferOrganizationOwnershipMutation, { organizationId, memberId, idempotencyKey });
   return mapOrganizationMember(data.transferOrganizationOwnership);
 };
 
 export const leaveOrganizationViaGraphql = async (
   organizationId: number,
+  idempotencyKey: string,
 ): Promise<void> => {
   await graphqlMutationRequest<
     { leaveOrganization: boolean },
-    { organizationId: number }
-  >(leaveOrganizationMutation, { organizationId });
+    { organizationId: number; idempotencyKey: string }
+  >(leaveOrganizationMutation, { organizationId, idempotencyKey });
 };
 
 export const selectOrganizationViaGraphql = async (

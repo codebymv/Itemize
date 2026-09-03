@@ -4,6 +4,12 @@ import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
 import { NotificationsService } from '../notifications/notifications.service';
 import { OrganizationAccessRole } from './organizations.repository';
+import {
+  findOrganizationLifecycleReceipt,
+  lockOrganizationLifecycleActor,
+  organizationLifecycleReceiptResult,
+  saveOrganizationLifecycleReceipt,
+} from './organization-lifecycle-receipt';
 
 export type OrganizationInvitationRow = {
   id: number | string;
@@ -302,8 +308,29 @@ export class OrganizationInvitationsRepository {
     return result.rows[0]?.last_sent_at ?? null;
   }
 
-  async revoke(actorUserId: number, organizationId: number, invitationId: number) {
+  async revoke(
+    actorUserId: number,
+    organizationId: number,
+    invitationId: number,
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ) {
     return this.transaction(async (client) => {
+      if (!await lockOrganizationLifecycleActor(client, actorUserId)) {
+        return { kind: 'forbidden' as const };
+      }
+      const receipt = await findOrganizationLifecycleReceipt(
+        client, actorUserId, idempotencyKey,
+      );
+      if (receipt) {
+        const replay = organizationLifecycleReceiptResult(
+          receipt, 'revoke_invitation', requestFingerprint,
+        );
+        if (replay.kind !== 'ok') return replay;
+        return replay.result.revoked === true
+          ? { kind: 'revoked' as const, replayed: true }
+          : { kind: 'result_unavailable' as const };
+      }
       const actor = await this.lockActor(client, actorUserId, organizationId);
       if (!actor) return { kind: 'forbidden' as const };
       const target = await client.query<{ role: string; email: string }>(
@@ -334,7 +361,15 @@ export class OrganizationInvitationsRepository {
           role: target.rows[0].role,
         },
       });
-      return { kind: 'revoked' as const };
+      await saveOrganizationLifecycleReceipt(client, {
+        userId: actorUserId,
+        idempotencyKey,
+        organizationId,
+        action: 'revoke_invitation',
+        requestFingerprint,
+        result: { revoked: true },
+      });
+      return { kind: 'revoked' as const, replayed: false };
     });
   }
 

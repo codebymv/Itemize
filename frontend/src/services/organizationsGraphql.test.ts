@@ -203,14 +203,14 @@ describe('organization GraphQL consumer', () => {
       name: 'Renamed',
       logo_url: undefined,
     });
-    await deleteOrganizationViaGraphql(4);
+    await deleteOrganizationViaGraphql(4, 'organization-delete-0001');
     await addOrganizationMemberViaGraphql(4, member.email, 'member');
-    await updateOrganizationMemberRoleViaGraphql(4, 8, 'viewer');
+    await updateOrganizationMemberRoleViaGraphql(4, 8, 'viewer', 'member-role-0001');
     await expect(
-      transferOrganizationOwnershipViaGraphql(4, 8),
+      transferOrganizationOwnershipViaGraphql(4, 8, 'ownership-transfer-0001'),
     ).resolves.toMatchObject({ role: 'owner' });
-    await removeOrganizationMemberViaGraphql(4, 8);
-    await leaveOrganizationViaGraphql(4);
+    await removeOrganizationMemberViaGraphql(4, 8, 'member-remove-0001');
+    await leaveOrganizationViaGraphql(4, 'organization-leave-0001');
 
     const bodies = vi.mocked(fetch).mock.calls.map((call) =>
       JSON.parse(String((call[1] as RequestInit).body)),
@@ -223,6 +223,10 @@ describe('organization GraphQL consumer', () => {
       id: 4,
       input: { name: 'Renamed', logoUrl: null },
     });
+    expect(bodies[4].variables).toEqual({
+      id: 4,
+      idempotencyKey: 'organization-delete-0001',
+    });
     expect(bodies[5].variables).toEqual({
       organizationId: 4,
       input: { email: member.email, role: 'member' },
@@ -231,8 +235,22 @@ describe('organization GraphQL consumer', () => {
       organizationId: 4,
       memberId: 8,
       role: 'viewer',
+      idempotencyKey: 'member-role-0001',
     });
-    expect(bodies[7].variables).toEqual({ organizationId: 4, memberId: 8 });
+    expect(bodies[7].variables).toEqual({
+      organizationId: 4,
+      memberId: 8,
+      idempotencyKey: 'ownership-transfer-0001',
+    });
+    expect(bodies[8].variables).toEqual({
+      organizationId: 4,
+      memberId: 8,
+      idempotencyKey: 'member-remove-0001',
+    });
+    expect(bodies[9].variables).toEqual({
+      organizationId: 4,
+      idempotencyKey: 'organization-leave-0001',
+    });
     expect(fetchCsrfToken).toHaveBeenCalledTimes(10);
   });
 
@@ -276,7 +294,7 @@ describe('organization GraphQL consumer', () => {
       4, invitation.email, 'member', 'invitation-create-0001',
     );
     await resendOrganizationInvitationViaGraphql(4, 15, 'invitation-resend-0001');
-    await revokeOrganizationInvitationViaGraphql(4, 15);
+    await revokeOrganizationInvitationViaGraphql(4, 15, 'invitation-revoke-0001');
     await expect(acceptOrganizationInvitationViaGraphql('a'.repeat(64)))
       .resolves.toMatchObject({ organizationId: 4, role: 'member' });
 
@@ -293,7 +311,11 @@ describe('organization GraphQL consumer', () => {
       invitationId: 15,
       idempotencyKey: 'invitation-resend-0001',
     });
-    expect(bodies[4].variables).toEqual({ organizationId: 4, invitationId: 15 });
+    expect(bodies[4].variables).toEqual({
+      organizationId: 4,
+      invitationId: 15,
+      idempotencyKey: 'invitation-revoke-0001',
+    });
     expect(bodies[5].variables).toEqual({ token: 'a'.repeat(64) });
     expect(vi.mocked(fetchCsrfToken).mock.calls.length - csrfCallsBefore).toBe(4);
   });

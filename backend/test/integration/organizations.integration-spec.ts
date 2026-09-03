@@ -429,12 +429,17 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
     );
     const transferBlocked = await mutation(
       memberToken,
-      `mutation Transfer($organizationId: Int!, $memberId: Int!) {
-        transferOrganizationOwnership(organizationId: $organizationId, memberId: $memberId) { id }
+      `mutation Transfer($organizationId: Int!, $memberId: Int!, $key: String!) {
+        transferOrganizationOwnership(
+          organizationId: $organizationId
+          memberId: $memberId
+          idempotencyKey: $key
+        ) { id }
       }`,
       {
         organizationId: createdIds[0],
         memberId: Number(recipientMembership.rows[0].id),
+        key: 'ownership-transfer-over-limit',
       },
     ).expect(200);
     expect(transferBlocked.body.errors[0].extensions).toMatchObject({
@@ -635,13 +640,14 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
 
     const adminTransferDenied = await mutation(
       adminUserToken,
-      `mutation Transfer($organizationId: Int!, $memberId: Int!) {
+      `mutation Transfer($organizationId: Int!, $memberId: Int!, $key: String!) {
         transferOrganizationOwnership(
           organizationId: $organizationId
           memberId: $memberId
+          idempotencyKey: $key
         ) { id }
       }`,
-      { organizationId, memberId: invitedMemberId },
+      { organizationId, memberId: invitedMemberId, key: 'ownership-admin-denied' },
     ).expect(200);
     expect(adminTransferDenied.body.errors[0].extensions.reason).toBe(
       'OWNER_REQUIRED',
@@ -649,18 +655,61 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
 
     const transferred = await mutation(
       memberToken,
-      `mutation Transfer($organizationId: Int!, $memberId: Int!) {
+      `mutation Transfer($organizationId: Int!, $memberId: Int!, $key: String!) {
         transferOrganizationOwnership(
           organizationId: $organizationId
           memberId: $memberId
+          idempotencyKey: $key
         ) { ${memberFields} }
       }`,
-      { organizationId, memberId: invitedMemberId },
+      { organizationId, memberId: invitedMemberId, key: 'ownership-transfer-primary' },
     ).expect(200);
     expect(transferred.body.errors).toBeUndefined();
     expect(transferred.body.data.transferOrganizationOwnership).toMatchObject({
       id: invitedMemberId,
       role: 'owner',
+    });
+    const transferReplay = await mutation(
+      memberToken,
+      `mutation Transfer($organizationId: Int!, $memberId: Int!, $key: String!) {
+        transferOrganizationOwnership(
+          organizationId: $organizationId
+          memberId: $memberId
+          idempotencyKey: $key
+        ) { id role }
+      }`,
+      { organizationId, memberId: invitedMemberId, key: 'ownership-transfer-primary' },
+    ).expect(200);
+    expect(transferReplay.body.errors).toBeUndefined();
+    expect(transferReplay.body.data.transferOrganizationOwnership).toMatchObject({
+      id: invitedMemberId,
+      role: 'owner',
+    });
+    const transferKeyConflict = await mutation(
+      memberToken,
+      `mutation Role(
+        $organizationId: Int!
+        $memberId: Int!
+        $role: String!
+        $key: String!
+      ) {
+        updateOrganizationMemberRole(
+          organizationId: $organizationId
+          memberId: $memberId
+          role: $role
+          idempotencyKey: $key
+        ) { id }
+      }`,
+      {
+        organizationId,
+        memberId: adminMemberId,
+        role: 'member',
+        key: 'ownership-transfer-primary',
+      },
+    ).expect(200);
+    expect(transferKeyConflict.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_KEY_REUSED',
     });
     const ownershipRoles = await pool.query<{ user_id: number; role: string }>(
       `SELECT user_id, role FROM organization_members
@@ -732,13 +781,14 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
 
     const restored = await mutation(
       invitedUserToken,
-      `mutation Transfer($organizationId: Int!, $memberId: Int!) {
+      `mutation Transfer($organizationId: Int!, $memberId: Int!, $key: String!) {
         transferOrganizationOwnership(
           organizationId: $organizationId
           memberId: $memberId
+          idempotencyKey: $key
         ) { id role }
       }`,
-      { organizationId, memberId: ownerMemberId },
+      { organizationId, memberId: ownerMemberId, key: 'ownership-transfer-restore' },
     ).expect(200);
     expect(restored.body.data.transferOrganizationOwnership).toMatchObject({
       id: ownerMemberId,
@@ -780,29 +830,81 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
 
     const roleChanged = await mutation(
       memberToken,
-      `mutation Role($organizationId: Int!, $memberId: Int!, $role: String!) {
+      `mutation Role($organizationId: Int!, $memberId: Int!, $role: String!, $key: String!) {
         updateOrganizationMemberRole(
           organizationId: $organizationId
           memberId: $memberId
           role: $role
+          idempotencyKey: $key
         ) { ${memberFields} }
       }`,
-      { organizationId, memberId: invitedMemberId, role: 'viewer' },
+      {
+        organizationId,
+        memberId: invitedMemberId,
+        role: 'viewer',
+        key: 'member-role-viewer',
+      },
     ).expect(200);
     expect(roleChanged.body.data.updateOrganizationMemberRole.role).toBe(
       'viewer',
     );
-
-    const adminPeerDenied = await mutation(
-      adminUserToken,
-      `mutation Role($organizationId: Int!, $memberId: Int!, $role: String!) {
+    const roleReplay = await mutation(
+      memberToken,
+      `mutation Role($organizationId: Int!, $memberId: Int!, $role: String!, $key: String!) {
         updateOrganizationMemberRole(
           organizationId: $organizationId
           memberId: $memberId
           role: $role
+          idempotencyKey: $key
+        ) { id role }
+      }`,
+      {
+        organizationId,
+        memberId: invitedMemberId,
+        role: 'viewer',
+        key: 'member-role-viewer',
+      },
+    ).expect(200);
+    expect(roleReplay.body.errors).toBeUndefined();
+    expect(roleReplay.body.data.updateOrganizationMemberRole.role).toBe('viewer');
+    const changedRoleReuse = await mutation(
+      memberToken,
+      `mutation Role($organizationId: Int!, $memberId: Int!, $role: String!, $key: String!) {
+        updateOrganizationMemberRole(
+          organizationId: $organizationId
+          memberId: $memberId
+          role: $role
+          idempotencyKey: $key
         ) { id }
       }`,
-      { organizationId, memberId: adminMemberId, role: 'member' },
+      {
+        organizationId,
+        memberId: invitedMemberId,
+        role: 'member',
+        key: 'member-role-viewer',
+      },
+    ).expect(200);
+    expect(changedRoleReuse.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_KEY_REUSED',
+    });
+
+    const adminPeerDenied = await mutation(
+      adminUserToken,
+      `mutation Role($organizationId: Int!, $memberId: Int!, $role: String!, $key: String!) {
+        updateOrganizationMemberRole(
+          organizationId: $organizationId
+          memberId: $memberId
+          role: $role
+          idempotencyKey: $key
+        ) { id }
+      }`,
+      {
+        organizationId,
+        memberId: adminMemberId,
+        role: 'member',
+        key: 'member-role-admin-denied',
+      },
     ).expect(200);
     expect(adminPeerDenied.body.errors[0].extensions.reason).toBe(
       'ADMIN_PEER_FORBIDDEN',
@@ -816,12 +918,42 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
     expect(selected.body.errors).toBeUndefined();
     const left = await mutation(
       invitedUserToken,
-      `mutation Leave($organizationId: Int!) {
-        leaveOrganization(organizationId: $organizationId)
+      `mutation Leave($organizationId: Int!, $key: String!) {
+        leaveOrganization(organizationId: $organizationId, idempotencyKey: $key)
       }`,
-      { organizationId },
+      { organizationId, key: 'organization-leave-invited' },
     ).expect(200);
     expect(left.body.data.leaveOrganization).toBe(true);
+    const leftReplay = await mutation(
+      invitedUserToken,
+      `mutation Leave($organizationId: Int!, $key: String!) {
+        leaveOrganization(organizationId: $organizationId, idempotencyKey: $key)
+      }`,
+      { organizationId, key: 'organization-leave-invited' },
+    ).expect(200);
+    expect(leftReplay.body.errors).toBeUndefined();
+    expect(leftReplay.body.data.leaveOrganization).toBe(true);
+    const unavailableRoleReplay = await mutation(
+      memberToken,
+      `mutation Role($organizationId: Int!, $memberId: Int!, $role: String!, $key: String!) {
+        updateOrganizationMemberRole(
+          organizationId: $organizationId
+          memberId: $memberId
+          role: $role
+          idempotencyKey: $key
+        ) { id }
+      }`,
+      {
+        organizationId,
+        memberId: invitedMemberId,
+        role: 'viewer',
+        key: 'member-role-viewer',
+      },
+    ).expect(200);
+    expect(unavailableRoleReplay.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE',
+    });
     expect(
       (
         await pool.query<{ default_organization_id: number | null }>(
@@ -839,17 +971,32 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
       { organizationId, input: { email: invitedEmail, role: 'member' } },
     ).expect(200);
     const readdedMemberId = Number(readded.body.data.addOrganizationMember.id);
-    const removed = await mutation(
-      memberToken,
-      `mutation Remove($organizationId: Int!, $memberId: Int!) {
+    const removeDocument = `mutation Remove(
+      $organizationId: Int!
+      $memberId: Int!
+      $key: String!
+    ) {
         removeOrganizationMember(
           organizationId: $organizationId
           memberId: $memberId
+          idempotencyKey: $key
         ) { removedMemberId }
-      }`,
-      { organizationId, memberId: readdedMemberId },
-    ).expect(200);
+      }`;
+    const removeVariables = {
+      organizationId,
+      memberId: readdedMemberId,
+      key: 'member-remove-readded',
+    };
+    const [removed, removedReplay] = await Promise.all([
+      mutation(memberToken, removeDocument, removeVariables).expect(200),
+      mutation(memberToken, removeDocument, removeVariables).expect(200),
+    ]);
+    expect(removed.body.errors).toBeUndefined();
     expect(removed.body.data.removeOrganizationMember.removedMemberId).toBe(
+      readdedMemberId,
+    );
+    expect(removedReplay.body.errors).toBeUndefined();
+    expect(removedReplay.body.data.removeOrganizationMember.removedMemberId).toBe(
       readdedMemberId,
     );
 
@@ -869,10 +1016,10 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
     );
     const deniedDelete = await mutation(
       memberToken,
-      `mutation Delete($id: Int!) {
-        deleteOrganization(id: $id) { deletedId }
+      `mutation Delete($id: Int!, $key: String!) {
+        deleteOrganization(id: $id, idempotencyKey: $key) { deletedId }
       }`,
-      { id: organizationId },
+      { id: organizationId, key: 'organization-delete-evidence-denied' },
     ).expect(200);
     expect(deniedDelete.body.errors[0].extensions).toMatchObject({
       code: 'CONFLICT',
@@ -885,14 +1032,23 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
     );
     const deleted = await mutation(
       memberToken,
-      `mutation Delete($id: Int!) {
-        deleteOrganization(id: $id) { deletedId }
+      `mutation Delete($id: Int!, $key: String!) {
+        deleteOrganization(id: $id, idempotencyKey: $key) { deletedId }
       }`,
-      { id: organizationId },
+      { id: organizationId, key: 'organization-delete-primary' },
     ).expect(200);
     expect(deleted.body.data.deleteOrganization.deletedId).toBe(
       organizationId,
     );
+    const deletedReplay = await mutation(
+      memberToken,
+      `mutation Delete($id: Int!, $key: String!) {
+        deleteOrganization(id: $id, idempotencyKey: $key) { deletedId }
+      }`,
+      { id: organizationId, key: 'organization-delete-primary' },
+    ).expect(200);
+    expect(deletedReplay.body.errors).toBeUndefined();
+    expect(deletedReplay.body.data.deleteOrganization.deletedId).toBe(organizationId);
     const cleanup = await pool.query<{ file_url: string }>(
       `SELECT file_url FROM signature_file_deletion_jobs
        WHERE organization_id = $1`,
@@ -1202,15 +1358,37 @@ describe('Organization selector GraphQL PostgreSQL contract', () => {
     const revocableId = Number(revocable.body.data.createOrganizationInvitation.id);
     const revoked = await mutation(
       memberToken,
-      `mutation Revoke($organizationId: Int!, $invitationId: Int!) {
+      `mutation Revoke($organizationId: Int!, $invitationId: Int!, $key: String!) {
         revokeOrganizationInvitation(
           organizationId: $organizationId
           invitationId: $invitationId
+          idempotencyKey: $key
         )
       }`,
-      { organizationId: alphaId, invitationId: revocableId },
+      {
+        organizationId: alphaId,
+        invitationId: revocableId,
+        key: 'invitation-revoke-primary',
+      },
     ).expect(200);
     expect(revoked.body.data.revokeOrganizationInvitation).toBe(true);
+    const revokedReplay = await mutation(
+      memberToken,
+      `mutation Revoke($organizationId: Int!, $invitationId: Int!, $key: String!) {
+        revokeOrganizationInvitation(
+          organizationId: $organizationId
+          invitationId: $invitationId
+          idempotencyKey: $key
+        )
+      }`,
+      {
+        organizationId: alphaId,
+        invitationId: revocableId,
+        key: 'invitation-revoke-primary',
+      },
+    ).expect(200);
+    expect(revokedReplay.body.errors).toBeUndefined();
+    expect(revokedReplay.body.data.revokeOrganizationInvitation).toBe(true);
     const revokedRow = await pool.query<{ status: string; token_hash: string | null }>(
       'SELECT status, token_hash FROM organization_invitations WHERE id = $1',
       [revocableId],

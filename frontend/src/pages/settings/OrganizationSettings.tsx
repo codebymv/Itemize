@@ -209,7 +209,12 @@ export function OrganizationSettings({
     run: runInvitationAction,
   } = useKeyedSingleFlightAction<number>();
   const resendInvitationAttempt = useKeyedStableMutationKey<number>('organization-invitation-resend');
+  const revokeInvitationAttempt = useKeyedStableMutationKey<number>('organization-invitation-revoke');
   const inviteMemberAttempt = useStableMutationKey('organization-invitation-create');
+  const memberRoleAttempt = useKeyedStableMutationKey<number>('organization-member-role');
+  const removeMemberAttempt = useKeyedStableMutationKey<number>('organization-member-remove');
+  const transferOwnershipAttempt = useKeyedStableMutationKey<number>('organization-transfer-ownership');
+  const lifecycleAttempt = useKeyedStableMutationKey<'leave' | 'delete'>('organization-lifecycle');
   const [email, setEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<'admin' | 'member' | 'viewer'>('member');
   const [lifecycleAction, setLifecycleAction] = useState<'leave' | 'delete' | null>(null);
@@ -462,18 +467,18 @@ export function OrganizationSettings({
   ) => {
     if (!organizationId) return;
     await runInvitationAction(invitation.id, async () => {
-      let resendKey: string | null = null;
-      if (action === 'resend') {
-        resendKey = resendInvitationAttempt.begin(
-          invitation.id,
-          JSON.stringify({ organizationId, invitationId: invitation.id }),
-        );
-        if (!resendKey) return;
-      }
+      const fingerprint = JSON.stringify({
+        organizationId,
+        invitationId: invitation.id,
+      });
+      const mutationKey = action === 'resend'
+        ? resendInvitationAttempt.begin(invitation.id, fingerprint)
+        : revokeInvitationAttempt.begin(invitation.id, fingerprint);
+      if (!mutationKey) return;
       try {
         if (action === 'resend') {
           const resent = await resendOrganizationInvitation(
-            organizationId, invitation.id, resendKey as string,
+            organizationId, invitation.id, mutationKey,
           );
           resendInvitationAttempt.reset(invitation.id);
           setInvitations((current) => current.map((entry) =>
@@ -486,13 +491,17 @@ export function OrganizationSettings({
               : 'Link renewed, but email delivery is unavailable.',
           });
         } else {
-          await revokeOrganizationInvitation(organizationId, invitation.id);
+          await revokeOrganizationInvitation(
+            organizationId, invitation.id, mutationKey,
+          );
+          revokeInvitationAttempt.reset(invitation.id);
           setInvitations((current) => current.filter((entry) => entry.id !== invitation.id));
           toast({ title: 'Invitation revoked' });
         }
         void loadDetails();
       } catch (error) {
         if (action === 'resend') resendInvitationAttempt.release(invitation.id);
+        else revokeInvitationAttempt.release(invitation.id);
         toast({
           title: action === 'resend' ? 'Could not resend invitation' : 'Could not revoke invitation',
           description: error instanceof Error ? error.message : 'Please try again.',
@@ -504,12 +513,24 @@ export function OrganizationSettings({
 
   const handleRoleChange = async (member: OrganizationMember, role: string) => {
     if (!organizationId) return;
+    const idempotencyKey = memberRoleAttempt.begin(
+      member.id,
+      JSON.stringify({ organizationId, memberId: member.id, role }),
+    );
+    if (!idempotencyKey) return;
     setMemberActionId(member.id);
     try {
-      await updateMemberRole(organizationId, member.id, role);
-      await loadDetails();
+      const updated = await updateMemberRole(
+        organizationId, member.id, role, idempotencyKey,
+      );
+      memberRoleAttempt.reset(member.id);
+      setMembers((current) => current.map((entry) =>
+        entry.id === updated.id ? updated : entry,
+      ));
       toast({ title: 'Role updated' });
+      void loadDetails();
     } catch (error) {
+      memberRoleAttempt.release(member.id);
       toast({
         title: 'Could not update role',
         description: error instanceof Error ? error.message : 'Please try again.',
@@ -522,12 +543,20 @@ export function OrganizationSettings({
 
   const handleRemove = async (member: OrganizationMember) => {
     if (!organizationId) return;
+    const idempotencyKey = removeMemberAttempt.begin(
+      member.id,
+      JSON.stringify({ organizationId, memberId: member.id }),
+    );
+    if (!idempotencyKey) return;
     setMemberActionId(member.id);
     try {
-      await removeMember(organizationId, member.id);
-      await loadDetails();
+      await removeMember(organizationId, member.id, idempotencyKey);
+      removeMemberAttempt.reset(member.id);
+      setMembers((current) => current.filter((entry) => entry.id !== member.id));
       toast({ title: 'Member removed' });
+      void loadDetails();
     } catch (error) {
+      removeMemberAttempt.release(member.id);
       toast({
         title: 'Could not remove member',
         description: error instanceof Error ? error.message : 'Please try again.',
@@ -540,12 +569,32 @@ export function OrganizationSettings({
 
   const handleTransferOwnership = async (member: OrganizationMember) => {
     if (!organizationId || !isOwner) return;
+    const idempotencyKey = transferOwnershipAttempt.begin(
+      member.id,
+      JSON.stringify({ organizationId, memberId: member.id }),
+    );
+    if (!idempotencyKey) return;
     setMemberActionId(member.id);
     try {
-      await transferOrganizationOwnership(organizationId, member.id);
-      await Promise.all([refresh(), loadDetails(), loadAllowance(), refreshSubscription()]);
+      const transferred = await transferOrganizationOwnership(
+        organizationId, member.id, idempotencyKey,
+      );
+      transferOwnershipAttempt.reset(member.id);
+      setMembers((current) => current.map((entry) => {
+        if (entry.id === transferred.id) return transferred;
+        return entry.role === 'owner' ? { ...entry, role: 'admin' } : entry;
+      }));
       toast({ title: `Ownership transferred to ${member.user_name || member.email}` });
+      void Promise.all([
+        refresh(), loadDetails(), loadAllowance(), refreshSubscription(),
+      ]).catch(() => {
+        toast({
+          title: 'Ownership transferred',
+          description: 'Refresh to load the latest organization access and billing state.',
+        });
+      });
     } catch (error) {
+      transferOwnershipAttempt.release(member.id);
       toast({
         title: 'Could not transfer ownership',
         description: error instanceof Error ? error.message : 'Please try again.',
@@ -558,23 +607,38 @@ export function OrganizationSettings({
 
   const handleLifecycle = async (action: 'leave' | 'delete') => {
     if (!organizationId) return;
+    const idempotencyKey = lifecycleAttempt.begin(
+      action,
+      JSON.stringify({ organizationId, action }),
+    );
+    if (!idempotencyKey) return;
     setLifecycleAction(action);
     try {
-      if (action === 'delete') await deleteOrganization(organizationId);
-      else await leaveOrganization(organizationId);
-      await refresh();
-      await refreshSubscription();
-      navigate('/canvas');
-      toast({ title: action === 'delete' ? 'Organization deleted' : 'Organization left' });
+      if (action === 'delete') await deleteOrganization(organizationId, idempotencyKey);
+      else await leaveOrganization(organizationId, idempotencyKey);
+      lifecycleAttempt.reset(action);
     } catch (error) {
+      lifecycleAttempt.release(action);
       toast({
         title: action === 'delete' ? 'Could not delete organization' : 'Could not leave organization',
         description: error instanceof Error ? error.message : 'Please try again.',
         variant: 'destructive',
       });
+      setLifecycleAction(null);
+      return;
+    }
+    toast({ title: action === 'delete' ? 'Organization deleted' : 'Organization left' });
+    try {
+      await Promise.all([refresh(), refreshSubscription()]);
+    } catch {
+      toast({
+        title: action === 'delete' ? 'Organization deleted' : 'Organization left',
+        description: 'Refresh to load your current organization.',
+      });
     } finally {
       setLifecycleAction(null);
     }
+    navigate('/canvas');
   };
 
   if (!organization || !organizationId) {

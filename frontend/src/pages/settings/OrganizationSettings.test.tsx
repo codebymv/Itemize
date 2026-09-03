@@ -99,7 +99,16 @@ describe('OrganizationSettings', () => {
       name: 'Second Studio',
       slug: 'second-studio',
     });
-    mocks.transferOwnership.mockResolvedValue(undefined);
+    mocks.transferOwnership.mockResolvedValue({
+      id: 22,
+      organization_id: 7,
+      user_id: 5,
+      role: 'owner',
+      invited_at: '2026-08-25T00:00:00.000Z',
+      joined_at: '2026-08-25T00:05:00.000Z',
+      user_name: 'Grace Hopper',
+      email: 'grace@example.com',
+    });
     mocks.removeMember.mockResolvedValue(undefined);
     mocks.refreshSubscription.mockResolvedValue(undefined);
     mocks.invite.mockResolvedValue({
@@ -282,7 +291,7 @@ describe('OrganizationSettings', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Transfer ownership' }));
 
     await waitFor(() => {
-      expect(mocks.transferOwnership).toHaveBeenCalledWith(7, 22);
+      expect(mocks.transferOwnership).toHaveBeenCalledWith(7, 22, expect.any(String));
       expect(mocks.refresh).toHaveBeenCalled();
       expect(mocks.refreshSubscription).toHaveBeenCalled();
     });
@@ -318,7 +327,11 @@ describe('OrganizationSettings', () => {
     expect(screen.getByText(/immediately lose access/i)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Remove member' }));
 
-    await waitFor(() => expect(mocks.removeMember).toHaveBeenCalledWith(7, 22));
+    await waitFor(() => expect(mocks.removeMember).toHaveBeenCalledWith(
+      7,
+      22,
+      expect.any(String),
+    ));
   });
 
   it('shows the durable ownership transfer activity to managers', async () => {
@@ -400,6 +413,10 @@ describe('OrganizationSettings', () => {
       expect.any(String),
     ));
     fireEvent.click(screen.getByRole('button', { name: 'Revoke invitation to invitee@example.com' }));
-    await waitFor(() => expect(mocks.revokeInvitation).toHaveBeenCalledWith(7, 31));
+    await waitFor(() => expect(mocks.revokeInvitation).toHaveBeenCalledWith(
+      7,
+      31,
+      expect.any(String),
+    ));
   });
 });

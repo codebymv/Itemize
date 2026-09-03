@@ -3,6 +3,12 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
 import { NotificationsService } from '../notifications/notifications.service';
+import {
+  findOrganizationLifecycleReceipt,
+  lockOrganizationLifecycleActor,
+  organizationLifecycleReceiptResult,
+  saveOrganizationLifecycleReceipt,
+} from './organization-lifecycle-receipt';
 
 export type OrganizationRow = {
   id: number | string;
@@ -75,45 +81,56 @@ export type OrganizationOwnershipTransferDelivery = {
 };
 
 export type OrganizationDeleteOutcome =
-  | { kind: 'deleted' }
+  | { kind: 'deleted'; replayed: boolean }
   | { kind: 'forbidden' }
   | { kind: 'not_found' }
-  | { kind: 'evidence_retained' };
+  | { kind: 'evidence_retained' }
+  | { kind: 'idempotency_conflict' }
+  | { kind: 'result_unavailable' };
 
 export type OrganizationMemberMutationOutcome =
-  | { kind: 'ok'; row: OrganizationMemberRow }
+  | { kind: 'ok'; row: OrganizationMemberRow; replayed?: boolean }
   | { kind: 'forbidden' }
   | { kind: 'member_not_found' }
   | { kind: 'user_not_found' }
   | { kind: 'already_member' }
   | { kind: 'limit_reached'; current: number; limit: number; plan: string }
   | { kind: 'owner_immutable' }
-  | { kind: 'admin_peer_forbidden' };
+  | { kind: 'admin_peer_forbidden' }
+  | { kind: 'idempotency_conflict' }
+  | { kind: 'result_unavailable' };
 
 export type OrganizationMemberRemovalOutcome =
-  | { kind: 'removed' }
+  | { kind: 'removed'; replayed: boolean }
   | { kind: 'forbidden' }
   | { kind: 'member_not_found' }
   | { kind: 'owner_immutable' }
-  | { kind: 'admin_peer_forbidden' };
+  | { kind: 'admin_peer_forbidden' }
+  | { kind: 'idempotency_conflict' }
+  | { kind: 'result_unavailable' };
 
 export type OrganizationOwnershipTransferOutcome =
   | {
       kind: 'ok';
       row: OrganizationMemberRow;
-      delivery: OrganizationOwnershipTransferDelivery;
+      delivery: OrganizationOwnershipTransferDelivery | null;
+      replayed: boolean;
     }
   | { kind: 'forbidden' }
   | { kind: 'owner_required' }
   | { kind: 'member_not_found' }
   | { kind: 'ownership_unchanged' }
   | { kind: 'member_not_joined' }
-  | { kind: 'limit_reached'; current: number; limit: number; plan: string };
+  | { kind: 'limit_reached'; current: number; limit: number; plan: string }
+  | { kind: 'idempotency_conflict' }
+  | { kind: 'result_unavailable' };
 
 export type OrganizationLeaveOutcome =
-  | { kind: 'left' }
+  | { kind: 'left'; replayed: boolean }
   | { kind: 'forbidden' }
-  | { kind: 'owner_cannot_leave' };
+  | { kind: 'owner_cannot_leave' }
+  | { kind: 'idempotency_conflict' }
+  | { kind: 'result_unavailable' };
 
 type UserRow = {
   id: number | string;
@@ -423,8 +440,23 @@ export class OrganizationsRepository {
   delete(
     userId: number,
     organizationId: number,
+    idempotencyKey: string,
+    requestFingerprint: string,
   ): Promise<OrganizationDeleteOutcome> {
     return this.transaction(async (client) => {
+      if (!await lockOrganizationLifecycleActor(client, userId)) {
+        return { kind: 'not_found' };
+      }
+      const receipt = await findOrganizationLifecycleReceipt(client, userId, idempotencyKey);
+      if (receipt) {
+        const replay = organizationLifecycleReceiptResult(
+          receipt, 'delete_organization', requestFingerprint,
+        );
+        if (replay.kind !== 'ok') return replay;
+        return Number(replay.result.deletedId) === organizationId
+          ? { kind: 'deleted', replayed: true }
+          : { kind: 'result_unavailable' };
+      }
       const membership = await this.lockMembership(
         client,
         userId,
@@ -483,10 +515,18 @@ export class OrganizationsRepository {
            updated_at = CURRENT_TIMESTAMP`,
         [organizationId],
       );
+      await saveOrganizationLifecycleReceipt(client, {
+        userId,
+        idempotencyKey,
+        organizationId,
+        action: 'delete_organization',
+        requestFingerprint,
+        result: { deletedId: organizationId },
+      });
       await client.query('DELETE FROM organizations WHERE id = $1', [
         organizationId,
       ]);
-      return { kind: 'deleted' };
+      return { kind: 'deleted', replayed: false };
     });
   }
 
@@ -755,8 +795,30 @@ export class OrganizationsRepository {
     organizationId: number,
     memberId: number,
     role: OrganizationAccessRole,
+    idempotencyKey: string,
+    requestFingerprint: string,
   ): Promise<OrganizationMemberMutationOutcome> {
     return this.transaction(async (client) => {
+      if (!await lockOrganizationLifecycleActor(client, actorUserId)) {
+        return { kind: 'forbidden' };
+      }
+      const receipt = await findOrganizationLifecycleReceipt(
+        client, actorUserId, idempotencyKey,
+      );
+      if (receipt) {
+        const replay = organizationLifecycleReceiptResult(
+          receipt, 'update_member_role', requestFingerprint,
+        );
+        if (replay.kind !== 'ok') return replay;
+        const memberIdFromReceipt = Number(replay.result.memberId);
+        const member = Number.isSafeInteger(memberIdFromReceipt)
+          ? await this.findMemberWith(client, organizationId, memberIdFromReceipt)
+          : null;
+        return member
+          && member.role === replay.result.role
+          ? { kind: 'ok', row: member, replayed: true }
+          : { kind: 'result_unavailable' };
+      }
       const actor = await this.lockMembership(
         client,
         actorUserId,
@@ -817,7 +879,15 @@ export class OrganizationsRepository {
           role,
         },
       });
-      return { kind: 'ok', row: updated.rows[0] };
+      await saveOrganizationLifecycleReceipt(client, {
+        userId: actorUserId,
+        idempotencyKey,
+        organizationId,
+        action: 'update_member_role',
+        requestFingerprint,
+        result: { memberId, role },
+      });
+      return { kind: 'ok', row: updated.rows[0], replayed: false };
     });
   }
 
@@ -825,8 +895,30 @@ export class OrganizationsRepository {
     actorUserId: number,
     organizationId: number,
     memberId: number,
+    idempotencyKey: string,
+    requestFingerprint: string,
   ): Promise<OrganizationOwnershipTransferOutcome> {
     return this.transaction(async (client) => {
+      if (!await lockOrganizationLifecycleActor(client, actorUserId)) {
+        return { kind: 'forbidden' };
+      }
+      const receipt = await findOrganizationLifecycleReceipt(
+        client, actorUserId, idempotencyKey,
+      );
+      if (receipt) {
+        const replay = organizationLifecycleReceiptResult(
+          receipt, 'transfer_ownership', requestFingerprint,
+        );
+        if (replay.kind !== 'ok') return replay;
+        const memberIdFromReceipt = Number(replay.result.memberId);
+        const member = Number.isSafeInteger(memberIdFromReceipt)
+          ? await this.findMemberWith(client, organizationId, memberIdFromReceipt)
+          : null;
+        return member
+          && member.role === 'owner'
+          ? { kind: 'ok', row: member, delivery: null, replayed: true }
+          : { kind: 'result_unavailable' };
+      }
       const actor = await this.lockMembership(
         client,
         actorUserId,
@@ -936,9 +1028,19 @@ export class OrganizationsRepository {
         body: `${targetDisplay} now owns ${transferContext.organization_name}. You remain an admin.`,
       });
 
+      const transferredMember = { ...targetRow, role: 'owner' };
+      await saveOrganizationLifecycleReceipt(client, {
+        userId: actorUserId,
+        idempotencyKey,
+        organizationId,
+        action: 'transfer_ownership',
+        requestFingerprint,
+        result: { memberId, role: 'owner' },
+      });
+
       return {
         kind: 'ok',
-        row: { ...targetRow, role: 'owner' },
+        row: transferredMember,
         delivery: {
           organizationName: transferContext.organization_name,
           previousOwner: {
@@ -947,6 +1049,7 @@ export class OrganizationsRepository {
           },
           newOwner: { name: targetRow.user_name, email: targetRow.email },
         },
+        replayed: false,
       };
     });
   }
@@ -955,8 +1058,25 @@ export class OrganizationsRepository {
     actorUserId: number,
     organizationId: number,
     memberId: number,
+    idempotencyKey: string,
+    requestFingerprint: string,
   ): Promise<OrganizationMemberRemovalOutcome> {
     return this.transaction(async (client) => {
+      if (!await lockOrganizationLifecycleActor(client, actorUserId)) {
+        return { kind: 'forbidden' };
+      }
+      const receipt = await findOrganizationLifecycleReceipt(
+        client, actorUserId, idempotencyKey,
+      );
+      if (receipt) {
+        const replay = organizationLifecycleReceiptResult(
+          receipt, 'remove_member', requestFingerprint,
+        );
+        if (replay.kind !== 'ok') return replay;
+        return Number(replay.result.removedMemberId) === memberId
+          ? { kind: 'removed', replayed: true }
+          : { kind: 'result_unavailable' };
+      }
       const actor = await this.lockMembership(
         client,
         actorUserId,
@@ -1001,15 +1121,38 @@ export class OrganizationsRepository {
         Number(target.rows[0].user_id),
         organizationId,
       );
-      return { kind: 'removed' };
+      await saveOrganizationLifecycleReceipt(client, {
+        userId: actorUserId,
+        idempotencyKey,
+        organizationId,
+        action: 'remove_member',
+        requestFingerprint,
+        result: { removedMemberId: memberId },
+      });
+      return { kind: 'removed', replayed: false };
     });
   }
 
   leave(
     userId: number,
     organizationId: number,
+    idempotencyKey: string,
+    requestFingerprint: string,
   ): Promise<OrganizationLeaveOutcome> {
     return this.transaction(async (client) => {
+      if (!await lockOrganizationLifecycleActor(client, userId)) {
+        return { kind: 'forbidden' };
+      }
+      const receipt = await findOrganizationLifecycleReceipt(client, userId, idempotencyKey);
+      if (receipt) {
+        const replay = organizationLifecycleReceiptResult(
+          receipt, 'leave_organization', requestFingerprint,
+        );
+        if (replay.kind !== 'ok') return replay;
+        return replay.result.left === true
+          ? { kind: 'left', replayed: true }
+          : { kind: 'result_unavailable' };
+      }
       const membership = await this.lockMembership(
         client,
         userId,
@@ -1037,8 +1180,31 @@ export class OrganizationsRepository {
         [organizationId, userId],
       );
       await this.repairDefaultOrganization(client, userId, organizationId);
-      return { kind: 'left' };
+      await saveOrganizationLifecycleReceipt(client, {
+        userId,
+        idempotencyKey,
+        organizationId,
+        action: 'leave_organization',
+        requestFingerprint,
+        result: { left: true },
+      });
+      return { kind: 'left', replayed: false };
     });
+  }
+
+  private async findMemberWith(
+    client: PoolClient,
+    organizationId: number,
+    memberId: number,
+  ): Promise<OrganizationMemberRow | null> {
+    const member = await client.query<OrganizationMemberRow>(
+      `SELECT ${organizationMemberSelection}
+       FROM organization_members om
+       JOIN users u ON u.id = om.user_id
+       WHERE om.id=$1 AND om.organization_id=$2`,
+      [memberId, organizationId],
+    );
+    return member.rows[0] ?? null;
   }
 
   private slugBase(value: string): string {

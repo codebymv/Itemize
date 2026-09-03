@@ -98,8 +98,11 @@ export class OrganizationsResolver {
   @Mutation(() => DeleteOrganizationResult)
   async deleteOrganization(
     @Args('id', { type: () => Int }) id: number,
+    @Args('idempotencyKey') idempotencyKey: string,
   ): Promise<DeleteOrganizationResult> {
-    return { deletedId: await this.organizations.delete(this.userId(), id) };
+    return {
+      deletedId: await this.organizations.delete(this.userId(), id, idempotencyKey),
+    };
   }
 
   @CsrfProtected()
@@ -144,8 +147,11 @@ export class OrganizationsResolver {
   revokeOrganizationInvitation(
     @Args('organizationId', { type: () => Int }) organizationId: number,
     @Args('invitationId', { type: () => Int }) invitationId: number,
+    @Args('idempotencyKey') idempotencyKey: string,
   ): Promise<boolean> {
-    return this.invitations.revoke(this.userId(), organizationId, invitationId);
+    return this.invitations.revoke(
+      this.userId(), organizationId, invitationId, idempotencyKey,
+    );
   }
 
   @CsrfProtected()
@@ -162,12 +168,14 @@ export class OrganizationsResolver {
     @Args('organizationId', { type: () => Int }) organizationId: number,
     @Args('memberId', { type: () => Int }) memberId: number,
     @Args('role') role: string,
+    @Args('idempotencyKey') idempotencyKey: string,
   ): Promise<OrganizationMember> {
     return this.organizations.updateMemberRole(
       this.userId(),
       organizationId,
       memberId,
       role,
+      idempotencyKey,
     );
   }
 
@@ -176,12 +184,14 @@ export class OrganizationsResolver {
   async removeOrganizationMember(
     @Args('organizationId', { type: () => Int }) organizationId: number,
     @Args('memberId', { type: () => Int }) memberId: number,
+    @Args('idempotencyKey') idempotencyKey: string,
   ): Promise<RemoveOrganizationMemberResult> {
     return {
       removedMemberId: await this.organizations.removeMember(
         this.userId(),
         organizationId,
         memberId,
+        idempotencyKey,
       ),
     };
   }
@@ -191,11 +201,13 @@ export class OrganizationsResolver {
   transferOrganizationOwnership(
     @Args('organizationId', { type: () => Int }) organizationId: number,
     @Args('memberId', { type: () => Int }) memberId: number,
+    @Args('idempotencyKey') idempotencyKey: string,
   ): Promise<OrganizationMember> {
     return this.organizations.transferOwnership(
       this.userId(),
       organizationId,
       memberId,
+      idempotencyKey,
     );
   }
 
@@ -203,8 +215,9 @@ export class OrganizationsResolver {
   @Mutation(() => Boolean)
   leaveOrganization(
     @Args('organizationId', { type: () => Int }) organizationId: number,
+    @Args('idempotencyKey') idempotencyKey: string,
   ): Promise<boolean> {
-    return this.organizations.leave(this.userId(), organizationId);
+    return this.organizations.leave(this.userId(), organizationId, idempotencyKey);
   }
 
   @CsrfProtected()

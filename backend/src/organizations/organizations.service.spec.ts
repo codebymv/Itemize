@@ -226,29 +226,37 @@ describe('OrganizationsService', () => {
     repository.transferOwnership.mockResolvedValue({
       kind: 'ok',
       row: memberRow(),
+      replayed: false,
       delivery: {
         organizationName: 'Alpha',
         previousOwner: { name: 'Previous Owner', email: 'previous@example.com' },
         newOwner: { name: 'New Owner', email: 'owner@example.com' },
       },
     });
-    await expect(service.transferOwnership(7, 3, 9)).resolves.toMatchObject({
+    await expect(service.transferOwnership(
+      7, 3, 9, 'ownership-transfer-0001',
+    )).resolves.toMatchObject({
       id: 9,
       userId: 8,
       role: 'owner',
       email: 'owner@example.com',
     });
-    expect(ownershipEmail.send).toHaveBeenCalledWith(expect.objectContaining({
-      organizationName: 'Alpha',
-    }));
+    expect(ownershipEmail.send).toHaveBeenCalledWith(
+      expect.objectContaining({ organizationName: 'Alpha' }),
+      'organization-ownership:3:ownership-transfer-0001',
+    );
 
     repository.transferOwnership.mockResolvedValue({ kind: 'owner_required' });
-    await expect(service.transferOwnership(7, 3, 9)).rejects.toMatchObject({
+    await expect(service.transferOwnership(
+      7, 3, 9, 'ownership-transfer-0002',
+    )).rejects.toMatchObject({
       extensions: { code: 'FORBIDDEN', reason: 'OWNER_REQUIRED' },
     });
 
     repository.transferOwnership.mockResolvedValue({ kind: 'member_not_found' });
-    await expect(service.transferOwnership(7, 3, 99)).rejects.toMatchObject({
+    await expect(service.transferOwnership(
+      7, 3, 99, 'ownership-transfer-0003',
+    )).rejects.toMatchObject({
       extensions: { code: 'NOT_FOUND' },
     });
 
@@ -258,13 +266,35 @@ describe('OrganizationsService', () => {
       limit: 1,
       plan: 'free',
     });
-    await expect(service.transferOwnership(7, 3, 9)).rejects.toMatchObject({
+    await expect(service.transferOwnership(
+      7, 3, 9, 'ownership-transfer-0004',
+    )).rejects.toMatchObject({
       extensions: {
         code: 'FORBIDDEN',
         reason: 'ORGANIZATION_LIMIT_REACHED',
         current: 2,
         limit: 1,
       },
+    });
+  });
+
+  it('replays ownership transfers without repeating delivery and rejects reused keys', async () => {
+    repository.transferOwnership.mockResolvedValueOnce({
+      kind: 'ok',
+      row: memberRow(),
+      delivery: null,
+      replayed: true,
+    });
+    await expect(service.transferOwnership(
+      7, 3, 9, 'ownership-transfer-replay',
+    )).resolves.toMatchObject({ id: 9, role: 'owner' });
+    expect(ownershipEmail.send).not.toHaveBeenCalled();
+
+    repository.transferOwnership.mockResolvedValueOnce({ kind: 'idempotency_conflict' });
+    await expect(service.transferOwnership(
+      7, 3, 9, 'ownership-transfer-conflict',
+    )).rejects.toMatchObject({
+      extensions: { code: 'CONFLICT', reason: 'IDEMPOTENCY_KEY_REUSED' },
     });
   });
 

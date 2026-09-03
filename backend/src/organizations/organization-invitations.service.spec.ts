@@ -127,6 +127,20 @@ describe('OrganizationInvitationsService', () => {
     });
   });
 
+  it('replays revocation and rejects lifecycle key reuse', async () => {
+    repository.revoke
+      .mockResolvedValueOnce({ kind: 'revoked', replayed: true })
+      .mockResolvedValueOnce({ kind: 'idempotency_conflict' });
+    await expect(service.revoke(
+      7, 4, 9, 'invitation-revoke-0001',
+    )).resolves.toBe(true);
+    await expect(service.revoke(
+      7, 4, 9, 'invitation-revoke-0002',
+    )).rejects.toMatchObject({
+      extensions: { code: 'CONFLICT', reason: 'IDEMPOTENCY_KEY_REUSED' },
+    });
+  });
+
   it('shows expired previews and requires the invited email at acceptance', async () => {
     repository.preview.mockResolvedValue({
       ...row,

@@ -179,7 +179,7 @@ describe('contacts API GraphQL transport', () => {
       { name: 'Alpha' }, 'organization-create-0001',
     )).resolves.toEqual(organization);
     await expect(updateOrganization(4, { name: 'Alpha' })).resolves.toEqual(organization);
-    await deleteOrganization(4);
+    await deleteOrganization(4, 'organization-delete-0001');
     await expect(ensureDefaultOrganization()).resolves.toEqual(organization);
     await expect(selectOrganization(4)).resolves.toEqual(organization);
     await expect(getOrganizationMembers(4)).resolves.toEqual([member]);
@@ -191,19 +191,23 @@ describe('contacts API GraphQL transport', () => {
     await expect(resendOrganizationInvitation(
       4, 12, 'invitation-resend-0001',
     )).resolves.toEqual(invitation);
-    await revokeOrganizationInvitation(4, 12);
-    await expect(updateMemberRole(4, 8, 'viewer')).resolves.toEqual(member);
-    await expect(transferOrganizationOwnership(4, 8)).resolves.toMatchObject({
+    await revokeOrganizationInvitation(4, 12, 'invitation-revoke-0001');
+    await expect(updateMemberRole(
+      4, 8, 'viewer', 'member-role-0001',
+    )).resolves.toEqual(member);
+    await expect(transferOrganizationOwnership(
+      4, 8, 'ownership-transfer-0001',
+    )).resolves.toMatchObject({
       role: 'owner',
     });
-    await removeMember(4, 8);
-    await leaveOrganization(4);
+    await removeMember(4, 8, 'member-remove-0001');
+    await leaveOrganization(4, 'organization-leave-0001');
 
     expect(createOrganizationViaGraphql).toHaveBeenCalledWith(
       { name: 'Alpha' }, 'organization-create-0001',
     );
     expect(updateOrganizationViaGraphql).toHaveBeenCalledWith(4, { name: 'Alpha' });
-    expect(deleteOrganizationViaGraphql).toHaveBeenCalledWith(4);
+    expect(deleteOrganizationViaGraphql).toHaveBeenCalledWith(4, 'organization-delete-0001');
     expect(selectOrganizationViaGraphql).toHaveBeenCalledWith(4);
     expect(getOrganizationInvitationsViaGraphql).toHaveBeenCalledWith(4);
     expect(getOrganizationActivityViaGraphql).toHaveBeenCalledWith(4, 10);
@@ -216,15 +220,24 @@ describe('contacts API GraphQL transport', () => {
     expect(resendOrganizationInvitationViaGraphql).toHaveBeenCalledWith(
       4, 12, 'invitation-resend-0001',
     );
-    expect(revokeOrganizationInvitationViaGraphql).toHaveBeenCalledWith(4, 12);
+    expect(revokeOrganizationInvitationViaGraphql).toHaveBeenCalledWith(
+      4, 12, 'invitation-revoke-0001',
+    );
     expect(updateOrganizationMemberRoleViaGraphql).toHaveBeenCalledWith(
       4,
       8,
       'viewer',
+      'member-role-0001',
     );
-    expect(transferOrganizationOwnershipViaGraphql).toHaveBeenCalledWith(4, 8);
-    expect(removeOrganizationMemberViaGraphql).toHaveBeenCalledWith(4, 8);
-    expect(leaveOrganizationViaGraphql).toHaveBeenCalledWith(4);
+    expect(transferOrganizationOwnershipViaGraphql).toHaveBeenCalledWith(
+      4, 8, 'ownership-transfer-0001',
+    );
+    expect(removeOrganizationMemberViaGraphql).toHaveBeenCalledWith(
+      4, 8, 'member-remove-0001',
+    );
+    expect(leaveOrganizationViaGraphql).toHaveBeenCalledWith(
+      4, 'organization-leave-0001',
+    );
     expect(api.get).not.toHaveBeenCalled();
     expect(api.post).not.toHaveBeenCalled();
     expect(api.put).not.toHaveBeenCalled();

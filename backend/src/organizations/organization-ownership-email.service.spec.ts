@@ -25,7 +25,7 @@ describe('OrganizationOwnershipEmailService', () => {
       organizationName: 'Ada & Grace',
       previousOwner: { name: 'Ada <Owner>', email: 'ada@example.com' },
       newOwner: { name: 'Grace Hopper', email: 'grace@example.com' },
-    });
+    }, 'ownership-transfer-0001');
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     const requests = fetchMock.mock.calls.map((call) =>
@@ -37,6 +37,13 @@ describe('OrganizationOwnershipEmailService', () => {
     ]);
     expect(requests[0].html).toContain('https://itemize.test/organization-settings');
     expect(requests[0].html).not.toContain('Ada <Owner>');
+    const idempotencyKeys = fetchMock.mock.calls.map((call) =>
+      (call[1] as RequestInit).headers as Record<string, string>,
+    ).map((headers) => headers['Idempotency-Key']).sort();
+    expect(idempotencyKeys).toEqual([
+      'ownership-transfer-0001:new-owner',
+      'ownership-transfer-0001:previous-owner',
+    ]);
   });
 
   it('does not fail the completed transfer when email is not configured', async () => {
@@ -46,7 +53,7 @@ describe('OrganizationOwnershipEmailService', () => {
       organizationName: 'Alpha',
       previousOwner: { name: null, email: 'old@example.com' },
       newOwner: { name: null, email: 'new@example.com' },
-    })).resolves.toBeUndefined();
+    }, 'ownership-transfer-0002')).resolves.toBeUndefined();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

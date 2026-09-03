@@ -205,10 +205,20 @@ export class OrganizationsService {
     }
   }
 
-  async delete(userId: number, organizationId: number): Promise<number> {
+  async delete(
+    userId: number,
+    organizationId: number,
+    idempotencyKey: string,
+  ): Promise<number> {
     this.id(organizationId);
     try {
-      const outcome = await this.organizations.delete(userId, organizationId);
+      const key = organizationMutationKey(idempotencyKey);
+      const outcome = await this.organizations.delete(
+        userId,
+        organizationId,
+        key,
+        organizationMutationFingerprint('delete_organization', { organizationId }),
+      );
       if (outcome.kind === 'forbidden' || outcome.kind === 'not_found') {
         throw itemizeGraphqlError('Organization not found', 'NOT_FOUND');
       }
@@ -218,6 +228,12 @@ export class OrganizationsService {
           'CONFLICT',
           { reason: 'SIGNATURE_EVIDENCE_RETAINED' },
         );
+      }
+      if (outcome.kind === 'idempotency_conflict') {
+        this.idempotencyFailure('IDEMPOTENCY_KEY_REUSED');
+      }
+      if (outcome.kind === 'result_unavailable') {
+        this.idempotencyFailure('IDEMPOTENCY_RESULT_UNAVAILABLE');
       }
       return organizationId;
     } catch (error) {
@@ -296,6 +312,7 @@ export class OrganizationsService {
     organizationId: number,
     memberId: number,
     roleValue: string,
+    idempotencyKey: string,
   ): Promise<OrganizationMember> {
     this.id(organizationId);
     this.memberId(memberId);
@@ -306,6 +323,12 @@ export class OrganizationsService {
         organizationId,
         memberId,
         role,
+        organizationMutationKey(idempotencyKey),
+        organizationMutationFingerprint('update_member_role', {
+          organizationId,
+          memberId,
+          role,
+        }),
       );
       return this.memberMutationOutcome(outcome);
     } catch (error) {
@@ -317,6 +340,7 @@ export class OrganizationsService {
     userId: number,
     organizationId: number,
     memberId: number,
+    idempotencyKey: string,
   ): Promise<number> {
     this.id(organizationId);
     this.memberId(memberId);
@@ -325,6 +349,8 @@ export class OrganizationsService {
         userId,
         organizationId,
         memberId,
+        organizationMutationKey(idempotencyKey),
+        organizationMutationFingerprint('remove_member', { organizationId, memberId }),
       );
       if (outcome.kind === 'removed') return memberId;
       this.memberFailure(outcome.kind);
@@ -337,17 +363,26 @@ export class OrganizationsService {
     userId: number,
     organizationId: number,
     memberId: number,
+    idempotencyKey: string,
   ): Promise<OrganizationMember> {
     this.id(organizationId);
     this.memberId(memberId);
     try {
+      const key = organizationMutationKey(idempotencyKey);
       const outcome = await this.organizations.transferOwnership(
         userId,
         organizationId,
         memberId,
+        key,
+        organizationMutationFingerprint('transfer_ownership', { organizationId, memberId }),
       );
       if (outcome.kind === 'ok') {
-        await this.ownershipEmail.send(outcome.delivery);
+        if (outcome.delivery) {
+          await this.ownershipEmail.send(
+            outcome.delivery,
+            `organization-ownership:${organizationId}:${key}`,
+          );
+        }
         return this.mapMember(outcome.row);
       }
       if (outcome.kind === 'forbidden' || outcome.kind === 'member_not_found') {
@@ -379,6 +414,12 @@ export class OrganizationsService {
           },
         );
       }
+      if (outcome.kind === 'idempotency_conflict') {
+        this.idempotencyFailure('IDEMPOTENCY_KEY_REUSED');
+      }
+      if (outcome.kind === 'result_unavailable') {
+        this.idempotencyFailure('IDEMPOTENCY_RESULT_UNAVAILABLE');
+      }
       throw itemizeGraphqlError(
         'The new owner must have joined the organization',
         'BAD_USER_INPUT',
@@ -389,10 +430,19 @@ export class OrganizationsService {
     }
   }
 
-  async leave(userId: number, organizationId: number): Promise<boolean> {
+  async leave(
+    userId: number,
+    organizationId: number,
+    idempotencyKey: string,
+  ): Promise<boolean> {
     this.id(organizationId);
     try {
-      const outcome = await this.organizations.leave(userId, organizationId);
+      const outcome = await this.organizations.leave(
+        userId,
+        organizationId,
+        organizationMutationKey(idempotencyKey),
+        organizationMutationFingerprint('leave_organization', { organizationId }),
+      );
       if (outcome.kind === 'left') return true;
       if (outcome.kind === 'owner_cannot_leave') {
         throw itemizeGraphqlError(
@@ -400,6 +450,12 @@ export class OrganizationsService {
           'FORBIDDEN',
           { reason: 'OWNER_CANNOT_LEAVE' },
         );
+      }
+      if (outcome.kind === 'idempotency_conflict') {
+        this.idempotencyFailure('IDEMPOTENCY_KEY_REUSED');
+      }
+      if (outcome.kind === 'result_unavailable') {
+        this.idempotencyFailure('IDEMPOTENCY_RESULT_UNAVAILABLE');
       }
       throw itemizeGraphqlError('Organization not found', 'NOT_FOUND');
     } catch (error) {
@@ -634,6 +690,12 @@ export class OrganizationsService {
   }
 
   private memberFailure(kind: string): never {
+    if (kind === 'idempotency_conflict') {
+      this.idempotencyFailure('IDEMPOTENCY_KEY_REUSED');
+    }
+    if (kind === 'result_unavailable') {
+      this.idempotencyFailure('IDEMPOTENCY_RESULT_UNAVAILABLE');
+    }
     if (kind === 'member_not_found' || kind === 'forbidden') {
       throw itemizeGraphqlError('Organization member not found', 'NOT_FOUND');
     }
@@ -654,6 +716,18 @@ export class OrganizationsService {
     throw itemizeGraphqlError(
       'Organization member operation failed',
       'SERVICE_UNAVAILABLE',
+    );
+  }
+
+  private idempotencyFailure(
+    reason: 'IDEMPOTENCY_KEY_REUSED' | 'IDEMPOTENCY_RESULT_UNAVAILABLE',
+  ): never {
+    throw itemizeGraphqlError(
+      reason === 'IDEMPOTENCY_KEY_REUSED'
+        ? 'idempotencyKey was already used for a different organization lifecycle request'
+        : 'The result for this organization lifecycle request is unavailable',
+      'CONFLICT',
+      { field: 'idempotencyKey', reason },
     );
   }
 

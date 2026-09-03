@@ -18,7 +18,10 @@ const escapeHtml = (value: string): string =>
 export class OrganizationOwnershipEmailService {
   private readonly logger = new Logger(OrganizationOwnershipEmailService.name);
 
-  async send(transfer: OrganizationOwnershipTransferDelivery): Promise<void> {
+  async send(
+    transfer: OrganizationOwnershipTransferDelivery,
+    idempotencyKey: string,
+  ): Promise<void> {
     const organizationUrl = `${this.appUrl()}/organization-settings`;
     const organizationName = escapeHtml(transfer.organizationName);
     const previousOwnerDisplay = transfer.previousOwner.name || transfer.previousOwner.email;
@@ -53,12 +56,14 @@ export class OrganizationOwnershipEmailService {
         `You now own ${transfer.organizationName} on Itemize`,
         `${previousOwnerDisplay} transferred ${transfer.organizationName} to you. The organization plan and billing remain unchanged: ${organizationUrl}`,
         newOwnerHtml,
+        `${idempotencyKey}:new-owner`,
       ),
       this.deliver(
         transfer.previousOwner.email,
         `Ownership of ${transfer.organizationName} was transferred`,
         `${newOwnerDisplay} now owns ${transfer.organizationName}. You remain an admin: ${organizationUrl}`,
         previousOwnerHtml,
+        `${idempotencyKey}:previous-owner`,
       ),
     ]);
   }
@@ -68,6 +73,7 @@ export class OrganizationOwnershipEmailService {
     subject: string,
     text: string,
     html: string,
+    idempotencyKey: string,
   ): Promise<boolean> {
     const apiKey = process.env.RESEND_API_KEY?.trim();
     if (!apiKey) {
@@ -82,6 +88,7 @@ export class OrganizationOwnershipEmailService {
         headers: {
           Authorization: `Bearer ${apiKey}`,
           'Content-Type': 'application/json',
+          'Idempotency-Key': idempotencyKey,
         },
         body: JSON.stringify({
           from: process.env.EMAIL_FROM || 'Itemize <noreply@itemize.cloud>',

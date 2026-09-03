@@ -75,8 +75,8 @@ export const updateOrganization = async (id: number, data: Partial<Organization>
   return updateOrganizationViaGraphql(id, data);
 };
 
-export const deleteOrganization = async (id: number): Promise<void> => {
-  await deleteOrganizationViaGraphql(id);
+export const deleteOrganization = async (id: number, idempotencyKey: string): Promise<void> => {
+  await deleteOrganizationViaGraphql(id, idempotencyKey);
 };
 
 export const ensureDefaultOrganization = async (): Promise<Organization> => {
@@ -116,26 +116,44 @@ export const resendOrganizationInvitation = async (
 ): Promise<OrganizationInvitation> =>
   resendOrganizationInvitationViaGraphql(orgId, invitationId, idempotencyKey);
 
-export const revokeOrganizationInvitation = async (orgId: number, invitationId: number): Promise<void> =>
-  revokeOrganizationInvitationViaGraphql(orgId, invitationId);
+export const revokeOrganizationInvitation = async (
+  orgId: number,
+  invitationId: number,
+  idempotencyKey: string,
+): Promise<void> => revokeOrganizationInvitationViaGraphql(
+  orgId, invitationId, idempotencyKey,
+);
 
-export const updateMemberRole = async (orgId: number, memberId: number, role: string): Promise<OrganizationMember> => {
-  return updateOrganizationMemberRoleViaGraphql(orgId, memberId, role);
+export const updateMemberRole = async (
+  orgId: number,
+  memberId: number,
+  role: string,
+  idempotencyKey: string,
+): Promise<OrganizationMember> => {
+  return updateOrganizationMemberRoleViaGraphql(orgId, memberId, role, idempotencyKey);
 };
 
-export const removeMember = async (orgId: number, memberId: number): Promise<void> => {
-  await removeOrganizationMemberViaGraphql(orgId, memberId);
+export const removeMember = async (
+  orgId: number,
+  memberId: number,
+  idempotencyKey: string,
+): Promise<void> => {
+  await removeOrganizationMemberViaGraphql(orgId, memberId, idempotencyKey);
 };
 
 export const transferOrganizationOwnership = async (
   orgId: number,
   memberId: number,
+  idempotencyKey: string,
 ): Promise<OrganizationMember> => {
-  return transferOrganizationOwnershipViaGraphql(orgId, memberId);
+  return transferOrganizationOwnershipViaGraphql(orgId, memberId, idempotencyKey);
 };
 
-export const leaveOrganization = async (orgId: number): Promise<void> => {
-  await leaveOrganizationViaGraphql(orgId);
+export const leaveOrganization = async (
+  orgId: number,
+  idempotencyKey: string,
+): Promise<void> => {
+  await leaveOrganizationViaGraphql(orgId, idempotencyKey);
 };
 
 // ======================
