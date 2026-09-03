@@ -369,7 +369,8 @@ export interface CreateConversationData {
 }
 
 export const createConversation = async (
-    input: CreateConversationData
+    input: CreateConversationData,
+    idempotencyKey: string,
 ): Promise<Conversation> => {
     const data = await graphqlMutationRequest<
         { createConversation: Conversation },
@@ -380,15 +381,17 @@ export const createConversation = async (
                 channel?: string;
                 initialMessage?: string;
             };
+            idempotencyKey: string;
         }
     >(
         `
             ${BASE_CONVERSATION_FIELDS}
-            mutation CreateConversation($input: CreateConversationInput!) {
-                createConversation(input: $input) { ...ConversationFields }
+            mutation CreateConversation($input: CreateConversationInput!, $idempotencyKey: String!) {
+                createConversation(input: $input, idempotencyKey: $idempotencyKey) { ...ConversationFields }
             }
         `,
         {
+            idempotencyKey,
             input: {
                 contactId: input.contact_id,
                 ...(input.subject === undefined ? {} : { subject: input.subject }),

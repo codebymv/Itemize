@@ -742,10 +742,11 @@ describe('Calendar GraphQL PostgreSQL contract', () => {
     const [booking, deletion] = await Promise.all([
       mutation(
         organizationId,
-        `mutation CreateBooking($input: CreateBookingInput!) {
-          createBooking(input: $input) { id }
+        `mutation CreateBooking($input: CreateBookingInput!, $idempotencyKey: String!) {
+          createBooking(input: $input, idempotencyKey: $idempotencyKey) { id }
         }`,
         {
+          idempotencyKey: 'calendar-delete-race-booking',
           input: {
             calendarId: raceCalendarId,
             title: 'Concurrent booking',

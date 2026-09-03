@@ -190,7 +190,7 @@ describe('booking GraphQL consumer', () => {
       organization_id: 42,
     };
 
-    await expect(createBookingViaGraphql(input)).resolves.toMatchObject({
+    await expect(createBookingViaGraphql(input, 'booking-create-key')).resolves.toMatchObject({
       id: 91,
       organization_id: 42,
       source: 'manual',
@@ -202,6 +202,7 @@ describe('booking GraphQL consumer', () => {
     });
     expect(JSON.parse(String(request.body))).toMatchObject({
       variables: {
+        idempotencyKey: 'booking-create-key',
         input: {
           calendarId: 17,
           contactId: 11,

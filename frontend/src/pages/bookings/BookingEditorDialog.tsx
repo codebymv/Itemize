@@ -18,6 +18,7 @@ import type { Booking, Calendar } from '@/types';
 import { createBooking, rescheduleBooking } from '@/services/calendarsApi';
 import { zonedDateTimeInput, zonedDateTimeToIso } from '@/lib/zonedDateTime';
 import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
+import { useStableMutationKey } from '@/hooks/useStableMutationKey';
 
 const errorMessage = (error: unknown) => {
   const response = (error as { response?: { data?: { error?: unknown; message?: unknown } } })?.response?.data;
@@ -55,6 +56,7 @@ export function BookingEditorDialog({
   const [phone, setPhone] = useState(booking?.attendee_phone ?? '');
   const [notes, setNotes] = useState(booking?.notes ?? '');
   const { pending: saving, run, dismissIfIdle } = useSingleFlightAction();
+  const bookingCreation = useStableMutationKey('booking-create');
   const [error, setError] = useState('');
   const selectedCalendar = useMemo(() => calendars.find(calendar => calendar.id === Number(calendarId)), [calendarId, calendars]);
 
@@ -91,7 +93,7 @@ export function BookingEditorDialog({
         if (booking) {
           await rescheduleBooking(booking.id, { start_time: startTime, end_time: endTime, timezone }, organizationId);
         } else {
-          await createBooking({
+          const createInput = {
             organization_id: organizationId,
             calendar_id: selectedCalendar.id,
             start_time: startTime,
@@ -102,20 +104,31 @@ export function BookingEditorDialog({
             attendee_email: email.trim() || undefined,
             attendee_phone: phone.trim() || undefined,
             notes: notes.trim() || undefined,
-          });
+          };
+          const idempotencyKey = bookingCreation.begin(JSON.stringify(createInput));
+          if (!idempotencyKey) return;
+          await createBooking(createInput, idempotencyKey);
+          bookingCreation.reset();
         }
-        onOpenChange(false);
-        onSaved();
       } catch (errorValue) {
+        bookingCreation.release();
         setError(errorMessage(errorValue));
+        return;
       }
+      // The write is already confirmed. Follow-up view updates must not turn it
+      // into a retryable "save failed" state.
+      onOpenChange(false);
+      onSaved();
     });
   };
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => {
       if (nextOpen) onOpenChange(true);
-      else dismissIfIdle(() => onOpenChange(false));
+      else dismissIfIdle(() => {
+        bookingCreation.reset();
+        onOpenChange(false);
+      });
     }}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
@@ -148,7 +161,10 @@ export function BookingEditorDialog({
           ) : null}
           {error ? <Alert variant="destructive"><AlertDescription>{error}</AlertDescription></Alert> : null}
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => dismissIfIdle(() => onOpenChange(false))} disabled={saving}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={() => dismissIfIdle(() => {
+              bookingCreation.reset();
+              onOpenChange(false);
+            })} disabled={saving}>Cancel</Button>
             <Button type="submit" disabled={saving || !selectedCalendar} aria-busy={saving || undefined} className="bg-blue-600 text-white interaction-button--primary">{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{booking ? 'Reschedule' : 'Create booking'}</Button>
           </DialogFooter>
         </form>

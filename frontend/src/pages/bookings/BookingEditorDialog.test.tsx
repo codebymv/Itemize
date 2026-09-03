@@ -73,15 +73,18 @@ describe('BookingEditorDialog', () => {
     fireEvent.change(screen.getByLabelText(/Email/), { target: { value: 'maya@example.com' } });
     fireEvent.click(screen.getByRole('button', { name: 'Create booking' }));
 
-    await waitFor(() => expect(api.createBooking).toHaveBeenCalledWith(expect.objectContaining({
-      organization_id: 42,
-      calendar_id: 7,
-      start_time: '2026-09-01T16:30:00.000Z',
-      end_time: '2026-09-01T17:00:00.000Z',
-      timezone: 'America/Phoenix',
-      attendee_name: 'Maya Patel',
-      attendee_email: 'maya@example.com',
-    })));
+    await waitFor(() => expect(api.createBooking).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organization_id: 42,
+        calendar_id: 7,
+        start_time: '2026-09-01T16:30:00.000Z',
+        end_time: '2026-09-01T17:00:00.000Z',
+        timezone: 'America/Phoenix',
+        attendee_name: 'Maya Patel',
+        attendee_email: 'maya@example.com',
+      }),
+      expect.any(String),
+    ));
     expect(onOpenChange).toHaveBeenCalledWith(false);
     expect(onSaved).toHaveBeenCalledOnce();
   });
@@ -139,5 +142,32 @@ describe('BookingEditorDialog', () => {
 
     resolveCreate?.(booking);
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+  });
+
+  it('reuses the same creation key when an unchanged request is retried', async () => {
+    api.createBooking
+      .mockRejectedValueOnce(new Error('Network response was lost'))
+      .mockResolvedValueOnce(booking);
+    render(
+      <BookingEditorDialog
+        open
+        onOpenChange={vi.fn()}
+        organizationId={42}
+        calendars={[calendar]}
+        onSaved={vi.fn()}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText('Date'), { target: { value: '2026-09-01' } });
+    fireEvent.change(screen.getByLabelText('Time'), { target: { value: '09:30' } });
+    fireEvent.change(screen.getByLabelText('Attendee name'), { target: { value: 'Maya Patel' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Create booking' }));
+    await screen.findByText('Network response was lost');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Create booking' }));
+    await waitFor(() => expect(api.createBooking).toHaveBeenCalledTimes(2));
+    expect(api.createBooking.mock.calls[1][1]).toBe(
+      api.createBooking.mock.calls[0][1],
+    );
   });
 });

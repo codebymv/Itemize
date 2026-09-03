@@ -101,6 +101,9 @@ const {
   runBookingIdempotencyMigration,
 } = require('./db_booking_idempotency_migrations');
 const {
+  runBookingCreationReceiptMigration,
+} = require('./db_booking_creation_receipt_migrations');
+const {
   runCalendarTokenEncryptionMigration,
 } = require('./db_calendar_token_encryption_migrations');
 const {
@@ -180,6 +183,9 @@ const {
 
 // Import Inbox migrations
 const { runAllInboxMigrations } = require('./db_inbox_migrations');
+const {
+  runConversationCreationReceiptMigration,
+} = require('./db_conversation_creation_receipt_migrations');
 
 // Import SMS migrations
 const { runAllSmsMigrations } = require('./db_sms_migrations');
@@ -702,6 +708,11 @@ const initializeDatabase = async (pool) => {
       'booking_public_idempotency_v1',
       runBookingIdempotencyMigration,
     );
+    await runMigrationOnce(
+      pool,
+      'booking_creation_receipts_v1',
+      runBookingCreationReceiptMigration,
+    );
     await runMigrationOnce(pool, 'calendar_token_encryption', runCalendarTokenEncryptionMigration);
     await runMigrationOnce(pool, 'calendar_sync_jobs', runCalendarSyncJobMigration);
     await runMigrationOnce(pool, 'module_forms', runAllFormsMigrations);
@@ -711,6 +722,11 @@ const initializeDatabase = async (pool) => {
       runFormCreationReceiptMigration,
     );
     await runMigrationOnce(pool, 'module_inbox', runAllInboxMigrations);
+    await runMigrationOnce(
+      pool,
+      'conversation_creation_receipts_v1',
+      runConversationCreationReceiptMigration,
+    );
     await runMigrationOnce(pool, 'module_sms', runAllSmsMigrations);
     await runMigrationOnce(
       pool,

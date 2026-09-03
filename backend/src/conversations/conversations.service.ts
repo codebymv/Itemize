@@ -16,6 +16,10 @@ import {
   ConversationRow,
   ConversationsRepository,
 } from './conversations.repository';
+import {
+  conversationCreationFingerprint,
+  conversationCreationKey,
+} from './conversation-creation.idempotency';
 
 const CONVERSATION_STATUSES = new Set(['open', 'closed', 'snoozed']);
 
@@ -100,6 +104,7 @@ export class ConversationsService {
     organizationId: number,
     userId: number,
     input: CreateConversationInput,
+    idempotencyKey: string,
   ): Promise<Conversation> {
     const contactId = this.id(input.contactId, 'contactId');
     const subject = this.nullableText(input.subject, 'subject', 500);
@@ -110,12 +115,33 @@ export class ConversationsService {
       100_000,
     );
     try {
-      const outcome = await this.conversations.create(organizationId, userId, {
+      const values = {
         contactId,
         subject,
         channel,
         initialMessage,
-      });
+      };
+      const outcome = await this.conversations.create(
+        organizationId,
+        userId,
+        values,
+        conversationCreationKey(idempotencyKey),
+        conversationCreationFingerprint(values),
+      );
+      if (outcome.kind === 'idempotency-conflict') {
+        throw itemizeGraphqlError(
+          'idempotencyKey was already used for a different conversation creation request',
+          'CONFLICT',
+          { field: 'idempotencyKey', reason: 'IDEMPOTENCY_KEY_REUSED' },
+        );
+      }
+      if (outcome.kind === 'result-unavailable') {
+        throw itemizeGraphqlError(
+          'The conversation created by this request is no longer available',
+          'CONFLICT',
+          { field: 'idempotencyKey', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE' },
+        );
+      }
       if (outcome.kind === 'contact_not_found') {
         throw itemizeGraphqlError('Contact not found', 'NOT_FOUND');
       }

@@ -347,13 +347,14 @@ describe('Booking read GraphQL PostgreSQL contract', () => {
   it('creates a tenant-validated manual booking with REST parity and one versioned event', async () => {
     const response = await mutate(
       organizationId,
-      `mutation CreateBooking($input: CreateBookingInput!) {
-        createBooking(input: $input) {
+      `mutation CreateBooking($input: CreateBookingInput!, $idempotencyKey: String!) {
+        createBooking(input: $input, idempotencyKey: $idempotencyKey) {
           ${fields}
           cancellationReason
         }
       }`,
       {
+        idempotencyKey: 'booking-integration-create',
         input: {
           calendarId,
           contactId,
@@ -438,8 +439,8 @@ describe('Booking read GraphQL PostgreSQL contract', () => {
   });
 
   it('conceals foreign create references and rejects foreign assignees', async () => {
-    const document = `mutation CreateBooking($input: CreateBookingInput!) {
-      createBooking(input: $input) { id }
+    const document = `mutation CreateBooking($input: CreateBookingInput!, $idempotencyKey: String!) {
+      createBooking(input: $input, idempotencyKey: $idempotencyKey) { id }
     }`;
     const base = {
       calendarId,
@@ -447,12 +448,14 @@ describe('Booking read GraphQL PostgreSQL contract', () => {
       endTime: '2099-09-02T17:30:00.000Z',
     };
     const foreignCalendar = await mutate(organizationId, document, {
+      idempotencyKey: 'booking-foreign-calendar',
       input: { ...base, calendarId: otherCalendarId },
     }).expect(200);
     expect(foreignCalendar.body.data).toBeNull();
     expect(foreignCalendar.body.errors[0].extensions.code).toBe('NOT_FOUND');
 
     const foreignContact = await mutate(organizationId, document, {
+      idempotencyKey: 'booking-foreign-contact',
       input: { ...base, contactId: otherContactId },
     }).expect(200);
     expect(foreignContact.body.data).toBeNull();
@@ -462,6 +465,7 @@ describe('Booking read GraphQL PostgreSQL contract', () => {
     });
 
     const foreignAssignee = await mutate(organizationId, document, {
+      idempotencyKey: 'booking-foreign-assignee',
       input: { ...base, assignedToId: otherUserId },
     }).expect(200);
     expect(foreignAssignee.body.data).toBeNull();
@@ -471,19 +475,89 @@ describe('Booking read GraphQL PostgreSQL contract', () => {
     });
   });
 
-  it('serializes simultaneous creates so only one booking claims a slot', async () => {
-    const document = `mutation CreateBooking($input: CreateBookingInput!) {
-      createBooking(input: $input) { id startTime endTime }
+  it('replays authenticated booking creation without repeating its event', async () => {
+    const document = `mutation CreateBooking(
+      $input: CreateBookingInput!,
+      $idempotencyKey: String!
+    ) {
+      createBooking(input: $input, idempotencyKey: $idempotencyKey) {
+        id title startTime
+      }
     }`;
     const variables = {
+      idempotencyKey: 'booking-durable-replay',
       input: {
         calendarId,
-        startTime: '2099-09-03T17:00:00.000Z',
-        endTime: '2099-09-03T17:30:00.000Z',
+        title: 'Durable booking',
+        startTime: '2099-09-08T17:00:00.000Z',
+        endTime: '2099-09-08T17:30:00.000Z',
+        timezone: 'America/Phoenix',
+      },
+    };
+
+    const created = await mutate(organizationId, document, variables).expect(200);
+    const replayed = await mutate(organizationId, document, variables).expect(200);
+    expect(created.body.errors).toBeUndefined();
+    expect(replayed.body.errors).toBeUndefined();
+    expect(replayed.body.data.createBooking).toEqual(
+      created.body.data.createBooking,
+    );
+
+    const bookingId = Number(created.body.data.createBooking.id);
+    const evidence = await pool.query<{ bookings: number; events: number; receipts: number }>(
+      `SELECT
+         (SELECT COUNT(*)::int FROM bookings WHERE organization_id=$1 AND id=$2) AS bookings,
+         (SELECT COUNT(*)::int FROM workflow_triggers
+          WHERE organization_id=$1 AND trigger_type='booking_created' AND entity_id=$2) AS events,
+         (SELECT COUNT(*)::int FROM booking_creation_receipts
+          WHERE organization_id=$1 AND idempotency_key=$3 AND result_booking_id=$2) AS receipts`,
+      [organizationId, bookingId, variables.idempotencyKey],
+    );
+    expect(evidence.rows[0]).toEqual({ bookings: 1, events: 1, receipts: 1 });
+
+    const changed = await mutate(organizationId, document, {
+      ...variables,
+      input: { ...variables.input, title: 'Changed booking' },
+    }).expect(200);
+    expect(changed.body.data).toBeNull();
+    expect(changed.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_KEY_REUSED',
+    });
+
+    await pool.query(
+      'DELETE FROM bookings WHERE organization_id=$1 AND id=$2',
+      [organizationId, bookingId],
+    );
+    const missing = await mutate(organizationId, document, variables).expect(200);
+    expect(missing.body.data).toBeNull();
+    expect(missing.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE',
+    });
+  });
+
+  it('serializes simultaneous creates so only one booking claims a slot', async () => {
+    const document = `mutation CreateBooking($input: CreateBookingInput!, $idempotencyKey: String!) {
+      createBooking(input: $input, idempotencyKey: $idempotencyKey) { id startTime endTime }
+    }`;
+    const input = {
+      calendarId,
+      startTime: '2099-09-03T17:00:00.000Z',
+      endTime: '2099-09-03T17:30:00.000Z',
+    };
+    const variables = {
+      idempotencyKey: 'booking-slot-race-a',
+      input,
+    };
+    const competingVariables = {
+      idempotencyKey: 'booking-slot-race-b',
+      input: {
+        ...input,
       },
     };
     const responses = await Promise.all([
-      mutate(organizationId, document, variables).expect(200),
+      mutate(organizationId, document, competingVariables).expect(200),
       mutate(organizationId, document, variables).expect(200),
     ]);
     expect(
@@ -501,7 +575,7 @@ describe('Booking read GraphQL PostgreSQL contract', () => {
        WHERE organization_id = $1
          AND calendar_id = $2
          AND start_time = $3`,
-      [organizationId, calendarId, variables.input.startTime],
+      [organizationId, calendarId, input.startTime],
     );
     expect(persisted.rows[0].total).toBe(1);
   });
@@ -601,10 +675,11 @@ describe('Booking read GraphQL PostgreSQL contract', () => {
   it('requires CSRF before create and reschedule writes', async () => {
     const create = await mutate(
       organizationId,
-      `mutation CreateBooking($input: CreateBookingInput!) {
-        createBooking(input: $input) { id }
+      `mutation CreateBooking($input: CreateBookingInput!, $idempotencyKey: String!) {
+        createBooking(input: $input, idempotencyKey: $idempotencyKey) { id }
       }`,
       {
+        idempotencyKey: 'booking-csrf-create',
         input: {
           calendarId,
           startTime: '2099-09-06T17:00:00.000Z',

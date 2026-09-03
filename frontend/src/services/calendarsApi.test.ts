@@ -223,10 +223,13 @@ describe('calendar API transport selection', () => {
     };
     vi.mocked(createBookingViaGraphql).mockResolvedValue(booking);
     vi.mocked(rescheduleBookingViaGraphql).mockResolvedValue(booking);
-    await createBooking(createInput);
+    await createBooking(createInput, 'booking-create-key');
     await rescheduleBooking(9, rescheduleInput, 3);
 
-    expect(createBookingViaGraphql).toHaveBeenCalledWith(createInput);
+    expect(createBookingViaGraphql).toHaveBeenCalledWith(
+      createInput,
+      'booking-create-key',
+    );
     expect(rescheduleBookingViaGraphql).toHaveBeenCalledWith(
       9,
       rescheduleInput,

@@ -53,11 +53,13 @@ export class ConversationsResolver {
   @Mutation(() => Conversation)
   createConversation(
     @Args('input') input: CreateConversationInput,
+    @Args('idempotencyKey', { type: () => String }) idempotencyKey: string,
   ): Promise<Conversation> {
     return this.conversations.create(
       this.organizationId(),
       this.userId(),
       input,
+      idempotencyKey,
     );
   }
 

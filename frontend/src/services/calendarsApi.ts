@@ -162,8 +162,11 @@ export interface BookingCreateData {
     organization_id?: number;
 }
 
-export const createBooking = async (data: BookingCreateData): Promise<Booking> => {
-    return createBookingViaGraphql(data);
+export const createBooking = async (
+    data: BookingCreateData,
+    idempotencyKey: string,
+): Promise<Booking> => {
+    return createBookingViaGraphql(data, idempotencyKey);
 };
 
 export const cancelBooking = async (

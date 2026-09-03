@@ -65,8 +65,8 @@ const cancelBookingMutation = `
 `;
 
 const createBookingMutation = `
-  mutation CreateBooking($input: CreateBookingInput!) {
-    createBooking(input: $input) { ${fields} }
+  mutation CreateBooking($input: CreateBookingInput!, $idempotencyKey: String!) {
+    createBooking(input: $input, idempotencyKey: $idempotencyKey) { ${fields} }
   }
 `;
 
@@ -184,8 +184,10 @@ export const cancelBookingViaGraphql = async (
 
 export const createBookingViaGraphql = async (
   input: BookingCreateData,
+  idempotencyKey: string,
 ): Promise<Booking> => {
   const variables = {
+    idempotencyKey,
     input: {
       calendarId: input.calendar_id,
       ...(input.contact_id === undefined

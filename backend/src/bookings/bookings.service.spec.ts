@@ -131,43 +131,58 @@ describe('BookingsService', () => {
   });
 
   it('normalizes and creates a tenant-owned manual booking', async () => {
-    repository.create.mockResolvedValue({ kind: 'created', row: row() });
+    repository.create.mockResolvedValue({
+      kind: 'created',
+      row: row(),
+      replayed: false,
+    });
     const startTime = new Date('2026-08-01T17:00:00.000Z');
     const endTime = new Date('2026-08-01T17:30:00.000Z');
 
     await expect(
-      service.create(3, {
-        calendarId: 4,
-        contactId: 5,
-        title: '  Consultation  ',
-        startTime,
-        endTime,
-        timezone: ' America/Phoenix ',
-        attendeeName: ' Ada Lovelace ',
-        attendeeEmail: ' ada@example.com ',
-        assignedToId: 7,
-        customFields: { channel: 'partner' },
-      }),
+      service.create(
+        3,
+        7,
+        {
+          calendarId: 4,
+          contactId: 5,
+          title: '  Consultation  ',
+          startTime,
+          endTime,
+          timezone: ' America/Phoenix ',
+          attendeeName: ' Ada Lovelace ',
+          attendeeEmail: ' ada@example.com ',
+          assignedToId: 7,
+          customFields: { channel: 'partner' },
+        },
+        'booking-create-key',
+      ),
     ).resolves.toMatchObject({
       id: 9,
       source: 'manual',
       calendarName: 'Consultations',
     });
-    expect(repository.create).toHaveBeenCalledWith(3, {
-      calendarId: 4,
-      contactId: 5,
-      title: 'Consultation',
-      startTime,
-      endTime,
-      timezone: 'America/Phoenix',
-      attendeeName: 'Ada Lovelace',
-      attendeeEmail: 'ada@example.com',
-      attendeePhone: null,
-      assignedToId: 7,
-      notes: null,
-      internalNotes: null,
-      customFields: { channel: 'partner' },
-    });
+    expect(repository.create).toHaveBeenCalledWith(
+      3,
+      7,
+      {
+        calendarId: 4,
+        contactId: 5,
+        title: 'Consultation',
+        startTime,
+        endTime,
+        timezone: 'America/Phoenix',
+        attendeeName: 'Ada Lovelace',
+        attendeeEmail: 'ada@example.com',
+        attendeePhone: null,
+        assignedToId: 7,
+        notes: null,
+        internalNotes: null,
+        customFields: { channel: 'partner' },
+      },
+      'booking-create-key',
+      expect.stringMatching(/^[a-f0-9]{64}$/),
+    );
   });
 
   it.each([
@@ -175,16 +190,23 @@ describe('BookingsService', () => {
     ['invalid_contact', 'BAD_USER_INPUT', 'INVALID_CONTACT'],
     ['invalid_assignee', 'BAD_USER_INPUT', 'INVALID_ASSIGNEE'],
     ['slot_unavailable', 'CONFLICT', 'SLOT_UNAVAILABLE'],
+    ['idempotency-conflict', 'CONFLICT', 'IDEMPOTENCY_KEY_REUSED'],
+    ['result-unavailable', 'CONFLICT', 'IDEMPOTENCY_RESULT_UNAVAILABLE'],
   ] as const)(
     'maps create outcome %s without returning persistence details',
     async (kind, code, reason) => {
       repository.create.mockResolvedValue({ kind } as never);
       await expect(
-        service.create(3, {
-          calendarId: 4,
-          startTime: new Date('2026-08-01T17:00:00.000Z'),
-          endTime: new Date('2026-08-01T17:30:00.000Z'),
-        }),
+        service.create(
+          3,
+          7,
+          {
+            calendarId: 4,
+            startTime: new Date('2026-08-01T17:00:00.000Z'),
+            endTime: new Date('2026-08-01T17:30:00.000Z'),
+          },
+          'booking-create-key',
+        ),
       ).rejects.toMatchObject({
         extensions: expect.objectContaining({
           code,
@@ -196,16 +218,43 @@ describe('BookingsService', () => {
 
   it('rejects invalid create input before opening a transaction', async () => {
     await expect(
-      service.create(3, {
-        calendarId: 4,
-        startTime: new Date('2026-08-01T17:30:00.000Z'),
-        endTime: new Date('2026-08-01T17:00:00.000Z'),
-        attendeeEmail: 'not-an-email',
-      }),
+      service.create(
+        3,
+        7,
+        {
+          calendarId: 4,
+          startTime: new Date('2026-08-01T17:30:00.000Z'),
+          endTime: new Date('2026-08-01T17:00:00.000Z'),
+          attendeeEmail: 'not-an-email',
+        },
+        'booking-create-key',
+      ),
     ).rejects.toMatchObject({
       extensions: expect.objectContaining({
         code: 'BAD_USER_INPUT',
         field: 'attendeeEmail',
+      }),
+    });
+    expect(repository.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects an invalid creation key before opening a transaction', async () => {
+    await expect(
+      service.create(
+        3,
+        7,
+        {
+          calendarId: 4,
+          startTime: new Date('2026-08-01T17:00:00.000Z'),
+          endTime: new Date('2026-08-01T17:30:00.000Z'),
+        },
+        'not safe',
+      ),
+    ).rejects.toMatchObject({
+      extensions: expect.objectContaining({
+        code: 'BAD_USER_INPUT',
+        field: 'idempotencyKey',
+        reason: 'INVALID_IDEMPOTENCY_KEY',
       }),
     });
     expect(repository.create).not.toHaveBeenCalled();

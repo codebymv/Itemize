@@ -194,7 +194,7 @@ describe('conversations GraphQL adapter', () => {
             subject: 'Subject',
             initial_message: 'Initial',
             organization_id: 42,
-        });
+        }, 'conversation-create-key');
         await updateConversation(
             7,
             { status: 'snoozed', snoozed_until: '2026-07-25T00:00:00.000Z' },
@@ -221,6 +221,7 @@ describe('conversations GraphQL adapter', () => {
             1,
             expect.stringContaining('mutation CreateConversation'),
             {
+                idempotencyKey: 'conversation-create-key',
                 input: {
                     contactId: 9,
                     subject: 'Subject',

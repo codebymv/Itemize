@@ -8,6 +8,10 @@ import {
 } from './booking.inputs';
 import { Booking, BookingPage } from './booking.types';
 import { BookingRow, BookingsRepository } from './bookings.repository';
+import {
+  bookingCreationFingerprint,
+  bookingCreationKey,
+} from './booking-creation.idempotency';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_CUSTOM_FIELDS_BYTES = 64 * 1024;
@@ -75,7 +79,9 @@ export class BookingsService {
 
   async create(
     organizationId: number,
+    userId: number,
     input: CreateBookingInput,
+    idempotencyKey: string,
   ): Promise<Booking> {
     const calendarId = this.id(input.calendarId, 'calendarId');
     const contactId = this.optionalId(input.contactId, 'contactId');
@@ -93,7 +99,7 @@ export class BookingsService {
       );
     }
     this.timeRange(input.startTime, input.endTime);
-    const outcome = await this.bookings.create(organizationId, {
+    const values = {
       calendarId,
       contactId,
       title: this.optionalText(input.title, 'title', 255),
@@ -122,7 +128,28 @@ export class BookingsService {
         10_000,
       ),
       customFields: this.record(input.customFields, 'customFields'),
-    });
+    };
+    const outcome = await this.bookings.create(
+      organizationId,
+      userId,
+      values,
+      bookingCreationKey(idempotencyKey),
+      bookingCreationFingerprint(values),
+    );
+    if (outcome.kind === 'idempotency-conflict') {
+      throw itemizeGraphqlError(
+        'idempotencyKey was already used for a different booking creation request',
+        'CONFLICT',
+        { field: 'idempotencyKey', reason: 'IDEMPOTENCY_KEY_REUSED' },
+      );
+    }
+    if (outcome.kind === 'result-unavailable') {
+      throw itemizeGraphqlError(
+        'The booking created by this request is no longer available',
+        'CONFLICT',
+        { field: 'idempotencyKey', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE' },
+      );
+    }
     if (outcome.kind === 'calendar_not_found') {
       throw itemizeGraphqlError('Calendar not found', 'NOT_FOUND');
     }

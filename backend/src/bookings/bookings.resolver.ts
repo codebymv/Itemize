@@ -38,8 +38,14 @@ export class BookingsResolver {
   @Mutation(() => Booking)
   createBooking(
     @Args('input') input: CreateBookingInput,
+    @Args('idempotencyKey', { type: () => String }) idempotencyKey: string,
   ): Promise<Booking> {
-    return this.bookings.create(this.organizationId(), input);
+    return this.bookings.create(
+      this.organizationId(),
+      this.userId(),
+      input,
+      idempotencyKey,
+    );
   }
 
   @CsrfProtected()
@@ -68,5 +74,11 @@ export class BookingsResolver {
     if (!organization)
       throw new Error('Verified organization context is unavailable');
     return organization.organizationId;
+  }
+
+  private userId(): number {
+    const identity = this.requestContext.current().identity;
+    if (!identity) throw new Error('Verified identity context is unavailable');
+    return identity.userId;
   }
 }

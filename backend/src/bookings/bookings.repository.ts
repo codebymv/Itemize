@@ -72,11 +72,18 @@ export type CreateBookingValues = {
 };
 
 export type CreateBookingOutcome =
-  | { kind: 'created'; row: BookingRow }
+  | { kind: 'created'; row: BookingRow; replayed: boolean }
   | { kind: 'calendar_not_found' }
   | { kind: 'invalid_contact' }
   | { kind: 'invalid_assignee' }
-  | { kind: 'slot_unavailable' };
+  | { kind: 'slot_unavailable' }
+  | { kind: 'idempotency-conflict' }
+  | { kind: 'result-unavailable' };
+
+type BookingCreationReceiptRow = {
+  request_fingerprint: string;
+  result_booking_id: number | null;
+};
 
 export type RescheduleBookingOutcome =
   | { kind: 'rescheduled'; row: BookingRow }
@@ -204,9 +211,41 @@ export class BookingsRepository {
 
   async create(
     organizationId: number,
+    userId: number,
     values: CreateBookingValues,
+    idempotencyKey: string,
+    requestFingerprint: string,
   ): Promise<CreateBookingOutcome> {
     return this.transaction(async (client) => {
+      await client.query(
+        'SELECT pg_advisory_xact_lock($1::int, hashtext($2))',
+        [organizationId, `booking-create:${idempotencyKey}`],
+      );
+      const receipt = await client.query<BookingCreationReceiptRow>(
+        `SELECT request_fingerprint, result_booking_id
+         FROM booking_creation_receipts
+         WHERE organization_id = $1 AND idempotency_key = $2
+         FOR UPDATE`,
+        [organizationId, idempotencyKey],
+      );
+      const replay = receipt.rows[0];
+      if (replay) {
+        if (replay.request_fingerprint !== requestFingerprint) {
+          return { kind: 'idempotency-conflict' };
+        }
+        if (replay.result_booking_id === null) {
+          return { kind: 'result-unavailable' };
+        }
+        const row = await this.findByIdWith(
+          client,
+          organizationId,
+          replay.result_booking_id,
+        );
+        return row
+          ? { kind: 'created', row, replayed: true }
+          : { kind: 'result-unavailable' };
+      }
+
       await this.lockCalendarBookings(client, values.calendarId);
       const calendar = await client.query<{
         assigned_to: number | null;
@@ -310,7 +349,14 @@ export class BookingsRepository {
       );
       const row = await this.findByIdWith(client, organizationId, booking.id);
       if (!row) throw new Error('Booking disappeared inside creation');
-      return { kind: 'created', row };
+      await client.query(
+        `INSERT INTO booking_creation_receipts (
+           organization_id, requested_by_user_id, idempotency_key,
+           request_fingerprint, result_booking_id
+         ) VALUES ($1, $2, $3, $4, $5)`,
+        [organizationId, userId, idempotencyKey, requestFingerprint, booking.id],
+      );
+      return { kind: 'created', row, replayed: false };
     });
   }
 

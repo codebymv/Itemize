@@ -172,17 +172,25 @@ describe('Conversations GraphQL PostgreSQL contract', () => {
     contactFirstName contactLastName contactEmail contactPhone createdAt updatedAt`;
 
   it('creates, lists, reads, updates, assigns, sends, and marks read', async () => {
-    const created = await mutation(
-      `mutation Create($input: CreateConversationInput!) {
-        createConversation(input: $input) { ${conversationFields} }
-      }`,
-      {
-        input: {
-          contactId,
-          subject: 'Project kickoff',
-          initialMessage: 'Hello Ada',
-        },
+    const createOperation = `mutation Create(
+      $input: CreateConversationInput!,
+      $idempotencyKey: String!
+    ) {
+      createConversation(input: $input, idempotencyKey: $idempotencyKey) {
+        ${conversationFields}
+      }
+    }`;
+    const createVariables = {
+      idempotencyKey: 'conversation-integration-create',
+      input: {
+        contactId,
+        subject: 'Project kickoff',
+        initialMessage: 'Hello Ada',
       },
+    };
+    const created = await mutation(
+      createOperation,
+      createVariables,
     ).expect(200);
     expect(created.body.errors).toBeUndefined();
     expect(created.body.data.createConversation).toMatchObject({
@@ -195,6 +203,19 @@ describe('Conversations GraphQL PostgreSQL contract', () => {
       lastMessagePreview: 'Hello Ada',
     });
     const conversationId = created.body.data.createConversation.id as number;
+    const replayed = await mutation(createOperation, createVariables).expect(200);
+    expect(replayed.body.errors).toBeUndefined();
+    expect(replayed.body.data.createConversation.id).toBe(conversationId);
+
+    const changed = await mutation(createOperation, {
+      ...createVariables,
+      input: { ...createVariables.input, initialMessage: 'Changed initial message' },
+    }).expect(200);
+    expect(changed.body.data).toBeNull();
+    expect(changed.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_KEY_REUSED',
+    });
 
     const listed = await query(
       `query List($contactId: Int!) {
@@ -306,14 +327,16 @@ describe('Conversations GraphQL PostgreSQL contract', () => {
   });
 
   it('serializes concurrent creation into one open conversation', async () => {
-    const operation = `mutation Create($input: CreateConversationInput!) {
-      createConversation(input: $input) { id contactId status }
+    const operation = `mutation Create($input: CreateConversationInput!, $idempotencyKey: String!) {
+      createConversation(input: $input, idempotencyKey: $idempotencyKey) { id contactId status }
     }`;
     const [first, second] = await Promise.all([
       mutation(operation, {
+        idempotencyKey: 'conversation-race-first',
         input: { contactId: secondContactId, initialMessage: 'First' },
       }),
       mutation(operation, {
+        idempotencyKey: 'conversation-race-second',
         input: { contactId: secondContactId, initialMessage: 'Second' },
       }),
     ]);
@@ -329,22 +352,53 @@ describe('Conversations GraphQL PostgreSQL contract', () => {
       [organizationId, secondContactId],
     );
     expect(count.rows[0].count).toBe(1);
+
+    const conversationId = Number(first.body.data.createConversation.id);
+    const evidence = await pool.query<{ messages: number; receipts: number }>(
+      `SELECT
+         (SELECT COUNT(*)::int FROM messages
+          WHERE organization_id=$1 AND conversation_id=$2) AS messages,
+         (SELECT COUNT(*)::int FROM conversation_creation_receipts
+          WHERE organization_id=$1 AND result_conversation_id=$2) AS receipts`,
+      [organizationId, conversationId],
+    );
+    expect(evidence.rows[0]).toEqual({ messages: 2, receipts: 2 });
+
+    await pool.query(
+      'DELETE FROM conversations WHERE organization_id=$1 AND id=$2',
+      [organizationId, conversationId],
+    );
+    const unavailable = await mutation(operation, {
+      idempotencyKey: 'conversation-race-first',
+      input: { contactId: secondContactId, initialMessage: 'First' },
+    }).expect(200);
+    expect(unavailable.body.data).toBeNull();
+    expect(unavailable.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE',
+    });
   });
 
   it('rejects cross-tenant contacts and non-member assignees', async () => {
     const contact = await mutation(
-      `mutation Create($input: CreateConversationInput!) {
-        createConversation(input: $input) { id }
+      `mutation Create($input: CreateConversationInput!, $idempotencyKey: String!) {
+        createConversation(input: $input, idempotencyKey: $idempotencyKey) { id }
       }`,
-      { input: { contactId: outsiderContactId } },
+      {
+        idempotencyKey: 'conversation-foreign-contact',
+        input: { contactId: outsiderContactId },
+      },
     ).expect(200);
     expect(contact.body.errors[0].extensions.code).toBe('NOT_FOUND');
 
     const own = await mutation(
-      `mutation Create($input: CreateConversationInput!) {
-        createConversation(input: $input) { id }
+      `mutation Create($input: CreateConversationInput!, $idempotencyKey: String!) {
+        createConversation(input: $input, idempotencyKey: $idempotencyKey) { id }
       }`,
-      { input: { contactId } },
+      {
+        idempotencyKey: 'conversation-own-contact',
+        input: { contactId },
+      },
     ).expect(200);
     const assignment = await mutation(
       `mutation Assign($id: Int!, $assignedTo: Int) {
