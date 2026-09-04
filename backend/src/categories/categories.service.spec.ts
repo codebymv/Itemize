@@ -37,14 +37,22 @@ describe('CategoriesService', () => {
       },
     ]);
 
-    repository.create.mockResolvedValue(
-      row({ name: 'Ideas', color_value: '#ABC' }),
-    );
-    await service.create(7, { name: ' Ideas ', colorValue: ' #abc ' });
-    expect(repository.create).toHaveBeenCalledWith(7, {
-      name: 'Ideas',
-      colorValue: '#ABC',
+    repository.create.mockResolvedValue({
+      kind: 'created',
+      row: row({ name: 'Ideas', color_value: '#ABC' }),
+      replayed: false,
     });
+    await service.create(
+      7,
+      { name: ' Ideas ', colorValue: ' #abc ' },
+      'category-create-key',
+    );
+    expect(repository.create).toHaveBeenCalledWith(
+      7,
+      { name: 'Ideas', colorValue: '#ABC' },
+      'category-create-key',
+      expect.stringMatching(/^[a-f0-9]{64}$/),
+    );
   });
 
   it('supports partial updates but rejects null and empty updates', async () => {
@@ -94,19 +102,40 @@ describe('CategoriesService', () => {
       extensions: { reason: 'INVALID_CATEGORY_ID' },
     });
     await expect(
-      service.create(7, { name: ' '.repeat(2) }),
+      service.create(7, { name: ' '.repeat(2) }, 'invalid-name-key'),
     ).rejects.toMatchObject({
       extensions: { reason: 'INVALID_CATEGORY_NAME' },
     });
     await expect(
-      service.create(7, { name: 'Ideas', colorValue: 'red' }),
+      service.create(7, { name: 'Ideas', colorValue: 'red' }, 'invalid-color-key'),
     ).rejects.toMatchObject({
       extensions: { reason: 'INVALID_CATEGORY_COLOR' },
     });
 
     repository.create.mockRejectedValue({ code: '23505' });
-    await expect(service.create(7, { name: 'Ideas' })).rejects.toMatchObject({
+    await expect(
+      service.create(7, { name: 'Ideas' }, 'duplicate-key'),
+    ).rejects.toMatchObject({
       extensions: { reason: 'DUPLICATE_CATEGORY_NAME' },
+    });
+  });
+
+  it('maps replay-key conflicts and unavailable results to stable errors', async () => {
+    repository.create.mockResolvedValueOnce({ kind: 'idempotency_conflict' });
+    await expect(
+      service.create(7, { name: 'Ideas' }, 'reused-key'),
+    ).rejects.toMatchObject({
+      extensions: { code: 'CONFLICT', reason: 'IDEMPOTENCY_KEY_REUSED' },
+    });
+
+    repository.create.mockResolvedValueOnce({ kind: 'result_unavailable' });
+    await expect(
+      service.create(7, { name: 'Ideas' }, 'deleted-result-key'),
+    ).rejects.toMatchObject({
+      extensions: {
+        code: 'CONFLICT',
+        reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE',
+      },
     });
   });
 });

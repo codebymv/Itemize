@@ -18,8 +18,8 @@ const categoriesQuery = `
 `;
 
 const createCategoryMutation = `
-  mutation CreateCategory($input: CreateCategoryInput!) {
-    createCategory(input: $input) { ${categoryFields} }
+  mutation CreateCategory($input: CreateCategoryInput!, $idempotencyKey: String!) {
+    createCategory(input: $input, idempotencyKey: $idempotencyKey) { ${categoryFields} }
   }
 `;
 
@@ -60,11 +60,12 @@ export const getCategoriesViaGraphql = async (): Promise<Category[]> => {
 
 export const createCategoryViaGraphql = async (
   input: CreateCategoryPayload,
+  idempotencyKey: string,
 ): Promise<Category> => {
   const data = await graphqlMutationRequest<
     { createCategory: GraphqlCategory },
-    { input: ReturnType<typeof mapInput> }
-  >(createCategoryMutation, { input: mapInput(input) });
+    { input: ReturnType<typeof mapInput>; idempotencyKey: string }
+  >(createCategoryMutation, { input: mapInput(input), idempotencyKey });
   return mapCategory(data.createCategory);
 };
 

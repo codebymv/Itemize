@@ -28,8 +28,16 @@ export class TagsResolver {
   @CsrfProtected()
   @OrganizationScoped()
   @Mutation(() => Tag)
-  createTag(@Args('input') input: CreateTagInput): Promise<Tag> {
-    return this.tags.create(this.organizationId(), input);
+  createTag(
+    @Args('input') input: CreateTagInput,
+    @Args('idempotencyKey', { type: () => String }) idempotencyKey: string,
+  ): Promise<Tag> {
+    return this.tags.create(
+      this.organizationId(),
+      this.userId(),
+      input,
+      idempotencyKey,
+    );
   }
 
   @CsrfProtected()
@@ -55,5 +63,11 @@ export class TagsResolver {
     const organization = this.requestContext.current().organization;
     if (!organization) throw new Error('Verified organization context is unavailable');
     return organization.organizationId;
+  }
+
+  private userId(): number {
+    const identity = this.requestContext.current().identity;
+    if (!identity) throw new Error('Verified user identity is unavailable');
+    return identity.userId;
   }
 }

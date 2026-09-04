@@ -24,7 +24,7 @@
     "ai:eval": "ts-node src/run-ai-suggestion-eval.ts",
     "test": "jest --runInBand",
     "test:integration": "jest --config jest.integration.config.cjs --runInBand",
-    "test:contract": "jest --runInBand --runTestsByPath src/common/graphql-consumer-contract.spec.ts",
+    "test:contract": "jest --runInBand --runTestsByPath src/common/graphql-consumer-contract.spec.ts src/common/graphql-mutation-replay-contract.spec.ts",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage --runInBand"
   },

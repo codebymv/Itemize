@@ -49,14 +49,19 @@ describe('category API GraphQL transport', () => {
     vi.mocked(deleteCategoryViaGraphql).mockResolvedValue({ deletedId: 4 });
 
     await getCategories('ignored-token');
-    await createCategory({ name: 'Projects' }, 'ignored-token');
+    await createCategory(
+      { name: 'Projects' },
+      'category-create-key',
+      'ignored-token',
+    );
     await updateCategory(4, { name: 'Projects' }, 'ignored-token');
     await deleteCategory(4, 'ignored-token');
 
     expect(getCategoriesViaGraphql).toHaveBeenCalled();
-    expect(createCategoryViaGraphql).toHaveBeenCalledWith({
-      name: 'Projects',
-    });
+    expect(createCategoryViaGraphql).toHaveBeenCalledWith(
+      { name: 'Projects' },
+      'category-create-key',
+    );
     expect(updateCategoryViaGraphql).toHaveBeenCalledWith(4, {
       name: 'Projects',
     });

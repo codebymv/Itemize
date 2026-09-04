@@ -24,6 +24,7 @@ describe('Tag GraphQL and pipeline REST/GraphQL PostgreSQL parity', () => {
   let pipelineId: number;
   let dealId: number;
   const jwt = new JwtService();
+  const newsletterTagCreationKey = 'tag-newsletter-create-v1';
 
   beforeAll(async () => {
     const connectionString = process.env.TEST_DATABASE_URL;
@@ -230,10 +231,13 @@ describe('Tag GraphQL and pipeline REST/GraphQL PostgreSQL parity', () => {
     const created = await mutation(
       memberToken,
       organizationId,
-      `mutation CreateTag($input: CreateTagInput!) {
-        createTag(input: $input) { id name color }
+      `mutation CreateTag($input: CreateTagInput!, $idempotencyKey: String!) {
+        createTag(input: $input, idempotencyKey: $idempotencyKey) { id name color }
       }`,
-      { input: { name: '  Newsletter  ', color: '#10b981' } },
+      {
+        input: { name: '  Newsletter  ', color: '#10b981' },
+        idempotencyKey: newsletterTagCreationKey,
+      },
     ).expect(200);
     expect(created.body.errors).toBeUndefined();
     expect(created.body.data.createTag).toMatchObject({
@@ -241,6 +245,36 @@ describe('Tag GraphQL and pipeline REST/GraphQL PostgreSQL parity', () => {
       color: '#10B981',
     });
     const createdId = created.body.data.createTag.id;
+
+    const replayed = await mutation(
+      memberToken,
+      organizationId,
+      `mutation CreateTag($input: CreateTagInput!, $idempotencyKey: String!) {
+        createTag(input: $input, idempotencyKey: $idempotencyKey) { id }
+      }`,
+      {
+        input: { name: 'Newsletter', color: '#10B981' },
+        idempotencyKey: newsletterTagCreationKey,
+      },
+    ).expect(200);
+    expect(replayed.body.errors).toBeUndefined();
+    expect(replayed.body.data.createTag.id).toBe(createdId);
+
+    const conflictingReuse = await mutation(
+      memberToken,
+      organizationId,
+      `mutation CreateTag($input: CreateTagInput!, $idempotencyKey: String!) {
+        createTag(input: $input, idempotencyKey: $idempotencyKey) { id }
+      }`,
+      {
+        input: { name: 'Different tag' },
+        idempotencyKey: newsletterTagCreationKey,
+      },
+    ).expect(200);
+    expect(conflictingReuse.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_KEY_REUSED',
+    });
     await pool.query(
       'UPDATE contacts SET tags = tags || ARRAY[$1] WHERE id = $2',
       ['Newsletter', contactId],
@@ -285,13 +319,31 @@ describe('Tag GraphQL and pipeline REST/GraphQL PostgreSQL parity', () => {
       { id: createdId },
     ).expect(200);
     expect(repeated.body.errors[0].extensions.code).toBe('NOT_FOUND');
+
+    const replayAfterDelete = await mutation(
+      memberToken,
+      organizationId,
+      `mutation CreateTag($input: CreateTagInput!, $idempotencyKey: String!) {
+        createTag(input: $input, idempotencyKey: $idempotencyKey) { id }
+      }`,
+      {
+        input: { name: 'Newsletter', color: '#10B981' },
+        idempotencyKey: newsletterTagCreationKey,
+      },
+    ).expect(200);
+    expect(replayAfterDelete.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE',
+    });
   });
 
   it('rejects duplicate tags, invalid colors, missing CSRF, and foreign mutations', async () => {
     const duplicate = await mutation(
       memberToken,
       organizationId,
-      `mutation { createTag(input: { name: " vip " }) { id } }`,
+      `mutation {
+        createTag(input: { name: " vip " }, idempotencyKey: "tag-duplicate-v1") { id }
+      }`,
     ).expect(200);
     expect(duplicate.body.errors[0].extensions).toMatchObject({
       code: 'BAD_USER_INPUT',
@@ -301,7 +353,12 @@ describe('Tag GraphQL and pipeline REST/GraphQL PostgreSQL parity', () => {
     const invalid = await mutation(
       memberToken,
       organizationId,
-      `mutation { createTag(input: { name: "Bad color", color: "red" }) { id } }`,
+      `mutation {
+        createTag(
+          input: { name: "Bad color", color: "red" }
+          idempotencyKey: "tag-invalid-color-v1"
+        ) { id }
+      }`,
     ).expect(200);
     expect(invalid.body.errors[0].extensions).toMatchObject({
       code: 'BAD_USER_INPUT',
@@ -327,16 +384,42 @@ describe('Tag GraphQL and pipeline REST/GraphQL PostgreSQL parity', () => {
   });
 
   it('serializes concurrent case-insensitive creation and requires authentication', async () => {
+    const exactName = `ExactTag-${Date.now()}`;
+    const exactDocument = `mutation CreateTag(
+      $input: CreateTagInput!
+      $idempotencyKey: String!
+    ) {
+      createTag(input: $input, idempotencyKey: $idempotencyKey) { id name }
+    }`;
+    const exactVariables = {
+      input: { name: exactName },
+      idempotencyKey: `tag-exact-${Date.now()}`,
+    };
+    const [exactFirst, exactSecond] = await Promise.all([
+      mutation(memberToken, organizationId, exactDocument, exactVariables),
+      mutation(memberToken, organizationId, exactDocument, exactVariables),
+    ]);
+    expect(exactFirst.body.errors).toBeUndefined();
+    expect(exactSecond.body.errors).toBeUndefined();
+    expect(exactFirst.body.data.createTag.id).toBe(
+      exactSecond.body.data.createTag.id,
+    );
+
     const name = `RaceTag-${Date.now()}`;
-    const document = `mutation CreateTag($input: CreateTagInput!) {
-      createTag(input: $input) { id name }
+    const document = `mutation CreateTag(
+      $input: CreateTagInput!
+      $idempotencyKey: String!
+    ) {
+      createTag(input: $input, idempotencyKey: $idempotencyKey) { id name }
     }`;
     const [first, second] = await Promise.all([
       mutation(memberToken, organizationId, document, {
         input: { name },
+        idempotencyKey: `tag-race-first-${Date.now()}`,
       }),
       mutation(memberToken, organizationId, document, {
         input: { name: name.toLowerCase() },
+        idempotencyKey: `tag-race-second-${Date.now()}`,
       }),
     ]);
     const responses = [first, second];
@@ -370,6 +453,12 @@ describe('Tag GraphQL and pipeline REST/GraphQL PostgreSQL parity', () => {
       organizationId,
       `mutation DeleteTag($id: Int!) { deleteTag(id: $id) { deletedId } }`,
       { id: createdId },
+    ).expect(200);
+    await mutation(
+      memberToken,
+      organizationId,
+      `mutation DeleteTag($id: Int!) { deleteTag(id: $id) { deletedId } }`,
+      { id: exactFirst.body.data.createTag.id },
     ).expect(200);
   });
 

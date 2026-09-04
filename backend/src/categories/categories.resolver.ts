@@ -19,8 +19,11 @@ export class CategoriesResolver {
 
   @CsrfProtected()
   @Mutation(() => Category)
-  createCategory(@Args('input') input: CreateCategoryInput): Promise<Category> {
-    return this.categories.create(this.userId(), input);
+  createCategory(
+    @Args('input') input: CreateCategoryInput,
+    @Args('idempotencyKey', { type: () => String }) idempotencyKey: string,
+  ): Promise<Category> {
+    return this.categories.create(this.userId(), input, idempotencyKey);
   }
 
   @CsrfProtected()

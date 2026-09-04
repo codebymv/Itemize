@@ -12,10 +12,15 @@ export type TagRow = {
   created_at: Date;
 };
 
-type TagValues = {
+export type TagValues = {
   name: string;
   color: string;
 };
+
+export type CreateTagOutcome =
+  | { kind: 'created'; row: TagRow; replayed: boolean }
+  | { kind: 'idempotency_conflict' }
+  | { kind: 'result_unavailable' };
 
 export type UpdateTagOutcome =
   | { kind: 'updated'; row: TagRow }
@@ -59,16 +64,59 @@ export class TagsRepository {
     return result.rows.map((row) => row.name);
   }
 
-  async create(organizationId: number, values: TagValues): Promise<TagRow> {
+  async create(
+    organizationId: number,
+    userId: number,
+    values: TagValues,
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<CreateTagOutcome> {
     return this.transaction(async (client) => {
       await client.query('SELECT pg_advisory_xact_lock($1)', [organizationId]);
+      const receipt = await client.query<{
+        request_fingerprint: string;
+        result_tag_id: number | null;
+      }>(
+        `SELECT request_fingerprint, result_tag_id
+         FROM tag_creation_receipts
+         WHERE organization_id = $1 AND idempotency_key = $2
+         FOR UPDATE`,
+        [organizationId, idempotencyKey],
+      );
+      const replay = receipt.rows[0];
+      if (replay) {
+        if (replay.request_fingerprint !== requestFingerprint) {
+          return { kind: 'idempotency_conflict' };
+        }
+        if (replay.result_tag_id === null) {
+          return { kind: 'result_unavailable' };
+        }
+        const row = await this.findById(
+          client,
+          organizationId,
+          Number(replay.result_tag_id),
+        );
+        return { kind: 'created', row, replayed: true };
+      }
       const inserted = await client.query<{ id: number }>(
         `INSERT INTO tags (organization_id, name, color)
          VALUES ($1, $2, $3)
          RETURNING id`,
         [organizationId, values.name, values.color],
       );
-      return this.findById(client, organizationId, Number(inserted.rows[0].id));
+      const row = await this.findById(
+        client,
+        organizationId,
+        Number(inserted.rows[0].id),
+      );
+      await client.query(
+        `INSERT INTO tag_creation_receipts (
+           organization_id, requested_by_user_id, idempotency_key,
+           request_fingerprint, result_tag_id
+         ) VALUES ($1, $2, $3, $4, $5)`,
+        [organizationId, userId, idempotencyKey, requestFingerprint, row.id],
+      );
+      return { kind: 'created', row, replayed: false };
     });
   }
 

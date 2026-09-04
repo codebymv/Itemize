@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { getCategories, createCategory, updateCategory, deleteCategory, Category, CreateCategoryPayload } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from './use-toast';
+import { useStableMutationKey } from './useStableMutationKey';
 
 // Global category refresh event
 const CATEGORY_REFRESH_EVENT = 'categoriesUpdated';
@@ -20,6 +21,11 @@ export const useDatabaseCategories = () => {
   const [error, setError] = useState<string | null>(null);
   const { token } = useAuth();
   const { toast } = useToast();
+  const {
+    begin: beginCategoryCreate,
+    release: releaseCategoryCreate,
+    reset: resetCategoryCreate,
+  } = useStableMutationKey('category-create');
 
   // Fetch categories from database
   const fetchCategories = useCallback(async () => {
@@ -72,29 +78,47 @@ export const useDatabaseCategories = () => {
   // Create new category
   const addCategory = useCallback(async (categoryData: CreateCategoryPayload) => {
     if (!token) return null;
-    
+    const signature = JSON.stringify({
+      name: categoryData.name.trim(),
+      colorValue: (categoryData.color_value ?? '#3B82F6').trim().toUpperCase(),
+    });
+    const idempotencyKey = beginCategoryCreate(signature);
+    if (!idempotencyKey) return null;
+
+    let newCategory: Category;
     try {
-      const newCategory = await createCategory(categoryData, token);
-      setCategories(prev => [...prev, newCategory].sort((a, b) => a.name.localeCompare(b.name)));
-      
-      // Trigger global refresh so all components update
-      console.log('📢 Triggering global category refresh after creating:', newCategory.name);
-      triggerGlobalCategoryRefresh();
-      
-      return newCategory;
+      newCategory = await createCategory(categoryData, idempotencyKey, token);
     } catch (err) {
+      releaseCategoryCreate();
       console.error('Error creating category:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to create category';
-      
+
       toast({
         title: "Error",
         description: errorMessage,
         variant: "destructive"
       });
-      
+
       return null;
     }
-  }, [token, toast]);
+    resetCategoryCreate();
+    setCategories(prev => [
+      ...prev.filter(category => category.id !== newCategory.id),
+      newCategory,
+    ].sort((a, b) => a.name.localeCompare(b.name)));
+
+    // Trigger global refresh so all components update
+      console.log('📢 Triggering global category refresh after creating:', newCategory.name);
+    triggerGlobalCategoryRefresh();
+
+    return newCategory;
+  }, [
+    beginCategoryCreate,
+    releaseCategoryCreate,
+    resetCategoryCreate,
+    token,
+    toast,
+  ]);
 
   // Update existing category
   const editCategory = useCallback(async (categoryId: number, categoryData: CreateCategoryPayload) => {
@@ -191,4 +215,4 @@ export const useDatabaseCategories = () => {
     // Computed values
     totalCategories: categories.length
   };
-}; 
+};

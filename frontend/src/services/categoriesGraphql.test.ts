@@ -66,7 +66,7 @@ describe('category GraphQL consumer', () => {
     await createCategoryViaGraphql({
       name: 'Projects',
       color_value: '#3B82F6',
-    });
+    }, 'category-create-key');
     await updateCategoryViaGraphql(4, {
       name: 'Projects',
       color_value: '#ABC',
@@ -80,6 +80,7 @@ describe('category GraphQL consumer', () => {
     );
     expect(bodies[0].variables).toEqual({
       input: { name: 'Projects', colorValue: '#3B82F6' },
+      idempotencyKey: 'category-create-key',
     });
     expect(bodies[1].variables).toEqual({
       id: 4,

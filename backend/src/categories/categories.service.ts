@@ -6,7 +6,12 @@ import { Category } from './category.types';
 import {
   CategoriesRepository,
   CategoryRow,
+  CategoryValues,
 } from './categories.repository';
+import {
+  categoryCreationFingerprint,
+  categoryCreationKey,
+} from './category-creation.idempotency';
 
 const DEFAULT_CATEGORY_COLOR = '#3B82F6';
 const COLOR_PATTERN = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
@@ -23,13 +28,37 @@ export class CategoriesService {
     }
   }
 
-  async create(userId: number, input: CreateCategoryInput): Promise<Category> {
-    const name = this.name(input.name);
-    const colorValue = this.color(input.colorValue ?? DEFAULT_CATEGORY_COLOR);
+  async create(
+    userId: number,
+    input: CreateCategoryInput,
+    idempotencyKey: string,
+  ): Promise<Category> {
+    const values: CategoryValues = {
+      name: this.name(input.name),
+      colorValue: this.color(input.colorValue ?? DEFAULT_CATEGORY_COLOR),
+    };
     try {
-      return this.mapCategory(
-        await this.categories.create(userId, { name, colorValue }),
+      const outcome = await this.categories.create(
+        userId,
+        values,
+        categoryCreationKey(idempotencyKey),
+        categoryCreationFingerprint(values),
       );
+      if (outcome.kind === 'idempotency_conflict') {
+        throw itemizeGraphqlError(
+          'idempotencyKey was already used for a different category creation request',
+          'CONFLICT',
+          { field: 'idempotencyKey', reason: 'IDEMPOTENCY_KEY_REUSED' },
+        );
+      }
+      if (outcome.kind === 'result_unavailable') {
+        throw itemizeGraphqlError(
+          'The category created by this request is no longer available',
+          'CONFLICT',
+          { field: 'idempotencyKey', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE' },
+        );
+      }
+      return this.mapCategory(outcome.row);
     } catch (error) {
       this.rethrow(error);
     }

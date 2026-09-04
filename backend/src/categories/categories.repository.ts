@@ -11,10 +11,15 @@ export type CategoryRow = {
   updated_at: Date;
 };
 
-type CategoryValues = {
+export type CategoryValues = {
   name: string;
   colorValue: string;
 };
+
+export type CreateCategoryOutcome =
+  | { kind: 'created'; row: CategoryRow; replayed: boolean }
+  | { kind: 'idempotency_conflict' }
+  | { kind: 'result_unavailable' };
 
 export type UpdateCategoryOutcome =
   | { kind: 'updated'; row: CategoryRow }
@@ -50,14 +55,57 @@ export class CategoriesRepository {
     return result.rows;
   }
 
-  async create(userId: number, values: CategoryValues): Promise<CategoryRow> {
-    const result = await this.pool.query<CategoryRow>(
-      `INSERT INTO categories (user_id, name, color_value)
-       VALUES ($1, $2, $3)
-       RETURNING ${categorySelection}`,
-      [userId, values.name, values.colorValue],
-    );
-    return result.rows[0];
+  async create(
+    userId: number,
+    values: CategoryValues,
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<CreateCategoryOutcome> {
+    return this.transaction(async (client) => {
+      await client.query('SELECT pg_advisory_xact_lock($1)', [userId]);
+      const receipt = await client.query<{
+        request_fingerprint: string;
+        result_category_id: number | null;
+      }>(
+        `SELECT request_fingerprint, result_category_id
+         FROM category_creation_receipts
+         WHERE user_id = $1 AND idempotency_key = $2
+         FOR UPDATE`,
+        [userId, idempotencyKey],
+      );
+      const replay = receipt.rows[0];
+      if (replay) {
+        if (replay.request_fingerprint !== requestFingerprint) {
+          return { kind: 'idempotency_conflict' };
+        }
+        if (replay.result_category_id === null) {
+          return { kind: 'result_unavailable' };
+        }
+        const row = await this.findById(
+          client,
+          userId,
+          Number(replay.result_category_id),
+        );
+        return row
+          ? { kind: 'created', row, replayed: true }
+          : { kind: 'result_unavailable' };
+      }
+
+      const result = await client.query<CategoryRow>(
+        `INSERT INTO categories (user_id, name, color_value)
+         VALUES ($1, $2, $3)
+         RETURNING ${categorySelection}`,
+        [userId, values.name, values.colorValue],
+      );
+      const row = result.rows[0];
+      await client.query(
+        `INSERT INTO category_creation_receipts (
+           user_id, idempotency_key, request_fingerprint, result_category_id
+         ) VALUES ($1, $2, $3, $4)`,
+        [userId, idempotencyKey, requestFingerprint, row.id],
+      );
+      return { kind: 'created', row, replayed: false };
+    });
   }
 
   async update(
@@ -177,6 +225,20 @@ export class CategoriesRepository {
         [newName, userId, oldName],
       );
     }
+  }
+
+  private async findById(
+    client: PoolClient,
+    userId: number,
+    categoryId: number,
+  ): Promise<CategoryRow | null> {
+    const result = await client.query<CategoryRow>(
+      `SELECT ${categorySelection}
+       FROM categories
+       WHERE id = $1 AND user_id = $2`,
+      [categoryId, userId],
+    );
+    return result.rows[0] ?? null;
   }
 
   private async transaction<T>(

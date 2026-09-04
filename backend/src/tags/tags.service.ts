@@ -3,7 +3,11 @@ import { GraphQLError } from 'graphql';
 import { itemizeGraphqlError } from '../common/graphql-error';
 import { CreateTagInput, UpdateTagInput } from './tag.inputs';
 import { Tag } from './tag.types';
-import { TagRow, TagsRepository } from './tags.repository';
+import { TagRow, TagsRepository, TagValues } from './tags.repository';
+import {
+  tagCreationFingerprint,
+  tagCreationKey,
+} from './tag-creation.idempotency';
 
 const DEFAULT_TAG_COLOR = '#3B82F6';
 const COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
@@ -28,11 +32,39 @@ export class TagsService {
     }
   }
 
-  async create(organizationId: number, input: CreateTagInput): Promise<Tag> {
-    const name = this.name(input.name);
-    const color = this.color(input.color ?? DEFAULT_TAG_COLOR);
+  async create(
+    organizationId: number,
+    userId: number,
+    input: CreateTagInput,
+    idempotencyKey: string,
+  ): Promise<Tag> {
+    const values: TagValues = {
+      name: this.name(input.name),
+      color: this.color(input.color ?? DEFAULT_TAG_COLOR),
+    };
     try {
-      return this.mapTag(await this.tags.create(organizationId, { name, color }));
+      const outcome = await this.tags.create(
+        organizationId,
+        userId,
+        values,
+        tagCreationKey(idempotencyKey),
+        tagCreationFingerprint(values),
+      );
+      if (outcome.kind === 'idempotency_conflict') {
+        throw itemizeGraphqlError(
+          'idempotencyKey was already used for a different tag creation request',
+          'CONFLICT',
+          { field: 'idempotencyKey', reason: 'IDEMPOTENCY_KEY_REUSED' },
+        );
+      }
+      if (outcome.kind === 'result_unavailable') {
+        throw itemizeGraphqlError(
+          'The tag created by this request is no longer available',
+          'CONFLICT',
+          { field: 'idempotencyKey', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE' },
+        );
+      }
+      return this.mapTag(outcome.row);
     } catch (error) {
       this.rethrow(error);
     }

@@ -16,6 +16,7 @@ describe('Category GraphQL PostgreSQL contract', () => {
   let outsiderToken: string;
   let generalId: number;
   const jwt = new JwtService();
+  const workCreationKey = 'category-work-create-v1';
 
   beforeAll(async () => {
     const connectionString = process.env.TEST_DATABASE_URL;
@@ -130,23 +131,58 @@ describe('Category GraphQL PostgreSQL contract', () => {
   it('validates creates, normalizes colors, and requires CSRF', async () => {
     const created = await mutation(
       memberToken,
-      `mutation Create($input: CreateCategoryInput!) {
-        createCategory(input: $input) { ${fields} }
+      `mutation Create($input: CreateCategoryInput!, $idempotencyKey: String!) {
+        createCategory(input: $input, idempotencyKey: $idempotencyKey) { ${fields} }
       }`,
-      { input: { name: ' Work ', colorValue: '#abc' } },
+      {
+        input: { name: ' Work ', colorValue: '#abc' },
+        idempotencyKey: workCreationKey,
+      },
     ).expect(200);
     expect(created.body.errors).toBeUndefined();
     expect(created.body.data.createCategory).toMatchObject({
       name: 'Work',
       colorValue: '#ABC',
     });
+    const replayed = await mutation(
+      memberToken,
+      `mutation Create($input: CreateCategoryInput!, $idempotencyKey: String!) {
+        createCategory(input: $input, idempotencyKey: $idempotencyKey) { id }
+      }`,
+      {
+        input: { name: 'Work', colorValue: '#ABC' },
+        idempotencyKey: workCreationKey,
+      },
+    ).expect(200);
+    expect(replayed.body.errors).toBeUndefined();
+    expect(replayed.body.data.createCategory.id).toBe(
+      created.body.data.createCategory.id,
+    );
+
+    const conflictingReuse = await mutation(
+      memberToken,
+      `mutation Create($input: CreateCategoryInput!, $idempotencyKey: String!) {
+        createCategory(input: $input, idempotencyKey: $idempotencyKey) { id }
+      }`,
+      {
+        input: { name: 'Different' },
+        idempotencyKey: workCreationKey,
+      },
+    ).expect(200);
+    expect(conflictingReuse.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_KEY_REUSED',
+    });
 
     const duplicate = await mutation(
       memberToken,
-      `mutation Create($input: CreateCategoryInput!) {
-        createCategory(input: $input) { id }
+      `mutation Create($input: CreateCategoryInput!, $idempotencyKey: String!) {
+        createCategory(input: $input, idempotencyKey: $idempotencyKey) { id }
       }`,
-      { input: { name: 'Work' } },
+      {
+        input: { name: 'Work' },
+        idempotencyKey: 'category-work-duplicate-v1',
+      },
     ).expect(200);
     expect(duplicate.body.errors[0].extensions).toMatchObject({
       code: 'BAD_USER_INPUT',
@@ -156,10 +192,36 @@ describe('Category GraphQL PostgreSQL contract', () => {
     const noCsrf = await query(
       memberToken,
       `mutation {
-        createCategory(input: { name: "Denied" }) { id }
+        createCategory(
+          input: { name: "Denied" }
+          idempotencyKey: "category-denied-v1"
+        ) { id }
       }`,
     ).expect(200);
     expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
+  });
+
+  it('serializes concurrent exact category retries to one result', async () => {
+    const name = `Concurrent-${Date.now()}`;
+    const document = `mutation Create(
+      $input: CreateCategoryInput!
+      $idempotencyKey: String!
+    ) {
+      createCategory(input: $input, idempotencyKey: $idempotencyKey) { id name }
+    }`;
+    const variables = {
+      input: { name, colorValue: '#2563EB' },
+      idempotencyKey: `category-concurrent-${Date.now()}`,
+    };
+    const [first, second] = await Promise.all([
+      mutation(memberToken, document, variables),
+      mutation(memberToken, document, variables),
+    ]);
+    expect(first.body.errors).toBeUndefined();
+    expect(second.body.errors).toBeUndefined();
+    expect(first.body.data.createCategory.id).toBe(
+      second.body.data.createCategory.id,
+    );
   });
 
   it('propagates a rename through every personal content store atomically', async () => {
@@ -256,6 +318,21 @@ describe('Category GraphQL PostgreSQL contract', () => {
     ).expect(200);
     expect(deleted.body.errors).toBeUndefined();
     expect(deleted.body.data.deleteCategory.deletedId).toBe(projectsId);
+
+    const replayAfterDelete = await mutation(
+      memberToken,
+      `mutation Create($input: CreateCategoryInput!, $idempotencyKey: String!) {
+        createCategory(input: $input, idempotencyKey: $idempotencyKey) { id }
+      }`,
+      {
+        input: { name: 'Work', colorValue: '#ABC' },
+        idempotencyKey: workCreationKey,
+      },
+    ).expect(200);
+    expect(replayAfterDelete.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE',
+    });
 
     const content = await pool.query<{
       source: string;

@@ -567,10 +567,11 @@ export const getCategories = async (token?: string): Promise<Category[]> => {
 
 export const createCategory = async (
   categoryData: CreateCategoryPayload,
+  idempotencyKey: string,
   token?: string,
 ): Promise<Category> => {
   void token;
-  return createCategoryViaGraphql(categoryData);
+  return createCategoryViaGraphql(categoryData, idempotencyKey);
 };
 
 export const updateCategory = async (

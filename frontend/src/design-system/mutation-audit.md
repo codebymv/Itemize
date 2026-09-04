@@ -64,6 +64,7 @@ story; neither layer is sufficient by itself.
 | Public chat widget | Start or resume a session, send a visitor message, and end a session | The embed owns one immediate attempt at a time, keeps one key for an unchanged retry, restores failed message input, and retries only replay-safe network ambiguity | Session starts and visitor messages use resource-scoped durable receipts and payload fingerprints in the same transaction as counters, inbox mirroring, and notifications; end-session is an absolute transition whose successful replay does not repeat realtime effects | Confirmed responses replace optimistic visitor messages by server identity; exact replays return the original session or message |
 | Contacts | Bulk tag update | Immediate single-flight and guarded modal dismissal | Existing bulk contact update contract | Owning contact list refreshes only after confirmation |
 | Contacts | CSV import | One payload-scoped attempt owns the modal through settlement; duplicate click, touch, and Enter admission is rejected before the importing step renders, while an ambiguous retry retains its key | Required caller idempotency key; the receipt, imported contacts, workflow triggers, and contact activities commit in one tenant-serialized transaction, and conflicting key reuse fails closed | Import results and the owning contact refresh occur only after the admitted batch returns; confirmed replays do not repeat onboarding effects |
+| Taxonomy creation | Personal workspace categories and organization CRM tags | Category UI retains one key for unchanged normalized intent; tag API callers must supply the same contract | Category and tag creation each commit a scope-owned durable receipt, normalized name/color fingerprint, and result identity with the insert. Exact retries replay, changed key reuse conflicts, and deleted results fail closed. | Confirmed categories reconcile into the owning category collection before the existing cross-canvas refresh signal |
 | Account | Schedule permanent deletion | Shared immediate single-flight state; confirmation cannot dismiss while unresolved | Authenticated account-deletion boundary retains its existing preflight and recovery contract | Auth is cleared and navigation occurs only after confirmed scheduling |
 | Account and administration | Plan change, checkout/trial start, organization creation/switching/deletion, member role/removal/ownership/leave actions, invitation create/resend/revoke, and Stripe connect/disconnect | Shared immediate locks close pre-render admission gaps; organization and membership lifecycle actions retain stable keys for unchanged attempts; row-keyed UI ownership keeps unrelated invitations actionable | Organization creation commits its owner membership, default selection, activity, and caller-scoped receipt atomically. Invitation delivery retains its organization-scoped receipt and provider key. Role changes, removals, ownership transfer, revocation, leave, and deletion share a caller-scoped lifecycle namespace whose receipt survives access loss and organization deletion. Exact retries replay before current-access checks, concurrent duplicates serialize, changed or cross-action reuse conflicts, entity-based results fail closed after later removal/change, and ownership email uses provider idempotency keys. | Confirmed organizations, members, roles, and invitations reconcile locally before narrow background refresh; leave/delete report committed success separately from context refresh; authoritative entitlement or integration refresh never converts a committed write into a false failure |
 | Workspace | Move and resize canvas items | Latest absolute position wins; batches serialize and unchanged ambiguous retries retain one attempt | Caller-owned realtime mutation ID; absolute writes are safe to repeat | Newer queued movement cannot be replaced by stale retry data |
@@ -93,10 +94,12 @@ underlying write is itself safe to repeat.
 
 ## Remaining migration queue
 
-1. Add durable server idempotency to remaining non-idempotent create and publish
-   boundaries that are currently protected only against concurrent browser
-   events. `useSingleFlightAction` deliberately does not claim replay safety
-   after a lost response.
+The executable GraphQL replay contract inventories every `create`, `duplicate`,
+and `publish` mutation and rejects unclassified additions in release checks.
+The remaining explicit server replay gaps are invoice-business creation,
+manually recorded reputation-review creation, and workspace-vault creation.
+`useSingleFlightAction` deliberately does not claim replay safety after a lost
+response.
 
 ## Review test
 

@@ -28,6 +28,9 @@ const {
 } = require('./db_workspace_creation_receipt_migrations');
 
 const { runCategoryContractMigration } = require('./db_category_contract_migrations');
+const {
+  runCategoryCreationReceiptMigration,
+} = require('./db_category_creation_receipt_migrations');
 
 // Import CRM migrations
 const { runAllCRMMigrations } = require('./db_crm_migrations');
@@ -43,6 +46,9 @@ const {
 const {
   runPipelineCreationReceiptMigration,
 } = require('./db_pipeline_creation_receipt_migrations');
+const {
+  runTagCreationReceiptMigration,
+} = require('./db_tag_creation_receipt_migrations');
 const {
   runOrganizationInvitationsMigration,
   runOrganizationOwnerInvariantMigration,
@@ -622,6 +628,11 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'feature_categories_data', runCategoriesDataMigration);
     await runMigrationOnce(pool, 'feature_categories_cleanup', runCleanupDefaultCategories);
     await runMigrationOnce(pool, 'category_contract_v1', runCategoryContractMigration);
+    await runMigrationOnce(
+      pool,
+      'category_creation_receipts_v1',
+      runCategoryCreationReceiptMigration,
+    );
     await runMigrationOnce(pool, 'feature_sharing', runSharingMigration);
     await runMigrationOnce(pool, 'feature_wireframes', runWireframesMigration);
     await runMigrationOnce(pool, 'feature_wireframes_dimensions', runWireframesDimensionsMigration);
@@ -648,6 +659,11 @@ const initializeDatabase = async (pool) => {
       pool,
       'pipeline_creation_receipts_v1',
       runPipelineCreationReceiptMigration,
+    );
+    await runMigrationOnce(
+      pool,
+      'tag_creation_receipts_v1',
+      runTagCreationReceiptMigration,
     );
     await runMigrationOnce(
       pool,
