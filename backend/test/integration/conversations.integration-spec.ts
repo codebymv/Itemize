@@ -251,23 +251,35 @@ describe('Conversations GraphQL PostgreSQL contract', () => {
       assignedToName: 'Inbox Member',
     });
 
-    const sent = await mutation(
-      `mutation Send($id: Int!, $input: SendConversationMessageInput!) {
-        sendConversationMessage(conversationId: $id, input: $input) {
+    const sendOperation = `mutation Send(
+      $id: Int!,
+      $input: SendConversationMessageInput!,
+      $idempotencyKey: String!
+    ) {
+        sendConversationMessage(
+          conversationId: $id,
+          input: $input,
+          idempotencyKey: $idempotencyKey
+        ) {
           id conversationId organizationId senderType senderUserId
           channel content contentHtml metadata isRead createdAt
         }
-      }`,
-      {
-        id: conversationId,
-        input: {
-          content: '  Follow up  ',
-          contentHtml: '<p>Follow up</p>',
-          metadata: { source: 'integration' },
-        },
+      }`;
+    const sendVariables = {
+      id: conversationId,
+      idempotencyKey: 'conversation-message-integration',
+      input: {
+        content: '  Follow up  ',
+        contentHtml: '<p>Follow up</p>',
+        metadata: { source: 'integration' },
       },
-    ).expect(200);
+    };
+    const [sent, sentReplay] = await Promise.all([
+      mutation(sendOperation, sendVariables).expect(200),
+      mutation(sendOperation, sendVariables).expect(200),
+    ]);
     expect(sent.body.errors).toBeUndefined();
+    expect(sentReplay.body.errors).toBeUndefined();
     expect(sent.body.data.sendConversationMessage).toMatchObject({
       conversationId,
       organizationId,
@@ -275,6 +287,18 @@ describe('Conversations GraphQL PostgreSQL contract', () => {
       senderUserId: ownerId,
       content: 'Follow up',
       metadata: { source: 'integration' },
+    });
+    expect(sentReplay.body.data.sendConversationMessage.id).toBe(
+      sent.body.data.sendConversationMessage.id,
+    );
+    const changedMessage = await mutation(sendOperation, {
+      ...sendVariables,
+      input: { ...sendVariables.input, content: 'Changed follow up' },
+    }).expect(200);
+    expect(changedMessage.body.data).toBeNull();
+    expect(changedMessage.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_KEY_REUSED',
     });
 
     await pool.query(
@@ -324,6 +348,20 @@ describe('Conversations GraphQL PostgreSQL contract', () => {
         (message: { isRead: boolean }) => message.isRead,
       ),
     ).toBe(true);
+
+    await pool.query(
+      'DELETE FROM messages WHERE organization_id=$1 AND id=$2',
+      [organizationId, sent.body.data.sendConversationMessage.id],
+    );
+    const unavailableMessage = await mutation(
+      sendOperation,
+      sendVariables,
+    ).expect(200);
+    expect(unavailableMessage.body.data).toBeNull();
+    expect(unavailableMessage.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE',
+    });
   });
 
   it('serializes concurrent creation into one open conversation', async () => {

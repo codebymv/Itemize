@@ -91,6 +91,12 @@ export type CreateConversationOutcome =
   | { kind: 'idempotency-conflict' }
   | { kind: 'result-unavailable' };
 
+export type SendConversationMessageOutcome =
+  | { kind: 'ok'; row: ConversationMessageRow; replayed: boolean }
+  | { kind: 'conversation_not_found' }
+  | { kind: 'idempotency-conflict' }
+  | { kind: 'result-unavailable' };
+
 type ConversationCreationReceiptRow = {
   request_fingerprint: string;
   result_conversation_id: number | null;
@@ -470,15 +476,48 @@ export class ConversationsRepository {
     userId: number,
     conversationId: number,
     values: SendMessageValues,
-  ): Promise<ConversationMessageRow | null> {
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<SendConversationMessageOutcome> {
     return this.transaction(async (client) => {
+      await client.query(
+        'SELECT pg_advisory_xact_lock($1::int, hashtext($2))',
+        [organizationId, `conversation-message:${idempotencyKey}`],
+      );
+      const receipt = await client.query<{
+        request_fingerprint: string;
+        result_message_id: number | null;
+      }>(
+        `SELECT request_fingerprint,result_message_id
+         FROM conversation_message_receipts
+         WHERE organization_id=$1 AND idempotency_key=$2
+         FOR UPDATE`,
+        [organizationId, idempotencyKey],
+      );
+      const replay = receipt.rows[0];
+      if (replay) {
+        if (replay.request_fingerprint !== requestFingerprint) {
+          return { kind: 'idempotency-conflict' };
+        }
+        if (replay.result_message_id === null) {
+          return { kind: 'result-unavailable' };
+        }
+        const row = await this.selectMessage(
+          client,
+          organizationId,
+          replay.result_message_id,
+        );
+        return row
+          ? { kind: 'ok', row, replayed: true }
+          : { kind: 'result-unavailable' };
+      }
       const owned = await client.query<{ id: number }>(
         `SELECT id FROM conversations
          WHERE id = $1 AND organization_id = $2
          FOR UPDATE`,
         [conversationId, organizationId],
       );
-      if (owned.rows.length === 0) return null;
+      if (owned.rows.length === 0) return { kind: 'conversation_not_found' };
       const inserted = await client.query<{ id: number }>(
         `INSERT INTO messages (
            conversation_id, organization_id, sender_type, sender_user_id,
@@ -511,7 +550,14 @@ export class ConversationsRepository {
         inserted.rows[0].id,
       );
       if (!row) throw new Error('Created message could not be reloaded');
-      return row;
+      await client.query(
+        `INSERT INTO conversation_message_receipts (
+           organization_id,requested_by_user_id,idempotency_key,
+           request_fingerprint,result_message_id
+         ) VALUES ($1,$2,$3,$4,$5)`,
+        [organizationId, userId, idempotencyKey, requestFingerprint, row.id],
+      );
+      return { kind: 'ok', row, replayed: false };
     });
   }
 

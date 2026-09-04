@@ -491,12 +491,14 @@ export interface SendMessageData {
 export const sendMessage = async (
     conversationId: number,
     input: SendMessageData,
-    organizationId?: number
+    organizationId: number | undefined,
+    idempotencyKey: string,
 ): Promise<Message> => {
     const data = await graphqlMutationRequest<
         { sendConversationMessage: Message },
         {
             conversationId: number;
+            idempotencyKey: string;
             input: {
                 content: string;
                 channel?: string;
@@ -510,10 +512,12 @@ export const sendMessage = async (
             mutation SendConversationMessage(
                 $conversationId: Int!
                 $input: SendConversationMessageInput!
+                $idempotencyKey: String!
             ) {
                 sendConversationMessage(
                     conversationId: $conversationId
                     input: $input
+                    idempotencyKey: $idempotencyKey
                 ) {
                     ...ConversationMessageFields
                 }
@@ -521,6 +525,7 @@ export const sendMessage = async (
         `,
         {
             conversationId,
+            idempotencyKey,
             input: {
                 content: input.content,
                 ...(input.channel === undefined ? {} : { channel: input.channel }),

@@ -708,18 +708,18 @@ export const cancelSignatureDocumentViaGraphql=async(id:number,organizationId?:n
   return mapDocument(data.cancelSignatureDocument);
 };
 
-export const sendSignatureDocumentViaGraphql=async(id:number,organizationId?:number):Promise<SignatureDocument>=>{
-  const data=await mutationWithLegacyReliabilitySelection<{sendSignatureDocument:GqlDocument},{id:number}>(fields=>`mutation SendSignatureDocument($id:Int!){sendSignatureDocument(id:$id){${fields}}}`,{id},organizationId);
+export const sendSignatureDocumentViaGraphql=async(id:number,idempotencyKey:string,organizationId?:number):Promise<SignatureDocument>=>{
+  const data=await mutationWithLegacyReliabilitySelection<{sendSignatureDocument:GqlDocument},{id:number;idempotencyKey:string}>(fields=>`mutation SendSignatureDocument($id:Int!,$idempotencyKey:String!){sendSignatureDocument(id:$id,idempotencyKey:$idempotencyKey){${fields}}}`,{id,idempotencyKey},organizationId);
   return mapDocument(data.sendSignatureDocument);
 };
 
-export const remindSignatureDocumentViaGraphql=async(id:number,organizationId?:number):Promise<SignatureDocument>=>{
-  const data=await mutationWithLegacyReliabilitySelection<{sendSignatureReminder:GqlDocument},{id:number}>(fields=>`mutation SendSignatureReminder($id:Int!){sendSignatureReminder(id:$id){${fields}}}`,{id},organizationId);
+export const remindSignatureDocumentViaGraphql=async(id:number,idempotencyKey:string,organizationId?:number):Promise<SignatureDocument>=>{
+  const data=await mutationWithLegacyReliabilitySelection<{sendSignatureReminder:GqlDocument},{id:number;idempotencyKey:string}>(fields=>`mutation SendSignatureReminder($id:Int!,$idempotencyKey:String!){sendSignatureReminder(id:$id,idempotencyKey:$idempotencyKey){${fields}}}`,{id,idempotencyKey},organizationId);
   return mapDocument(data.sendSignatureReminder);
 };
 
-export const retrySignatureDocumentViaGraphql=async(id:number,organizationId?:number):Promise<SignatureDocument>=>{
-  const data=await mutationWithLegacyReliabilitySelection<{retrySignatureDocument:GqlDocument},{id:number}>(fields=>`mutation RetrySignatureDocument($id:Int!){retrySignatureDocument(id:$id){${fields}}}`,{id},organizationId);
+export const retrySignatureDocumentViaGraphql=async(id:number,idempotencyKey:string,organizationId?:number):Promise<SignatureDocument>=>{
+  const data=await mutationWithLegacyReliabilitySelection<{retrySignatureDocument:GqlDocument},{id:number;idempotencyKey:string}>(fields=>`mutation RetrySignatureDocument($id:Int!,$idempotencyKey:String!){retrySignatureDocument(id:$id,idempotencyKey:$idempotencyKey){${fields}}}`,{id,idempotencyKey},organizationId);
   return mapDocument(data.retrySignatureDocument);
 };
 

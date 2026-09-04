@@ -265,7 +265,7 @@ describe('Calendar integrations GraphQL PostgreSQL contract', () => {
 
   it('enqueues idempotently and exposes only safe durable status', async () => {
     const mutation = `
-      mutation RequestSync($connectionId: Int!, $key: String) {
+      mutation RequestSync($connectionId: Int!, $key: String!) {
         requestCalendarSync(
           connectionId: $connectionId
           idempotencyKey: $key

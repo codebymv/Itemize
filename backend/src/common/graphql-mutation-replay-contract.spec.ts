@@ -29,6 +29,40 @@ const hasRequiredReplayKey = (argument: GraphQLArgument): boolean => {
 // or publish mutation without a required replay key fails this test.
 const KNOWN_NON_REPLAY_SAFE_MUTATIONS: string[] = [];
 
+// These authenticated operations enqueue provider work or commit a financial
+// side effect. The list is deliberately explicit so renames and newly added
+// dispatch paths require a contract decision instead of relying on a prefix.
+const BUSINESS_DISPATCH_MUTATIONS = [
+  'createBillingCheckoutSession',
+  'createBillingPortalSession',
+  'createInvoicePaymentLink',
+  'enqueueAdminEmailBatch',
+  'enqueueContactEmail',
+  'enqueueContactSms',
+  'generateRecurringInvoiceNow',
+  'recordInvoicePayment',
+  'recordPayment',
+  'refundPayment',
+  'requestCalendarSync',
+  'resendOrganizationInvitation',
+  'resendReputationRequest',
+  'retrySignatureDocument',
+  'sendAgentChatMessage',
+  'sendBulkReputationRequests',
+  'sendCampaign',
+  'sendCampaignTest',
+  'sendConversationMessage',
+  'sendEmailTemplateTest',
+  'sendEstimate',
+  'sendInvoice',
+  'sendReputationRequest',
+  'sendSignatureDocument',
+  'sendSignatureReminder',
+  'sendSmsTemplateTest',
+  'sendSocialMessage',
+  'transferOrganizationOwnership',
+];
+
 describe('GraphQL mutation replay contract', () => {
   let app: NestExpressApplication;
 
@@ -67,5 +101,18 @@ describe('GraphQL mutation replay contract', () => {
 
     expect(replayRelevant.length).toBeGreaterThan(35);
     expect(missingReplayBoundary).toEqual(KNOWN_NON_REPLAY_SAFE_MUTATIONS);
+  });
+
+  it('requires every business dispatch mutation to expose a replay boundary', () => {
+    const mutationFields = app.get(GraphQLSchemaHost).schema
+      .getMutationType()?.getFields() ?? {};
+    const missingOperations = BUSINESS_DISPATCH_MUTATIONS
+      .filter((name) => !mutationFields[name]);
+    const missingReplayBoundary = BUSINESS_DISPATCH_MUTATIONS
+      .filter((name) => mutationFields[name])
+      .filter((name) => !mutationFields[name]?.args.some(hasRequiredReplayKey));
+
+    expect(missingOperations).toEqual([]);
+    expect(missingReplayBoundary).toEqual([]);
   });
 });

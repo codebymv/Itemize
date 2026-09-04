@@ -25,22 +25,31 @@ export class SignatureDeliveryResolver {
   @CsrfProtected()
   @OrganizationScoped()
   @Mutation(() => SignatureDocument)
-  sendSignatureDocument(@Args('id', { type: () => Int }) id: number): Promise<SignatureDocument> {
-    return this.service.send(this.organizationId(), id, this.userId());
+  sendSignatureDocument(
+    @Args('id', { type: () => Int }) id: number,
+    @Args('idempotencyKey') idempotencyKey: string,
+  ): Promise<SignatureDocument> {
+    return this.service.send(this.organizationId(), id, this.userId(), idempotencyKey);
   }
 
   @CsrfProtected()
   @OrganizationScoped()
   @Mutation(() => SignatureDocument)
-  sendSignatureReminder(@Args('id', { type: () => Int }) id: number): Promise<SignatureDocument> {
-    return this.service.remind(this.organizationId(), id, this.userId());
+  sendSignatureReminder(
+    @Args('id', { type: () => Int }) id: number,
+    @Args('idempotencyKey') idempotencyKey: string,
+  ): Promise<SignatureDocument> {
+    return this.service.remind(this.organizationId(), id, this.userId(), idempotencyKey);
   }
 
   @CsrfProtected()
   @OrganizationScoped()
   @Mutation(() => SignatureDocument)
-  retrySignatureDocument(@Args('id', { type: () => Int }) id: number): Promise<SignatureDocument> {
-    return this.service.retry(this.organizationId(), id, this.userId());
+  retrySignatureDocument(
+    @Args('id', { type: () => Int }) id: number,
+    @Args('idempotencyKey') idempotencyKey: string,
+  ): Promise<SignatureDocument> {
+    return this.service.retry(this.organizationId(), id, this.userId(), idempotencyKey);
   }
 
   @CsrfProtected()

@@ -97,7 +97,7 @@ export class CalendarIntegrationsService {
     organizationId: number,
     userId: number,
     connectionId: number,
-    idempotencyKey?: string | null,
+    idempotencyKey: string,
   ): Promise<CalendarSyncRequest> {
     this.id(connectionId);
     const normalizedKey = this.idempotencyKey(idempotencyKey);
@@ -163,9 +163,8 @@ export class CalendarIntegrationsService {
     }
   }
 
-  private idempotencyKey(value?: string | null): string | undefined {
-    if (value === undefined || value === null || value === '') return undefined;
-    const normalized = value.trim();
+  private idempotencyKey(value: string): string {
+    const normalized = String(value ?? '').trim();
     if (!IDEMPOTENCY_KEY_PATTERN.test(normalized)) {
       throw itemizeGraphqlError(
         'idempotencyKey must be 1-128 safe ASCII characters',

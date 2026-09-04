@@ -99,12 +99,14 @@ export class ConversationsResolver {
   sendConversationMessage(
     @Args('conversationId', { type: () => Int }) conversationId: number,
     @Args('input') input: SendConversationMessageInput,
+    @Args('idempotencyKey', { type: () => String }) idempotencyKey: string,
   ): Promise<ConversationMessage> {
     return this.conversations.sendMessage(
       this.organizationId(),
       this.userId(),
       conversationId,
       input,
+      idempotencyKey,
     );
   }
 

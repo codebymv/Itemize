@@ -202,10 +202,10 @@ export const getSignatureDocument = async (id: number, organizationId?: number, 
     : getSignatureDocumentViaGraphql(id, organizationId, signal);
 };
 
-export const sendSignatureDocument = async (id: number, organizationId?: number) => {
+export const sendSignatureDocument = async (id: number, idempotencyKey: string, organizationId?: number) => {
   return organizationId === undefined
-    ? sendSignatureDocumentViaGraphql(id)
-    : sendSignatureDocumentViaGraphql(id, organizationId);
+    ? sendSignatureDocumentViaGraphql(id, idempotencyKey)
+    : sendSignatureDocumentViaGraphql(id, idempotencyKey, organizationId);
 };
 
 export const cancelSignatureDocument = async (id: number, organizationId?: number) => {
@@ -220,16 +220,16 @@ export const deleteSignatureDocument = async (id: number, organizationId?: numbe
     : deleteSignatureDocumentViaGraphql(id, organizationId);
 };
 
-export const remindSignatureDocument = async (id: number, organizationId?: number) => {
+export const remindSignatureDocument = async (id: number, idempotencyKey: string, organizationId?: number) => {
   return organizationId === undefined
-    ? remindSignatureDocumentViaGraphql(id)
-    : remindSignatureDocumentViaGraphql(id, organizationId);
+    ? remindSignatureDocumentViaGraphql(id, idempotencyKey)
+    : remindSignatureDocumentViaGraphql(id, idempotencyKey, organizationId);
 };
 
-export const retrySignatureDocument = async (id: number, organizationId?: number) => {
+export const retrySignatureDocument = async (id: number, idempotencyKey: string, organizationId?: number) => {
   return organizationId === undefined
-    ? retrySignatureDocumentViaGraphql(id)
-    : retrySignatureDocumentViaGraphql(id, organizationId);
+    ? retrySignatureDocumentViaGraphql(id, idempotencyKey)
+    : retrySignatureDocumentViaGraphql(id, idempotencyKey, organizationId);
 };
 
 export const downloadSignedDocument = (id: number) => {

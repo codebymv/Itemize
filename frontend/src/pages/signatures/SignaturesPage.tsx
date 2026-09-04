@@ -38,6 +38,7 @@ import {
 } from '@/services/signaturesApi';
 import { signatureQueryKeys } from '@/services/signatureQueryKeys';
 import { useKeyedSingleFlightAction } from '@/hooks/useSingleFlightAction';
+import { useKeyedStableMutationKey } from '@/hooks/useStableMutationKey';
 
 const PAGE_SIZE = 20;
 
@@ -61,6 +62,7 @@ export function SignaturesPage() {
   const [page, setPage] = useState(1);
   const [deleteDocumentId, setDeleteDocumentId] = useState<number | null>(null);
   const { isPending: isDocumentPending, run: runDocumentAction } = useKeyedSingleFlightAction<number>();
+  const deliveryAttempts = useKeyedStableMutationKey<string>('signature-delivery');
 
   useEffect(() => {
     const timeout = window.setTimeout(() => setDebouncedSearch(searchQuery.trim()), 300);
@@ -151,11 +153,16 @@ export function SignaturesPage() {
   const handleSend = async (id: number) => {
     if (!organizationId) return;
     await runDocumentAction(id, async () => {
+      const attempt = `send:${id}`;
+      const idempotencyKey = deliveryAttempts.begin(attempt, `${organizationId}:${attempt}`);
+      if (!idempotencyKey) return;
       try {
-        const updated = await sendSignatureDocument(id, organizationId);
+        const updated = await sendSignatureDocument(id, idempotencyKey, organizationId);
+        deliveryAttempts.reset(attempt);
         toast({ title: 'Signature request queued' });
-        await refreshQueue(updated);
+        void refreshQueue(updated);
       } catch (error) {
+        deliveryAttempts.release(attempt);
         toast({ title: 'Error', description: 'Failed to send signature request', variant: 'destructive' });
       }
     });
@@ -164,11 +171,16 @@ export function SignaturesPage() {
   const handleResend = async (id: number) => {
     if (!organizationId) return;
     await runDocumentAction(id, async () => {
+      const attempt = `remind:${id}`;
+      const idempotencyKey = deliveryAttempts.begin(attempt, `${organizationId}:${attempt}`);
+      if (!idempotencyKey) return;
       try {
-        const updated = await remindSignatureDocument(id, organizationId);
+        const updated = await remindSignatureDocument(id, idempotencyKey, organizationId);
+        deliveryAttempts.reset(attempt);
         toast({ title: 'Signature reminder queued' });
-        await refreshQueue(updated);
+        void refreshQueue(updated);
       } catch (error) {
+        deliveryAttempts.release(attempt);
         toast({ title: 'Error', description: 'Failed to resend signature request', variant: 'destructive' });
       }
     });
@@ -177,11 +189,16 @@ export function SignaturesPage() {
   const handleRetry = async (id: number) => {
     if (!organizationId) return;
     await runDocumentAction(id, async () => {
+      const attempt = `retry:${id}`;
+      const idempotencyKey = deliveryAttempts.begin(attempt, `${organizationId}:${attempt}`);
+      if (!idempotencyKey) return;
       try {
-        const updated = await retrySignatureDocument(id, organizationId);
+        const updated = await retrySignatureDocument(id, idempotencyKey, organizationId);
+        deliveryAttempts.reset(attempt);
         toast({ title: 'Failed processing queued for retry' });
-        await refreshQueue(updated);
+        void refreshQueue(updated);
       } catch (error) {
+        deliveryAttempts.release(attempt);
         toast({ title: 'Retry unavailable', description: 'The failed step could not be retried.', variant: 'destructive' });
       }
     });

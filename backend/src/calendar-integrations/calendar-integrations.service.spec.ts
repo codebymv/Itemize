@@ -93,7 +93,7 @@ describe('CalendarIntegrationsService', () => {
 
   it('reports disabled synchronization as a typed conflict', async () => {
     repository.enqueue.mockResolvedValue({ kind: 'disabled' });
-    await expect(service.enqueue(3, 7, 9)).rejects.toMatchObject<
+    await expect(service.enqueue(3, 7, 9, 'sync-request-disabled')).rejects.toMatchObject<
       Partial<GraphQLError>
     >({
       extensions: {
@@ -101,6 +101,19 @@ describe('CalendarIntegrationsService', () => {
         reason: 'CALENDAR_SYNC_DISABLED',
       },
     });
+  });
+
+  it('requires a caller-owned key before queuing synchronization', async () => {
+    await expect(service.enqueue(3, 7, 9, '')).rejects.toMatchObject<
+      Partial<GraphQLError>
+    >({
+      extensions: {
+        code: 'BAD_USER_INPUT',
+        field: 'idempotencyKey',
+        reason: 'INVALID_IDEMPOTENCY_KEY',
+      },
+    });
+    expect(repository.enqueue).not.toHaveBeenCalled();
   });
 
   it('uses not-found semantics for another user or organization', async () => {

@@ -7,6 +7,7 @@ import {
   SIGNATURE_CONSENT_SHA256,
   SIGNATURE_CONSENT_VERSION,
 } from '../public-signing/signature-consent';
+import { SignatureDeliveryAction } from './signature-delivery-action.idempotency';
 
 type SignatureDeliveryDocument = {
   id: number; organization_id: number; title: string; message: string | null;
@@ -27,6 +28,13 @@ export class SignatureDeliveryStateError extends Error {
     this.name = 'SignatureDeliveryStateError';
   }
 }
+
+export type SignatureDeliveryActionOutcome =
+  | { kind: 'applied' }
+  | { kind: 'replayed' }
+  | { kind: 'not_found' }
+  | { kind: 'idempotency_conflict' }
+  | { kind: 'idempotency_result_unavailable' };
 
 @Injectable()
 export class SignatureDeliveryRepository {
@@ -67,11 +75,21 @@ export class SignatureDeliveryRepository {
     organizationId: number,
     documentId: number,
     actorUserId: number,
+    idempotencyKey: string,
+    requestFingerprint: string,
     inspection?: { fileUrl: string; originalSha256: string; pageCount: number },
-  ): Promise<boolean> {
+  ): Promise<SignatureDeliveryActionOutcome> {
     return this.transaction(async (client) => {
+      const replay = await this.claimAction(
+        client,
+        organizationId,
+        idempotencyKey,
+        'send',
+        requestFingerprint,
+      );
+      if (replay) return replay;
       const document = await this.lockDocument(client, organizationId, documentId);
-      if (!document) return false;
+      if (!document) return { kind: 'not_found' };
       if (document.status !== 'draft') {
         throw new SignatureDeliveryStateError(
           'Only draft documents can be sent',
@@ -185,7 +203,16 @@ export class SignatureDeliveryRepository {
           SIGNATURE_CONSENT_SHA256,
         ],
       );
-      return true;
+      await this.recordAction(
+        client,
+        organizationId,
+        actorUserId,
+        idempotencyKey,
+        'send',
+        requestFingerprint,
+        documentId,
+      );
+      return { kind: 'applied' };
     });
   }
 
@@ -193,10 +220,20 @@ export class SignatureDeliveryRepository {
     organizationId: number,
     documentId: number,
     actorUserId: number,
-  ): Promise<boolean> {
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<SignatureDeliveryActionOutcome> {
     return this.transaction(async (client) => {
+      const replay = await this.claimAction(
+        client,
+        organizationId,
+        idempotencyKey,
+        'remind',
+        requestFingerprint,
+      );
+      if (replay) return replay;
       const document = await this.lockDocument(client, organizationId, documentId);
-      if (!document) return false;
+      if (!document) return { kind: 'not_found' };
       if (!['sent', 'in_progress'].includes(document.status)) {
         throw new SignatureDeliveryStateError(
           'Only active signature documents can be reminded',
@@ -281,7 +318,16 @@ export class SignatureDeliveryRepository {
           })],
         );
       }
-      return true;
+      await this.recordAction(
+        client,
+        organizationId,
+        actorUserId,
+        idempotencyKey,
+        'remind',
+        requestFingerprint,
+        documentId,
+      );
+      return { kind: 'applied' };
     });
   }
 
@@ -289,10 +335,20 @@ export class SignatureDeliveryRepository {
     organizationId: number,
     documentId: number,
     actorUserId: number,
-  ): Promise<boolean> {
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<SignatureDeliveryActionOutcome> {
     return this.transaction(async (client) => {
+      const replay = await this.claimAction(
+        client,
+        organizationId,
+        idempotencyKey,
+        'retry',
+        requestFingerprint,
+      );
+      if (replay) return replay;
       const document = await this.lockDocument(client, organizationId, documentId);
-      if (!document) return false;
+      if (!document) return { kind: 'not_found' };
       if (!['sent', 'in_progress'].includes(document.status)) {
         throw new SignatureDeliveryStateError(
           'Only active signature documents can be retried',
@@ -341,7 +397,16 @@ export class SignatureDeliveryRepository {
           version: 1,
         })],
       );
-      return true;
+      await this.recordAction(
+        client,
+        organizationId,
+        actorUserId,
+        idempotencyKey,
+        'retry',
+        requestFingerprint,
+        documentId,
+      );
+      return { kind: 'applied' };
     });
   }
 
@@ -398,6 +463,62 @@ export class SignatureDeliveryRepository {
       [documentId, organizationId],
     );
     return result.rows[0] ?? null;
+  }
+
+  private async claimAction(
+    client: PoolClient,
+    organizationId: number,
+    idempotencyKey: string,
+    action: SignatureDeliveryAction,
+    requestFingerprint: string,
+  ): Promise<SignatureDeliveryActionOutcome | null> {
+    await client.query(
+      'SELECT pg_advisory_xact_lock(hashtextextended($1, 0))',
+      [`signature-delivery:${organizationId}:${idempotencyKey}`],
+    );
+    const receipt = await client.query<{
+      action: SignatureDeliveryAction;
+      request_fingerprint: string;
+      result_document_id: number | null;
+    }>(
+      `SELECT action,request_fingerprint,result_document_id
+       FROM signature_delivery_action_receipts
+       WHERE organization_id=$1 AND idempotency_key=$2`,
+      [organizationId, idempotencyKey],
+    );
+    const prior = receipt.rows[0];
+    if (!prior) return null;
+    if (prior.action !== action || prior.request_fingerprint !== requestFingerprint) {
+      return { kind: 'idempotency_conflict' };
+    }
+    return prior.result_document_id === null
+      ? { kind: 'idempotency_result_unavailable' }
+      : { kind: 'replayed' };
+  }
+
+  private async recordAction(
+    client: PoolClient,
+    organizationId: number,
+    actorUserId: number,
+    idempotencyKey: string,
+    action: SignatureDeliveryAction,
+    requestFingerprint: string,
+    documentId: number,
+  ): Promise<void> {
+    await client.query(
+      `INSERT INTO signature_delivery_action_receipts
+         (organization_id,requested_by_user_id,idempotency_key,action,
+          request_fingerprint,result_document_id)
+       VALUES ($1,$2,$3,$4,$5,$6)`,
+      [
+        organizationId,
+        actorUserId,
+        idempotencyKey,
+        action,
+        requestFingerprint,
+        documentId,
+      ],
+    );
   }
 
   private async lockRecipients(

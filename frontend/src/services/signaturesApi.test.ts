@@ -76,9 +76,9 @@ describe('signature API transport boundaries', () => {
     await updateSignatureDocument(7, update);
     await deleteSignatureDocument(7);
     await deleteSignatureDocumentFile(7);
-    await sendSignatureDocument(7);
+    await sendSignatureDocument(7, 'send-key');
     await cancelSignatureDocument(7);
-    await remindSignatureDocument(7);
+    await remindSignatureDocument(7, 'remind-key');
     await getSignatureEmailPreview({ message: 'Sign this' });
     await listSignatureTemplates();
     await getSignatureTemplate(5);
@@ -99,9 +99,9 @@ describe('signature API transport boundaries', () => {
     expect(graphql.updateSignatureDocumentViaGraphql).toHaveBeenCalledWith(7, update);
     expect(graphql.deleteSignatureDocumentViaGraphql).toHaveBeenCalledWith(7);
     expect(graphql.removeSignatureDocumentFileViaGraphql).toHaveBeenCalledWith(7);
-    expect(graphql.sendSignatureDocumentViaGraphql).toHaveBeenCalledWith(7);
+    expect(graphql.sendSignatureDocumentViaGraphql).toHaveBeenCalledWith(7, 'send-key');
     expect(graphql.cancelSignatureDocumentViaGraphql).toHaveBeenCalledWith(7);
-    expect(graphql.remindSignatureDocumentViaGraphql).toHaveBeenCalledWith(7);
+    expect(graphql.remindSignatureDocumentViaGraphql).toHaveBeenCalledWith(7, 'remind-key');
     expect(graphql.getSignatureEmailPreviewViaGraphql).toHaveBeenCalledWith({
       message: 'Sign this',
     });

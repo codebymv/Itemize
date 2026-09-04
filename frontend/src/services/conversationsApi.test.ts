@@ -210,6 +210,7 @@ describe('conversations GraphQL adapter', () => {
                 metadata: { source: 'test' },
             },
             42,
+            'conversation-message-key',
         );
 
         expect(graphqlRequest).toHaveBeenCalledWith(
@@ -259,6 +260,7 @@ describe('conversations GraphQL adapter', () => {
             expect.stringContaining('mutation SendConversationMessage'),
             {
                 conversationId: 7,
+                idempotencyKey: 'conversation-message-key',
                 input: {
                     content: 'Hello',
                     contentHtml: '<p>Hello</p>',

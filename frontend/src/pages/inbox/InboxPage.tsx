@@ -232,6 +232,7 @@ export function InboxPage() {
                     selectedConversation.id,
                     { content, channel: selectedConversation.channel || 'internal' },
                     organizationId,
+                    idempotencyKey,
                 );
                 setSelectedConversation(prev => prev ? { ...prev, messages: [...(prev.messages || []), message] } : null);
             }

@@ -1196,24 +1196,35 @@ describe('E-signature GraphQL read contract', () => {
        VALUES ($1,$2,'Signer','signature',1,10,10,20,10,'Sign here',true,false)`,
       [documentId, recipientId],
     );
+    const sendKey = 'signature-send-integration';
     const send = () => graphql(
       memberToken,
       organizationId,
-      'mutation Send($id:Int!){sendSignatureDocument(id:$id){id status}}',
-      { id: documentId },
+      `mutation Send($id:Int!,$idempotencyKey:String!){
+        sendSignatureDocument(id:$id,idempotencyKey:$idempotencyKey){id status}
+      }`,
+      { id: documentId, idempotencyKey: sendKey },
     );
     const concurrent = await Promise.all([send(), send()]);
     const successes = concurrent.filter((result) => !result.body.errors);
-    const conflicts = concurrent.filter((result) => result.body.errors);
-    expect(successes).toHaveLength(1);
+    expect(successes).toHaveLength(2);
     expect(successes[0].body.data.sendSignatureDocument).toMatchObject({
       id: documentId,
       status: 'SENT',
     });
-    expect(conflicts).toHaveLength(1);
-    expect(conflicts[0].body.errors[0].extensions).toMatchObject({
+    expect(successes[1].body.data.sendSignatureDocument.id).toBe(documentId);
+    const crossActionConflict = await graphql(
+      memberToken,
+      organizationId,
+      `mutation Remind($id:Int!,$idempotencyKey:String!){
+        sendSignatureReminder(id:$id,idempotencyKey:$idempotencyKey){id}
+      }`,
+      { id: documentId, idempotencyKey: sendKey },
+    );
+    expect(crossActionConflict.body.data).toBeNull();
+    expect(crossActionConflict.body.errors[0].extensions).toMatchObject({
       code: 'CONFLICT',
-      reason: 'SIGNATURE_DOCUMENT_NOT_DRAFT',
+      reason: 'IDEMPOTENCY_KEY_REUSED',
     });
 
     const queued = await pool.query<{
@@ -1279,19 +1290,47 @@ describe('E-signature GraphQL read contract', () => {
       sent: 1,
     });
 
-    const remind = await graphql(
-      memberToken,
-      organizationId,
-      'mutation Remind($id:Int!){sendSignatureReminder(id:$id){id status}}',
-      { id: documentId },
-    );
-    expect(remind.body.errors).toBeUndefined();
+    const remindOperation = `mutation Remind($id:Int!,$idempotencyKey:String!){
+      sendSignatureReminder(id:$id,idempotencyKey:$idempotencyKey){id status}
+    }`;
+    const remindVariables = {
+      id: documentId,
+      idempotencyKey: 'signature-reminder-integration',
+    };
+    const reminders = await Promise.all([
+      graphql(memberToken, organizationId, remindOperation, remindVariables),
+      graphql(memberToken, organizationId, remindOperation, remindVariables),
+    ]);
+    expect(reminders.every((result) => !result.body.errors)).toBe(true);
     const pendingReminder = await pool.query<{ id: number }>(
       `SELECT id FROM signature_delivery_outbox
        WHERE document_id=$1 AND delivery_type='signature_reminder' AND status='queued'`,
       [documentId],
     );
     expect(pendingReminder.rows).toHaveLength(1);
+
+    await pool.query(
+      `UPDATE signature_delivery_outbox SET status='dead_letter'
+       WHERE id=$1`,
+      [pendingReminder.rows[0].id],
+    );
+    const retryOperation = `mutation Retry($id:Int!,$idempotencyKey:String!){
+      retrySignatureDocument(id:$id,idempotencyKey:$idempotencyKey){id status}
+    }`;
+    const retryVariables = {
+      id: documentId,
+      idempotencyKey: 'signature-retry-integration',
+    };
+    const retries = await Promise.all([
+      graphql(memberToken, organizationId, retryOperation, retryVariables),
+      graphql(memberToken, organizationId, retryOperation, retryVariables),
+    ]);
+    expect(retries.every((result) => !result.body.errors)).toBe(true);
+    expect(Number((await pool.query(
+      `SELECT COUNT(*) AS total FROM signature_audit_log
+       WHERE document_id=$1 AND event_type='retry_queued'`,
+      [documentId],
+    )).rows[0].total)).toBe(1);
 
     const cancel = await graphql(
       memberToken,
@@ -1311,6 +1350,17 @@ describe('E-signature GraphQL read contract', () => {
     expect(terminal.rows[0]).toMatchObject({
       signing_token_hash: null,
       status: 'cancelled',
+    });
+
+    await pool.query(
+      'DELETE FROM signature_documents WHERE organization_id=$1 AND id=$2',
+      [organizationId, documentId],
+    );
+    const unavailable = await send();
+    expect(unavailable.body.data).toBeNull();
+    expect(unavailable.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE',
     });
   });
 

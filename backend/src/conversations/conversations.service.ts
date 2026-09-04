@@ -20,6 +20,10 @@ import {
   conversationCreationFingerprint,
   conversationCreationKey,
 } from './conversation-creation.idempotency';
+import {
+  conversationMessageFingerprint,
+  conversationMessageKey,
+} from './conversation-message.idempotency';
 
 const CONVERSATION_STATUSES = new Set(['open', 'closed', 'snoozed']);
 
@@ -251,6 +255,7 @@ export class ConversationsService {
     userId: number,
     conversationId: number,
     input: SendConversationMessageInput,
+    idempotencyKey: string,
   ): Promise<ConversationMessage> {
     this.id(conversationId, 'conversationId');
     const content = this.text(input.content, 'content', 100_000);
@@ -262,16 +267,33 @@ export class ConversationsService {
     );
     const metadata = this.record(input.metadata ?? {}, 'metadata');
     try {
-      const row = await this.conversations.sendMessage(
+      const values = { content, channel, contentHtml, metadata };
+      const outcome = await this.conversations.sendMessage(
         organizationId,
         userId,
         conversationId,
-        { content, channel, contentHtml, metadata },
+        values,
+        conversationMessageKey(idempotencyKey),
+        conversationMessageFingerprint(conversationId, values),
       );
-      if (!row) {
+      if (outcome.kind === 'idempotency-conflict') {
+        throw itemizeGraphqlError(
+          'idempotencyKey was already used for a different conversation message',
+          'CONFLICT',
+          { field: 'idempotencyKey', reason: 'IDEMPOTENCY_KEY_REUSED' },
+        );
+      }
+      if (outcome.kind === 'result-unavailable') {
+        throw itemizeGraphqlError(
+          'The conversation message created by this request is no longer available',
+          'CONFLICT',
+          { field: 'idempotencyKey', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE' },
+        );
+      }
+      if (outcome.kind === 'conversation_not_found') {
         throw itemizeGraphqlError('Conversation not found', 'NOT_FOUND');
       }
-      return this.mapMessage(row);
+      return this.mapMessage(outcome.row);
     } catch (error) {
       this.rethrow(error);
     }

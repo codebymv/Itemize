@@ -12,8 +12,14 @@ import { renderSignaturePreviewEmail } from './signature-delivery.email';
 import { SignatureEmailPreviewInput } from './signature-delivery.inputs';
 import {
   SignatureDeliveryRepository,
+  SignatureDeliveryActionOutcome,
   SignatureDeliveryStateError,
 } from './signature-delivery.repository';
+import {
+  SignatureDeliveryAction,
+  signatureDeliveryActionFingerprint,
+  signatureDeliveryActionKey,
+} from './signature-delivery-action.idempotency';
 import {
   SignatureEmailPreview,
   SignatureReminderSchedule,
@@ -44,16 +50,20 @@ export class SignatureDeliveryService {
     private readonly storage: SignatureFileStorage,
   ) {}
 
-  async send(organizationId: number, id: number, userId: number): Promise<SignatureDocument> {
+  async send(
+    organizationId: number,
+    id: number,
+    userId: number,
+    idempotencyKey: string,
+  ): Promise<SignatureDocument> {
     await this.access(organizationId);
     this.id(id);
+    const key = signatureDeliveryActionKey(idempotencyKey);
+    const fingerprint = signatureDeliveryActionFingerprint('send', id);
     try {
       const source = await this.repository.preflightSource(organizationId, id);
-      if (!source) {
-        throw itemizeGraphqlError('Signature document not found', 'NOT_FOUND');
-      }
       let inspection: { fileUrl: string; originalSha256: string; pageCount: number } | undefined;
-      if (source.status === 'draft' && source.fileUrl && !source.pageCount) {
+      if (source?.status === 'draft' && source.fileUrl && !source.pageCount) {
         const pdf = await this.storage.read(source.fileUrl);
         if (!pdf) {
           throw new SignatureDeliveryStateError(
@@ -67,35 +77,65 @@ export class SignatureDeliveryService {
           pageCount: (await inspectSignaturePdf(pdf)).pageCount,
         };
       }
-      if (!(await this.repository.enqueueInitial(organizationId, id, userId, inspection))) {
-        throw itemizeGraphqlError('Signature document not found', 'NOT_FOUND');
-      }
+      const outcome = await this.repository.enqueueInitial(
+        organizationId,
+        id,
+        userId,
+        key,
+        fingerprint,
+        inspection,
+      );
+      this.assertActionOutcome(outcome, 'send');
     } catch (error) {
       this.deliveryError(error);
     }
     return (await this.documents.detail(organizationId, id)).document;
   }
 
-  async remind(organizationId: number, id: number, userId: number): Promise<SignatureDocument> {
+  async remind(
+    organizationId: number,
+    id: number,
+    userId: number,
+    idempotencyKey: string,
+  ): Promise<SignatureDocument> {
     await this.access(organizationId);
     this.id(id);
+    const key = signatureDeliveryActionKey(idempotencyKey);
+    const fingerprint = signatureDeliveryActionFingerprint('remind', id);
     try {
-      if (!(await this.repository.enqueueReminder(organizationId, id, userId))) {
-        throw itemizeGraphqlError('Signature document not found', 'NOT_FOUND');
-      }
+      const outcome = await this.repository.enqueueReminder(
+        organizationId,
+        id,
+        userId,
+        key,
+        fingerprint,
+      );
+      this.assertActionOutcome(outcome, 'remind');
     } catch (error) {
       this.deliveryError(error);
     }
     return (await this.documents.detail(organizationId, id)).document;
   }
 
-  async retry(organizationId: number, id: number, userId: number): Promise<SignatureDocument> {
+  async retry(
+    organizationId: number,
+    id: number,
+    userId: number,
+    idempotencyKey: string,
+  ): Promise<SignatureDocument> {
     await this.access(organizationId);
     this.id(id);
+    const key = signatureDeliveryActionKey(idempotencyKey);
+    const fingerprint = signatureDeliveryActionFingerprint('retry', id);
     try {
-      if (!(await this.repository.retryFailures(organizationId, id, userId))) {
-        throw itemizeGraphqlError('Signature document not found', 'NOT_FOUND');
-      }
+      const outcome = await this.repository.retryFailures(
+        organizationId,
+        id,
+        userId,
+        key,
+        fingerprint,
+      );
+      this.assertActionOutcome(outcome, 'retry');
     } catch (error) {
       this.deliveryError(error);
     }
@@ -205,6 +245,29 @@ export class SignatureDeliveryService {
   private id(value: number): void {
     if (!Number.isSafeInteger(value) || value < 1) {
       throw this.bad('id must be a positive integer', 'id', 'INVALID_SIGNATURE_DOCUMENT_ID');
+    }
+  }
+
+  private assertActionOutcome(
+    outcome: SignatureDeliveryActionOutcome,
+    action: SignatureDeliveryAction,
+  ): void {
+    if (outcome.kind === 'not_found') {
+      throw itemizeGraphqlError('Signature document not found', 'NOT_FOUND');
+    }
+    if (outcome.kind === 'idempotency_conflict') {
+      throw itemizeGraphqlError(
+        `idempotencyKey was already used for a different signature ${action} request`,
+        'CONFLICT',
+        { field: 'idempotencyKey', reason: 'IDEMPOTENCY_KEY_REUSED' },
+      );
+    }
+    if (outcome.kind === 'idempotency_result_unavailable') {
+      throw itemizeGraphqlError(
+        'The signature document from this request is no longer available',
+        'CONFLICT',
+        { field: 'idempotencyKey', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE' },
+      );
     }
   }
 

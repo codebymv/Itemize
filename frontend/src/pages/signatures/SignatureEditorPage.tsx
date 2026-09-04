@@ -165,6 +165,7 @@ export default function SignatureEditorPage() {
     dismissIfIdle,
   } = useSingleFlightAction();
   const createAttempt = useStableMutationKey("create-signature-document");
+  const deliveryAttempt = useStableMutationKey("signature-delivery");
   const working = prefilling || mutationPending;
   const [initialized, setInitialized] = useState(!id);
   const [showSendModal, setShowSendModal] = useState(false);
@@ -466,6 +467,13 @@ export default function SignatureEditorPage() {
   const handleSend = async (options: { message: string }) => {
     if (!document || !organizationId || !readiness.ready || isDirty) return;
     await runDocumentAction(async () => {
+      const idempotencyKey = deliveryAttempt.begin(JSON.stringify({
+        organizationId,
+        documentId: document.id,
+        action: "send",
+        message: options.message,
+      }));
+      if (!idempotencyKey) return;
       try {
         setMessage(options.message);
         const updated = await updateSignatureDocument(document.id, {
@@ -477,12 +485,16 @@ export default function SignatureEditorPage() {
           sender_email: currentUser?.email || document.sender_email || undefined,
         }, organizationId);
         cacheDocumentDetails(updated, { recipients, fields });
-        await sendSignatureDocument(document.id, organizationId);
+        const sent = await sendSignatureDocument(document.id, idempotencyKey, organizationId);
+        deliveryAttempt.reset();
+        setDocument(sent);
+        cacheDocumentDetails(sent, { recipients, fields });
         void queryClient.invalidateQueries({ queryKey: signatureQueryKeys.documents(organizationId) });
         toast({ title: "Signature request sent" });
         setShowSendModal(false);
         navigate("/documents");
       } catch {
+        deliveryAttempt.release();
         toast({
           title: "Signature request could not be sent",
           variant: "destructive",
@@ -494,13 +506,23 @@ export default function SignatureEditorPage() {
   const handleRemind = async () => {
     if (!document || !organizationId) return;
     await runDocumentAction(async () => {
+      const idempotencyKey = deliveryAttempt.begin(
+        `${organizationId}:${document.id}:remind`,
+      );
+      if (!idempotencyKey) return;
       try {
-        const updated = await remindSignatureDocument(document.id, organizationId);
+        const updated = await remindSignatureDocument(
+          document.id,
+          idempotencyKey,
+          organizationId,
+        );
+        deliveryAttempt.reset();
         setDocument(updated);
         cacheDocumentDetails(updated);
         toast({ title: "Signature reminder queued" });
         refreshOperationalState();
       } catch {
+        deliveryAttempt.release();
         toast({ title: "Reminder could not be sent", variant: "destructive" });
       }
     });
@@ -509,13 +531,23 @@ export default function SignatureEditorPage() {
   const handleRetry = async () => {
     if (!document || !organizationId) return;
     await runDocumentAction(async () => {
+      const idempotencyKey = deliveryAttempt.begin(
+        `${organizationId}:${document.id}:retry`,
+      );
+      if (!idempotencyKey) return;
       try {
-        const updated = await retrySignatureDocument(document.id, organizationId);
+        const updated = await retrySignatureDocument(
+          document.id,
+          idempotencyKey,
+          organizationId,
+        );
+        deliveryAttempt.reset();
         setDocument(updated);
         cacheDocumentDetails(updated);
         toast({ title: "Failed step queued for retry" });
         refreshOperationalState();
       } catch {
+        deliveryAttempt.release();
         toast({ title: "Retry unavailable", variant: "destructive" });
       }
     });

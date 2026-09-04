@@ -71,8 +71,8 @@ export class CalendarIntegrationsResolver {
   @Mutation(() => CalendarSyncRequest)
   requestCalendarSync(
     @Args('connectionId', { type: () => Int }) connectionId: number,
-    @Args('idempotencyKey', { type: () => String, nullable: true })
-    idempotencyKey?: string | null,
+    @Args('idempotencyKey', { type: () => String })
+    idempotencyKey: string,
   ): Promise<CalendarSyncRequest> {
     return this.calendarIntegrations.enqueue(
       this.organizationId(),

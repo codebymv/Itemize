@@ -27,19 +27,32 @@ describe('SignatureDeliveryService', () => {
       originalSha256: 'a'.repeat(64),
       pageCount: 1,
     });
-    repository.enqueueInitial.mockResolvedValue(true);
-    repository.enqueueReminder.mockResolvedValue(true);
-    repository.retryFailures.mockResolvedValue(true);
+    repository.enqueueInitial.mockResolvedValue({ kind: 'applied' });
+    repository.enqueueReminder.mockResolvedValue({ kind: 'applied' });
+    repository.retryFailures.mockResolvedValue({ kind: 'applied' });
     documents.detail.mockResolvedValue({
       document: { id: 7, title: 'NDA' },
     } as Awaited<ReturnType<SignatureDocumentsService['detail']>>);
   });
 
   it('queues send and reminder intents before returning authoritative document state', async () => {
-    await expect(service.send(3, 7, 19)).resolves.toMatchObject({ id: 7 });
-    await expect(service.remind(3, 7, 19)).resolves.toMatchObject({ id: 7 });
-    expect(repository.enqueueInitial).toHaveBeenCalledWith(3, 7, 19, undefined);
-    expect(repository.enqueueReminder).toHaveBeenCalledWith(3, 7, 19);
+    await expect(service.send(3, 7, 19, 'send-key')).resolves.toMatchObject({ id: 7 });
+    await expect(service.remind(3, 7, 19, 'remind-key')).resolves.toMatchObject({ id: 7 });
+    expect(repository.enqueueInitial).toHaveBeenCalledWith(
+      3,
+      7,
+      19,
+      'send-key',
+      expect.stringMatching(/^[a-f0-9]{64}$/),
+      undefined,
+    );
+    expect(repository.enqueueReminder).toHaveBeenCalledWith(
+      3,
+      7,
+      19,
+      'remind-key',
+      expect.stringMatching(/^[a-f0-9]{64}$/),
+    );
     expect(documents.detail).toHaveBeenNthCalledWith(1, 3, 7);
     expect(documents.detail).toHaveBeenNthCalledWith(2, 3, 7);
   });
@@ -56,9 +69,29 @@ describe('SignatureDeliveryService', () => {
   });
 
   it('queues an operator-requested retry for failed delivery or completion work', async () => {
-    await expect(service.retry(3, 7, 19)).resolves.toMatchObject({ id: 7 });
-    expect(repository.retryFailures).toHaveBeenCalledWith(3, 7, 19);
+    await expect(service.retry(3, 7, 19, 'retry-key')).resolves.toMatchObject({ id: 7 });
+    expect(repository.retryFailures).toHaveBeenCalledWith(
+      3,
+      7,
+      19,
+      'retry-key',
+      expect.stringMatching(/^[a-f0-9]{64}$/),
+    );
     expect(documents.detail).toHaveBeenCalledWith(3, 7);
+  });
+
+  it('validates delivery keys and reports conflicting or unavailable replays', async () => {
+    await expect(service.send(3, 7, 19, '')).rejects.toMatchObject({
+      extensions: { code: 'BAD_USER_INPUT', reason: 'INVALID_IDEMPOTENCY_KEY' },
+    });
+    repository.enqueueReminder.mockResolvedValueOnce({ kind: 'idempotency_conflict' });
+    await expect(service.remind(3, 7, 19, 'reused-key')).rejects.toMatchObject({
+      extensions: { code: 'CONFLICT', reason: 'IDEMPOTENCY_KEY_REUSED' },
+    });
+    repository.retryFailures.mockResolvedValueOnce({ kind: 'idempotency_result_unavailable' });
+    await expect(service.retry(3, 7, 19, 'missing-key')).rejects.toMatchObject({
+      extensions: { code: 'CONFLICT', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE' },
+    });
   });
 
   it('renders a bounded server-controlled preview and escapes user content', async () => {

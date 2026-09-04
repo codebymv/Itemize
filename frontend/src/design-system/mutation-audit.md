@@ -59,7 +59,7 @@ story; neither layer is sufficient by itself.
 | Full-page editors | Pages, automations, chat and reputation widgets, segments, SMS templates, estimates, organization settings, products, and recurring schedules | One editor-wide single-flight owner prevents save, status, conversion, or create actions from racing before rerender; chat- and reputation-widget creation retain one key for an unchanged draft after an ambiguous failure | Chat- and reputation-widget creation commit a durable receipt and normalized draft fingerprint; chat creation additionally remains serialized and database-unique per organization, so a genuinely new create attempt still conflicts after setup | Confirmed entities patch source state or the owning query cache before derived invalidation |
 | Email template studio | Save draft, publish, and send test | One studio-wide lock with action-specific pending copy; nested draft persistence runs inside the owning publish or test attempt; an unchanged publish retains its key after an ambiguous failure | Publish uses a template-scoped durable receipt and request fingerprint; test delivery retains its existing delivery key | Draft/catalog state is patched before navigation; publish and test cannot race a save |
 | Automation runs | Enroll, pause, resume, retry, and cancel | One workflow-run lock with row-specific busy semantics and guarded parent/confirmation dismissal | Existing workflow enrollment transitions | Enrollment, contact eligibility, and automation queue queries refresh together |
-| Signature documents and templates | Draft creation, template creation/instantiation, save, upload, send, remind, retry, cancel, and delete | One document- or catalog-wide immediate lock; create and instantiate retain one stable key per unchanged attempt; send and delete dialogs cannot dismiss mid-write | Draft creation, template creation, and template instantiation share one organization-scoped durable receipt namespace. The normalized action and ordered aggregate fingerprint are committed with the returned document/template; exact retries replay before quota evaluation, cross-action or changed key reuse conflicts, and deleted results fail closed. | Document detail/catalog caches patch before list invalidation or navigation |
+| Signature documents and templates | Draft creation, template creation/instantiation, save, upload, send, remind, retry, cancel, and delete | One document- or catalog-wide immediate lock; create, instantiate, send, remind, and retry retain one stable key per unchanged attempt; send and delete dialogs cannot dismiss mid-write | Draft creation, template creation, and template instantiation share one organization-scoped durable creation namespace. Send, reminder, and operator-retry commands share a separate durable delivery-action namespace. Both commit the normalized action fingerprint and result identity with the business effect; exact retries replay, cross-action or changed key reuse conflicts, and deleted results fail closed. | Document detail/catalog caches patch before list invalidation or navigation; a delayed refresh cannot turn accepted delivery work into a false failure |
 | Public completion routes | Book/cancel appointment, submit form/review/signature, accept/decline estimate | Immediate single-flight admission with action-specific pending feedback; public bookings and forms retain one payload-scoped key across ambiguous retries; review, signature, and estimate terminal actions explicitly retry only response-less transport failures | Booking creation and form submission use resource-scoped durable keys and payload fingerprints; booking cancellation capabilities are deterministically recoverable without storing raw tokens; review completion fingerprints the normalized response on its request row; signature completion stores a token-hash receipt in the terminal transaction; exact replays return the original result while changed or opposite responses conflict; estimate transitions replay their terminal target | Terminal success replaces the interactive state only after confirmation |
 | Public chat widget | Start or resume a session, send a visitor message, and end a session | The embed owns one immediate attempt at a time, keeps one key for an unchanged retry, restores failed message input, and retries only replay-safe network ambiguity | Session starts and visitor messages use resource-scoped durable receipts and payload fingerprints in the same transaction as counters, inbox mirroring, and notifications; end-session is an absolute transition whose successful replay does not repeat realtime effects | Confirmed responses replace optimistic visitor messages by server identity; exact replays return the original session or message |
 | Contacts | Bulk tag update | Immediate single-flight and guarded modal dismissal | Existing bulk contact update contract | Owning contact list refreshes only after confirmation |
@@ -92,14 +92,20 @@ underlying write is itself safe to repeat.
 | Disable sharing | Absolute `is_public = false` transition | Share UI owns one stable mutation ID across an unchanged retry. |
 | Move or resize canvas content | Debounced absolute coordinates; newest value supersedes older values | Position-sync UI owns one ID per canonical batch and retains it only while the batch is unchanged. |
 
-## Remaining migration queue
+## Replay contract coverage
 
 The executable GraphQL replay contract inventories every `create`, `duplicate`,
 and `publish` mutation and rejects unclassified additions in release checks.
-The remaining explicit server replay gaps are invoice-business creation,
-manually recorded reputation-review creation, and workspace-vault creation.
+It also owns an explicit catalog of authenticated business dispatches that
+enqueue provider work or commit financial effects. Both catalogs currently
+have zero exceptions: every operation exposes a required caller-owned replay
+key. Signature send/remind/retry, calendar synchronization, and the unified
+Inbox message path are included in that boundary.
+
 `useSingleFlightAction` deliberately does not claim replay safety after a lost
-response.
+response. New effectful operations must either join an executable replay
+catalog with a durable server receipt or document why their absolute-state
+postcondition can be reconciled safely.
 
 ## Review test
 

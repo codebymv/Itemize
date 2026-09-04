@@ -1,5 +1,4 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { randomUUID } from 'node:crypto';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
 
@@ -168,7 +167,7 @@ export class CalendarIntegrationsRepository {
     organizationId: number,
     userId: number,
     connectionId: number,
-    idempotencyKey?: string,
+    idempotencyKey: string,
   ): Promise<EnqueueCalendarSyncOutcome> {
     return this.transaction(async (client) => {
       const connection = await client.query<{
@@ -198,7 +197,7 @@ export class CalendarIntegrationsRepository {
         return { kind: 'invalid_direction' };
       }
 
-      const key = idempotencyKey ?? randomUUID();
+      const key = idempotencyKey;
       const prior = await client.query<CalendarSyncJobRow>(
         `SELECT ${jobSelection}
          FROM calendar_sync_jobs

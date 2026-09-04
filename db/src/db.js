@@ -178,6 +178,9 @@ const {
   runSignatureDeliveryMigration,
 } = require('./db_signature_delivery_migrations');
 const {
+  runSignatureDeliveryActionReceiptMigration,
+} = require('./db_signature_delivery_action_receipt_migrations');
+const {
   runSignatureFileDeletionMigration,
 } = require('./db_signature_file_deletion_migrations');
 const {
@@ -204,6 +207,9 @@ const { runAllInboxMigrations } = require('./db_inbox_migrations');
 const {
   runConversationCreationReceiptMigration,
 } = require('./db_conversation_creation_receipt_migrations');
+const {
+  runConversationMessageReceiptMigration,
+} = require('./db_conversation_message_receipt_migrations');
 
 // Import SMS migrations
 const { runAllSmsMigrations } = require('./db_sms_migrations');
@@ -780,6 +786,11 @@ const initializeDatabase = async (pool) => {
       'conversation_creation_receipts_v1',
       runConversationCreationReceiptMigration,
     );
+    await runMigrationOnce(
+      pool,
+      'conversation_message_receipts_v1',
+      runConversationMessageReceiptMigration,
+    );
     await runMigrationOnce(pool, 'module_sms', runAllSmsMigrations);
     await runMigrationOnce(
       pool,
@@ -1056,6 +1067,11 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'module_esignatures', runAllESignatureMigrations);
     await runMigrationOnce(pool, 'module_esignatures_mvp_plus', runESignatureMvpPlusMigrations);
     await runMigrationOnce(pool, 'signature_delivery_outbox', runSignatureDeliveryMigration);
+    await runMigrationOnce(
+      pool,
+      'signature_delivery_action_receipts_v1',
+      runSignatureDeliveryActionReceiptMigration,
+    );
     await runMigrationOnce(pool, 'signature_file_deletion_jobs', runSignatureFileDeletionMigration);
     await runMigrationOnce(pool, 'signature_completion_jobs', runSignatureCompletionMigration);
     await runMigrationOnce(pool, 'signature_evidence_retention', runSignatureEvidenceRetentionMigration);
