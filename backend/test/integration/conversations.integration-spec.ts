@@ -450,7 +450,7 @@ describe('Conversations GraphQL PostgreSQL contract', () => {
     });
   });
 
-  it('does not mark messages from a foreign conversation as read', async () => {
+  it('conceals a foreign conversation across every detail and mutation path', async () => {
     const foreignConversation = await pool.query<{ id: number }>(
       `INSERT INTO conversations (
          organization_id, contact_id, status, unread_count
@@ -468,6 +468,33 @@ describe('Conversations GraphQL PostgreSQL contract', () => {
       [foreignId, outsiderOrganizationId, outsiderContactId],
     );
 
+    const detailDenied = await query(
+      `query Detail($id: Int!) {
+        conversation(id: $id) { id }
+      }`,
+      { id: foreignId },
+    ).expect(200);
+    expect(detailDenied.body.data).toBeNull();
+    expect(detailDenied.body.errors[0].extensions.code).toBe('NOT_FOUND');
+
+    const updateDenied = await mutation(
+      `mutation Update($id: Int!, $input: UpdateConversationInput!) {
+        updateConversation(id: $id, input: $input) { id }
+      }`,
+      { id: foreignId, input: { status: 'closed' } },
+    ).expect(200);
+    expect(updateDenied.body.data).toBeNull();
+    expect(updateDenied.body.errors[0].extensions.code).toBe('NOT_FOUND');
+
+    const assignmentDenied = await mutation(
+      `mutation Assign($id: Int!, $assignedTo: Int) {
+        assignConversation(id: $id, assignedTo: $assignedTo) { id }
+      }`,
+      { id: foreignId, assignedTo: memberId },
+    ).expect(200);
+    expect(assignmentDenied.body.data).toBeNull();
+    expect(assignmentDenied.body.errors[0].extensions.code).toBe('NOT_FOUND');
+
     const denied = await mutation(
       `mutation Read($id: Int!) {
         markConversationRead(id: $id) { id }
@@ -475,10 +502,61 @@ describe('Conversations GraphQL PostgreSQL contract', () => {
       { id: foreignId },
     ).expect(200);
     expect(denied.body.errors[0].extensions.code).toBe('NOT_FOUND');
-    const unchanged = await pool.query<{ is_read: boolean }>(
-      'SELECT is_read FROM messages WHERE id = $1',
-      [foreignMessage.rows[0].id],
+    const sendDenied = await mutation(
+      `mutation Send(
+        $id: Int!,
+        $input: SendConversationMessageInput!,
+        $idempotencyKey: String!
+      ) {
+        sendConversationMessage(
+          conversationId: $id,
+          input: $input,
+          idempotencyKey: $idempotencyKey
+        ) { id }
+      }`,
+      {
+        id: foreignId,
+        input: { content: 'Cross-tenant message attempt' },
+        idempotencyKey: 'conversation-foreign-send',
+      },
+    ).expect(200);
+    expect(sendDenied.body.errors[0].extensions.code).toBe('NOT_FOUND');
+
+    const foreignState = await pool.query<{
+      status: string;
+      assigned_to: number | null;
+      is_read: boolean;
+      message_count: number;
+      receipt_count: number;
+    }>(
+      `SELECT
+         conversation.status,
+         conversation.assigned_to,
+         message.is_read,
+         (SELECT COUNT(*)::int FROM messages
+          WHERE organization_id=conversation.organization_id
+            AND conversation_id=conversation.id) AS message_count,
+         (SELECT COUNT(*)::int FROM conversation_message_receipts
+          WHERE organization_id=$3 AND idempotency_key=$4) AS receipt_count
+       FROM conversations conversation
+       JOIN messages message
+         ON message.id=$5
+        AND message.organization_id=conversation.organization_id
+       WHERE conversation.organization_id=$1 AND conversation.id=$2`,
+      [
+        outsiderOrganizationId,
+        foreignId,
+        organizationId,
+        'conversation-foreign-send',
+        foreignMessage.rows[0].id,
+      ],
     );
-    expect(unchanged.rows[0].is_read).toBe(false);
+    expect(foreignState.rows[0]).toEqual({
+      status: 'open',
+      assigned_to: null,
+      is_read: false,
+      message_count: 1,
+      receipt_count: 0,
+    });
   });
 });

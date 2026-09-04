@@ -248,6 +248,92 @@ describe('Message delivery GraphQL PostgreSQL contract', () => {
     expect(denied.body.errors[0].extensions.code).toBe('NOT_FOUND');
   });
 
+  it('hides foreign templates across contact and test deliveries', async () => {
+    const foreignTemplates = await pool.query<{
+      email_template_id: number;
+      sms_template_id: number;
+    }>(
+      `WITH email_template AS (
+         INSERT INTO email_templates (
+           organization_id,name,subject,body_html,category,created_by
+         ) VALUES ($1,'Foreign email','Hidden','<p>Hidden</p>','general',$2)
+         RETURNING id
+       ), sms_template AS (
+         INSERT INTO sms_templates (
+           organization_id,name,message,category,created_by
+         ) VALUES ($1,'Foreign SMS','Hidden','general',$2)
+         RETURNING id
+       )
+       SELECT email_template.id AS email_template_id,
+              sms_template.id AS sms_template_id
+       FROM email_template CROSS JOIN sms_template`,
+      [outsiderOrganizationId, outsiderId],
+    );
+    const { email_template_id: foreignEmailTemplateId,
+      sms_template_id: foreignSmsTemplateId } = foreignTemplates.rows[0];
+    const keys = {
+      contactEmail: `foreign-contact-email-${Date.now()}`,
+      testEmail: `foreign-test-email-${Date.now()}`,
+      contactSms: `foreign-contact-sms-${Date.now()}`,
+      testSms: `foreign-test-sms-${Date.now()}`,
+    };
+
+    const attempts = await Promise.all([
+      graphql(
+        `mutation Send($input: EnqueueContactEmailInput!) {
+          enqueueContactEmail(input: $input) { id }
+        }`,
+        { input: {
+          contactId,
+          templateId: foreignEmailTemplateId,
+          idempotencyKey: keys.contactEmail,
+        } },
+      ).expect(200),
+      graphql(
+        `mutation Test($input: SendEmailTemplateTestInput!) {
+          sendEmailTemplateTest(input: $input) { id }
+        }`,
+        { input: {
+          templateId: foreignEmailTemplateId,
+          toEmail: 'operator@test.itemize',
+          idempotencyKey: keys.testEmail,
+        } },
+      ).expect(200),
+      graphql(
+        `mutation Send($input: EnqueueContactSmsInput!) {
+          enqueueContactSms(input: $input) { id }
+        }`,
+        { input: {
+          contactId,
+          templateId: foreignSmsTemplateId,
+          idempotencyKey: keys.contactSms,
+        } },
+      ).expect(200),
+      graphql(
+        `mutation Test($input: SendSmsTemplateTestInput!) {
+          sendSmsTemplateTest(input: $input) { id }
+        }`,
+        { input: {
+          templateId: foreignSmsTemplateId,
+          toPhone: '+16025550100',
+          idempotencyKey: keys.testSms,
+        } },
+      ).expect(200),
+    ]);
+    for (const attempt of attempts) {
+      expect(attempt.body.data).toBeNull();
+      expect(attempt.body.errors[0].extensions.code).toBe('NOT_FOUND');
+    }
+
+    const persisted = await pool.query<{ count: number }>(
+      `SELECT COUNT(*)::int AS count
+       FROM message_delivery_jobs
+       WHERE organization_id=$1 AND idempotency_key=ANY($2::text[])`,
+      [organizationId, Object.values(keys)],
+    );
+    expect(persisted.rows[0].count).toBe(0);
+  });
+
   it('marks test content and creates no normal contact artifacts', async () => {
     let providerSequence = 0;
     emailProvider.send.mockImplementation(async () => ({
