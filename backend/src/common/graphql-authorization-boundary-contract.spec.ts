@@ -11,7 +11,13 @@ type OperationBoundary = {
   csrfProtected: boolean;
   adminGuarded: boolean;
   conflictingScopes: string[];
+  usesResolvedOrganization: boolean;
 };
+
+const tenantIndependentOrganizationOperations = new Set([
+  'email-templates/email-templates.resolver.ts:previewEmailTemplate',
+  'sms-templates/sms-templates.resolver.ts:smsMessageInfo',
+]);
 
 const sourceRoot = path.resolve(__dirname, '..');
 
@@ -104,6 +110,9 @@ const inspectResolver = (absolutePath: string): OperationBoundary[] => {
           || classDecorators.has('CsrfProtected'),
         adminGuarded: classAdminGuarded || usesAdminGuard(member),
         conflictingScopes: isPublic ? [] : scopes.slice(1),
+        usesResolvedOrganization: /(?:this\.(?:organizationId|billingOwnerOrganizationId|financialOrganizationId)\(\)|(?:context|requestContext)\.organization|\.current\(\)\.organization)/.test(
+          member.getText(sourceFile),
+        ),
       });
     }
   }
@@ -138,5 +147,15 @@ describe('GraphQL authorization boundary contract', () => {
       .map((operation) => `${operation.file}:${operation.line} ${operation.name}`);
 
     expect(missingCsrf).toEqual([]);
+  });
+
+  it('requires organization-scoped operations to consume resolved tenant context', () => {
+    const missingContext = operations
+      .filter((operation) => operation.scope === 'organization')
+      .filter((operation) => !operation.usesResolvedOrganization)
+      .filter((operation) => !tenantIndependentOrganizationOperations.has(`${operation.file}:${operation.name}`))
+      .map((operation) => `${operation.file}:${operation.line} ${operation.name}`);
+
+    expect(missingContext).toEqual([]);
   });
 });

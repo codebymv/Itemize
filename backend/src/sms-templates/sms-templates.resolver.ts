@@ -19,7 +19,7 @@ export class SmsTemplatesResolver {
   @OrganizationScoped() @Query(() => [SmsTemplateCategory])
   smsTemplateCategories() { return this.templates.categories(this.organizationId()); }
   @OrganizationScoped() @Query(() => SmsMessageInfo)
-  smsMessageInfo(@Args('message') message: string) { this.userId(); return this.templates.messageInfo(message); }
+  smsMessageInfo(@Args('message') message: string) { return this.templates.messageInfo(message); }
   @CsrfProtected() @OrganizationScoped() @Mutation(() => SmsTemplate)
   createSmsTemplate(
     @Args('input') input: CreateSmsTemplateInput,
