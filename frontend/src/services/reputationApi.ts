@@ -295,9 +295,10 @@ export const getReview = async (
 
 export const createReview = async (
     review: Partial<Review>,
-    organizationId?: number
+    organizationId: number,
+    idempotencyKey: string,
 ): Promise<Review> => {
-    return createReviewViaGraphql(review, organizationId);
+    return createReviewViaGraphql(review, idempotencyKey, organizationId);
 };
 
 export const updateReview = async (

@@ -50,8 +50,9 @@ export class VaultResolver {
   @Mutation(() => WorkspaceVault)
   createWorkspaceVault(
     @Args('input') input: CreateWorkspaceVaultInput,
+    @Args('idempotencyKey', { type: () => String }) idempotencyKey: string,
   ): Promise<WorkspaceVault> {
-    return this.vaults.create(this.userId(), input);
+    return this.vaults.create(this.userId(), input, idempotencyKey);
   }
 
   @CsrfProtected()

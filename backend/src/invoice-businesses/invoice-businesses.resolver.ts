@@ -43,8 +43,14 @@ export class InvoiceBusinessesResolver {
   @Mutation(() => InvoiceBusiness)
   createInvoiceBusiness(
     @Args('input') input: CreateInvoiceBusinessInput,
+    @Args('idempotencyKey', { type: () => String }) idempotencyKey: string,
   ): Promise<InvoiceBusiness> {
-    return this.businessService.create(this.organizationId(), input);
+    return this.businessService.create(
+      this.organizationId(),
+      this.userId(),
+      input,
+      idempotencyKey,
+    );
   }
 
   @CsrfProtected()
@@ -81,5 +87,13 @@ export class InvoiceBusinessesResolver {
       throw new Error('Verified organization context is unavailable');
     }
     return organization.organizationId;
+  }
+
+  private userId(): number {
+    const identity = this.requestContext.current().identity;
+    if (!identity) {
+      throw new Error('Verified identity context is unavailable');
+    }
+    return identity.userId;
   }
 }

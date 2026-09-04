@@ -23,7 +23,7 @@ const canonicalize = (value: unknown): unknown => {
   return value;
 };
 
-type WorkspaceCreationType = 'list' | 'note' | 'whiteboard' | 'wireframe';
+type WorkspaceCreationType = 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault';
 
 type WorkspaceCreationAttempt = {
   key: string;
@@ -40,12 +40,31 @@ const creationKey = (): string =>
     return value.toString(16);
   });
 
+const creationSignature = async (
+  type: WorkspaceCreationType,
+  payload: object,
+): Promise<string> => {
+  const canonical = JSON.stringify(canonicalize({ type, payload }));
+  const bytes = new TextEncoder().encode(canonical);
+  if (globalThis.crypto?.subtle) {
+    const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
+    return Array.from(new Uint8Array(digest), (byte) =>
+      byte.toString(16).padStart(2, '0')).join('');
+  }
+  let hash = 2_166_136_261;
+  for (const byte of bytes) {
+    hash ^= byte;
+    hash = Math.imul(hash, 16_777_619);
+  }
+  return `fallback-${(hash >>> 0).toString(16)}-${bytes.length}`;
+};
+
 export const runWorkspaceCreationAttempt = async <T>(
   type: WorkspaceCreationType,
   payload: object,
   create: (idempotencyKey: string) => Promise<T>,
 ): Promise<T> => {
-  const signature = JSON.stringify(canonicalize({ type, payload }));
+  const signature = await creationSignature(type, payload);
   const attempt = creationAttempts.get(signature) ?? { key: creationKey() };
   creationAttempts.set(signature, attempt);
   if (attempt.pending) return attempt.pending as Promise<T>;

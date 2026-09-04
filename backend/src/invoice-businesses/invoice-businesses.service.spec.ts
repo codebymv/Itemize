@@ -53,21 +53,29 @@ describe('InvoiceBusinessesService', () => {
   });
 
   it('normalizes create fields without accepting logo ownership', async () => {
-    repository.create.mockResolvedValue(row());
-    await service.create(3, {
+    repository.create.mockResolvedValue({
+      kind: 'created', row: row(), replayed: false,
+    });
+    await service.create(3, 7, {
       name: ' Itemize Studio ',
       email: ' billing@itemize.test ',
       phone: ' ',
       address: ' Phoenix, AZ ',
       taxId: null,
-    });
-    expect(repository.create).toHaveBeenCalledWith(3, {
-      name: 'Itemize Studio',
-      email: 'billing@itemize.test',
-      phone: null,
-      address: 'Phoenix, AZ',
-      taxId: null,
-    });
+    }, 'business-create-key');
+    expect(repository.create).toHaveBeenCalledWith(
+      3,
+      7,
+      {
+        name: 'Itemize Studio',
+        email: 'billing@itemize.test',
+        phone: null,
+        address: 'Phoenix, AZ',
+        taxId: null,
+      },
+      'business-create-key',
+      expect.stringMatching(/^[a-f0-9]{64}$/),
+    );
   });
 
   it('preserves omissions and clears explicitly blank optional fields', async () => {
@@ -90,7 +98,7 @@ describe('InvoiceBusinessesService', () => {
     await expect(service.find(3, 0)).rejects.toMatchObject({
       extensions: { reason: 'INVALID_INVOICE_BUSINESS_ID' },
     });
-    await expect(service.create(3, { name: ' ' })).rejects.toMatchObject({
+    await expect(service.create(3, 7, { name: ' ' }, 'invalid-name-key')).rejects.toMatchObject({
       extensions: { reason: 'INVALID_INVOICE_BUSINESS_NAME' },
     });
     await expect(

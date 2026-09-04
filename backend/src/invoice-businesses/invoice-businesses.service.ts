@@ -14,8 +14,13 @@ import {
   InvoiceBusinessRow,
   InvoiceBusinessesRepository,
   InvoiceBusinessUpdates,
+  InvoiceBusinessValues,
 } from './invoice-businesses.repository';
 import { InvoiceLogoRemovalResult } from '../invoice-logo-cleanup/invoice-logo-cleanup.types';
+import {
+  invoiceBusinessCreationFingerprint,
+  invoiceBusinessCreationKey,
+} from './invoice-business-creation.idempotency';
 
 @Injectable()
 export class InvoiceBusinessesService {
@@ -53,17 +58,39 @@ export class InvoiceBusinessesService {
 
   async create(
     organizationId: number,
+    userId: number,
     input: CreateInvoiceBusinessInput,
+    idempotencyKey: string,
   ): Promise<InvoiceBusiness> {
-    return this.map(
-      await this.businesses.create(organizationId, {
-        name: this.name(input.name),
-        email: this.optional(input.email, 'email', 255),
-        phone: this.optional(input.phone, 'phone', 50),
-        address: this.optional(input.address, 'address', 10_000),
-        taxId: this.optional(input.taxId, 'taxId', 100),
-      }),
+    const values: InvoiceBusinessValues = {
+      name: this.name(input.name),
+      email: this.optional(input.email, 'email', 255),
+      phone: this.optional(input.phone, 'phone', 50),
+      address: this.optional(input.address, 'address', 10_000),
+      taxId: this.optional(input.taxId, 'taxId', 100),
+    };
+    const outcome = await this.businesses.create(
+      organizationId,
+      userId,
+      values,
+      invoiceBusinessCreationKey(idempotencyKey),
+      invoiceBusinessCreationFingerprint(values),
     );
+    if (outcome.kind === 'idempotency_conflict') {
+      throw itemizeGraphqlError(
+        'idempotencyKey was already used for a different invoice business creation request',
+        'CONFLICT',
+        { field: 'idempotencyKey', reason: 'IDEMPOTENCY_KEY_REUSED' },
+      );
+    }
+    if (outcome.kind === 'result_unavailable') {
+      throw itemizeGraphqlError(
+        'The invoice business created by this request is no longer available',
+        'CONFLICT',
+        { field: 'idempotencyKey', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE' },
+      );
+    }
+    return this.map(outcome.row);
   }
 
   async update(

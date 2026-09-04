@@ -86,13 +86,14 @@ describe('reputation reviews GraphQL consumer', () => {
       } } }));
     await createReviewViaGraphql({
       platform: 'google', platform_id: 4, rating: 5, review_text: 'Excellent', contact_id: 6,
-    }, 3);
+    }, 'review-create-key', 3);
     await updateReviewViaGraphql(9, { response_text: 'Thank you', internal_notes: 'VIP' }, 3);
     const bodies = vi.mocked(fetch).mock.calls.map((call) =>
       JSON.parse(String((call[1] as RequestInit).body)));
     expect(bodies[0].variables.input).toEqual({
       platform: 'google', platformId: 4, rating: 5, reviewText: 'Excellent', contactId: 6,
     });
+    expect(bodies[0].variables.idempotencyKey).toBe('review-create-key');
     expect(bodies[1].variables).toEqual({
       id: 9, input: { responseText: 'Thank you', internalNotes: 'VIP' },
     });

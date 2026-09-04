@@ -15,6 +15,10 @@ import {
   ReputationReviewsRepository,
   ReputationReviewUpdateValues,
 } from './reputation-reviews.repository';
+import {
+  reputationReviewCreationFingerprint,
+  reputationReviewCreationKey,
+} from './reputation-review-creation.idempotency';
 
 const PLATFORMS = new Set(['google', 'facebook', 'yelp', 'trustpilot', 'g2', 'capterra', 'custom']);
 const STATUSES = new Set(['new', 'read', 'responded', 'flagged', 'hidden']);
@@ -61,10 +65,41 @@ export class ReputationReviewsService {
     } catch (error) { this.rethrow(error); }
   }
 
-  async create(organizationId: number, input: CreateReputationReviewInput): Promise<ReputationReview> {
+  async create(
+    organizationId: number,
+    userId: number,
+    input: CreateReputationReviewInput,
+    idempotencyKey: string,
+  ): Promise<ReputationReview> {
     const values = this.createValues(input);
     try {
-      return this.map(await this.repository.create(organizationId, values));
+      const outcome = await this.repository.create(
+        organizationId,
+        userId,
+        values,
+        reputationReviewCreationKey(idempotencyKey),
+        reputationReviewCreationFingerprint({
+          ...values,
+          reviewDate: input.reviewDate === undefined
+            ? 'server-now-v1'
+            : values.reviewDate.toISOString(),
+        }),
+      );
+      if (outcome.kind === 'idempotency_conflict') {
+        throw itemizeGraphqlError(
+          'idempotencyKey was already used for a different review creation request',
+          'CONFLICT',
+          { field: 'idempotencyKey', reason: 'IDEMPOTENCY_KEY_REUSED' },
+        );
+      }
+      if (outcome.kind === 'result_unavailable') {
+        throw itemizeGraphqlError(
+          'The review created by this request is no longer available',
+          'CONFLICT',
+          { field: 'idempotencyKey', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE' },
+        );
+      }
+      return this.map(outcome.row);
     } catch (error) { this.rethrow(error); }
   }
 

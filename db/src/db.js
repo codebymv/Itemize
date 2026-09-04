@@ -249,6 +249,9 @@ const { runCampaignSegmentTargetMigration } = require('./db_campaign_segment_mig
 const { runAllInvoicingMigrations, addBusinessIdToEstimates } = require('./db_invoicing_migrations');
 const { runInvoiceCreationReceiptMigration } = require('./db_invoice_creation_receipt_migrations');
 const { runProductCreationReceiptMigration } = require('./db_product_creation_receipt_migrations');
+const {
+  runInvoiceBusinessCreationReceiptMigration,
+} = require('./db_invoice_business_creation_receipt_migrations');
 const { runEstimateCreationReceiptMigration } = require('./db_estimate_creation_receipt_migrations');
 const {
   runRecurringInvoiceCreationReceiptMigration,
@@ -263,6 +266,9 @@ const { runAllReputationMigrations } = require('./db_reputation_migrations');
 const {
   runReputationWidgetCreationReceiptMigration,
 } = require('./db_reputation_widget_creation_receipt_migrations');
+const {
+  runReputationReviewCreationReceiptMigration,
+} = require('./db_reputation_review_creation_receipt_migrations');
 const {
   runReputationRequestDeliveryMigration,
 } = require('./db_reputation_request_delivery_migrations');
@@ -328,6 +334,9 @@ const {
 
 // Import Vault migrations (encrypted storage)
 const { runVaultMigrations } = require('./db_vault_migrations');
+const {
+  runVaultCreationReceiptMigration,
+} = require('./db_vault_creation_receipt_migrations');
 
 const userColumns = [
   'id',
@@ -847,6 +856,11 @@ const initializeDatabase = async (pool) => {
       'product_creation_receipts_v1',
       runProductCreationReceiptMigration,
     );
+    await runMigrationOnce(
+      pool,
+      'invoice_business_creation_receipts_v1',
+      runInvoiceBusinessCreationReceiptMigration,
+    );
     await runMigrationOnce(pool, 'stripe_webhook_idempotency', runStripeWebhookIdempotencyMigration);
     await runMigrationOnce(pool, 'module_estimates_recurring', runEstimatesRecurringMigrations);
     await runMigrationOnce(pool, 'estimates_business_column', addBusinessIdToEstimates);
@@ -960,6 +974,11 @@ const initializeDatabase = async (pool) => {
     );
     await runMigrationOnce(
       pool,
+      'reputation_review_creation_receipts_v1',
+      runReputationReviewCreationReceiptMigration,
+    );
+    await runMigrationOnce(
+      pool,
       'public_review_submission_idempotency_v1',
       runPublicReviewSubmissionMigration,
     );
@@ -1052,6 +1071,11 @@ const initializeDatabase = async (pool) => {
       runSignatureCreationReceiptMigration,
     );
     await runMigrationOnce(pool, 'module_vault', runVaultMigrations);
+    await runMigrationOnce(
+      pool,
+      'vault_creation_receipts_v1',
+      runVaultCreationReceiptMigration,
+    );
     
     // Admin email communications - extend email_logs for admin use
     await runMigrationOnce(pool, 'admin_email_logs_columns', async (p) => {

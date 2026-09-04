@@ -98,13 +98,16 @@ const createInput = (review: Partial<Review>) => ({
 });
 
 export const createReviewViaGraphql = async (
-  review: Partial<Review>, organizationId?: number,
+  review: Partial<Review>, idempotencyKey: string, organizationId?: number,
 ): Promise<Review> => {
-  const variables = { input: createInput(review) };
+  const variables = { input: createInput(review), idempotencyKey };
   const data = await graphqlMutationRequest<{
     createReputationReview: GraphqlReview;
-  }, typeof variables>(`mutation CreateReputationReview($input: CreateReputationReviewInput!) {
-    createReputationReview(input: $input) { ${fields} }
+  }, typeof variables>(`mutation CreateReputationReview(
+    $input: CreateReputationReviewInput!
+    $idempotencyKey: String!
+  ) {
+    createReputationReview(input: $input, idempotencyKey: $idempotencyKey) { ${fields} }
   }`, variables, organizationId);
   return mapReview(data.createReputationReview);
 };

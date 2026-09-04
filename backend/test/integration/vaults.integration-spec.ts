@@ -617,17 +617,21 @@ describe('Vault GraphQL PostgreSQL lifecycle', () => {
     const noCsrf = await query(
       memberToken,
       `mutation {
-        createWorkspaceVault(input: { positionX: 1, positionY: 2 }) { id }
+        createWorkspaceVault(
+          input: { positionX: 1, positionY: 2 }
+          idempotencyKey: "vault-csrf-check"
+        ) { id }
       }`,
     ).expect(200);
     expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
 
     const created = await mutation(
       memberToken,
-      `mutation Create($input: CreateWorkspaceVaultInput!) {
-        createWorkspaceVault(input: $input) { ${fields} }
+      `mutation Create($input: CreateWorkspaceVaultInput!, $key: String!) {
+        createWorkspaceVault(input: $input, idempotencyKey: $key) { ${fields} }
       }`,
       {
+        key: `vault-crud-${Date.now()}`,
         input: {
           title: 'New vault',
           category: 'General',
@@ -676,15 +680,60 @@ describe('Vault GraphQL PostgreSQL lifecycle', () => {
     expect(removed.body.data.deleteWorkspaceVault.deletedId).toBe(createdId);
   });
 
+  it('replays concurrent creation exactly and rejects changed or unavailable results', async () => {
+    const document = `mutation Create($input: CreateWorkspaceVaultInput!, $key: String!) {
+      createWorkspaceVault(input: $input, idempotencyKey: $key) { id title }
+    }`;
+    const key = `vault-replay-${Date.now()}`;
+    const variables = {
+      key,
+      input: {
+        title: 'Replay vault',
+        positionX: 14,
+        positionY: 28,
+        masterPassword: 'password4',
+      },
+    };
+    const [first, second] = await Promise.all([
+      mutation(memberToken, document, variables).expect(200),
+      mutation(memberToken, document, variables).expect(200),
+    ]);
+    expect(first.body.errors).toBeUndefined();
+    expect(second.body.errors).toBeUndefined();
+    const createdId = Number(first.body.data.createWorkspaceVault.id);
+    expect(second.body.data.createWorkspaceVault.id).toBe(createdId);
+    const count = await pool.query<{ count: string }>(
+      `SELECT COUNT(*)::text AS count FROM vaults
+       WHERE user_id=$1 AND title='Replay vault'`,
+      [memberId],
+    );
+    expect(Number(count.rows[0].count)).toBe(1);
+
+    const conflict = await mutation(memberToken, document, {
+      key,
+      input: { ...variables.input, title: 'Changed replay vault' },
+    }).expect(200);
+    expect(conflict.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', reason: 'IDEMPOTENCY_KEY_REUSED',
+    });
+
+    await pool.query('DELETE FROM vaults WHERE id=$1 AND user_id=$2', [createdId, memberId]);
+    const unavailable = await mutation(memberToken, document, variables).expect(200);
+    expect(unavailable.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE',
+    });
+  });
+
   it('stores v2 blobs without decrypting them on the server', async () => {
     const created = await mutation(
       memberToken,
-      `mutation Create($input: CreateWorkspaceVaultInput!) {
-        createWorkspaceVault(input: $input) {
+      `mutation Create($input: CreateWorkspaceVaultInput!, $key: String!) {
+        createWorkspaceVault(input: $input, idempotencyKey: $key) {
           id cryptoVersion wrappedVek isLocked
         }
       }`,
       {
+        key: `vault-zke-${Date.now()}`,
         input: {
           title: 'ZKE vault',
           positionX: 1,

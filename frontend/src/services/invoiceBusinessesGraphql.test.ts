@@ -132,7 +132,7 @@ describe('invoice business GraphQL consumer', () => {
       name: 'Itemize Studio',
       email: '',
       logo_url: 'https://attacker.invalid/logo.png',
-    });
+    }, 'business-create-key');
     await updateInvoiceBusinessViaGraphql(8, {
       phone: '',
       address: 'Phoenix, AZ',
@@ -149,6 +149,7 @@ describe('invoice business GraphQL consumer', () => {
       name: 'Itemize Studio',
       email: null,
     });
+    expect(bodies[0].variables.idempotencyKey).toBe('business-create-key');
     expect(bodies[1].variables).toEqual({
       id: 8,
       input: { phone: null, address: 'Phoenix, AZ' },

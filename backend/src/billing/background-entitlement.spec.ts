@@ -17,7 +17,11 @@ const expectPaidPredicate = (sql: string): void => {
 describe('background worker paid-entitlement boundaries', () => {
   it('gates campaign and document delivery at both discovery and claim', async () => {
     const query = jest.fn().mockResolvedValue({ rows: [] });
-    const pool = { query } as unknown as Pool;
+    const client = { query, release: jest.fn() };
+    const pool = {
+      connect: jest.fn().mockResolvedValue(client),
+      query,
+    } as unknown as Pool;
 
     const campaign = new CampaignSendRepository(
       pool,
@@ -34,7 +38,11 @@ describe('background worker paid-entitlement boundaries', () => {
     await estimates.dueEmailDeliveryIds(10);
     await estimates.claimEmailDelivery(4, 8);
 
-    for (const [sql] of query.mock.calls) expectPaidPredicate(String(sql));
+    const deliverySql = query.mock.calls
+      .map(([sql]) => String(sql))
+      .filter((sql) => sql.includes("organization.plan IN ('starter','unlimited','pro')"));
+    expect(deliverySql).toHaveLength(6);
+    deliverySql.forEach(expectPaidPredicate);
   });
 
   it('gates every workflow claim phase and only new signature work', async () => {

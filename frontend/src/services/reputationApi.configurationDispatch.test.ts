@@ -139,14 +139,18 @@ describe('reputation API permanent transport selection', () => {
     await Promise.all([
       getReviews({ rating: 5 }, 3),
       getReview(29, 3),
-      createReview(createInput, 3),
+      createReview(createInput, 3, 'review-create-key'),
       updateReview(29, updateInput, 3),
       deleteReview(29, 3),
     ]);
 
     expect(getReviewsViaGraphql).toHaveBeenCalledWith({ rating: 5 }, 3);
     expect(getReviewViaGraphql).toHaveBeenCalledWith(29, 3);
-    expect(createReviewViaGraphql).toHaveBeenCalledWith(createInput, 3);
+    expect(createReviewViaGraphql).toHaveBeenCalledWith(
+      createInput,
+      'review-create-key',
+      3,
+    );
     expect(updateReviewViaGraphql).toHaveBeenCalledWith(29, updateInput, 3);
     expect(deleteReviewViaGraphql).toHaveBeenCalledWith(29, 3);
     expect(api.get).not.toHaveBeenCalled();

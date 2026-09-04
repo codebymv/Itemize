@@ -151,17 +151,22 @@ describe('Reputation reviews GraphQL PostgreSQL contract', () => {
     expect(forged.body.errors[0].extensions.code).toBe('FORBIDDEN');
 
     const noCsrf = await graphql(
-      'mutation { createReputationReview(input:{rating:5}) { id } }', {}, { csrf: false },
+      `mutation {
+        createReputationReview(
+          input:{rating:5}
+          idempotencyKey:"review-csrf-check"
+        ) { id }
+      }`, {}, { csrf: false },
     ).expect(200);
     expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
   });
 
   it('creates a tenant-qualified manual review and exposes it through GraphQL detail', async () => {
     const created = await graphql(
-      `mutation Create($input: CreateReputationReviewInput!) {
-        createReputationReview(input: $input) { ${fields} }
+      `mutation Create($input: CreateReputationReviewInput!, $key: String!) {
+        createReputationReview(input: $input, idempotencyKey: $key) { ${fields} }
       }`,
-      { input: { platform: 'google', platformId, rating: 5, reviewText: ' Excellent ',
+      { key: `review-create-${Date.now()}`, input: { platform: 'google', platformId, rating: 5, reviewText: ' Excellent ',
         reviewerName: ' Ada ', contactId, reviewDate: '2026-07-20T12:00:00.000Z' } },
     ).expect(200);
     expect(created.body.errors).toBeUndefined();
@@ -180,6 +185,49 @@ describe('Reputation reviews GraphQL PostgreSQL contract', () => {
     expect(detail.body.data.reputationReview).toMatchObject({
       id: reviewId, organizationId, reviewText: 'Excellent',
       platformName: 'Google Primary', contactFirstName: 'Ada',
+    });
+  });
+
+  it('replays concurrent review creation exactly and rejects changed or unavailable results', async () => {
+    const document = `mutation Create($input: CreateReputationReviewInput!, $key: String!) {
+      createReputationReview(input: $input, idempotencyKey: $key) { id rating reviewDate }
+    }`;
+    const key = `review-replay-${Date.now()}`;
+    const variables = {
+      key,
+      input: { rating: 4, reviewerName: 'Replay Reviewer' },
+    };
+    const [first, second] = await Promise.all([
+      graphql(document, variables).expect(200),
+      graphql(document, variables).expect(200),
+    ]);
+    expect(first.body.errors).toBeUndefined();
+    expect(second.body.errors).toBeUndefined();
+    const createdId = Number(first.body.data.createReputationReview.id);
+    expect(second.body.data.createReputationReview.id).toBe(createdId);
+    expect(second.body.data.createReputationReview.reviewDate)
+      .toBe(first.body.data.createReputationReview.reviewDate);
+    const count = await pool.query<{ count: string }>(
+      `SELECT COUNT(*)::text AS count FROM reviews
+       WHERE organization_id=$1 AND reviewer_name='Replay Reviewer'`,
+      [organizationId],
+    );
+    expect(Number(count.rows[0].count)).toBe(1);
+
+    const conflict = await graphql(document, {
+      key, input: { ...variables.input, rating: 2 },
+    }).expect(200);
+    expect(conflict.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', reason: 'IDEMPOTENCY_KEY_REUSED',
+    });
+
+    await pool.query(
+      'DELETE FROM reviews WHERE id=$1 AND organization_id=$2',
+      [createdId, organizationId],
+    );
+    const unavailable = await graphql(document, variables).expect(200);
+    expect(unavailable.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE',
     });
   });
 
@@ -569,9 +617,9 @@ describe('Reputation reviews GraphQL PostgreSQL contract', () => {
       { rating: 4, contactId: outsiderContactId },
     ]) {
       const denied = await graphql(
-        `mutation Create($input:CreateReputationReviewInput!){
-          createReputationReview(input:$input){ id }
-        }`, { input },
+        `mutation Create($input:CreateReputationReviewInput!,$key:String!){
+          createReputationReview(input:$input,idempotencyKey:$key){ id }
+        }`, { input, key: `review-foreign-${Date.now()}-${input.rating}-${input.contactId ?? input.platformId}` },
       ).expect(200);
       expect(denied.body.errors[0].extensions.code).toBe('BAD_USER_INPUT');
     }

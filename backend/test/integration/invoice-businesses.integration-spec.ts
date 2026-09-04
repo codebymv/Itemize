@@ -219,10 +219,11 @@ describe('Invoice business GraphQL PostgreSQL contract', () => {
     const created = await graphql(
       memberToken,
       organizationId,
-      `mutation Create($input: CreateInvoiceBusinessInput!) {
-        createInvoiceBusiness(input: $input) { ${fields} }
+      `mutation Create($input: CreateInvoiceBusinessInput!, $key: String!) {
+        createInvoiceBusiness(input: $input, idempotencyKey: $key) { ${fields} }
       }`,
       {
+        key: `business-crud-${Date.now()}`,
         input: {
           name: ' Itemize Studio ',
           email: ' billing@itemize.test ',
@@ -328,6 +329,46 @@ describe('Invoice business GraphQL PostgreSQL contract', () => {
         (business: { id: number }) => business.id,
       ),
     ).not.toContain(id);
+  });
+
+  it('replays concurrent business creation exactly and rejects changed or unavailable results', async () => {
+    const document = `mutation Create($input: CreateInvoiceBusinessInput!, $key: String!) {
+      createInvoiceBusiness(input: $input, idempotencyKey: $key) { id name }
+    }`;
+    const key = `business-replay-${Date.now()}`;
+    const variables = { key, input: { name: 'Replay Business', email: 'replay@test.itemize' } };
+    const [first, second] = await Promise.all([
+      graphql(memberToken, organizationId, document, variables).expect(200),
+      graphql(memberToken, organizationId, document, variables).expect(200),
+    ]);
+    expect(first.body.errors).toBeUndefined();
+    expect(second.body.errors).toBeUndefined();
+    const createdId = Number(first.body.data.createInvoiceBusiness.id);
+    expect(second.body.data.createInvoiceBusiness.id).toBe(createdId);
+    const count = await pool.query<{ count: string }>(
+      `SELECT COUNT(*)::text AS count FROM businesses
+       WHERE organization_id=$1 AND name='Replay Business'`,
+      [organizationId],
+    );
+    expect(Number(count.rows[0].count)).toBe(1);
+
+    const conflict = await graphql(memberToken, organizationId, document, {
+      key, input: { ...variables.input, name: 'Changed Replay Business' },
+    }).expect(200);
+    expect(conflict.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', reason: 'IDEMPOTENCY_KEY_REUSED',
+    });
+
+    await pool.query(
+      'DELETE FROM businesses WHERE id=$1 AND organization_id=$2',
+      [createdId, organizationId],
+    );
+    const unavailable = await graphql(
+      memberToken, organizationId, document, variables,
+    ).expect(200);
+    expect(unavailable.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE',
+    });
   });
 
   it('clears business logos atomically and durably cleans server-owned storage', async () => {
@@ -482,7 +523,10 @@ describe('Invoice business GraphQL PostgreSQL contract', () => {
       memberToken,
       organizationId,
       `mutation {
-        createInvoiceBusiness(input: { name: "Denied" }) { id }
+        createInvoiceBusiness(
+          input: { name: "Denied" }
+          idempotencyKey: "business-csrf-check"
+        ) { id }
       }`,
       {},
       false,
@@ -493,7 +537,10 @@ describe('Invoice business GraphQL PostgreSQL contract', () => {
       memberToken,
       organizationId,
       `mutation {
-        createInvoiceBusiness(input: { name: " " }) { id }
+        createInvoiceBusiness(
+          input: { name: " " }
+          idempotencyKey: "business-invalid-check"
+        ) { id }
       }`,
     ).expect(200);
     expect(invalid.body.errors[0].extensions).toMatchObject({

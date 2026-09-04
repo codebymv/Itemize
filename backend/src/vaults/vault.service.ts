@@ -28,6 +28,11 @@ import {
   VaultRow,
 } from './vault.repository';
 import {
+  vaultCreationFingerprint,
+  vaultCreationKey,
+  vaultPasswordIntentDigest,
+} from './vault-creation.idempotency';
+import {
   DeleteWorkspaceVaultResult,
   DeleteWorkspaceVaultItemResult,
   WorkspaceVault,
@@ -102,6 +107,7 @@ export class VaultService {
   async create(
     userId: number,
     input: CreateWorkspaceVaultInput,
+    idempotencyKey: string,
   ): Promise<WorkspaceVault> {
     const v2 = input.cryptoVersion === 2;
     if (v2 && input.masterPassword) {
@@ -115,7 +121,7 @@ export class VaultService {
       ? this.password(input.masterPassword)
       : undefined;
     const kdf = v2 ? this.kdfInput(input) : null;
-    const row = await this.vaults.create(userId, {
+    const values = {
       title: this.text(input.title ?? 'Untitled Vault', 'title', 255),
       category: this.text(input.category ?? 'General', 'category', 255),
       colorValue: this.color(input.colorValue ?? '#3B82F6'),
@@ -140,8 +146,37 @@ export class VaultService {
           ? this.wrappedKey(input.wrappedVekRecovery, 'wrappedVekRecovery')
           : null
         : null,
-    });
-    return this.map(row, [], false);
+    };
+    const outcome = await this.vaults.create(
+      userId,
+      values,
+      vaultCreationKey(idempotencyKey),
+      vaultCreationFingerprint({
+        ...values,
+        encryptionSalt: v2
+          ? values.encryptionSalt
+          : masterPassword
+            ? 'server-generated-v1'
+            : null,
+        masterPasswordHash: undefined,
+        masterPasswordDigest: vaultPasswordIntentDigest(masterPassword),
+      }),
+    );
+    if (outcome.kind === 'idempotency_conflict') {
+      throw itemizeGraphqlError(
+        'idempotencyKey was already used for a different vault creation request',
+        'CONFLICT',
+        { field: 'idempotencyKey', reason: 'IDEMPOTENCY_KEY_REUSED' },
+      );
+    }
+    if (outcome.kind === 'result_unavailable') {
+      throw itemizeGraphqlError(
+        'The vault created by this request is no longer available',
+        'CONFLICT',
+        { field: 'idempotencyKey', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE' },
+      );
+    }
+    return this.map(outcome.row, [], false);
   }
 
   async update(

@@ -70,6 +70,11 @@ export type VaultValue = {
   wrappedVekRecovery?: string | null;
 };
 
+export type CreateVaultOutcome =
+  | { kind: 'created'; row: VaultRow; replayed: boolean }
+  | { kind: 'idempotency_conflict' }
+  | { kind: 'result_unavailable' };
+
 export type UpdateVaultValue = Partial<
   Pick<
     VaultValue,
@@ -193,38 +198,80 @@ export class VaultRepository {
     }
   }
 
-  async create(userId: number, value: VaultValue): Promise<VaultRow> {
-    const result = await this.pool.query<VaultRow>(
-      `INSERT INTO vaults (
-         user_id, title, category, color_value, position_x, position_y,
-         width, height, z_index, is_locked, encryption_salt, master_password_hash,
-         crypto_version, kdf_algorithm, kdf_memory_kib, kdf_iterations,
-         kdf_parallelism, wrapped_vek, wrapped_vek_recovery
-       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
-       RETURNING *, 0::int AS item_count`,
-      [
-        userId,
-        value.title,
-        value.category,
-        value.colorValue,
-        value.positionX,
-        value.positionY,
-        value.width,
-        value.height,
-        value.zIndex,
-        value.isLocked,
-        value.encryptionSalt,
-        value.masterPasswordHash,
-        value.cryptoVersion ?? 1,
-        value.kdfAlgorithm ?? null,
-        value.kdfMemoryKiB ?? null,
-        value.kdfIterations ?? null,
-        value.kdfParallelism ?? null,
-        value.wrappedVek ?? null,
-        value.wrappedVekRecovery ?? null,
-      ],
-    );
-    return result.rows[0];
+  async create(
+    userId: number,
+    value: VaultValue,
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<CreateVaultOutcome> {
+    return this.transaction(async (client) => {
+      await client.query('SELECT pg_advisory_xact_lock($1)', [userId]);
+      const receipt = await client.query<{
+        request_fingerprint: string;
+        result_vault_id: number | null;
+      }>(
+        `SELECT request_fingerprint, result_vault_id
+         FROM vault_creation_receipts
+         WHERE user_id = $1 AND idempotency_key = $2
+         FOR UPDATE`,
+        [userId, idempotencyKey],
+      );
+      const replay = receipt.rows[0];
+      if (replay) {
+        if (replay.request_fingerprint !== requestFingerprint) {
+          return { kind: 'idempotency_conflict' };
+        }
+        if (replay.result_vault_id === null) {
+          return { kind: 'result_unavailable' };
+        }
+        const row = await this.selectVaultById(
+          client,
+          userId,
+          Number(replay.result_vault_id),
+        );
+        return row
+          ? { kind: 'created', row, replayed: true }
+          : { kind: 'result_unavailable' };
+      }
+      const result = await client.query<VaultRow>(
+        `INSERT INTO vaults (
+           user_id, title, category, color_value, position_x, position_y,
+           width, height, z_index, is_locked, encryption_salt, master_password_hash,
+           crypto_version, kdf_algorithm, kdf_memory_kib, kdf_iterations,
+           kdf_parallelism, wrapped_vek, wrapped_vek_recovery
+         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)
+         RETURNING *, 0::int AS item_count`,
+        [
+          userId,
+          value.title,
+          value.category,
+          value.colorValue,
+          value.positionX,
+          value.positionY,
+          value.width,
+          value.height,
+          value.zIndex,
+          value.isLocked,
+          value.encryptionSalt,
+          value.masterPasswordHash,
+          value.cryptoVersion ?? 1,
+          value.kdfAlgorithm ?? null,
+          value.kdfMemoryKiB ?? null,
+          value.kdfIterations ?? null,
+          value.kdfParallelism ?? null,
+          value.wrappedVek ?? null,
+          value.wrappedVekRecovery ?? null,
+        ],
+      );
+      const row = result.rows[0];
+      await client.query(
+        `INSERT INTO vault_creation_receipts (
+           user_id, idempotency_key, request_fingerprint, result_vault_id
+         ) VALUES ($1,$2,$3,$4)`,
+        [userId, idempotencyKey, requestFingerprint, row.id],
+      );
+      return { kind: 'created', row, replayed: false };
+    });
   }
 
   async update(
@@ -707,6 +754,22 @@ export class VaultRepository {
        FROM vaults v
        WHERE v.id = $1 AND v.user_id = $2
        FOR UPDATE`,
+      [vaultId, userId],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  private async selectVaultById(
+    client: PoolClient,
+    userId: number,
+    vaultId: number,
+  ): Promise<VaultRow | null> {
+    const result = await client.query<VaultRow>(
+      `SELECT ${VAULT_COLUMNS}, COUNT(vi.id)::int AS item_count
+       FROM vaults v
+       LEFT JOIN vault_items vi ON vi.vault_id = v.id
+       WHERE v.id = $1 AND v.user_id = $2
+       GROUP BY v.id`,
       [vaultId, userId],
     );
     return result.rows[0] ?? null;

@@ -456,11 +456,22 @@ export const getBusiness = async (
     return getInvoiceBusinessViaGraphql(businessId, organizationId);
 };
 
+export const invoiceBusinessCreationSignature = (
+    business: Partial<Business>,
+): string => JSON.stringify({
+    name: business.name?.trim() ?? '',
+    email: business.email?.trim() || null,
+    phone: business.phone?.trim() || null,
+    address: business.address?.trim() || null,
+    taxId: business.tax_id?.trim() || null,
+});
+
 export const createBusiness = async (
     business: Partial<Business>,
-    organizationId?: number
+    organizationId: number,
+    idempotencyKey: string,
 ): Promise<Business> => {
-    return createInvoiceBusinessViaGraphql(business, organizationId);
+    return createInvoiceBusinessViaGraphql(business, idempotencyKey, organizationId);
 };
 
 export const updateBusiness = async (

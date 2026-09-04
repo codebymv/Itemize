@@ -42,8 +42,14 @@ export class ReputationReviewsResolver {
   @Mutation(() => ReputationReview)
   createReputationReview(
     @Args('input') input: CreateReputationReviewInput,
+    @Args('idempotencyKey', { type: () => String }) idempotencyKey: string,
   ): Promise<ReputationReview> {
-    return this.reviews.create(this.organizationId(), input);
+    return this.reviews.create(
+      this.organizationId(),
+      this.userId(),
+      input,
+      idempotencyKey,
+    );
   }
 
   @CsrfProtected()

@@ -78,6 +78,7 @@ describe('workspace mutation reconciliation', () => {
     }));
     const first = runWorkspaceCreationAttempt('list', { title: 'Tasks' }, create);
     const second = runWorkspaceCreationAttempt('list', { title: 'Tasks' }, create);
+    await vi.waitFor(() => expect(create).toHaveBeenCalledOnce());
     resolveCreate({ id: 4 });
 
     await expect(Promise.all([first, second])).resolves.toEqual([

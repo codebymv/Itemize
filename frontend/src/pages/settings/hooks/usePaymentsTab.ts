@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
+import { useStableMutationKey } from '@/hooks/useStableMutationKey';
 import { GraphqlRequestError } from '@/services/graphqlClient';
 import {
   getPaymentSettings,
@@ -11,6 +12,7 @@ import {
   updateBusiness,
   deleteBusiness,
   uploadBusinessLogo,
+  invoiceBusinessCreationSignature,
   type PaymentSettings,
   type Business,
 } from '@/services/invoicesApi';
@@ -99,6 +101,11 @@ export const usePaymentsTab = ({
   } = useSingleFlightAction();
   const savingBusiness = businessPending && businessAction === 'save';
   const uploadingLogo = businessPending && businessAction === 'logo';
+  const {
+    begin: beginBusinessCreate,
+    release: releaseBusinessCreate,
+    reset: resetBusinessCreate,
+  } = useStableMutationKey('invoice-business-create');
 
   // Data
   const [settings, setSettings] = useState<PaymentSettings | null>(null);
@@ -281,8 +288,9 @@ export const usePaymentsTab = ({
       }
       setBusinessDialogOpenState(false);
       setEditingBusiness(null);
+      resetBusinessCreate();
     });
-  }, [businessFormData.logo_url, dismissBusinessIfIdle]);
+  }, [businessFormData.logo_url, dismissBusinessIfIdle, resetBusinessCreate]);
 
   const setBusinessDialogOpen = useCallback((nextOpen: boolean) => {
     if (nextOpen) setBusinessDialogOpenState(true);
@@ -304,8 +312,23 @@ export const usePaymentsTab = ({
           setBusinesses(prev => prev.map(b => b.id === updated.id ? updated : b));
           toast({ title: 'Updated', description: 'Business updated successfully' });
         } else {
-          const created = await createBusiness(businessFormData, organizationId);
-          setBusinesses(prev => [created, ...prev]);
+          const idempotencyKey = beginBusinessCreate(
+            invoiceBusinessCreationSignature(businessFormData),
+          );
+          if (!idempotencyKey) return;
+          let created: Business;
+          try {
+            created = await createBusiness(
+              businessFormData,
+              organizationId,
+              idempotencyKey,
+            );
+            resetBusinessCreate();
+          } finally {
+            releaseBusinessCreate();
+          }
+          setBusinesses(prev => [created, ...prev.filter((business) =>
+            business.id !== created.id)]);
 
           if (pendingLogoFile) {
             try {
@@ -339,7 +362,17 @@ export const usePaymentsTab = ({
         setBusinessAction(null);
       }
     });
-  }, [organizationId, editingBusiness, businessFormData, pendingLogoFile, runBusinessAction, toast]);
+  }, [
+    organizationId,
+    editingBusiness,
+    businessFormData,
+    pendingLogoFile,
+    runBusinessAction,
+    toast,
+    beginBusinessCreate,
+    releaseBusinessCreate,
+    resetBusinessCreate,
+  ]);
 
   const handleDeleteClick = useCallback((business: Business) => {
     setBusinessToDelete(business);

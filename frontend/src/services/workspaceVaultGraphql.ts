@@ -242,15 +242,19 @@ const updateInput = (payload: VaultPayload) => ({
 
 export const createVaultViaGraphql = async (
   payload: CreateVaultPayload,
+  idempotencyKey: string,
 ): Promise<Vault> => {
   const data = await graphqlMutationRequest<
     { createWorkspaceVault: GraphqlVault },
-    { input: ReturnType<typeof createInput> }
+    { input: ReturnType<typeof createInput>; idempotencyKey: string }
   >(
-    `mutation CreateWorkspaceVault($input: CreateWorkspaceVaultInput!) {
-      createWorkspaceVault(input: $input) { ${VAULT_FIELDS} }
+    `mutation CreateWorkspaceVault(
+      $input: CreateWorkspaceVaultInput!
+      $idempotencyKey: String!
+    ) {
+      createWorkspaceVault(input: $input, idempotencyKey: $idempotencyKey) { ${VAULT_FIELDS} }
     }`,
-    { input: createInput(payload) },
+    { input: createInput(payload), idempotencyKey },
   );
   return legacyVault(data.createWorkspaceVault);
 };

@@ -120,7 +120,7 @@ describe("workspace vault GraphQL consumer", () => {
       kdf_parallelism: 1,
       wrapped_vek: "wrapped",
       wrapped_vek_recovery: "recovery-wrapped",
-    });
+    }, "vault-create-key");
     const [, init] = vi.mocked(fetch).mock.calls[0];
     expect(init?.headers).toMatchObject({ "x-csrf-token": "csrf" });
     expect(JSON.parse(String(init?.body))).toMatchObject({
@@ -137,6 +137,7 @@ describe("workspace vault GraphQL consumer", () => {
           wrappedVek: "wrapped",
           wrappedVekRecovery: "recovery-wrapped",
         },
+        idempotencyKey: "vault-create-key",
       },
     });
   });

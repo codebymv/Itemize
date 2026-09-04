@@ -145,11 +145,15 @@ describe('VaultService', () => {
 
   it('validates and hashes a new locked vault', async () => {
     repository.create.mockImplementation(async (_userId, value) => ({
-      ...row,
-      title: value.title,
-      is_locked: value.isLocked,
-      encryption_salt: value.encryptionSalt,
-      master_password_hash: value.masterPasswordHash,
+      kind: 'created',
+      replayed: false,
+      row: {
+        ...row,
+        title: value.title,
+        is_locked: value.isLocked,
+        encryption_salt: value.encryptionSalt,
+        master_password_hash: value.masterPasswordHash,
+      },
     }));
     await expect(
       service.create(7, {
@@ -157,7 +161,7 @@ describe('VaultService', () => {
         positionX: 10,
         positionY: 20,
         masterPassword: 'password1',
-      }),
+      }, 'vault-create-key'),
     ).resolves.toMatchObject({
       title: 'Credentials',
       isLocked: true,
@@ -168,6 +172,8 @@ describe('VaultService', () => {
     await expect(
       bcrypt.compare('password1', stored.masterPasswordHash as string),
     ).resolves.toBe(true);
+    expect(repository.create.mock.calls[0][2]).toBe('vault-create-key');
+    expect(repository.create.mock.calls[0][3]).toMatch(/^[a-f0-9]{64}$/);
   });
 
   it('applies partial position updates and enforces user ownership in the repository call', async () => {

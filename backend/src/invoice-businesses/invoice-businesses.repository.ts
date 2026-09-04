@@ -29,6 +29,11 @@ export type InvoiceBusinessUpdates = Partial<
   InvoiceBusinessValues & { isActive: boolean }
 >;
 
+export type CreateInvoiceBusinessOutcome =
+  | { kind: 'created'; row: InvoiceBusinessRow; replayed: boolean }
+  | { kind: 'idempotency_conflict' }
+  | { kind: 'result_unavailable' };
+
 export type InvoiceBusinessLogoRemoval = {
   row: InvoiceBusinessRow;
   cleanupQueued: boolean;
@@ -79,23 +84,64 @@ export class InvoiceBusinessesRepository {
 
   async create(
     organizationId: number,
+    userId: number,
     values: InvoiceBusinessValues,
-  ): Promise<InvoiceBusinessRow> {
-    const result = await this.pool.query<InvoiceBusinessRow>(
-      `INSERT INTO businesses (
-         organization_id, name, email, phone, address, tax_id
-       ) VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING ${selection}`,
-      [
-        organizationId,
-        values.name,
-        values.email,
-        values.phone,
-        values.address,
-        values.taxId,
-      ],
-    );
-    return result.rows[0];
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<CreateInvoiceBusinessOutcome> {
+    return this.transaction(async (client) => {
+      await client.query('SELECT pg_advisory_xact_lock($1)', [organizationId]);
+      const receipt = await client.query<{
+        request_fingerprint: string;
+        result_business_id: number | null;
+      }>(
+        `SELECT request_fingerprint, result_business_id
+         FROM invoice_business_creation_receipts
+         WHERE organization_id = $1 AND idempotency_key = $2
+         FOR UPDATE`,
+        [organizationId, idempotencyKey],
+      );
+      const replay = receipt.rows[0];
+      if (replay) {
+        if (replay.request_fingerprint !== requestFingerprint) {
+          return { kind: 'idempotency_conflict' };
+        }
+        if (replay.result_business_id === null) {
+          return { kind: 'result_unavailable' };
+        }
+        const row = await this.selectById(
+          client,
+          organizationId,
+          Number(replay.result_business_id),
+        );
+        return row
+          ? { kind: 'created', row, replayed: true }
+          : { kind: 'result_unavailable' };
+      }
+      const result = await client.query<InvoiceBusinessRow>(
+        `INSERT INTO businesses (
+           organization_id, name, email, phone, address, tax_id
+         ) VALUES ($1, $2, $3, $4, $5, $6)
+         RETURNING ${selection}`,
+        [
+          organizationId,
+          values.name,
+          values.email,
+          values.phone,
+          values.address,
+          values.taxId,
+        ],
+      );
+      const row = result.rows[0];
+      await client.query(
+        `INSERT INTO invoice_business_creation_receipts (
+           organization_id, requested_by_user_id, idempotency_key,
+           request_fingerprint, result_business_id
+         ) VALUES ($1,$2,$3,$4,$5)`,
+        [organizationId, userId, idempotencyKey, requestFingerprint, row.id],
+      );
+      return { kind: 'created', row, replayed: false };
+    });
   }
 
   async update(
@@ -187,6 +233,20 @@ export class InvoiceBusinessesRepository {
       );
       return { row: updated.rows[0], cleanupQueued };
     });
+  }
+
+  private async selectById(
+    client: PoolClient,
+    organizationId: number,
+    businessId: number,
+  ): Promise<InvoiceBusinessRow | null> {
+    const result = await client.query<InvoiceBusinessRow>(
+      `SELECT ${selection}
+       FROM businesses
+       WHERE id = $1 AND organization_id = $2`,
+      [businessId, organizationId],
+    );
+    return result.rows[0] ?? null;
   }
 
   private async transaction<T>(

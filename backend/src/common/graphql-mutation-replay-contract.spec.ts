@@ -25,15 +25,9 @@ const hasRequiredReplayKey = (argument: GraphQLArgument): boolean => {
     && Object.values(inputType.getFields()).some(replayBoundaryField);
 };
 
-// These are the only currently accepted gaps. Adding another create,
-// duplicate, or publish mutation without a required replay key fails this
-// contract. When a listed mutation is hardened, the test also requires its
-// removal from this explicit debt register.
-const KNOWN_NON_REPLAY_SAFE_MUTATIONS = [
-  'createInvoiceBusiness',
-  'createReputationReview',
-  'createWorkspaceVault',
-];
+// The replay contract has no accepted exceptions. Any new create, duplicate,
+// or publish mutation without a required replay key fails this test.
+const KNOWN_NON_REPLAY_SAFE_MUTATIONS: string[] = [];
 
 describe('GraphQL mutation replay contract', () => {
   let app: NestExpressApplication;

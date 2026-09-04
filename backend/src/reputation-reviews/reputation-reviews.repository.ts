@@ -37,6 +37,11 @@ export type ReputationReviewMutationOutcome =
   | { kind: 'ok'; row: ReputationReviewRow }
   | { kind: 'not_found' };
 
+export type CreateReputationReviewOutcome =
+  | { kind: 'created'; row: ReputationReviewRow; replayed: boolean }
+  | { kind: 'idempotency_conflict' }
+  | { kind: 'result_unavailable' };
+
 const selection = `
   r.id, r.organization_id, r.platform_id, r.platform, r.external_review_id,
   r.rating, r.review_text, r.reviewer_name, r.reviewer_email, r.reviewer_phone,
@@ -106,9 +111,42 @@ export class ReputationReviewsRepository {
 
   async create(
     organizationId: number,
+    userId: number,
     values: ReputationReviewCreateValues,
-  ): Promise<ReputationReviewRow> {
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<CreateReputationReviewOutcome> {
     return this.transaction(async (client) => {
+      await client.query('SELECT pg_advisory_xact_lock($1)', [organizationId]);
+      const receipt = await client.query<{
+        request_fingerprint: string;
+        result_review_id: number | null;
+      }>(
+        `SELECT request_fingerprint, result_review_id
+         FROM reputation_review_creation_receipts
+         WHERE organization_id = $1 AND idempotency_key = $2
+         FOR UPDATE`,
+        [organizationId, idempotencyKey],
+      );
+      const replay = receipt.rows[0];
+      if (replay) {
+        if (replay.request_fingerprint !== requestFingerprint) {
+          return { kind: 'idempotency_conflict' };
+        }
+        if (replay.result_review_id === null) {
+          return { kind: 'result_unavailable' };
+        }
+        const row = await this.findByIdWithClient(
+          client,
+          organizationId,
+          Number(replay.result_review_id),
+          false,
+          false,
+        );
+        return row
+          ? { kind: 'created', row, replayed: true }
+          : { kind: 'result_unavailable' };
+      }
       const platform = await this.validatePlatform(
         client, organizationId, values.platformId, values.platform, values.platformWasProvided,
       );
@@ -126,7 +164,14 @@ export class ReputationReviewsRepository {
       );
       const row = await this.findByIdWithClient(client, organizationId, Number(inserted.rows[0].id));
       if (!row) throw new Error('Created review could not be reloaded');
-      return row;
+      await client.query(
+        `INSERT INTO reputation_review_creation_receipts (
+           organization_id, requested_by_user_id, idempotency_key,
+           request_fingerprint, result_review_id
+         ) VALUES ($1,$2,$3,$4,$5)`,
+        [organizationId, userId, idempotencyKey, requestFingerprint, row.id],
+      );
+      return { kind: 'created', row, replayed: false };
     });
   }
 

@@ -74,7 +74,7 @@ describe('invoice business API transport selection', () => {
     await getBusinesses(4);
     await getBusinessPage(1, 20, 4);
     await getBusiness(8, 4);
-    await createBusiness(business, 4);
+    await createBusiness(business, 4, 'business-create-key');
     await updateBusiness(8, { name: 'Itemize Studio' }, 4);
     await deleteBusiness(8, 4);
     await deleteBusinessLogo(8, 4);
@@ -86,7 +86,11 @@ describe('invoice business API transport selection', () => {
     expect(getInvoiceBusinessesViaGraphql).toHaveBeenCalledWith(4);
     expect(getInvoiceBusinessPageViaGraphql).toHaveBeenCalledWith(1, 20, 4, undefined);
     expect(getInvoiceBusinessViaGraphql).toHaveBeenCalledWith(8, 4);
-    expect(createInvoiceBusinessViaGraphql).toHaveBeenCalledWith(business, 4);
+    expect(createInvoiceBusinessViaGraphql).toHaveBeenCalledWith(
+      business,
+      'business-create-key',
+      4,
+    );
     expect(updateInvoiceBusinessViaGraphql).toHaveBeenCalledWith(
       8,
       { name: 'Itemize Studio' },

@@ -652,7 +652,11 @@ export const createVault = async (
   token?: string,
 ) => {
   void token;
-  return createVaultViaGraphql(vaultData);
+  return runWorkspaceCreationAttempt(
+    "vault",
+    vaultData,
+    (idempotencyKey) => createVaultViaGraphql(vaultData, idempotencyKey),
+  );
 };
 
 // Update a vault

@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const SRC = join(process.cwd(), 'src')
-const read = (path: string) => readFileSync(join(SRC, path), 'utf8')
+const read = (path: string) => readFileSync(join(SRC, path), 'utf8').replace(/\r\n/g, '\n')
 const sourceFiles = (directory = SRC): string[] => readdirSync(directory).flatMap(entry => {
   const path = join(directory, entry)
   return statSync(path).isDirectory()

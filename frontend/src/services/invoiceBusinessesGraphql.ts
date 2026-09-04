@@ -137,16 +137,20 @@ export const getInvoiceBusinessViaGraphql = async (
 
 export const createInvoiceBusinessViaGraphql = async (
   business: Partial<Business>,
+  idempotencyKey: string,
   organizationId?: number,
 ): Promise<Business> => {
   const data = await graphqlMutationRequest<
     { createInvoiceBusiness: GraphqlInvoiceBusiness },
-    { input: ReturnType<typeof mapCreateInput> }
+    { input: ReturnType<typeof mapCreateInput>; idempotencyKey: string }
   >(
-    `mutation CreateInvoiceBusiness($input: CreateInvoiceBusinessInput!) {
-      createInvoiceBusiness(input: $input) { ${invoiceBusinessFields} }
+    `mutation CreateInvoiceBusiness(
+      $input: CreateInvoiceBusinessInput!
+      $idempotencyKey: String!
+    ) {
+      createInvoiceBusiness(input: $input, idempotencyKey: $idempotencyKey) { ${invoiceBusinessFields} }
     }`,
-    { input: mapCreateInput(business) },
+    { input: mapCreateInput(business), idempotencyKey },
     organizationId,
   );
   return mapBusiness(data.createInvoiceBusiness);

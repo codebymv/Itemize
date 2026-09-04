@@ -1,12 +1,14 @@
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/hooks/useOrganization';
+import { useStableMutationKey } from '@/hooks/useStableMutationKey';
 import {
   getBusinesses,
   createBusiness,
   updateBusiness,
   deleteBusiness,
   uploadBusinessLogo,
+  invoiceBusinessCreationSignature,
   type Business,
 } from '@/services/invoicesApi';
 
@@ -34,7 +36,7 @@ interface UseBusinessManagementReturn {
   handleSaveBusiness: () => Promise<void>;
   handleDeleteBusiness: () => Promise<void>;
   handleBusinessLogoUpload: (event: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
-  setBusinessDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setBusinessDialogOpen: (open: boolean) => void;
   setBusinessFormData: React.Dispatch<React.SetStateAction<BusinessFormData>>;
   setPendingLogoFile: React.Dispatch<React.SetStateAction<File | null>>;
 }
@@ -42,12 +44,17 @@ interface UseBusinessManagementReturn {
 export const useBusinessManagement = (): UseBusinessManagementReturn => {
   const { toast } = useToast();
   const { organizationId } = useOrganization();
+  const {
+    begin: beginBusinessCreate,
+    release: releaseBusinessCreate,
+    reset: resetBusinessCreate,
+  } = useStableMutationKey('invoice-business-create');
 
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(false);
   const [savingBusiness, setSavingBusiness] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const [businessDialogOpen, setBusinessDialogOpen] = useState(false);
+  const [businessDialogOpen, setBusinessDialogOpenState] = useState(false);
   const [editingBusiness, setEditingBusiness] = useState<Business | null>(null);
   const [pendingLogoFile, setPendingLogoFile] = useState<File | null>(null);
   const [businessFormData, setBusinessFormData] = useState<BusinessFormData>({
@@ -99,16 +106,22 @@ export const useBusinessManagement = (): UseBusinessManagementReturn => {
       });
       setPendingLogoFile(null);
     }
-    setBusinessDialogOpen(true);
+    setBusinessDialogOpenState(true);
   }, [businessFormData.logo_url]);
 
   const closeBusinessDialog = useCallback(() => {
     if (businessFormData.logo_url?.startsWith('blob:')) {
       URL.revokeObjectURL(businessFormData.logo_url);
     }
-    setBusinessDialogOpen(false);
+    setBusinessDialogOpenState(false);
     setEditingBusiness(null);
-  }, [businessFormData.logo_url]);
+    resetBusinessCreate();
+  }, [businessFormData.logo_url, resetBusinessCreate]);
+
+  const setBusinessDialogOpen = useCallback((open: boolean) => {
+    if (open) setBusinessDialogOpenState(true);
+    else closeBusinessDialog();
+  }, [closeBusinessDialog]);
 
   const handleSaveBusiness = useCallback(async () => {
     if (!organizationId) return;
@@ -124,8 +137,23 @@ export const useBusinessManagement = (): UseBusinessManagementReturn => {
         setBusinesses(prev => prev.map(b => b.id === updated.id ? updated : b));
         toast({ title: 'Updated', description: 'Business updated successfully' });
       } else {
-        const created = await createBusiness(businessFormData, organizationId);
-        setBusinesses(prev => [created, ...prev]);
+        const idempotencyKey = beginBusinessCreate(
+          invoiceBusinessCreationSignature(businessFormData),
+        );
+        if (!idempotencyKey) return;
+        let created: Business;
+        try {
+          created = await createBusiness(
+            businessFormData,
+            organizationId,
+            idempotencyKey,
+          );
+          resetBusinessCreate();
+        } finally {
+          releaseBusinessCreate();
+        }
+        setBusinesses(prev => [created, ...prev.filter((business) =>
+          business.id !== created.id)]);
 
         if (pendingLogoFile) {
           try {
@@ -154,13 +182,22 @@ export const useBusinessManagement = (): UseBusinessManagementReturn => {
           toast({ title: 'Created', description: 'Business created successfully' });
         }
       }
-      setBusinessDialogOpen(false);
+      setBusinessDialogOpenState(false);
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to save business', variant: 'destructive' });
     } finally {
       setSavingBusiness(false);
     }
-  }, [organizationId, editingBusiness, businessFormData, pendingLogoFile, toast]);
+  }, [
+    organizationId,
+    editingBusiness,
+    businessFormData,
+    pendingLogoFile,
+    toast,
+    beginBusinessCreate,
+    releaseBusinessCreate,
+    resetBusinessCreate,
+  ]);
 
   const handleDeleteBusiness = useCallback(async () => {
     if (!editingBusiness) return;
@@ -168,7 +205,7 @@ export const useBusinessManagement = (): UseBusinessManagementReturn => {
       await deleteBusiness(editingBusiness.id, organizationId);
       setBusinesses(prev => prev.filter(b => b.id !== editingBusiness.id));
       toast({ title: 'Deleted', description: 'Business deleted successfully' });
-      setBusinessDialogOpen(false);
+      setBusinessDialogOpenState(false);
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to delete business', variant: 'destructive' });
     }
