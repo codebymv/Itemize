@@ -9,6 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { Response } from 'express';
+import { HttpCapabilityScoped, HttpSessionScoped } from '../common/metadata';
 import { RequestContextService } from '../request-context/request-context.service';
 import {
   createCalendarOAuthState,
@@ -36,6 +37,7 @@ export class CalendarOAuthController {
   ) {}
 
   @Get('auth')
+  @HttpSessionScoped()
   @UseGuards(CalendarOAuthGuard)
   begin(
     @Query('return_url') returnUrl: string | undefined,
@@ -62,6 +64,7 @@ export class CalendarOAuthController {
   }
 
   @Get('callback')
+  @HttpCapabilityScoped()
   async callback(
     @Query('code') code: string | undefined,
     @Query('state') state: string | undefined,
@@ -116,6 +119,7 @@ export class CalendarOAuthController {
   }
 
   @Get('calendars/:connectionId')
+  @HttpSessionScoped()
   @UseGuards(CalendarOAuthGuard)
   async providerCalendars(
     @Param('connectionId') connectionId: string,

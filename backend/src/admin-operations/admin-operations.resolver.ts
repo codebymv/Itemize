@@ -1,6 +1,6 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { CsrfProtected } from '../common/metadata';
+import { CsrfProtected, PlatformAdminScoped } from '../common/metadata';
 import { RequestContextService } from '../request-context/request-context.service';
 import { AdminAccessGuard } from './admin-access.guard';
 import { AdminUserIdsInput, AdminUserSearchInput } from './admin-operations.inputs';
@@ -8,6 +8,7 @@ import { AdminOperationsService } from './admin-operations.service';
 import { AdminActivationFunnel, AdminJobQueueDetails, AdminOperationsSnapshot, AdminPlanUpdate, AdminSystemStats, AdminUser, AdminUserCount, AdminUserIds, AdminUserSearchResult } from './admin-operations.types';
 
 @UseGuards(AdminAccessGuard)
+@PlatformAdminScoped()
 @Resolver()
 export class AdminOperationsResolver {
   constructor(private readonly service: AdminOperationsService, private readonly requestContext: RequestContextService) {}

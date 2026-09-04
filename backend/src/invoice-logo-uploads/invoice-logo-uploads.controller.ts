@@ -6,6 +6,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { RequestContextService } from '../request-context/request-context.service';
 import { InvoiceLogoUploadGuard } from './invoice-logo-upload.guard';
+import { HttpSessionScoped } from '../common/metadata';
 import { InvoiceLogoUploadsService } from './invoice-logo-uploads.service';
 
 const upload = FileInterceptor('logo', {
@@ -23,6 +24,7 @@ const upload = FileInterceptor('logo', {
 });
 
 @Controller('api/invoices')
+@HttpSessionScoped()
 @UseGuards(InvoiceLogoUploadGuard)
 export class InvoiceLogoUploadsController {
   constructor(

@@ -1,10 +1,11 @@
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { CsrfProtected } from '../common/metadata';
+import { AccountScoped, CsrfProtected } from '../common/metadata';
 import { RequestContextService } from '../request-context/request-context.service';
 import { MarkOnboardingSeenInput } from './onboarding.inputs';
 import { OnboardingService } from './onboarding.service';
 import { OnboardingFeatureProgress } from './onboarding.types';
 
+@AccountScoped()
 @Resolver(() => OnboardingFeatureProgress)
 export class OnboardingResolver {
   constructor(

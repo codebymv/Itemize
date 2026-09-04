@@ -11,6 +11,7 @@ import { Response } from 'express';
 import { existsSync, statSync } from 'node:fs';
 import { readdir, readFile, stat } from 'node:fs/promises';
 import * as path from 'node:path';
+import { Public } from '../common/metadata';
 
 const SKIP_DIR_NAMES = new Set(['archive', 'generated']);
 
@@ -161,6 +162,7 @@ async function searchDocuments(
 }
 
 @Controller('docs')
+@Public()
 export class DocsController {
   private readonly docsBasePath = findDocsPath();
 

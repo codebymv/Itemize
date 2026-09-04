@@ -9,9 +9,14 @@ import {
   Req,
 } from '@nestjs/common';
 import { Request } from 'express';
+import {
+  HttpCapabilityScoped,
+  HttpPublicResourceScoped,
+} from '../common/metadata';
 import { PublicBookingsService } from './public-bookings.service';
 
 @Controller('api/bookings/public/book')
+@HttpPublicResourceScoped()
 export class PublicBookingsController {
   constructor(private readonly bookings: PublicBookingsService) {}
 
@@ -44,6 +49,7 @@ export class PublicBookingsController {
   }
 
   @Post(':slug/cancel/:token')
+  @HttpCapabilityScoped()
   @HttpCode(200)
   async cancel(
     @Param('slug') slug: string,

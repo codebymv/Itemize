@@ -1,6 +1,6 @@
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { PageInput } from '../common/pagination';
-import { CsrfProtected, OrganizationScoped } from '../common/metadata';
+import { AccountScoped, CsrfProtected, OrganizationScoped } from '../common/metadata';
 import { RequestContextService } from '../request-context/request-context.service';
 import {
   BatchCanvasPositionsInput,
@@ -41,6 +41,7 @@ import {
   DisableWorkspaceSharingResult,
 } from './workspace-content.types';
 
+@AccountScoped()
 @Resolver()
 export class WorkspaceContentResolver {
   constructor(

@@ -12,9 +12,11 @@ import {
 import { Response } from 'express';
 import { RequestContextService } from '../request-context/request-context.service';
 import { ContactTransferGuard } from './contact-transfer.guard';
+import { HttpSessionScoped } from '../common/metadata';
 import { ContactTransfersService } from './contact-transfers.service';
 
 @Controller('api/contacts')
+@HttpSessionScoped()
 @UseGuards(ContactTransferGuard)
 export class ContactTransfersController {
   constructor(

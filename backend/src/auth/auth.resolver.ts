@@ -1,6 +1,6 @@
 import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { Request, Response } from 'express';
-import { CsrfProtected, Public } from '../common/metadata';
+import { AccountScoped, CsrfProtected, Public } from '../common/metadata';
 import { RequestContextService } from '../request-context/request-context.service';
 import {
   ChangePasswordInput,
@@ -36,6 +36,7 @@ import {
 
 type GraphqlHttpContext = { req: Request; res: Response };
 
+@AccountScoped()
 @Resolver()
 export class AuthResolver {
   constructor(

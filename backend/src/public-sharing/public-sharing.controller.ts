@@ -1,9 +1,11 @@
 import { Controller, Get, Param, Req, Res } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { AccessTokenService } from '../auth/access-token.service';
+import { HttpCapabilityScoped } from '../common/metadata';
 import { PublicSharingService } from './public-sharing.service';
 
 @Controller('api/shared')
+@HttpCapabilityScoped()
 export class PublicSharingController {
   constructor(
     private readonly sharing: PublicSharingService,

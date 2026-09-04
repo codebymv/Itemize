@@ -1,5 +1,6 @@
 import { Body, Controller, Inject, Logger, Post, Req, Res } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { HttpProviderWebhookScoped } from '../common/metadata';
 import { SMS_STATUS_MAP, SmsWebhooksService } from './sms-webhooks.service';
 import {
   TWILIO_WEBHOOK_VERIFIER,
@@ -10,6 +11,7 @@ const TWIML_EMPTY_RESPONSE =
   '<?xml version="1.0" encoding="UTF-8"?><Response></Response>';
 
 @Controller('api/sms-templates/webhook')
+@HttpProviderWebhookScoped()
 export class SmsWebhooksController {
   private readonly logger = new Logger(SmsWebhooksController.name);
 

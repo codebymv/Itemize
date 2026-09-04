@@ -1,5 +1,6 @@
 import { Controller, Get, Injectable, Logger, Query, Res } from '@nestjs/common';
 import { Response } from 'express';
+import { HttpCapabilityScoped } from '../common/metadata';
 import { DEFAULT_RETURN_PATH } from './stripe-connect-state';
 import { StripeConnectService } from './stripe-connect.service';
 
@@ -18,6 +19,7 @@ const redirectWith = (
 
 @Injectable()
 @Controller('api/invoice-integrations/stripe')
+@HttpCapabilityScoped()
 export class StripeConnectController {
   private readonly logger = new Logger(StripeConnectController.name);
 

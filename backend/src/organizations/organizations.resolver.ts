@@ -1,5 +1,5 @@
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { CsrfProtected, Public } from '../common/metadata';
+import { AccountScoped, CsrfProtected, Public } from '../common/metadata';
 import { RequestContextService } from '../request-context/request-context.service';
 import {
   AddOrganizationMemberInput,
@@ -21,6 +21,7 @@ import {
 import { OrganizationInvitationsService } from './organization-invitations.service';
 import { OrganizationsService } from './organizations.service';
 
+@AccountScoped()
 @Resolver(() => Organization)
 export class OrganizationsResolver {
   constructor(

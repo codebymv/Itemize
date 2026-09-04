@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Logger, Post, Query, Req, Res } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { HttpProviderWebhookScoped } from '../common/metadata';
 import {
   MetaWebhookInputError,
   MetaWebhookNotConfiguredError,
@@ -13,6 +14,7 @@ import {
 type RawBodyRequest = Request & { rawBody?: Buffer };
 
 @Controller('api/social')
+@HttpProviderWebhookScoped()
 export class SocialWebhooksController {
   private readonly logger = new Logger(SocialWebhooksController.name);
 

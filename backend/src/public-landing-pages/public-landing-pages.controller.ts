@@ -1,5 +1,6 @@
 import { Body, Controller, Get, HttpCode, Param, Post, Req } from '@nestjs/common';
 import { Request } from 'express';
+import { HttpPublicResourceScoped } from '../common/metadata';
 import { PublicLandingPagesService } from './public-landing-pages.service';
 
 const headerValue = (value: string | string[] | undefined): string | null => {
@@ -11,6 +12,7 @@ const queryValue = (value: unknown): string | null =>
   typeof value === 'string' ? value : null;
 
 @Controller('api/pages/public/page')
+@HttpPublicResourceScoped()
 export class PublicLandingPagesController {
   constructor(private readonly pages: PublicLandingPagesService) {}
 

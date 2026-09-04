@@ -1,10 +1,11 @@
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { CsrfProtected } from '../common/metadata';
+import { AccountScoped, CsrfProtected } from '../common/metadata';
 import { RequestContextService } from '../request-context/request-context.service';
 import { CreateCategoryInput, UpdateCategoryInput } from './category.inputs';
 import { Category, DeleteCategoryResult } from './category.types';
 import { CategoriesService } from './categories.service';
 
+@AccountScoped()
 @Resolver(() => Category)
 export class CategoriesResolver {
   constructor(

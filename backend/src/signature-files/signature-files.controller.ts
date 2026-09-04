@@ -17,6 +17,7 @@ import { memoryStorage } from 'multer';
 import { Response } from 'express';
 import { RequestContextService } from '../request-context/request-context.service';
 import { SignatureFileGuard } from './signature-file.guard';
+import { HttpSessionScoped } from '../common/metadata';
 import { SignatureFilesService } from './signature-files.service';
 import {
   sendSignatureFile,
@@ -53,6 +54,7 @@ const pdfUpload = FileInterceptor('file', {
 });
 
 @Controller('api/signatures')
+@HttpSessionScoped()
 @UseGuards(SignatureFileGuard)
 export class SignatureFilesController {
   constructor(

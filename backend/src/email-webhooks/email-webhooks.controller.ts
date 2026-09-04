@@ -11,6 +11,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { Request } from 'express';
+import { HttpProviderWebhookScoped } from '../common/metadata';
 import {
   EmailWebhookInputError,
   EmailWebhooksService,
@@ -25,6 +26,7 @@ import {
 type RawBodyRequest = Request & { rawBody?: Buffer };
 
 @Controller('api/email/webhook')
+@HttpProviderWebhookScoped()
 export class EmailWebhooksController {
   private readonly logger = new Logger(EmailWebhooksController.name);
 

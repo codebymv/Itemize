@@ -8,6 +8,7 @@ import {
   Res,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { HttpProviderWebhookScoped } from '../common/metadata';
 import {
   STRIPE_SUBSCRIPTION_WEBHOOK_VERIFIER,
   StripeSubscriptionWebhookUnavailableError,
@@ -22,6 +23,7 @@ import {
 type RawBodyRequest = Request & { rawBody?: Buffer };
 
 @Controller('api/billing')
+@HttpProviderWebhookScoped()
 export class SubscriptionWebhooksController {
   private readonly logger = new Logger(SubscriptionWebhooksController.name);
 

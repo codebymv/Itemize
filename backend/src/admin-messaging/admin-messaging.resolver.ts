@@ -1,7 +1,7 @@
 import { UseGuards } from '@nestjs/common';
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { AdminAccessGuard } from '../admin-operations/admin-access.guard';
-import { CsrfProtected } from '../common/metadata';
+import { CsrfProtected, PlatformAdminScoped } from '../common/metadata';
 import {
   AdminEmailLogFilterInput, AdminEmailPreviewInput, AdminEmailTemplateFilterInput,
 } from './admin-messaging.inputs';
@@ -12,6 +12,7 @@ import {
 } from './admin-messaging.types';
 
 @UseGuards(AdminAccessGuard)
+@PlatformAdminScoped()
 @Resolver()
 export class AdminMessagingResolver {
   constructor(private readonly service: AdminMessagingService) {}

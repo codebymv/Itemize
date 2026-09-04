@@ -17,6 +17,7 @@ import {
   Res,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { HttpCapabilityScoped } from '../common/metadata';
 import { RealtimeHostService } from '../realtime-host/realtime-host.service';
 import {
   normalizePublicChatIdempotencyKey,
@@ -32,6 +33,7 @@ const serverFailure = (response: Response, message: string): void => {
 };
 
 @Controller('api/chat-widget/public')
+@HttpCapabilityScoped()
 export class ChatWidgetPublicController {
   private readonly logger = new Logger(ChatWidgetPublicController.name);
 

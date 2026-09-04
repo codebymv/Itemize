@@ -1,6 +1,6 @@
 import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { Request } from 'express';
-import { CsrfProtected, Public } from '../common/metadata';
+import { AccountScoped, CsrfProtected, Public } from '../common/metadata';
 import { RequestContextService } from '../request-context/request-context.service';
 import { AiProviderService } from './ai-provider.service';
 import { AiRateLimitService } from './ai-rate-limit.service';
@@ -26,6 +26,7 @@ export class AiResolver {
   ) {}
 
   @CsrfProtected()
+  @AccountScoped()
   @Mutation(() => AiSuggestionsPayload)
   listSuggestions(
     @Args('input') input: ListSuggestionsInput,
@@ -36,6 +37,7 @@ export class AiResolver {
   }
 
   @CsrfProtected()
+  @AccountScoped()
   @Mutation(() => AiSuggestionsPayload)
   noteSuggestions(
     @Args('input') input: NoteSuggestionsInput,

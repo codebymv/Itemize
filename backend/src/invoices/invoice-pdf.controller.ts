@@ -2,9 +2,11 @@ import { Controller, Get, Param, Res, UseGuards } from '@nestjs/common';
 import { Response } from 'express';
 import { RequestContextService } from '../request-context/request-context.service';
 import { InvoicePdfGuard } from './invoice-pdf.guard';
+import { HttpSessionScoped } from '../common/metadata';
 import { InvoicePdfService } from './invoice-pdf.service';
 
 @Controller('api/invoices')
+@HttpSessionScoped()
 @UseGuards(InvoicePdfGuard)
 export class InvoicePdfController {
   constructor(

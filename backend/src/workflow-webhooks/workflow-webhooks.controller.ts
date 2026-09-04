@@ -1,6 +1,7 @@
 import { Body, Controller, Logger, Param, Post, Req, Res } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { z } from 'zod';
+import { HttpProviderWebhookScoped } from '../common/metadata';
 import { normalizeWorkflowTrigger, WORKFLOW_TRIGGER_TYPES } from '../workflows/workflow.registry';
 import {
   verifyWorkflowWebhook,
@@ -33,6 +34,7 @@ const webhookEventSchema = z.object({
 type RawBodyRequest = Request & { rawBody?: Buffer };
 
 @Controller('api/webhooks')
+@HttpProviderWebhookScoped()
 export class WorkflowWebhooksController {
   private readonly logger = new Logger(WorkflowWebhooksController.name);
 

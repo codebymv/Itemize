@@ -1,5 +1,5 @@
 import { Args, Int, Mutation, Query, Resolver } from '@nestjs/graphql';
-import { CsrfProtected } from '../common/metadata';
+import { AccountScoped, CsrfProtected } from '../common/metadata';
 import { PageInput } from '../common/pagination';
 import { RequestContextService } from '../request-context/request-context.service';
 import {
@@ -23,6 +23,7 @@ import {
   WorkspaceVaultPage,
 } from './vault.types';
 
+@AccountScoped()
 @Resolver(() => WorkspaceVault)
 export class VaultResolver {
   constructor(

@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, Post, Res } from '@nestjs/common';
 import { Response } from 'express';
+import { HttpCapabilityScoped } from '../common/metadata';
 import { CampaignUnsubscribeService } from './campaign-unsubscribe.service';
 
 const page = (state: 'ready' | 'unsubscribed' | 'invalid', token: string): string => {
@@ -18,6 +19,7 @@ const page = (state: 'ready' | 'unsubscribed' | 'invalid', token: string): strin
 };
 
 @Controller('api/campaigns/unsubscribe')
+@HttpCapabilityScoped()
 export class CampaignUnsubscribeController {
   constructor(private readonly unsubscribeService: CampaignUnsubscribeService) {}
 

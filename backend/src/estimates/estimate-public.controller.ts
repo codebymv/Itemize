@@ -1,8 +1,10 @@
 import { Controller, Get, HttpCode, Param, Post, Res } from '@nestjs/common';
 import { Response } from 'express';
+import { HttpCapabilityScoped } from '../common/metadata';
 import { EstimatePublicService } from './estimate-public.service';
 
 @Controller('api/public/estimates')
+@HttpCapabilityScoped()
 export class EstimatePublicController {
   constructor(private readonly estimates: EstimatePublicService) {}
 

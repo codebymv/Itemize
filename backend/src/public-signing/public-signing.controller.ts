@@ -10,6 +10,7 @@ import {
   Res,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { HttpCapabilityScoped } from '../common/metadata';
 import { PublicSigningAudit } from './public-signing.repository';
 import { PublicSigningService } from './public-signing.service';
 import {
@@ -22,6 +23,7 @@ import {
 const REQUEST_ID = /^[A-Za-z0-9._:-]{1,128}$/;
 
 @Controller('api/public/sign')
+@HttpCapabilityScoped()
 export class PublicSigningController {
   constructor(private readonly signing: PublicSigningService) {}
 

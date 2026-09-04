@@ -8,9 +8,14 @@ import {
   Res,
 } from '@nestjs/common';
 import { Response } from 'express';
+import {
+  HttpCapabilityScoped,
+  HttpPublicResourceScoped,
+} from '../common/metadata';
 import { PublicReputationService } from './public-reputation.service';
 
 @Controller('api/reputation/public')
+@HttpPublicResourceScoped()
 export class PublicReputationController {
   constructor(private readonly reputation: PublicReputationService) {}
 
@@ -24,6 +29,7 @@ export class PublicReputationController {
   }
 
   @Get('review/:token')
+  @HttpCapabilityScoped()
   async reviewRequest(
     @Param('token') token: string,
     @Res({ passthrough: true }) response: Response,
@@ -33,6 +39,7 @@ export class PublicReputationController {
   }
 
   @Post('review/:token')
+  @HttpCapabilityScoped()
   @HttpCode(200)
   async submitReview(
     @Param('token') token: string,

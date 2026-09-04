@@ -12,6 +12,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { Request } from 'express';
+import { HttpProviderWebhookScoped } from '../common/metadata';
 import {
   InvoiceWebhooksService,
   StripeInvoiceWebhookInputError,
@@ -26,6 +27,7 @@ import {
 type RawBodyRequest = Request & { rawBody?: Buffer };
 
 @Controller('api/invoices/webhook')
+@HttpProviderWebhookScoped()
 export class InvoiceWebhooksController {
   private readonly logger = new Logger(InvoiceWebhooksController.name);
 

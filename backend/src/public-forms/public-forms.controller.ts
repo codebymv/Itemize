@@ -9,9 +9,11 @@ import {
   Res,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { HttpPublicResourceScoped } from '../common/metadata';
 import { PublicFormsService } from './public-forms.service';
 
 @Controller('api/forms/public/form')
+@HttpPublicResourceScoped()
 export class PublicFormsController {
   constructor(private readonly forms: PublicFormsService) {}
 

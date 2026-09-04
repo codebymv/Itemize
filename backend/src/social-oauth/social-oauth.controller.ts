@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { Response } from 'express';
+import { HttpCapabilityScoped, HttpSessionScoped } from '../common/metadata';
 import { SessionOrganizationGuard } from '../common/session-organization.guard';
 import { RequestContextService } from '../request-context/request-context.service';
 import {
@@ -38,6 +39,7 @@ export class SocialOAuthController {
   ) {}
 
   @Get('connect/facebook')
+  @HttpSessionScoped()
   @UseGuards(SessionOrganizationGuard)
   async connect(@Res() response: Response): Promise<void> {
     try {
@@ -78,6 +80,7 @@ export class SocialOAuthController {
   }
 
   @Get('callback/facebook')
+  @HttpCapabilityScoped()
   async callback(
     @Query('code') code: string | undefined,
     @Query('state') state: string | undefined,

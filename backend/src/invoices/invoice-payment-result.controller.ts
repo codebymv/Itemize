@@ -1,8 +1,10 @@
 import { Controller, Get, NotFoundException, Param, Res } from '@nestjs/common';
 import { Response } from 'express';
+import { HttpCapabilityScoped } from '../common/metadata';
 import { InvoicePaymentResultService } from './invoice-payment-result.service';
 
 @Controller('api/public/invoice-payments')
+@HttpCapabilityScoped()
 export class InvoicePaymentResultController {
   constructor(private readonly results: InvoicePaymentResultService) {}
 
