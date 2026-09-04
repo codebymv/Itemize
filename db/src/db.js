@@ -41,6 +41,9 @@ const {
   runDealCreationReceiptMigration,
 } = require('./db_deal_creation_receipt_migrations');
 const {
+  runPipelineCreationReceiptMigration,
+} = require('./db_pipeline_creation_receipt_migrations');
+const {
   runOrganizationInvitationsMigration,
   runOrganizationOwnerInvariantMigration,
 } = require('./db_organization_lifecycle_migrations');
@@ -239,6 +242,7 @@ const { runCampaignSegmentTargetMigration } = require('./db_campaign_segment_mig
 // Import Invoicing migrations
 const { runAllInvoicingMigrations, addBusinessIdToEstimates } = require('./db_invoicing_migrations');
 const { runInvoiceCreationReceiptMigration } = require('./db_invoice_creation_receipt_migrations');
+const { runProductCreationReceiptMigration } = require('./db_product_creation_receipt_migrations');
 const { runEstimateCreationReceiptMigration } = require('./db_estimate_creation_receipt_migrations');
 const {
   runRecurringInvoiceCreationReceiptMigration,
@@ -642,6 +646,11 @@ const initializeDatabase = async (pool) => {
     );
     await runMigrationOnce(
       pool,
+      'pipeline_creation_receipts_v1',
+      runPipelineCreationReceiptMigration,
+    );
+    await runMigrationOnce(
+      pool,
       'contact_import_receipts_v1',
       runContactImportReceiptMigration,
     );
@@ -816,6 +825,11 @@ const initializeDatabase = async (pool) => {
       pool,
       'invoice_creation_receipts_v1',
       runInvoiceCreationReceiptMigration,
+    );
+    await runMigrationOnce(
+      pool,
+      'product_creation_receipts_v1',
+      runProductCreationReceiptMigration,
     );
     await runMigrationOnce(pool, 'stripe_webhook_idempotency', runStripeWebhookIdempotencyMigration);
     await runMigrationOnce(pool, 'module_estimates_recurring', runEstimatesRecurringMigrations);

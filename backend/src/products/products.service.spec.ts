@@ -77,7 +77,9 @@ describe('ProductsService', () => {
   });
 
   it('normalizes one-time creates and preserves decimal strings', async () => {
-    repository.create.mockResolvedValue(row());
+    repository.create.mockResolvedValue({
+      kind: 'created', row: row(), replayed: false,
+    });
     await service.create(4, 7, {
       name: ' Consultation ',
       description: ' ',
@@ -89,19 +91,25 @@ describe('ProductsService', () => {
       taxRate: '8.25',
       taxable: true,
       isActive: true,
-    });
-    expect(repository.create).toHaveBeenCalledWith(4, 7, {
-      name: 'Consultation',
-      description: null,
-      sku: 'CONSULT',
-      price: '125.50',
-      currency: 'USD',
-      productType: 'one_time',
-      billingPeriod: null,
-      taxRate: '8.25',
-      taxable: true,
-      isActive: true,
-    });
+    }, 'product-create-key');
+    expect(repository.create).toHaveBeenCalledWith(
+      4,
+      7,
+      {
+        name: 'Consultation',
+        description: null,
+        sku: 'CONSULT',
+        price: '125.50',
+        currency: 'USD',
+        productType: 'one_time',
+        billingPeriod: null,
+        taxRate: '8.25',
+        taxable: true,
+        isActive: true,
+      },
+      'product-create-key',
+      expect.stringMatching(/^[a-f0-9]{64}$/),
+    );
   });
 
   it('requires a valid billing period for recurring products', async () => {
@@ -114,7 +122,7 @@ describe('ProductsService', () => {
         taxRate: '0',
         taxable: true,
         isActive: true,
-      }),
+      }, 'product-create-key'),
     ).rejects.toMatchObject({
       extensions: { reason: 'PRODUCT_BILLING_PERIOD_REQUIRED' },
     });
@@ -150,7 +158,7 @@ describe('ProductsService', () => {
         taxRate: '100.01',
         taxable: true,
         isActive: true,
-      }),
+      }, 'product-create-key'),
     ).rejects.toMatchObject({
       extensions: { reason: 'INVALID_PRODUCT_TAXRATE' },
     });
@@ -163,5 +171,31 @@ describe('ProductsService', () => {
     await expect(service.delete(4, 999)).rejects.toMatchObject({
       extensions: { code: 'NOT_FOUND' },
     });
+  });
+
+  it('rejects invalid, conflicting, and unavailable creation attempts', async () => {
+    const input = {
+      name: 'Consultation',
+      price: '125.50',
+      currency: 'USD',
+      productType: 'one_time',
+      taxRate: '0',
+      taxable: true,
+      isActive: true,
+    };
+    await expect(service.create(4, 7, input, 'unsafe key'))
+      .rejects.toMatchObject({
+        extensions: { reason: 'INVALID_IDEMPOTENCY_KEY' },
+      });
+    repository.create.mockResolvedValueOnce({ kind: 'idempotency_conflict' });
+    await expect(service.create(4, 7, input, 'product-create-key'))
+      .rejects.toMatchObject({
+        extensions: { reason: 'IDEMPOTENCY_KEY_REUSED' },
+      });
+    repository.create.mockResolvedValueOnce({ kind: 'result_unavailable' });
+    await expect(service.create(4, 7, input, 'product-create-key'))
+      .rejects.toMatchObject({
+        extensions: { reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE' },
+      });
   });
 });

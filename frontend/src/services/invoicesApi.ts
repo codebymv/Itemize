@@ -215,9 +215,10 @@ export const getProducts = async (
 
 export const createProduct = async (
     product: Partial<Product>,
-    organizationId?: number
+    organizationId: number,
+    idempotencyKey: string,
 ): Promise<Product> => {
-    return createProductViaGraphql(product, organizationId);
+    return createProductViaGraphql(product, organizationId, idempotencyKey);
 };
 
 export const updateProduct = async (

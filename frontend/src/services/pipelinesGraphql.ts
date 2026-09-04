@@ -127,8 +127,8 @@ const pipelineWorkspaceQuery = `
 `;
 
 const createPipelineMutation = `
-  mutation CreatePipeline($input: CreatePipelineInput!) {
-    createPipeline(input: $input) { ${pipelineFields} }
+  mutation CreatePipeline($input: CreatePipelineInput!, $idempotencyKey: String!) {
+    createPipeline(input: $input, idempotencyKey: $idempotencyKey) { ${pipelineFields} }
   }
 `;
 
@@ -330,13 +330,14 @@ export const getPipelineWorkspaceViaGraphql = async (
 
 export const createPipelineViaGraphql = async (
   data: CreatePipelineData,
+  idempotencyKey: string,
 ): Promise<Pipeline> => {
   const response = await graphqlMutationRequest<
     { createPipeline: GraphqlPipeline },
-    { input: ReturnType<typeof mapPipelineInput> }
+    { input: ReturnType<typeof mapPipelineInput>; idempotencyKey: string }
   >(
     createPipelineMutation,
-    { input: mapPipelineInput(data) },
+    { input: mapPipelineInput(data), idempotencyKey },
     data.organization_id,
   );
   return mapPipeline(response.createPipeline);

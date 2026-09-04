@@ -40,6 +40,7 @@ import { AvailabilitySettingRow } from '@/components/settings/SettingsPrimitives
 import { useToast } from '@/hooks/use-toast';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
+import { useStableMutationKey } from '@/hooks/useStableMutationKey';
 import { PageLayout } from '@/components/layout/PageLayout';
 import {
     HeaderAction,
@@ -62,7 +63,10 @@ import {
     deleteProduct,
     Product,
 } from '@/services/invoicesApi';
-import { getProductPageViaGraphql } from '@/services/productsGraphql';
+import {
+    getProductPageViaGraphql,
+    type ProductListResponse,
+} from '@/services/productsGraphql';
 import { productQueryKeys } from '@/services/productQueryKeys';
 import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
@@ -135,6 +139,7 @@ export function ProductsPage() {
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
     const [formData, setFormData] = useState<ProductFormData>(defaultFormData);
     const { pending: saving, run: runSave, dismissIfIdle } = useSingleFlightAction();
+    const createAttempt = useStableMutationKey('product-create');
     const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
     useEffect(() => {
@@ -146,14 +151,15 @@ export function ProductsPage() {
         setPage(1);
     }, [debouncedSearch, statusFilter, typeFilter]);
 
+    const productPageQueryKey = productQueryKeys.page(organizationId, {
+        search: debouncedSearch,
+        status: statusFilter,
+        type: typeFilter,
+        page,
+        limit: PAGE_SIZE,
+    });
     const productsQuery = useQuery({
-        queryKey: productQueryKeys.page(organizationId, {
-            search: debouncedSearch,
-            status: statusFilter,
-            type: typeFilter,
-            page,
-            limit: PAGE_SIZE,
-        }),
+        queryKey: productPageQueryKey,
         queryFn: ({ signal }) => getProductPageViaGraphql({
             page,
             limit: PAGE_SIZE,
@@ -211,21 +217,99 @@ export function ProductsPage() {
         if (!organizationId || !formData.name) return;
 
         await runSave(async () => {
-            try {
-                if (editingProduct) {
+            if (editingProduct) {
+                try {
                     await updateProduct(editingProduct.id, formData, organizationId);
-                    toast({ title: 'Updated', description: 'Product updated successfully' });
-                } else {
-                    await createProduct(formData, organizationId);
-                    toast({ title: 'Created', description: 'Product created successfully' });
+                } catch {
+                    toast({ title: 'Error', description: 'Failed to save product', variant: 'destructive' });
+                    return;
                 }
-                setDialogOpen(false);
-                await queryClient.invalidateQueries({ queryKey: productQueryKeys.all(organizationId) });
-            } catch {
-                toast({ title: 'Error', description: 'Failed to save product', variant: 'destructive' });
+                toast({ title: 'Updated', description: 'Product updated successfully' });
+            } else {
+                const signature = JSON.stringify({
+                    organizationId,
+                    name: formData.name.trim(),
+                    description: formData.description.trim() || null,
+                    sku: formData.sku.trim() || null,
+                    price: String(formData.price),
+                    currency: formData.currency.trim().toUpperCase(),
+                    productType: formData.product_type,
+                    billingPeriod: formData.product_type === 'recurring'
+                        ? (formData.billing_period ?? 'monthly')
+                        : null,
+                    taxRate: String(formData.tax_rate),
+                    taxable: formData.taxable,
+                    isActive: formData.is_active,
+                });
+                const idempotencyKey = createAttempt.begin(signature);
+                if (!idempotencyKey) return;
+                let created: Product;
+                try {
+                    created = await createProduct(formData, organizationId, idempotencyKey);
+                } catch {
+                    createAttempt.release();
+                    toast({ title: 'Error', description: 'Failed to save product', variant: 'destructive' });
+                    return;
+                }
+                createAttempt.reset();
+                const normalizedSearch = debouncedSearch.toLowerCase();
+                const matchesCurrentPage = Boolean(
+                    (statusFilter === 'all'
+                        || created.is_active === (statusFilter === 'active'))
+                    && (typeFilter === 'all' || created.product_type === typeFilter)
+                    && (!normalizedSearch
+                        || created.name.toLowerCase().includes(normalizedSearch)
+                        || created.sku?.toLowerCase().includes(normalizedSearch))
+                );
+                queryClient.setQueryData<ProductListResponse>(
+                    productPageQueryKey,
+                    (current) => {
+                        if (!current) return current;
+                        const matchingTotal = current.pagination.total
+                            + Number(matchesCurrentPage);
+                        const nextProducts = matchesCurrentPage && page === 1
+                            ? [
+                                created,
+                                ...current.products.filter((product) => product.id !== created.id),
+                            ]
+                                .sort((left, right) => left.name.localeCompare(right.name))
+                                .slice(0, current.pagination.limit)
+                            : current.products;
+                        return {
+                            products: nextProducts,
+                            pagination: {
+                                ...current.pagination,
+                                total: matchingTotal,
+                                totalPages: matchingTotal === 0
+                                    ? 0
+                                    : Math.ceil(matchingTotal / current.pagination.limit),
+                            },
+                            stats: {
+                                ...current.stats,
+                                total: current.stats.total + 1,
+                                active: current.stats.active + Number(created.is_active),
+                                inactive: current.stats.inactive + Number(!created.is_active),
+                                oneTime: current.stats.oneTime
+                                    + Number(created.product_type === 'one_time'),
+                                recurring: current.stats.recurring
+                                    + Number(created.product_type === 'recurring'),
+                            },
+                        };
+                    },
+                );
+                toast({ title: 'Created', description: 'Product created successfully' });
             }
+            setDialogOpen(false);
+            void queryClient.invalidateQueries({
+                queryKey: productQueryKeys.all(organizationId),
+            });
         });
     };
+
+    const closeProductDialog = () => dismissIfIdle(() => {
+        createAttempt.reset();
+        setDialogOpen(false);
+    });
 
     const handleDelete = async (): Promise<boolean> => {
         if (!organizationId || !productToDelete) return false;
@@ -516,7 +600,7 @@ export function ProductsPage() {
 
             <Dialog open={dialogOpen} onOpenChange={(open) => {
                 if (open) setDialogOpen(true);
-                else dismissIfIdle(() => setDialogOpen(false));
+                else closeProductDialog();
             }}>
                 <ModalContent size="md">
                     <ModalHeader
@@ -635,7 +719,7 @@ export function ProductsPage() {
                         </div>
                     </ModalBody>
                     <ModalFooter>
-                        <Button variant="outline" onClick={() => dismissIfIdle(() => setDialogOpen(false))} disabled={saving}>
+                        <Button variant="outline" onClick={closeProductDialog} disabled={saving}>
                             Cancel
                         </Button>
                         <Button

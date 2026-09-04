@@ -53,8 +53,11 @@ export interface CreatePipelineData {
   organization_id?: number;
 }
 
-export const createPipeline = async (data: CreatePipelineData): Promise<Pipeline> => {
-  return createPipelineViaGraphql(data);
+export const createPipeline = async (
+  data: CreatePipelineData,
+  idempotencyKey: string,
+): Promise<Pipeline> => {
+  return createPipelineViaGraphql(data, idempotencyKey);
 };
 
 export const updatePipeline = async (id: number, data: Partial<CreatePipelineData>): Promise<Pipeline> => {

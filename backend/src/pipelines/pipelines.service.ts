@@ -16,6 +16,10 @@ import {
   PipelinesRepository,
   UpdatePipelineValues,
 } from './pipelines.repository';
+import {
+  pipelineCreationFingerprint,
+  pipelineCreationKey,
+} from './pipeline-creation.idempotency';
 
 const COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
 const DEFAULT_STAGE_COLOR = '#6B7280';
@@ -78,20 +82,45 @@ export class PipelinesService {
     organizationId: number,
     userId: number,
     input: CreatePipelineInput,
+    idempotencyKey: string,
   ): Promise<Pipeline> {
+    const providedStages = input.stages
+      ? this.stages(input.stages)
+      : null;
     const values: CreatePipelineValues = {
       name: this.name(input.name),
       description: this.description(input.description),
-      stages: input.stages
-        ? this.stages(input.stages)
-        : this.defaultStages(),
+      stages: providedStages ?? this.defaultStages(),
       isDefault: input.isDefault ?? false,
     };
     try {
-      return this.mapPipeline(
-        await this.pipelines.create(organizationId, userId, values),
-        [],
+      const outcome = await this.pipelines.create(
+        organizationId,
+        userId,
+        values,
+        pipelineCreationKey(idempotencyKey),
+        pipelineCreationFingerprint({
+          name: values.name,
+          description: values.description,
+          isDefault: values.isDefault,
+          stages: providedStages ?? 'itemize-default-stages-v1',
+        }),
       );
+      if (outcome.kind === 'idempotency_conflict') {
+        throw itemizeGraphqlError(
+          'idempotencyKey was already used for a different pipeline creation request',
+          'CONFLICT',
+          { field: 'idempotencyKey', reason: 'IDEMPOTENCY_KEY_REUSED' },
+        );
+      }
+      if (outcome.kind === 'result_unavailable') {
+        throw itemizeGraphqlError(
+          'The pipeline created by this request is no longer available',
+          'CONFLICT',
+          { field: 'idempotencyKey', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE' },
+        );
+      }
+      return this.mapPipeline(outcome.row, []);
     } catch (error) {
       this.rethrow(error);
     }

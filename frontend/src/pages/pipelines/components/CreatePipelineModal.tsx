@@ -31,6 +31,7 @@ import {
   type CreatePipelineFormValues,
 } from '@/lib/formSchemas';
 import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
+import { useStableMutationKey } from '@/hooks/useStableMutationKey';
 
 const getApiErrorMessage = (error: unknown, fallback: string): string => {
   const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
@@ -54,6 +55,7 @@ export function CreatePipelineModal({
 }: CreatePipelineModalProps) {
   const { toast } = useToast();
   const { pending: loading, run, dismissIfIdle } = useSingleFlightAction();
+  const createAttempt = useStableMutationKey('pipeline-create');
   const isEditing = Boolean(pipeline);
   const form = useForm<CreatePipelineFormValues>({
     resolver: zodResolver(createPipelineFormSchema),
@@ -89,6 +91,7 @@ export function CreatePipelineModal({
 
   const handleSubmit = async (values: CreatePipelineFormValues) => {
     await run(async () => {
+      let savedPipeline: Pipeline;
       try {
         const payload = {
           name: values.name.trim(),
@@ -97,7 +100,7 @@ export function CreatePipelineModal({
           organization_id: organizationId,
         };
         if (pipeline) {
-          const updatedPipeline = await updatePipeline(pipeline.id, {
+          savedPipeline = await updatePipeline(pipeline.id, {
             ...payload,
             stages: values.stages.map((stage, order) => ({
               ...stage,
@@ -106,10 +109,17 @@ export function CreatePipelineModal({
               order,
             })),
           });
-          onUpdated?.(updatedPipeline);
         } else {
-          const createdPipeline = await createPipeline(payload);
-          onCreated(createdPipeline);
+          const signature = JSON.stringify(payload);
+          const idempotencyKey = createAttempt.begin(signature);
+          if (!idempotencyKey) return;
+          try {
+            savedPipeline = await createPipeline(payload, idempotencyKey);
+          } catch (error) {
+            createAttempt.release();
+            throw error;
+          }
+          createAttempt.reset();
         }
       } catch (error) {
         console.error(`Error ${isEditing ? 'updating' : 'creating'} pipeline:`, error);
@@ -121,12 +131,20 @@ export function CreatePipelineModal({
           ),
           variant: 'destructive',
         });
+        return;
       }
+      if (pipeline) onUpdated?.(savedPipeline);
+      else onCreated(savedPipeline);
     });
   };
 
+  const close = () => dismissIfIdle(() => {
+    createAttempt.reset();
+    onClose();
+  });
+
   return (
-    <Dialog open onOpenChange={(open) => !open && dismissIfIdle(onClose)}>
+    <Dialog open onOpenChange={(open) => !open && close()}>
       <DialogContent className="sm:max-w-[450px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -282,7 +300,7 @@ export function CreatePipelineModal({
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => dismissIfIdle(onClose)} disabled={loading} style={{ fontFamily: '"Raleway", sans-serif' }} aria-label="Cancel">
+            <Button type="button" variant="outline" onClick={close} disabled={loading} style={{ fontFamily: '"Raleway", sans-serif' }} aria-label="Cancel">
               Cancel
             </Button>
             <Button 

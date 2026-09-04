@@ -54,11 +54,15 @@ describe('product API transport selection', () => {
     vi.mocked(updateProductViaGraphql).mockResolvedValue(product);
     vi.mocked(deleteProductViaGraphql).mockResolvedValue({ success: true });
     await getProducts({}, 4);
-    await createProduct(product, 4);
+    await createProduct(product, 4, 'product-create-key');
     await updateProduct(9, { name: 'Retainer' }, 4);
     await deleteProduct(9, 4);
     expect(getProductsViaGraphql).toHaveBeenCalledWith({}, 4);
-    expect(createProductViaGraphql).toHaveBeenCalledWith(product, 4);
+    expect(createProductViaGraphql).toHaveBeenCalledWith(
+      product,
+      4,
+      'product-create-key',
+    );
     expect(updateProductViaGraphql).toHaveBeenCalledWith(
       9,
       { name: 'Retainer' },

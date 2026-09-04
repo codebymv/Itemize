@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { Pool } from 'pg';
+import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
 
 export type ProductRow = {
@@ -34,6 +34,11 @@ export type ProductValues = {
 };
 
 export type ProductUpdates = Partial<ProductValues>;
+
+export type CreateProductOutcome =
+  | { kind: 'created'; row: ProductRow; replayed: boolean }
+  | { kind: 'idempotency_conflict' }
+  | { kind: 'result_unavailable' };
 
 export type ProductCriteria = {
   organizationId: number;
@@ -144,29 +149,69 @@ export class ProductsRepository {
     organizationId: number,
     userId: number,
     values: ProductValues,
-  ): Promise<ProductRow> {
-    const result = await this.pool.query<ProductRow>(
-      `INSERT INTO products (
-         organization_id, name, description, sku, price, currency,
-         product_type, billing_period, tax_rate, taxable, is_active, created_by
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-       RETURNING ${productSelection}`,
-      [
-        organizationId,
-        values.name,
-        values.description,
-        values.sku,
-        values.price,
-        values.currency,
-        values.productType,
-        values.billingPeriod,
-        values.taxRate,
-        values.taxable,
-        values.isActive,
-        userId,
-      ],
-    );
-    return result.rows[0];
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<CreateProductOutcome> {
+    return this.transaction(async (client) => {
+      await client.query('SELECT pg_advisory_xact_lock($1)', [organizationId]);
+      const receipt = await client.query<{
+        request_fingerprint: string;
+        result_product_id: number | null;
+      }>(
+        `SELECT request_fingerprint, result_product_id
+         FROM product_creation_receipts
+         WHERE organization_id = $1 AND idempotency_key = $2
+         FOR UPDATE`,
+        [organizationId, idempotencyKey],
+      );
+      const replay = receipt.rows[0];
+      if (replay) {
+        if (replay.request_fingerprint !== requestFingerprint) {
+          return { kind: 'idempotency_conflict' };
+        }
+        if (replay.result_product_id === null) {
+          return { kind: 'result_unavailable' };
+        }
+        const row = await this.selectById(
+          client,
+          organizationId,
+          Number(replay.result_product_id),
+        );
+        return row
+          ? { kind: 'created', row, replayed: true }
+          : { kind: 'result_unavailable' };
+      }
+      const result = await client.query<ProductRow>(
+        `INSERT INTO products (
+           organization_id, name, description, sku, price, currency,
+           product_type, billing_period, tax_rate, taxable, is_active, created_by
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+         RETURNING ${productSelection}`,
+        [
+          organizationId,
+          values.name,
+          values.description,
+          values.sku,
+          values.price,
+          values.currency,
+          values.productType,
+          values.billingPeriod,
+          values.taxRate,
+          values.taxable,
+          values.isActive,
+          userId,
+        ],
+      );
+      const row = result.rows[0];
+      await client.query(
+        `INSERT INTO product_creation_receipts (
+           organization_id, requested_by_user_id, idempotency_key,
+           request_fingerprint, result_product_id
+         ) VALUES ($1,$2,$3,$4,$5)`,
+        [organizationId, userId, idempotencyKey, requestFingerprint, row.id],
+      );
+      return { kind: 'created', row, replayed: false };
+    });
   }
 
   async update(
@@ -220,5 +265,36 @@ export class ProductsRepository {
       [productId, organizationId],
     );
     return result.rows.length === 1;
+  }
+
+  private async selectById(
+    client: PoolClient,
+    organizationId: number,
+    productId: number,
+  ): Promise<ProductRow | null> {
+    const result = await client.query<ProductRow>(
+      `SELECT ${productSelection}
+       FROM products
+       WHERE id = $1 AND organization_id = $2`,
+      [productId, organizationId],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  private async transaction<T>(
+    operation: (client: PoolClient) => Promise<T>,
+  ): Promise<T> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      const result = await operation(client);
+      await client.query('COMMIT');
+      return result;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 }

@@ -68,6 +68,11 @@ export type UpdatePipelineOutcome =
   | { kind: 'not_found' }
   | { kind: 'stage_in_use'; stageIds: string[] };
 
+export type CreatePipelineOutcome =
+  | { kind: 'created'; row: PipelineRow; replayed: boolean }
+  | { kind: 'idempotency_conflict' }
+  | { kind: 'result_unavailable' };
+
 export type DeletePipelineOutcome =
   | { kind: 'deleted' }
   | { kind: 'not_found' }
@@ -163,8 +168,38 @@ export class PipelinesRepository {
     organizationId: number,
     userId: number,
     values: CreatePipelineValues,
-  ): Promise<PipelineRow> {
+    idempotencyKey: string,
+    requestFingerprint: string,
+  ): Promise<CreatePipelineOutcome> {
     return this.transaction(async (client) => {
+      await client.query('SELECT pg_advisory_xact_lock($1)', [organizationId]);
+      const receipt = await client.query<{
+        request_fingerprint: string;
+        result_pipeline_id: number | null;
+      }>(
+        `SELECT request_fingerprint, result_pipeline_id
+         FROM pipeline_creation_receipts
+         WHERE organization_id = $1 AND idempotency_key = $2
+         FOR UPDATE`,
+        [organizationId, idempotencyKey],
+      );
+      const replay = receipt.rows[0];
+      if (replay) {
+        if (replay.request_fingerprint !== requestFingerprint) {
+          return { kind: 'idempotency_conflict' };
+        }
+        if (replay.result_pipeline_id === null) {
+          return { kind: 'result_unavailable' };
+        }
+        const row = await this.selectById(
+          client,
+          organizationId,
+          Number(replay.result_pipeline_id),
+        );
+        return row
+          ? { kind: 'created', row, replayed: true }
+          : { kind: 'result_unavailable' };
+      }
       if (values.isDefault) {
         await this.clearOtherDefaults(client, organizationId);
       }
@@ -188,7 +223,14 @@ export class PipelinesRepository {
         Number(inserted.rows[0].id),
       );
       if (!row) throw new Error('Pipeline disappeared inside its transaction');
-      return row;
+      await client.query(
+        `INSERT INTO pipeline_creation_receipts (
+           organization_id, requested_by_user_id, idempotency_key,
+           request_fingerprint, result_pipeline_id
+         ) VALUES ($1,$2,$3,$4,$5)`,
+        [organizationId, userId, idempotencyKey, requestFingerprint, row.id],
+      );
+      return { kind: 'created', row, replayed: false };
     });
   }
 

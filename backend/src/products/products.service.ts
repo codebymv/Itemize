@@ -13,6 +13,10 @@ import {
   ProductUpdates,
   ProductValues,
 } from './products.repository';
+import {
+  productCreationFingerprint,
+  productCreationKey,
+} from './product-creation.idempotency';
 
 const MONEY = /^(?:0|[1-9]\d{0,7})(?:\.\d{1,2})?$/;
 const TAX_RATE = /^(?:(?:0|[1-9]\d?)(?:\.\d{1,2})?|100(?:\.0{1,2})?)$/;
@@ -65,6 +69,7 @@ export class ProductsService {
     organizationId: number,
     userId: number,
     input: CreateProductInput,
+    idempotencyKey: string,
   ): Promise<Product> {
     const productType = this.productType(input.productType);
     const billingPeriod = this.billingPeriod(
@@ -84,9 +89,28 @@ export class ProductsService {
       taxable: input.taxable,
       isActive: input.isActive,
     };
-    return this.map(
-      await this.products.create(organizationId, userId, values),
+    const outcome = await this.products.create(
+      organizationId,
+      userId,
+      values,
+      productCreationKey(idempotencyKey),
+      productCreationFingerprint(values),
     );
+    if (outcome.kind === 'idempotency_conflict') {
+      throw itemizeGraphqlError(
+        'idempotencyKey was already used for a different product creation request',
+        'CONFLICT',
+        { field: 'idempotencyKey', reason: 'IDEMPOTENCY_KEY_REUSED' },
+      );
+    }
+    if (outcome.kind === 'result_unavailable') {
+      throw itemizeGraphqlError(
+        'The product created by this request is no longer available',
+        'CONFLICT',
+        { field: 'idempotencyKey', reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE' },
+      );
+    }
+    return this.map(outcome.row);
   }
 
   async update(

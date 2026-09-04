@@ -121,7 +121,7 @@ describe('product GraphQL consumer', () => {
       name: 'Retainer',
       price: 1200.5,
       product_type: 'recurring',
-    });
+    }, 4, 'product-create-key');
     await updateProductViaGraphql(9, {
       description: '',
       tax_rate: 8.25,
@@ -140,6 +140,7 @@ describe('product GraphQL consumer', () => {
       productType: 'recurring',
       billingPeriod: 'monthly',
     });
+    expect(bodies[0].variables.idempotencyKey).toBe('product-create-key');
     expect(bodies[1].variables).toEqual({
       id: 9,
       input: { description: null, taxRate: '8.25', isActive: false },

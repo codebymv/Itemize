@@ -179,26 +179,33 @@ describe('Product catalog GraphQL PostgreSQL contract', () => {
   });
 
   it('keeps GraphQL CRUD decimal-safe and authoritative in PostgreSQL', async () => {
-    const created = await graphql(
-      memberToken,
-      organizationId,
-      `mutation Create($input: CreateProductInput!) {
-        createProduct(input: $input) { ${fields} }
-      }`,
-      {
-        input: {
-          name: ' Monthly retainer ',
-          description: ' Priority support ',
-          sku: ' RETAINER ',
-          price: '1200.50',
-          currency: 'usd',
-          productType: 'recurring',
-          billingPeriod: 'monthly',
-          taxRate: '8.25',
-        },
+    const createMutation = `mutation Create(
+      $input: CreateProductInput!
+      $idempotencyKey: String!
+    ) {
+      createProduct(input: $input, idempotencyKey: $idempotencyKey) { ${fields} }
+    }`;
+    const createVariables = {
+      input: {
+        name: ' Monthly retainer ',
+        description: ' Priority support ',
+        sku: ' RETAINER ',
+        price: '1200.50',
+        currency: 'usd',
+        productType: 'recurring',
+        billingPeriod: 'monthly',
+        taxRate: '8.25',
       },
-    ).expect(200);
+      idempotencyKey: `product-retainer-${Date.now()}`,
+    };
+    const [created, replayed] = await Promise.all([
+      graphql(memberToken, organizationId, createMutation, createVariables),
+      graphql(memberToken, organizationId, createMutation, createVariables),
+    ]);
+    expect(created.status).toBe(200);
+    expect(replayed.status).toBe(200);
     expect(created.body.errors).toBeUndefined();
+    expect(replayed.body.errors).toBeUndefined();
     expect(created.body.data.createProduct).toMatchObject({
       organizationId,
       name: 'Monthly retainer',
@@ -211,6 +218,21 @@ describe('Product catalog GraphQL PostgreSQL contract', () => {
       taxRate: '8.25',
     });
     const id = Number(created.body.data.createProduct.id);
+    expect(Number(replayed.body.data.createProduct.id)).toBe(id);
+
+    const conflicting = await graphql(
+      memberToken,
+      organizationId,
+      createMutation,
+      {
+        ...createVariables,
+        input: { ...createVariables.input, name: 'Different product' },
+      },
+    ).expect(200);
+    expect(conflicting.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_KEY_REUSED',
+    });
 
     const stored = await pool.query<{
       id: number;
@@ -292,6 +314,17 @@ describe('Product catalog GraphQL PostgreSQL contract', () => {
       deletedId: id,
       success: true,
     });
+
+    const unavailable = await graphql(
+      memberToken,
+      organizationId,
+      createMutation,
+      createVariables,
+    ).expect(200);
+    expect(unavailable.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE',
+    });
   });
 
   it('enforces CSRF, validation, and tenant-hidden mutation outcomes', async () => {
@@ -299,7 +332,10 @@ describe('Product catalog GraphQL PostgreSQL contract', () => {
       memberToken,
       organizationId,
       `mutation {
-        createProduct(input: { name: "Denied", price: "10" }) { id }
+        createProduct(
+          input: { name: "Denied", price: "10" }
+          idempotencyKey: "product-no-csrf"
+        ) { id }
       }`,
       {},
       false,
@@ -309,8 +345,8 @@ describe('Product catalog GraphQL PostgreSQL contract', () => {
     const invalid = await graphql(
       memberToken,
       organizationId,
-      `mutation Create($input: CreateProductInput!) {
-        createProduct(input: $input) { id }
+      `mutation Create($input: CreateProductInput!, $idempotencyKey: String!) {
+        createProduct(input: $input, idempotencyKey: $idempotencyKey) { id }
       }`,
       {
         input: {
@@ -319,6 +355,7 @@ describe('Product catalog GraphQL PostgreSQL contract', () => {
           productType: 'recurring',
           taxRate: '100.01',
         },
+        idempotencyKey: `product-invalid-${Date.now()}`,
       },
     ).expect(200);
     expect(invalid.body.errors[0].extensions).toMatchObject({

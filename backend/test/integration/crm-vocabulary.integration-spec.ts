@@ -472,28 +472,35 @@ describe('Tag GraphQL and pipeline REST/GraphQL PostgreSQL parity', () => {
   });
 
   it('creates and updates normalized canonical stages with explicit null semantics', async () => {
-    const created = await mutation(
-      memberToken,
-      organizationId,
-      `mutation CreatePipeline($input: CreatePipelineInput!) {
-        createPipeline(input: $input) {
+    const createPipelineMutation = `mutation CreatePipeline(
+      $input: CreatePipelineInput!
+      $idempotencyKey: String!
+    ) {
+        createPipeline(input: $input, idempotencyKey: $idempotencyKey) {
           id name description isDefault
           stages { id name color order }
         }
-      }`,
-      {
-        input: {
-          name: '  Partner Sales  ',
-          description: '  channel  ',
-          stages: [
-            { id: ' incoming ', name: ' Incoming ', color: '#abcdef', order: 50 },
-            { id: 'review', name: 'Review', color: '#123456', order: 0 },
-          ],
-          isDefault: true,
-        },
+      }`;
+    const createVariables = {
+      input: {
+        name: '  Partner Sales  ',
+        description: '  channel  ',
+        stages: [
+          { id: ' incoming ', name: ' Incoming ', color: '#abcdef', order: 50 },
+          { id: 'review', name: 'Review', color: '#123456', order: 0 },
+        ],
+        isDefault: true,
       },
-    ).expect(200);
+      idempotencyKey: `pipeline-canonical-${Date.now()}`,
+    };
+    const [created, replayed] = await Promise.all([
+      mutation(memberToken, organizationId, createPipelineMutation, createVariables),
+      mutation(memberToken, organizationId, createPipelineMutation, createVariables),
+    ]);
+    expect(created.status).toBe(200);
+    expect(replayed.status).toBe(200);
     expect(created.body.errors).toBeUndefined();
+    expect(replayed.body.errors).toBeUndefined();
     expect(created.body.data.createPipeline).toMatchObject({
       name: 'Partner Sales',
       description: 'channel',
@@ -504,6 +511,21 @@ describe('Tag GraphQL and pipeline REST/GraphQL PostgreSQL parity', () => {
       ],
     });
     const createdId = created.body.data.createPipeline.id;
+    expect(replayed.body.data.createPipeline.id).toBe(createdId);
+
+    const conflicting = await mutation(
+      memberToken,
+      organizationId,
+      createPipelineMutation,
+      {
+        ...createVariables,
+        input: { ...createVariables.input, name: 'Different pipeline' },
+      },
+    ).expect(200);
+    expect(conflicting.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_KEY_REUSED',
+    });
 
     const updated = await mutation(
       memberToken,
@@ -547,21 +569,49 @@ describe('Tag GraphQL and pipeline REST/GraphQL PostgreSQL parity', () => {
       { stage_key: 'review', stage_order: 0 },
       { stage_key: 'incoming', stage_order: 1 },
     ]);
+
+    await mutation(
+      memberToken,
+      organizationId,
+      `mutation DeletePipeline($id: Int!) {
+        deletePipeline(id: $id) { deletedId }
+      }`,
+      { id: createdId },
+    ).expect(200);
+    const unavailable = await mutation(
+      memberToken,
+      organizationId,
+      createPipelineMutation,
+      createVariables,
+    ).expect(200);
+    expect(unavailable.body.errors[0].extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE',
+    });
   });
 
   it('serializes defaults and protects used stages and non-empty pipelines', async () => {
-    const createDefault = (name: string) =>
+    const createDefault = (name: string, idempotencyKey: string) =>
       mutation(
         memberToken,
         organizationId,
-        `mutation CreatePipeline($input: CreatePipelineInput!) {
-          createPipeline(input: $input) { id isDefault }
+        `mutation CreatePipeline($input: CreatePipelineInput!, $idempotencyKey: String!) {
+          createPipeline(input: $input, idempotencyKey: $idempotencyKey) { id isDefault }
         }`,
-        { input: { name, isDefault: true } },
+        { input: { name, isDefault: true }, idempotencyKey },
       );
+    const attempt = Date.now();
+    const duplicateDefaults = await Promise.all([
+      createDefault(`Concurrent duplicate ${attempt}`, `pipeline-default-same-${attempt}`),
+      createDefault(`Concurrent duplicate ${attempt}`, `pipeline-default-same-${attempt}`),
+    ]);
+    expect(duplicateDefaults.every((response) => !response.body.errors)).toBe(true);
+    expect(duplicateDefaults[0].body.data.createPipeline.id).toBe(
+      duplicateDefaults[1].body.data.createPipeline.id,
+    );
     const defaults = await Promise.all([
-      createDefault(`Concurrent A ${Date.now()}`),
-      createDefault(`Concurrent B ${Date.now()}`),
+      createDefault(`Concurrent A ${attempt}`, `pipeline-default-a-${attempt}`),
+      createDefault(`Concurrent B ${attempt}`, `pipeline-default-b-${attempt}`),
     ]);
     expect(defaults.every((response) => !response.body.errors)).toBe(true);
     const defaultCount = await pool.query<{ total: number }>(

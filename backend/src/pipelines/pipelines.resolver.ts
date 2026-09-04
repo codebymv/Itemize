@@ -42,8 +42,14 @@ export class PipelinesResolver {
   @Mutation(() => Pipeline)
   createPipeline(
     @Args('input') input: CreatePipelineInput,
+    @Args('idempotencyKey') idempotencyKey: string,
   ): Promise<Pipeline> {
-    return this.pipelines.create(this.organizationId(), this.userId(), input);
+    return this.pipelines.create(
+      this.organizationId(),
+      this.userId(),
+      input,
+      idempotencyKey,
+    );
   }
 
   @CsrfProtected()

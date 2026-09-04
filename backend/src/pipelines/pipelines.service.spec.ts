@@ -19,12 +19,13 @@ const pipelineRow = (
   updated_at: new Date('2026-01-01T00:00:00.000Z'),
 });
 
-describe('PipelinesService workspace', () => {
+describe('PipelinesService', () => {
   const defaultPipeline = pipelineRow(1, 'Default', true);
   const requestedPipeline = pipelineRow(2, 'Requested');
   const repository = {
     findAll: jest.fn(),
     findById: jest.fn(),
+    create: jest.fn(),
   };
   const service = new PipelinesService(
     repository as unknown as PipelinesRepository,
@@ -66,5 +67,53 @@ describe('PipelinesService workspace', () => {
       selectedPipeline: null,
     });
     expect(repository.findById).not.toHaveBeenCalled();
+  });
+
+  it('normalizes pipeline creation before claiming a durable attempt', async () => {
+    repository.create.mockResolvedValue({
+      kind: 'created', row: requestedPipeline, replayed: false,
+    });
+
+    await service.create(42, 7, {
+      name: ' Partner Sales ',
+      description: ' channel ',
+      stages: [
+        { id: ' incoming ', name: ' Incoming ', color: '#abcdef', order: 50 },
+      ],
+      isDefault: true,
+    }, 'pipeline-create-key');
+
+    expect(repository.create).toHaveBeenCalledWith(
+      42,
+      7,
+      {
+        name: 'Partner Sales',
+        description: 'channel',
+        stages: [
+          { id: 'incoming', name: 'Incoming', color: '#ABCDEF', order: 0 },
+        ],
+        isDefault: true,
+      },
+      'pipeline-create-key',
+      expect.stringMatching(/^[a-f0-9]{64}$/),
+    );
+  });
+
+  it('rejects invalid, conflicting, and unavailable creation attempts', async () => {
+    const input = { name: 'Sales' };
+    await expect(service.create(42, 7, input, 'unsafe key'))
+      .rejects.toMatchObject({
+        extensions: { reason: 'INVALID_IDEMPOTENCY_KEY' },
+      });
+    repository.create.mockResolvedValueOnce({ kind: 'idempotency_conflict' });
+    await expect(service.create(42, 7, input, 'pipeline-create-key'))
+      .rejects.toMatchObject({
+        extensions: { reason: 'IDEMPOTENCY_KEY_REUSED' },
+      });
+    repository.create.mockResolvedValueOnce({ kind: 'result_unavailable' });
+    await expect(service.create(42, 7, input, 'pipeline-create-key'))
+      .rejects.toMatchObject({
+        extensions: { reason: 'IDEMPOTENCY_RESULT_UNAVAILABLE' },
+      });
   });
 });

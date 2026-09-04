@@ -251,16 +251,17 @@ export const getProductsViaGraphql = async (
 
 export const createProductViaGraphql = async (
   product: Partial<Product>,
-  organizationId?: number,
+  organizationId: number,
+  idempotencyKey: string,
 ): Promise<Product> => {
   const data = await graphqlMutationRequest<
     { createProduct: GraphqlProduct },
-    { input: ReturnType<typeof mapCreateInput> }
+    { input: ReturnType<typeof mapCreateInput>; idempotencyKey: string }
   >(
-    `mutation CreateProduct($input: CreateProductInput!) {
-      createProduct(input: $input) { ${productFields} }
+    `mutation CreateProduct($input: CreateProductInput!, $idempotencyKey: String!) {
+      createProduct(input: $input, idempotencyKey: $idempotencyKey) { ${productFields} }
     }`,
-    { input: mapCreateInput(product) },
+    { input: mapCreateInput(product), idempotencyKey },
     organizationId,
   );
   return mapProduct(data.createProduct);

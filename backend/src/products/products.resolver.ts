@@ -30,11 +30,15 @@ export class ProductsResolver {
   @CsrfProtected()
   @OrganizationScoped()
   @Mutation(() => Product)
-  createProduct(@Args('input') input: CreateProductInput): Promise<Product> {
+  createProduct(
+    @Args('input') input: CreateProductInput,
+    @Args('idempotencyKey') idempotencyKey: string,
+  ): Promise<Product> {
     return this.productsService.create(
       this.organizationId(),
       this.userId(),
       input,
+      idempotencyKey,
     );
   }
 

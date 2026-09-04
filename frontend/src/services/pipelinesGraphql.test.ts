@@ -200,7 +200,7 @@ describe('pipeline GraphQL consumer', () => {
       stages: pipeline.stages,
       is_default: true,
       organization_id: 42,
-    });
+    }, 'pipeline-create-key');
     await updatePipelineViaGraphql(17, {
       description: null,
       is_default: false,
@@ -218,6 +218,7 @@ describe('pipeline GraphQL consumer', () => {
       stages: pipeline.stages,
       isDefault: true,
     });
+    expect(createRequest.variables.idempotencyKey).toBe('pipeline-create-key');
     const updateRequest = JSON.parse(
       String((vi.mocked(fetch).mock.calls[1][1] as RequestInit).body),
     );

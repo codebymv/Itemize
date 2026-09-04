@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CreatePipelineModal } from './CreatePipelineModal';
 
 const pipelinesApi = vi.hoisted(() => ({
@@ -13,6 +13,10 @@ vi.mock('@/hooks/use-toast', () => ({
 }));
 
 describe('CreatePipelineModal', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('shows pipeline-name validation inline', async () => {
     render(
       <CreatePipelineModal
@@ -55,5 +59,45 @@ describe('CreatePipelineModal', () => {
 
     expect(await screen.findByText('Stage name is required')).toBeInTheDocument();
     await waitFor(() => expect(pipelinesApi.updatePipeline).not.toHaveBeenCalled());
+  });
+
+  it('retains one creation key while retrying an ambiguous failure', async () => {
+    const created = {
+      id: 17,
+      organization_id: 42,
+      name: 'Partner Sales',
+      description: '',
+      is_default: false,
+      stages: [],
+      created_at: '2026-09-03T00:00:00.000Z',
+      updated_at: '2026-09-03T00:00:00.000Z',
+    };
+    const onCreated = vi.fn();
+    pipelinesApi.createPipeline
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce(created);
+    render(
+      <CreatePipelineModal
+        organizationId={42}
+        onClose={vi.fn()}
+        onCreated={onCreated}
+      />,
+    );
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'Pipeline Name' }), {
+      target: { value: ' Partner Sales ' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Create pipeline' }));
+    await waitFor(() => expect(pipelinesApi.createPipeline).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(
+      screen.getByRole('button', { name: 'Create pipeline' }),
+    ).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Create pipeline' }));
+
+    await waitFor(() => expect(onCreated).toHaveBeenCalledWith(created));
+    expect(pipelinesApi.createPipeline).toHaveBeenCalledTimes(2);
+    expect(pipelinesApi.createPipeline.mock.calls[1][1]).toBe(
+      pipelinesApi.createPipeline.mock.calls[0][1],
+    );
   });
 });

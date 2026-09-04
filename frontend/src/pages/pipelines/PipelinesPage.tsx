@@ -230,15 +230,51 @@ export function PipelinesPage() {
 
   // Handle pipeline created
   const handlePipelineCreated = (pipeline: Pipeline) => {
+    const openAsStacked = createPipelineAsStacked && activePipelineId !== null;
     setShowCreatePipelineModal(false);
     setEditingPipeline(null);
-    if (createPipelineAsStacked && activePipelineId !== null) {
+    if (openAsStacked) {
       setStackedPipelineIds((currentIds) => [...new Set([...currentIds, pipeline.id])]);
     } else {
       setSelectedPipelineId(pipeline.id);
     }
     setCreatePipelineAsStacked(false);
     if (organizationId) {
+      const reconcilePipelines = (currentPipelines: Pipeline[]) => {
+        const hasCreatedPipeline = currentPipelines.some(
+          (current) => current.id === pipeline.id,
+        );
+        const reconciled = currentPipelines.map((current) => {
+          if (current.id === pipeline.id) return pipeline;
+          return pipeline.is_default
+            ? { ...current, is_default: false }
+            : current;
+        });
+        return hasCreatedPipeline ? reconciled : [...reconciled, pipeline];
+      };
+      const reconciledPipelines = reconcilePipelines(
+        pipelineWorkspace?.pipelines ?? [],
+      );
+      queryClient.setQueriesData<PipelineWorkspace>(
+        { queryKey: ['pipeline-workspace', organizationId] },
+        (workspace) => workspace ? {
+          ...workspace,
+          pipelines: reconcilePipelines(workspace.pipelines),
+        } : workspace,
+      );
+      queryClient.setQueryData(
+        ['pipeline', organizationId, pipeline.id],
+        { ...pipeline, deals: [] },
+      );
+      if (!openAsStacked) {
+        queryClient.setQueryData<PipelineWorkspace>(
+          ['pipeline-workspace', organizationId, pipeline.id],
+          {
+            pipelines: reconciledPipelines,
+            selectedPipeline: { ...pipeline, deals: [] },
+          },
+        );
+      }
       void queryClient.invalidateQueries({
         queryKey: ['pipeline-workspace', organizationId],
       });
