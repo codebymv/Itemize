@@ -249,7 +249,9 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
           </div>
         </CardHeader>
 
+        <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 px-6">
         <CategorySelector
+          className="mb-0 px-0"
           currentCategory={whiteboard.category || ''}
           categoryColor={categoryColor}
           itemColor={whiteboard.color_value}
@@ -266,12 +268,14 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
           handleUpdateCategoryColor={handleUpdateCategoryColor}
         />
         <WorkspaceContactLink
+          className="mb-0 px-0"
           contactId={whiteboard.contact_id}
           contactName={whiteboard.contact_name}
           onChange={(contactId, contactName) =>
             onUpdate(whiteboard.id, { contact_id: contactId, contact_name: contactName })
           }
         />
+        </div>
 
         <CollapsibleContent className="flex-1">
           <div 

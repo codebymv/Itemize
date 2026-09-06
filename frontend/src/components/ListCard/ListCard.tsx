@@ -197,7 +197,9 @@ const ListCard: React.FC<ListCardProps> = ({
           isSavingColor={isSavingColor}     // New prop
         />
 
+        <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 px-6">
         <CategorySelector
+          className="mb-0 px-0"
           currentCategory={list.type}
           categoryColor={categoryColor}
           itemColor={list.color_value}
@@ -214,12 +216,14 @@ const ListCard: React.FC<ListCardProps> = ({
           handleUpdateCategoryColor={handleUpdateCategoryColor}
         />
         <WorkspaceContactLink
+          className="mb-0 px-0"
           contactId={list.contact_id}
           contactName={list.contact_name}
           onChange={(contactId, contactName) =>
             onUpdate({ ...list, contact_id: contactId, contact_name: contactName })
           }
         />
+        </div>
 
         <CollapsibleContent>
           <CardContent className="p-0">

@@ -235,7 +235,9 @@ const WireframeCard: React.FC<WireframeCardProps> = ({
           </div>
         </CardHeader>
 
+        <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 px-6">
         <CategorySelector
+          className="mb-0 px-0"
           currentCategory={wireframe.category || ''}
           categoryColor={categoryColor}
           itemColor={wireframe.color_value}
@@ -252,12 +254,14 @@ const WireframeCard: React.FC<WireframeCardProps> = ({
           handleUpdateCategoryColor={handleUpdateCategoryColor}
         />
         <WorkspaceContactLink
+          className="mb-0 px-0"
           contactId={wireframe.contact_id}
           contactName={wireframe.contact_name}
           onChange={(contactId, contactName) =>
             onUpdate(wireframe.id, { contact_id: contactId, contact_name: contactName })
           }
         />
+        </div>
 
         <CollapsibleContent className="flex-1 flex flex-col min-h-0">
           <div

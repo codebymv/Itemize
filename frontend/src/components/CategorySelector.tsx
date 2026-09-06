@@ -1,3 +1,4 @@
+import { cn } from '@/lib/utils';
 import React from 'react';
 import { X, Check } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,8 @@ interface CategorySelectorProps {
   handleEditCategory: (category: string) => void;
   handleAddCustomCategory: () => void;
   handleUpdateCategoryColor: (categoryName: string, newColor: string) => void;
+  /** Lets a parent row own the outer spacing when the selector shares a line. */
+  className?: string;
 }
 
 export const CategorySelector: React.FC<CategorySelectorProps> = ({
@@ -39,14 +42,15 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
   setShowNewCategoryInput,
   handleEditCategory,
   handleAddCustomCategory,
-  handleUpdateCategoryColor
+  handleUpdateCategoryColor,
+  className,
 }) => {
   const displayCategory = currentCategory && currentCategory !== '' ? currentCategory : 'General';
   const displayColor = displayCategory === 'General' ? UI_COLORS.neutralGray : (categoryColor || itemColor || UI_COLORS.neutralGray);
   const getContrastColor = () => '#ffffff';
 
   return (
-    <div className="mb-2 px-6 flex items-center gap-2" aria-busy={isSavingCategory}>
+    <div className={cn("mb-2 px-6 flex items-center gap-2", className)} aria-busy={isSavingCategory}>
       {isEditingCategory ? (
         <div className="mb-2 w-full">
           {showNewCategoryInput ? (

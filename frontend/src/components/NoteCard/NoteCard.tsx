@@ -267,7 +267,9 @@ const NoteCard: React.FC<NoteCardProps> = ({
           </div>
         </CardHeader>
 
+        <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 px-6">
         <CategorySelector
+          className="mb-0 px-0"
           currentCategory={note.category || ''}
           categoryColor={categoryColor}
           itemColor={note.color_value}
@@ -284,12 +286,14 @@ const NoteCard: React.FC<NoteCardProps> = ({
           handleUpdateCategoryColor={handleUpdateCategoryColor}
         />
         <WorkspaceContactLink
+          className="mb-0 px-0"
           contactId={note.contact_id}
           contactName={note.contact_name}
           onChange={(contactId, contactName) =>
             onUpdate(note.id, { contact_id: contactId, contact_name: contactName })
           }
         />
+        </div>
 
         <CollapsibleContent className="flex-1">
           <div
