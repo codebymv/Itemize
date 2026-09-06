@@ -129,6 +129,35 @@ describe('noteMentionSuggestion', () => {
     expect(run).toHaveBeenCalledTimes(1);
   });
 
+  it('lists frames on # with the current one last and moves the note on accept', async () => {
+    const moveTo = vi.fn();
+    const ctx = context({
+      canBind: false,
+      frames: {
+        frames: [
+          { id: 1, title: 'Sanchez kitchen', color_value: '#3B82F6' },
+          { id: 2, title: 'Spring campaign', color_value: '#10B981' },
+        ],
+        currentFrameId: 2,
+        moveTo,
+      },
+    });
+    await expect(mentionItems(ctx, '#', '')).resolves.toEqual([
+      expect.objectContaining({ kind: 'frame', id: 1, label: 'Sanchez kitchen', detail: null }),
+      expect.objectContaining({ kind: 'frame', id: 2, detail: 'Current frame' }),
+    ]);
+    await expect(mentionItems(context({ frames: undefined }), '#', '')).resolves.toEqual([]);
+
+    const { editor, calls } = chainSpy();
+    acceptMention(ctx, '#', {
+      editor,
+      range: { from: 4, to: 8 },
+      props: { kind: 'frame', id: 1, label: 'Sanchez kitchen', detail: null, initials: '#' },
+    });
+    expect(calls).toEqual([['focus', []], ['deleteRange', [{ from: 4, to: 8 }]], ['run', []]]);
+    expect(moveTo).toHaveBeenCalledWith(1);
+  });
+
   it('asks the right source per sigil, scoping money documents to the bound client', async () => {
     vi.mocked(fetchContactSuggestions).mockResolvedValue([casey]);
     vi.mocked(fetchMoneySuggestions).mockResolvedValue([invoice]);

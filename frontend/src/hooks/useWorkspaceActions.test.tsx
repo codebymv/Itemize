@@ -55,13 +55,13 @@ const wrapperWith = (canvas: WorkspaceCanvasActions | null) =>
 
 describe('useWorkspaceActions', () => {
   it('offers estimate promotion to lists and neighbours only on the canvas', () => {
-    const canvas = { createListNear: vi.fn(), createNoteNear: vi.fn() };
+    const canvas = { createListNear: vi.fn(), createNoteNear: vi.fn(), frames: [], moveCardToFrame: vi.fn() };
     const onCanvas = renderHook(
       () => useWorkspaceActions({ source: 'list', card: list }, { onShare: vi.fn() }),
       { wrapper: wrapperWith(canvas) },
     );
     expect(onCanvas.result.current.available).toEqual([
-      'turn-into-estimate', 'new-list', 'new-note', 'share', 'mention-client', 'reference-document',
+      'turn-into-estimate', 'new-list', 'new-note', 'share', 'mention-client', 'reference-document', 'move-to-frame',
     ]);
 
     const noteOffCanvas = renderHook(
@@ -97,7 +97,7 @@ describe('useWorkspaceActions', () => {
   });
 
   it('routes neighbours to the canvas with the card as anchor and share to the card', () => {
-    const canvas = { createListNear: vi.fn(), createNoteNear: vi.fn() };
+    const canvas = { createListNear: vi.fn(), createNoteNear: vi.fn(), frames: [], moveCardToFrame: vi.fn() };
     const onShare = vi.fn();
     const { result } = renderHook(
       () => useWorkspaceActions({ source: 'note', card: note }, { onShare }),

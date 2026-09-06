@@ -8,6 +8,7 @@ import { CategorySelector } from '../CategorySelector';
 import { WorkspaceContactLink } from '@/components/workspace/WorkspaceContactLink';
 import { useListMentionContext } from '@/hooks/useListMentionContext';
 import { useWorkspaceActions } from '@/hooks/useWorkspaceActions';
+import { useCardFrames } from '@/hooks/useCardFrames';
 import { ListItemRow } from './ListItemRow';
 import { ListProgressBar } from './ListProgressBar';
 import { ListItemAdd } from './ListItemAdd';
@@ -87,7 +88,8 @@ const ListCard: React.FC<ListCardProps> = ({
     onShare(list.id);
   }, [list.id, onShare]);
   const actions = useWorkspaceActions({ source: 'list', card: list }, { onShare: handleShareList });
-  const mention = useListMentionContext(list.contact_id, actions);
+  const frames = useCardFrames({ source: 'list', card: list });
+  const mention = useListMentionContext(list.contact_id, actions, frames);
 
   // Handle delete confirmation
   const handleDeleteConfirmation = () => {

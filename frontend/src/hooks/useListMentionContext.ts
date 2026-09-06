@@ -4,11 +4,13 @@ import type { MentionContext } from '@/components/workspace/MentionInput';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useOrganization } from '@/hooks/useOrganization';
 import type { WorkspaceActionSurface } from '@/lib/workspaceActions';
+import type { FrameSurface } from '@/lib/frameSuggestions';
 
-/** The `@`/`$`/`/` context a list card hands to its item inputs; same gate as the client chip. */
+/** The `@`/`$`/`/`/`#` context a list card hands to its item inputs; same gate as the client chip. */
 export const useListMentionContext = (
   contactId: number | null | undefined,
   actions?: WorkspaceActionSurface,
+  frames?: FrameSurface,
 ): MentionContext => {
   const { hasFeature } = useSubscription();
   const { organizationId } = useOrganization();
@@ -19,10 +21,11 @@ export const useListMentionContext = (
       organizationId,
       canBind,
       contactId: contactId ?? null,
-      triggers: ['@', '$', '/'] as const,
+      triggers: ['@', '$', '/', '#'] as const,
       actions,
+      frames,
       onUpgrade: () => navigate('/settings'),
     }),
-    [actions, canBind, contactId, navigate, organizationId],
+    [actions, canBind, contactId, frames, navigate, organizationId],
   );
 };

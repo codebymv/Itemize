@@ -6,13 +6,13 @@
  * for entities the owner may not reference, so the client never has to guess.
  */
 export type ReferenceEntityType = 'contact' | 'invoice' | 'estimate' | 'payment';
-export type MentionTriggerChar = '@' | '$' | '/';
+export type MentionTriggerChar = '@' | '$' | '/' | '#';
 
 const MENTION_TOKEN =
   /([@$])\[([^\]\n]{1,200})\]\((contact|invoice|estimate|payment):(\d{1,12})\)/g;
 
 /** A sigil plus a query with no whitespace, at the start or after whitespace, ending at the caret. */
-const TRIGGER_BEFORE_CARET = /(^|\s)([@$/])([^\s@$]{0,80})$/;
+const TRIGGER_BEFORE_CARET = /(^|\s)([@$/#])([^\s@$]{0,80})$/;
 
 const sigilFor = (entityType: ReferenceEntityType): MentionTriggerChar =>
   entityType === 'contact' ? '@' : '$';

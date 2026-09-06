@@ -5,6 +5,7 @@ import {
   containsCard,
   frameForCard,
   openSlotInFrame,
+  placeCardInFrame,
   shiftedPosition,
 } from './frameContainment';
 
@@ -35,6 +36,25 @@ describe('frameContainment', () => {
     expect(frameForCard([frame, above], card)?.id).toBe(2);
     expect(frameForCard([frame, { ...frame, id: 3 }], card)?.id).toBe(3);
     expect(frameForCard([frame], { position_x: 0, position_y: 0 })).toBeNull();
+  });
+
+  it('places a card in the first open slot, or grows the frame when it is full', () => {
+    const card = { position_x: 5000, position_y: 5000, width: 600, height: 420 };
+    expect(placeCardInFrame(frame, [], card)).toEqual({ position: { x: 1024, y: 1072 }, frame });
+
+    // Two rows of two fill a 1400x900 frame; the third row needs the frame to grow.
+    const full = [
+      { position_x: 1024, position_y: 1072, width: 600, height: 420 },
+      { position_x: 1648, position_y: 1072, width: 600, height: 420 },
+      { position_x: 1024, position_y: 1516, width: 600, height: 420 },
+      { position_x: 1648, position_y: 1516, width: 600, height: 420 },
+    ];
+    expect(openSlotInFrame(frame, full, { width: 600, height: 420 })).toBeNull();
+    const placed = placeCardInFrame(frame, full, card);
+    expect(placed?.frame.height).toBe(1404);
+    expect(placed?.position).toEqual({ x: 1024, y: 1960 });
+
+    expect(placeCardInFrame({ ...frame, width: 500 }, [], card)).toBeNull();
   });
 
   it('finds the first open slot below the header and skips occupied ones', () => {

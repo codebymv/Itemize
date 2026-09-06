@@ -62,6 +62,34 @@ export const shiftedPosition = (
   y: (card.position_y ?? 0) + delta.dy,
 });
 
+/**
+ * Where a card goes when it is sent into a frame: the first open slot, or a
+ * slot in a new row after the frame grows to make one. Null only when the
+ * frame is narrower than the card.
+ */
+export const placeCardInFrame = <F extends FrameRect>(
+  frame: F,
+  occupants: readonly CanvasPositionedItem[],
+  card: CanvasPositionedItem,
+  gap = 24,
+): { position: { x: number; y: number }; frame: F } | null => {
+  const size = {
+    width: card.width ?? card.canvas_width ?? DEFAULT_CARD_SIZE.width,
+    height: card.height ?? card.canvas_height ?? DEFAULT_CARD_SIZE.height,
+  };
+  if (frame.width < size.width + gap * 2) return null;
+  const slot = openSlotInFrame(frame, occupants, size, gap);
+  if (slot) return { position: slot, frame };
+  const bottom = occupants.reduce((max, item) => {
+    if (!containsCard(frame, item)) return max;
+    const height = item.height ?? item.canvas_height ?? DEFAULT_CARD_SIZE.height;
+    return Math.max(max, (item.position_y ?? 0) + height);
+  }, frame.position_y);
+  const grown = { ...frame, height: Math.max(frame.height, bottom + gap + size.height + gap - frame.position_y) };
+  const slotInGrown = openSlotInFrame(grown, occupants, size, gap);
+  return slotInGrown ? { position: slotInGrown, frame: grown } : null;
+};
+
 /** The first open slot inside a frame for a card of `size`, scanning rows from the top-left. */
 export const openSlotInFrame = (
   frame: FrameRect,

@@ -36,6 +36,7 @@ export const useWorkspaceActions = (
     if (source === 'list') available.push('turn-into-estimate');
     if (canvas) available.push('new-list', 'new-note');
     available.push('share', 'mention-client', 'reference-document');
+    if (canvas) available.push('move-to-frame');
 
     const run = (id: WorkspaceActionId) => {
       switch (id) {

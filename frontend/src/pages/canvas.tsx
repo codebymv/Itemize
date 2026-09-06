@@ -41,8 +41,10 @@ import { useCanvasFrames } from "./canvas/hooks/useCanvasFrames";
 import { createCanvasHeaderTools } from "./canvas/components/CanvasToolbar";
 import { MobileListView as CanvasMobileListView } from "./canvas/components/MobileListView";
 import { findOpenCanvasPosition, type CanvasPositionedItem } from "@/lib/canvasPosition";
+import { placeCardInFrame } from "@/lib/frameContainment";
 import {
   WorkspaceCanvasActionsProvider,
+  type CanvasCardRef,
   type WorkspaceCanvasActions,
 } from "@/components/workspace/WorkspaceCanvasActions";
 import { CANVAS_FOCUS_PARAM, parseCanvasFocus } from "@/lib/canvasFocus";
@@ -630,9 +632,62 @@ const CanvasPage: React.FC = () => {
         y: anchor.position_y ?? 0,
       },
     );
-  // Handed to every card through context, so it must not change identity per render.
-  const canvasActionsRef = useRef({ positionBeside, handleOpenNewListModal, handleOpenNewNoteModal });
-  canvasActionsRef.current = { positionBeside, handleOpenNewListModal, handleOpenNewNoteModal };
+  // `#` from a card: put it in the frame's first open slot (growing the frame by a
+  // row when it is full), then bring the canvas along so the card stays in view.
+  const moveCardToFrame = (card: CanvasCardRef, frameId: number) => {
+    const frame = frames.find((entry) => entry.id === frameId);
+    if (!frame) return;
+    const occupants = [...lists, ...notes, ...whiteboards, ...wireframes, ...vaults].filter(
+      (item) => !(String(item.id) === String(card.id) && item === (
+        card.type === "list" ? lists.find((l) => String(l.id) === String(card.id))
+        : card.type === "note" ? notes.find((n) => n.id === card.id)
+        : card.type === "whiteboard" ? whiteboards.find((w) => w.id === card.id)
+        : card.type === "wireframe" ? wireframes.find((w) => w.id === card.id)
+        : vaults.find((v) => v.id === card.id)
+      )),
+    );
+    const placed = placeCardInFrame(frame, occupants, card);
+    if (!placed) {
+      toast({
+        title: "Frame is too narrow",
+        description: `Widen "${frame.title}" so the card fits, then try again.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    if (placed.frame.height !== frame.height) {
+      moveFrame(frameId, { x: frame.position_x, y: frame.position_y }, { width: frame.width, height: placed.frame.height });
+    }
+    const { position } = placed;
+    switch (card.type) {
+      case "list":
+        // List ids are typed as strings but arrive as numbers; the state match is strict.
+        handleListPositionUpdate(card.id as string, position);
+        break;
+      case "note":
+        handleNotePositionUpdate(Number(card.id), position);
+        break;
+      case "whiteboard":
+        handleWhiteboardPositionUpdate(Number(card.id), position);
+        break;
+      case "wireframe":
+        handleWireframePositionChange(Number(card.id), position);
+        break;
+      case "vault":
+        handleVaultPositionChange(Number(card.id), position);
+        break;
+    }
+    const size = {
+      width: card.width ?? card.canvas_width ?? 600,
+      height: card.height ?? card.canvas_height ?? 420,
+    };
+    window.requestAnimationFrame(() => canvasMethodsRef.current?.focusPosition(position, size));
+  };
+
+  // Handed to every card through context, so it must not change identity per render
+  // (except when the frame list itself changes, which `#` needs to see).
+  const canvasActionsRef = useRef({ positionBeside, handleOpenNewListModal, handleOpenNewNoteModal, moveCardToFrame });
+  canvasActionsRef.current = { positionBeside, handleOpenNewListModal, handleOpenNewNoteModal, moveCardToFrame };
   const canvasActions = useMemo<WorkspaceCanvasActions>(() => ({
     createListNear: (anchor) => {
       const current = canvasActionsRef.current;
@@ -642,7 +697,9 @@ const CanvasPage: React.FC = () => {
       const current = canvasActionsRef.current;
       current.handleOpenNewNoteModal(current.positionBeside(anchor));
     },
-  }), []);
+    frames,
+    moveCardToFrame: (card, frameId) => canvasActionsRef.current.moveCardToFrame(card, frameId),
+  }), [frames]);
 
   const handleOpenNewWhiteboardModal = (position?: {
     x: number;

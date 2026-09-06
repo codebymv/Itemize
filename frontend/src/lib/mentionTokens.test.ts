@@ -50,6 +50,8 @@ describe('mentionTokens', () => {
     expect(findMentionTrigger('/sha', 4, ['@', '$', '/'])).toEqual({ start: 0, char: '/', query: 'sha' });
     expect(findMentionTrigger('/sha', 4)).toBeNull();
     expect(findMentionTrigger('and/or', 6, ['/'])).toBeNull();
+    expect(findMentionTrigger('Move #kit', 9, ['#'])).toEqual({ start: 5, char: '#', query: 'kit' });
+    expect(findMentionTrigger('Move #kit', 9)).toBeNull();
   });
 
   it('replaces the open trigger with nothing or with another sigil', () => {

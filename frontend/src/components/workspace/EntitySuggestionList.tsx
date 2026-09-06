@@ -4,6 +4,7 @@ import {
   DollarSign,
   FileText,
   ListChecks,
+  Frame,
   Share2,
   StickyNote,
   UserRound,
@@ -30,10 +31,12 @@ const ACTION_ICONS: Record<WorkspaceActionId, LucideIcon> = {
   share: Share2,
   'mention-client': AtSign,
   'reference-document': DollarSign,
+  'move-to-frame': Frame,
 };
 
 const RowGlyph: React.FC<{ item: EntitySuggestion }> = ({ item }) => {
   if (item.kind === 'contact') return <>{item.initials}</>;
+  if (item.kind === 'frame') return <Frame className="h-3.5 w-3.5" />;
   const Icon = item.kind === 'action' && item.action ? ACTION_ICONS[item.action] : UserRound;
   return <Icon className="h-3.5 w-3.5" />;
 };
@@ -111,6 +114,7 @@ export const EntitySuggestionList = forwardRef<EntitySuggestionListHandle, Entit
                   STATUS_THEME_CLASSES.blue.iconBackgroundClass,
                   STATUS_THEME_CLASSES.blue.iconClass,
                 )}
+                style={item.kind === 'frame' && item.color ? { color: item.color } : undefined}
                 aria-hidden="true"
               >
                 <RowGlyph item={item} />

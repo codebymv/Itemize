@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { CardHeader, CardTitle } from "@/components/ui/card";
 import { useWorkspaceActions } from '@/hooks/useWorkspaceActions';
+import { useCardFrames } from '@/hooks/useCardFrames';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -83,6 +84,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
     onShare(note.id);
   }, [note.id, onShare]);
   const actions = useWorkspaceActions({ source: 'note', card: note }, { onShare: handleShareNote });
+  const frames = useCardFrames({ source: 'note', card: note });
 
   // Handle delete confirmation
   const handleDeleteConfirmation = () => {
@@ -322,6 +324,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
               contactId={note.contact_id ?? null}
               references={note.references}
               actions={actions}
+              frames={frames}
               onLinkContact={(contactId, contactName) =>
                 onUpdate(note.id, { contact_id: contactId, contact_name: contactName })
               }

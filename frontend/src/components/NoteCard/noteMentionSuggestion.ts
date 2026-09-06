@@ -18,6 +18,7 @@ import {
   triggerForAction,
   type WorkspaceActionSurface,
 } from '@/lib/workspaceActions';
+import { frameSuggestions, type FrameSurface } from '@/lib/frameSuggestions';
 
 /**
  * Live values the suggestion plugins read at call time. The editor is created
@@ -29,6 +30,8 @@ export interface MentionContext {
   contactId: number | null;
   /** The card's `/` actions; without them `/` lists nothing. */
   actions?: WorkspaceActionSurface;
+  /** The canvas's frames for `#`; absent off the canvas. */
+  frames?: FrameSurface;
   onLinkContact?: (contactId: number, contactName: string) => Promise<unknown> | unknown;
   onUpgrade?: () => void;
 }
@@ -47,12 +50,14 @@ const LIST_LABELS: Record<MentionTriggerChar, { label: string; empty: string }> 
   '@': { label: 'Client suggestions', empty: 'No matching clients' },
   $: { label: 'Document suggestions', empty: 'No matching documents' },
   '/': { label: 'Actions', empty: 'No matching actions' },
+  '#': { label: 'Frames', empty: 'No frames yet — add one from the Add menu' },
 };
 
 const PLUGIN_KEYS: Record<MentionTriggerChar, string> = {
   '@': 'contactMentionSuggestion',
   $: 'moneyMentionSuggestion',
   '/': 'workspaceActionSuggestion',
+  '#': 'frameSuggestion',
 };
 
 /**
@@ -68,6 +73,11 @@ export const acceptMention = (
   if (props.kind === 'upgrade') {
     editor.chain().focus().deleteRange(range).run();
     context.onUpgrade?.();
+    return;
+  }
+  if (props.kind === 'frame') {
+    editor.chain().focus().deleteRange(range).run();
+    context.frames?.moveTo(props.id);
     return;
   }
   if (props.kind === 'action') {
@@ -102,6 +112,7 @@ export const mentionItems = async (
   query: string,
 ): Promise<EntitySuggestion[]> => {
   if (char === '/') return actionSuggestions(context.actions?.available ?? [], query);
+  if (char === '#') return context.frames ? frameSuggestions(context.frames, query) : [];
   if (!context.canBind || context.organizationId === null) return [upgradeSuggestion];
   return char === '$'
     ? fetchMoneySuggestions(query, context.organizationId, context.contactId)
@@ -158,10 +169,13 @@ export const createEntityMentionSuggestion = (
       emptyLabel: LIST_LABELS[char].empty,
     });
 
-    // A `/` with nothing behind it is text ("and /or", a path), not a request.
+    // A `/` or `#` with nothing behind it is text (a path, "#42"), not a request;
+    // a bare `#` still explains where frames come from.
     const showHost = (props: SuggestionProps<EntitySuggestion>) => {
       if (!host) return;
-      host.hidden = char === '/' && props.items.length === 0;
+      host.hidden = (char === '/' || char === '#')
+        && props.items.length === 0
+        && !(char === '#' && props.query === '');
       if (!host.hidden) placePopup(host, props.clientRect);
     };
 

@@ -13,7 +13,8 @@ export type WorkspaceActionId =
   | 'new-note'
   | 'share'
   | 'mention-client'
-  | 'reference-document';
+  | 'reference-document'
+  | 'move-to-frame';
 
 export interface WorkspaceActionDefinition {
   id: WorkspaceActionId;
@@ -40,12 +41,19 @@ export const WORKSPACE_ACTIONS: readonly WorkspaceActionDefinition[] = [
     detail: 'Same as typing $ — invoices, estimates, payments',
     keywords: ['reference', 'invoice', 'estimate', 'payment', 'document', 'money'],
   },
+  {
+    id: 'move-to-frame',
+    label: 'Move into a frame',
+    detail: 'Same as typing #',
+    keywords: ['frame', 'move', 'group', 'project'],
+  },
 ];
 
 /** The sigil an action stands in for, when it is only a door to another list. */
 export const triggerForAction = (id: WorkspaceActionId): MentionTriggerChar | null => {
   if (id === 'mention-client') return '@';
   if (id === 'reference-document') return '$';
+  if (id === 'move-to-frame') return '#';
   return null;
 };
 

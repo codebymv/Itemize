@@ -19,3 +19,17 @@ export const createWorkspaceActionsExtension = (contextRef: { current: MentionCo
       ];
     },
   });
+
+/** The `#` trigger: pick a frame and the note moves into it. Inserts nothing. */
+export const createFrameMentionExtension = (contextRef: { current: MentionContext }) =>
+  Extension.create({
+    name: 'frameMentions',
+    addProseMirrorPlugins() {
+      return [
+        Suggestion({
+          editor: this.editor,
+          ...createEntityMentionSuggestion('#', contextRef),
+        }),
+      ];
+    },
+  });

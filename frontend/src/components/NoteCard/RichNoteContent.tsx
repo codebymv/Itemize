@@ -25,7 +25,8 @@ import { createEntityMentionSuggestion, type MentionContext } from './noteMentio
 import { MoneyMention, REFERENCE_STATUS_META, ReferenceStatus } from './noteMoneyMention';
 import type { WorkspaceReference } from '@/types';
 import type { WorkspaceActionSurface } from '@/lib/workspaceActions';
-import { createWorkspaceActionsExtension } from './noteWorkspaceActions';
+import { createFrameMentionExtension, createWorkspaceActionsExtension } from './noteWorkspaceActions';
+import type { FrameSurface } from '@/lib/frameSuggestions';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { STATUS_THEME_CLASSES } from '@/lib/statusVisuals';
@@ -50,6 +51,8 @@ interface RichNoteContentProps {
   references?: WorkspaceReference[];
   /** The card's `/` actions. */
   actions?: WorkspaceActionSurface;
+  /** The canvas's frames for `#`. */
+  frames?: FrameSurface;
 }
 
 export const RichNoteContent: React.FC<RichNoteContentProps> = ({
@@ -67,6 +70,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
   onLinkContact,
   references,
   actions,
+  frames,
 }) => {
   const isUpdatingFromProps = useRef(false);
   const navigate = useNavigate();
@@ -83,6 +87,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
     canBind: hasFeature('contacts') && organizationId !== null,
     contactId,
     actions,
+    frames,
     onLinkContact,
     onUpgrade: () => navigate('/settings'),
   };
@@ -197,6 +202,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
       }),
       ReferenceStatus,
       createWorkspaceActionsExtension(mentionContextRef),
+      createFrameMentionExtension(mentionContextRef),
       AutocompleteExtension,
     ],
     content: '',

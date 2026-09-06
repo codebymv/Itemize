@@ -31,6 +31,7 @@ import {
   triggerForAction,
   type WorkspaceActionSurface,
 } from '@/lib/workspaceActions';
+import { frameSuggestions, type FrameSurface } from '@/lib/frameSuggestions';
 
 /** What a plain input needs to know to offer `@` clients, `$` money documents, and `/` actions. */
 export interface MentionContext {
@@ -42,6 +43,8 @@ export interface MentionContext {
   triggers?: readonly MentionTriggerChar[];
   /** The card's `/` actions; required for `/` to open anything. */
   actions?: WorkspaceActionSurface;
+  /** The canvas's frames for `#`; absent off the canvas. */
+  frames?: FrameSurface;
   onUpgrade?: () => void;
 }
 
@@ -49,6 +52,7 @@ const LIST_LABELS: Record<MentionTriggerChar, { label: string; empty: string }> 
   '@': { label: 'Client suggestions', empty: 'No matching clients' },
   $: { label: 'Document suggestions', empty: 'No matching documents' },
   '/': { label: 'Actions', empty: 'No matching actions' },
+  '#': { label: 'Frames', empty: 'No frames yet — add one from the Add menu' },
 };
 
 export interface MentionInputProps
@@ -79,6 +83,9 @@ const loadSuggestions = (
   mention: MentionContext,
   triggers: readonly MentionTriggerChar[],
 ): Promise<EntitySuggestion[]> => {
+  if (trigger.char === '#') {
+    return Promise.resolve(mention.frames ? frameSuggestions(mention.frames, trigger.query) : []);
+  }
   if (trigger.char === '/') {
     // A door action only makes sense where its sigil is offered.
     const available = (mention.actions?.available ?? []).filter((id) => {
@@ -114,8 +121,13 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
     const enabled = Boolean(mention);
     const open = enabled && trigger !== null;
     const triggers = mention?.triggers ?? DEFAULT_TRIGGERS;
-    // `/usr/bin` is a path, not a request: the action list only shows when something matches.
-    const visible = open && trigger !== null && (trigger.char !== '/' || rows.length > 0);
+    // `/usr/bin` is a path and `#42` is text: those lists only show when something matches,
+    // except a bare `#`, which explains where frames come from.
+    const visible = open && trigger !== null && (
+      (trigger.char !== '/' && trigger.char !== '#')
+      || rows.length > 0
+      || (trigger.char === '#' && trigger.query === '')
+    );
 
     const syncTrigger = useCallback((nextValue: string, caret: number | null) => {
       if (!enabled) return;
@@ -172,6 +184,14 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
         return;
       }
       const caret = inputRef.current?.selectionStart ?? value.length;
+      if (item.kind === 'frame') {
+        const next = replaceMentionTrigger(value, trigger, caret);
+        onValueChange(next.value);
+        setTrigger(null);
+        restoreCaret(next.caret);
+        mention?.frames?.moveTo(item.id);
+        return;
+      }
       if (item.kind === 'action') {
         const sigil = item.action ? triggerForAction(item.action) : null;
         const next = replaceMentionTrigger(value, trigger, caret, sigil ?? '');

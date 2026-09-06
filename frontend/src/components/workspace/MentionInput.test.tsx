@@ -125,6 +125,54 @@ describe('MentionInput', () => {
     expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual(['SharePublic link for this card']);
   });
 
+  it('lists frames on #, moves the card on Enter, and removes the typed text', async () => {
+    const moveTo = vi.fn();
+    render(<Harness mention={{
+      organizationId: 9,
+      canBind: true,
+      triggers: ['@', '#'],
+      frames: {
+        frames: [
+          { id: 1, title: 'Sanchez kitchen', color_value: '#3B82F6' },
+          { id: 2, title: 'Spring campaign', color_value: '#10B981' },
+        ],
+        currentFrameId: 1,
+        moveTo,
+      },
+    }} />);
+    const input = screen.getByLabelText('Add new item') as HTMLInputElement;
+
+    typeAt(input, 'Tile #');
+    await screen.findByRole('listbox', { name: 'Frames' });
+    // The current frame is listed last so Enter always moves somewhere new.
+    expect(screen.getAllByRole('option').map((option) => option.textContent))
+      .toEqual(['Spring campaign', 'Sanchez kitchenCurrent frame']);
+
+    typeAt(input, 'Tile #spr');
+    await screen.findByRole('option', { name: /Spring campaign/ });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(moveTo).toHaveBeenCalledWith(2);
+    await waitFor(() => expect(input.value).toBe('Tile '));
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  it('keeps #42 as text but explains a bare # when there are no frames', async () => {
+    render(<Harness mention={{
+      organizationId: 9,
+      canBind: true,
+      triggers: ['#'],
+      frames: { frames: [], currentFrameId: null, moveTo: vi.fn() },
+    }} />);
+    const input = screen.getByLabelText('Add new item') as HTMLInputElement;
+
+    typeAt(input, 'Ticket #42');
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+
+    typeAt(input, 'Ticket #');
+    expect(await screen.findByText('No frames yet — add one from the Add menu')).toBeInTheDocument();
+  });
+
   it('ignores $ on a surface that only offers clients', () => {
     render(<Harness mention={{ organizationId: 9, canBind: true }} />);
     typeAt(screen.getByLabelText('Add new item') as HTMLInputElement, 'costs $5');

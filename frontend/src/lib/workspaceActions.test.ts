@@ -23,6 +23,7 @@ describe('workspaceActions', () => {
     expect(actionSuggestions(all, 'turn').map((row) => row.action)).toEqual(['turn-into-estimate']);
     expect(actionSuggestions(all, 'SHA').map((row) => row.action)).toEqual(['share']);
     expect(actionSuggestions(all, 'inv').map((row) => row.action)).toEqual(['reference-document']);
+    expect(actionSuggestions(all, 'fra').map((row) => row.action)).toEqual(['move-to-frame']);
     expect(actionSuggestions(all, 'new-li').map((row) => row.action)).toEqual(['new-list']);
     expect(actionSuggestions(all, 'usr/bin')).toEqual([]);
   });
@@ -36,6 +37,7 @@ describe('workspaceActions', () => {
   it('maps the door actions to their sigils', () => {
     expect(triggerForAction('mention-client')).toBe('@');
     expect(triggerForAction('reference-document')).toBe('$');
+    expect(triggerForAction('move-to-frame')).toBe('#');
     expect(triggerForAction('share')).toBeNull();
   });
 

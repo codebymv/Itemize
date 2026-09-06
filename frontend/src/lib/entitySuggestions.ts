@@ -6,9 +6,9 @@ import type { ReferenceEntityType } from '@/lib/mentionTokens';
 import type { WorkspaceActionId } from '@/lib/workspaceActions';
 import type { Contact } from '@/types';
 
-/** One row in an inline trigger list: `@` clients, `$` money documents, `/` actions, or the upgrade row. */
+/** One row in an inline trigger list: `@` clients, `$` money documents, `/` actions, `#` frames, or the upgrade row. */
 export interface EntitySuggestion {
-  kind: ReferenceEntityType | 'upgrade' | 'action';
+  kind: ReferenceEntityType | 'upgrade' | 'action' | 'frame';
   id: number;
   label: string;
   detail: string | null;
@@ -16,6 +16,8 @@ export interface EntitySuggestion {
   status?: string | null;
   /** Set for `kind: 'action'` rows. */
   action?: WorkspaceActionId;
+  /** Set for `kind: 'frame'` rows: the frame's colour. */
+  color?: string;
 }
 
 export const SUGGESTION_LIMIT = 6;
