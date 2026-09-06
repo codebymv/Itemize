@@ -25,6 +25,8 @@ const listRow = (
   width: 340,
   height: 265,
   z_index: 0,
+  contact_id: null,
+  contact_name: null,
   share_token: null,
   is_public: false,
   shared_at: null,
@@ -48,6 +50,8 @@ const noteRow = (
   width: 200,
   height: 200,
   z_index: 1,
+  contact_id: null,
+  contact_name: null,
   share_token: null,
   is_public: false,
   shared_at: null,
@@ -71,6 +75,8 @@ const whiteboardRow = (
   position_x: 50,
   position_y: 60,
   z_index: 0,
+  contact_id: null,
+  contact_name: null,
   color_value: '#3B82F6',
   share_token: null,
   is_public: false,
@@ -98,6 +104,8 @@ const wireframeRow = (
   width: 600,
   height: 600,
   z_index: 0,
+  contact_id: null,
+  contact_name: null,
   color_value: '#3B82F6',
   share_token: null,
   is_public: false,
@@ -313,6 +321,7 @@ describe('WorkspaceContentService', () => {
       width: null,
       height: null,
       zIndex: 0,
+      contactId: null,
     }, creationKey, expect.any(String));
   });
 
@@ -379,6 +388,7 @@ describe('WorkspaceContentService', () => {
       positionY: 15.5,
       width: 340,
       height: 265,
+      contactId: null,
     }, creationKey, expect.any(String));
   });
 
@@ -603,6 +613,7 @@ describe('WorkspaceContentService', () => {
       positionY: 2000,
       zIndex: 0,
       colorValue: '#3B82F6',
+      contactId: null,
     }, creationKey, expect.any(String));
 
     await expect(
@@ -680,6 +691,7 @@ describe('WorkspaceContentService', () => {
       height: 600,
       zIndex: 0,
       colorValue: '#ABCDEF',
+      contactId: null,
     }, creationKey, expect.any(String));
 
     repository.updateWireframe.mockResolvedValue({

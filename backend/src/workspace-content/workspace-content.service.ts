@@ -289,6 +289,7 @@ export class WorkspaceContentService {
       height: input.height === undefined
         ? DEFAULT_LIST_HEIGHT
         : this.listDimension(input.height, 'height'),
+      contactId: this.contactIdInput(input.contactId),
     };
     try {
       const idempotencyKey = this.creationKey(input.idempotencyKey);
@@ -304,6 +305,9 @@ export class WorkspaceContentService {
       }
       if (outcome.kind === 'category_not_found') {
         throw this.listCategoryNotFound();
+      }
+      if (outcome.kind === 'contact_not_found') {
+        throw this.contactNotFound();
       }
       if (outcome.kind !== 'completed') {
         throw itemizeGraphqlError(
@@ -363,6 +367,9 @@ export class WorkspaceContentService {
     if (input.height !== undefined) {
       values.height = this.listDimension(input.height, 'height');
     }
+    if (input.contactId !== undefined) {
+      values.contactId = this.contactIdInput(input.contactId);
+    }
     if (Object.keys(values).length === 0) {
       throw itemizeGraphqlError(
         'Workspace list update must include at least one field',
@@ -381,6 +388,9 @@ export class WorkspaceContentService {
       if (outcome.kind === 'not_found') throw this.listNotFound();
       if (outcome.kind === 'category_not_found') {
         throw this.listCategoryNotFound();
+      }
+      if (outcome.kind === 'contact_not_found') {
+        throw this.contactNotFound();
       }
       if (outcome.kind === 'conflict') {
         throw itemizeGraphqlError(
@@ -450,6 +460,7 @@ export class WorkspaceContentService {
       zIndex: input.zIndex === undefined
         ? 0
         : this.integer(input.zIndex, 'zIndex'),
+      contactId: this.contactIdInput(input.contactId),
     };
     try {
       const idempotencyKey = this.creationKey(input.idempotencyKey);
@@ -464,6 +475,9 @@ export class WorkspaceContentService {
       }
       if (outcome.kind === 'category_not_found') {
         throw this.categoryNotFound();
+      }
+      if (outcome.kind === 'contact_not_found') {
+        throw this.contactNotFound();
       }
       if (outcome.kind !== 'completed') {
         throw itemizeGraphqlError(
@@ -516,6 +530,9 @@ export class WorkspaceContentService {
     if (input.zIndex !== undefined) {
       values.zIndex = this.integer(input.zIndex, 'zIndex');
     }
+    if (input.contactId !== undefined) {
+      values.contactId = this.contactIdInput(input.contactId);
+    }
     const keys = Object.keys(values);
     if (keys.length === 0) {
       throw itemizeGraphqlError(
@@ -543,6 +560,9 @@ export class WorkspaceContentService {
       if (outcome.kind === 'not_found') throw this.noteNotFound();
       if (outcome.kind === 'category_not_found') {
         throw this.categoryNotFound();
+      }
+      if (outcome.kind === 'contact_not_found') {
+        throw this.contactNotFound();
       }
       return this.mapNote(outcome.row);
     } catch (error) {
@@ -605,6 +625,7 @@ export class WorkspaceContentService {
       zIndex: input.zIndex === undefined
         ? 0
         : this.whiteboardInteger(input.zIndex, 'zIndex'),
+      contactId: this.contactIdInput(input.contactId),
       colorValue: input.colorValue === undefined
         ? '#3B82F6'
         : this.whiteboardOptionalColor(input.colorValue),
@@ -622,6 +643,9 @@ export class WorkspaceContentService {
       }
       if (outcome.kind === 'category_not_found') {
         throw this.whiteboardCategoryNotFound();
+      }
+      if (outcome.kind === 'contact_not_found') {
+        throw this.contactNotFound();
       }
       if (outcome.kind !== 'completed') {
         throw itemizeGraphqlError(
@@ -684,6 +708,9 @@ export class WorkspaceContentService {
     if (input.zIndex !== undefined) {
       values.zIndex = this.whiteboardInteger(input.zIndex, 'zIndex');
     }
+    if (input.contactId !== undefined) {
+      values.contactId = this.contactIdInput(input.contactId);
+    }
     if (input.colorValue !== undefined) {
       values.colorValue = this.whiteboardOptionalColor(input.colorValue);
     }
@@ -711,6 +738,9 @@ export class WorkspaceContentService {
       if (outcome.kind === 'not_found') throw this.whiteboardNotFound();
       if (outcome.kind === 'category_not_found') {
         throw this.whiteboardCategoryNotFound();
+      }
+      if (outcome.kind === 'contact_not_found') {
+        throw this.contactNotFound();
       }
       if (outcome.kind === 'conflict') {
         throw itemizeGraphqlError(
@@ -777,6 +807,7 @@ export class WorkspaceContentService {
       zIndex: input.zIndex === undefined
         ? 0
         : this.wireframeInteger(input.zIndex, 'zIndex'),
+      contactId: this.contactIdInput(input.contactId),
       colorValue: input.colorValue === undefined
         ? '#3B82F6'
         : this.wireframeColor(input.colorValue),
@@ -794,6 +825,9 @@ export class WorkspaceContentService {
       }
       if (outcome.kind === 'category_not_found') {
         throw this.wireframeCategoryNotFound();
+      }
+      if (outcome.kind === 'contact_not_found') {
+        throw this.contactNotFound();
       }
       if (outcome.kind !== 'completed') {
         throw itemizeGraphqlError(
@@ -844,6 +878,9 @@ export class WorkspaceContentService {
     if (input.zIndex !== undefined) {
       values.zIndex = this.wireframeInteger(input.zIndex, 'zIndex');
     }
+    if (input.contactId !== undefined) {
+      values.contactId = this.contactIdInput(input.contactId);
+    }
     if (input.colorValue !== undefined) {
       values.colorValue = this.wireframeColor(input.colorValue);
     }
@@ -871,6 +908,9 @@ export class WorkspaceContentService {
       if (outcome.kind === 'not_found') throw this.wireframeNotFound();
       if (outcome.kind === 'category_not_found') {
         throw this.wireframeCategoryNotFound();
+      }
+      if (outcome.kind === 'contact_not_found') {
+        throw this.contactNotFound();
       }
       if (outcome.kind === 'conflict') {
         throw itemizeGraphqlError(
@@ -1209,6 +1249,8 @@ export class WorkspaceContentService {
       width: row.width === null ? null : Number(row.width),
       height: row.height === null ? null : Number(row.height),
       zIndex: Number(row.z_index ?? 0),
+      contactId: row.contact_id === null ? null : Number(row.contact_id),
+      contactName: row.contact_name ?? null,
       shareToken: row.share_token,
       isPublic: Boolean(row.is_public),
       sharedAt: row.shared_at ? new Date(row.shared_at) : null,
@@ -1231,6 +1273,8 @@ export class WorkspaceContentService {
       width: row.width === null ? null : Number(row.width),
       height: row.height === null ? null : Number(row.height),
       zIndex: Number(row.z_index ?? 0),
+      contactId: row.contact_id === null ? null : Number(row.contact_id),
+      contactName: row.contact_name ?? null,
       shareToken: row.share_token,
       isPublic: Boolean(row.is_public),
       sharedAt: row.shared_at ? new Date(row.shared_at) : null,
@@ -1255,6 +1299,8 @@ export class WorkspaceContentService {
       positionX: Number(row.position_x ?? 0),
       positionY: Number(row.position_y ?? 0),
       zIndex: Number(row.z_index ?? 0),
+      contactId: row.contact_id === null ? null : Number(row.contact_id),
+      contactName: row.contact_name ?? null,
       colorValue: row.color_value,
       shareToken: row.share_token,
       isPublic: Boolean(row.is_public),
@@ -1281,6 +1327,8 @@ export class WorkspaceContentService {
       width: Number(row.width ?? 600),
       height: Number(row.height ?? 600),
       zIndex: Number(row.z_index ?? 0),
+      contactId: row.contact_id === null ? null : Number(row.contact_id),
+      contactName: row.contact_name ?? null,
       colorValue: row.color_value ?? '#3B82F6',
       shareToken: row.share_token,
       isPublic: Boolean(row.is_public),
@@ -1869,6 +1917,30 @@ export class WorkspaceContentService {
       'List category was not found',
       'BAD_USER_INPUT',
       { field: 'category', reason: 'LIST_CATEGORY_NOT_FOUND' },
+    );
+  }
+
+  /**
+   * Normalizes an optional contact reference. Ownership of the contact is
+   * verified inside the repository transaction, not here.
+   */
+  private contactIdInput(value: number | null | undefined): number | null {
+    if (value === undefined || value === null) return null;
+    if (!Number.isSafeInteger(value) || value < 1) {
+      throw itemizeGraphqlError(
+        'contactId must be a positive integer',
+        'BAD_USER_INPUT',
+        { field: 'contactId', reason: 'INVALID_CONTACT_ID' },
+      );
+    }
+    return value;
+  }
+
+  private contactNotFound(): GraphQLError {
+    return itemizeGraphqlError(
+      'Contact was not found',
+      'NOT_FOUND',
+      { field: 'contactId', reason: 'CONTACT_NOT_FOUND' },
     );
   }
 

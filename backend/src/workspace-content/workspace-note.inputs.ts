@@ -5,6 +5,9 @@ export class CreateWorkspaceNoteInput {
   @Field()
   idempotencyKey: string;
 
+  @Field(() => Int, { nullable: true })
+  contactId?: number | null;
+
   @Field(() => String, { nullable: true })
   title?: string | null;
 
@@ -37,6 +40,9 @@ export class CreateWorkspaceNoteInput {
 export class UpdateWorkspaceNoteInput {
   @Field()
   mutationId: string;
+
+  @Field(() => Int, { nullable: true })
+  contactId?: number | null;
 
   @Field(() => String, { nullable: true })
   title?: string | null;

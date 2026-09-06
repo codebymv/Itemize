@@ -120,6 +120,7 @@ describe('WorkspaceContentRepository canvas position revisions', () => {
       width: 570,
       height: 350,
       zIndex: 0,
+      contactId: null,
     };
 
     await expect(repository.createNote(

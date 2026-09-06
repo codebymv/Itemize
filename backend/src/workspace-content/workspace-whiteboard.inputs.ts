@@ -11,6 +11,9 @@ export class CreateWorkspaceWhiteboardInput {
   @Field()
   idempotencyKey: string;
 
+  @Field(() => Int, { nullable: true })
+  contactId?: number | null;
+
   @Field(() => String, { nullable: true })
   title?: string | null;
 
@@ -46,6 +49,9 @@ export class CreateWorkspaceWhiteboardInput {
 export class UpdateWorkspaceWhiteboardInput {
   @Field()
   mutationId: string;
+
+  @Field(() => Int, { nullable: true })
+  contactId?: number | null;
 
   @Field(() => GraphQLISODateTime)
   expectedUpdatedAt: Date;

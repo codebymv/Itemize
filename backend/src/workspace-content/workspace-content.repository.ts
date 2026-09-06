@@ -23,6 +23,8 @@ export type WorkspaceListRow = {
   width: number | null;
   height: number | null;
   z_index: number | null;
+  contact_id: number | null;
+  contact_name: string | null;
   share_token: string | null;
   is_public: boolean | null;
   shared_at: Date | null;
@@ -43,6 +45,8 @@ export type WorkspaceNoteRow = {
   width: number | null;
   height: number | null;
   z_index: number | null;
+  contact_id: number | null;
+  contact_name: string | null;
   share_token: string | null;
   is_public: boolean | null;
   shared_at: Date | null;
@@ -64,6 +68,8 @@ export type WorkspaceWhiteboardRow = {
   position_y: number | null;
   z_index: number | null;
   color_value: string | null;
+  contact_id: number | null;
+  contact_name: string | null;
   share_token: string | null;
   is_public: boolean | null;
   shared_at: Date | null;
@@ -84,6 +90,8 @@ export type WorkspaceWireframeRow = {
   height: number | null;
   z_index: number | null;
   color_value: string | null;
+  contact_id: number | null;
+  contact_name: string | null;
   share_token: string | null;
   is_public: boolean | null;
   shared_at: Date | null;
@@ -115,6 +123,7 @@ export type CreateWorkspaceNoteValues = {
   width: number | null;
   height: number | null;
   zIndex: number;
+  contactId: number | null;
 };
 
 export type CreateWorkspaceListValues = {
@@ -126,6 +135,7 @@ export type CreateWorkspaceListValues = {
   positionY: number;
   width: number;
   height: number;
+  contactId: number | null;
 };
 
 export type UpdateWorkspaceListValues =
@@ -150,6 +160,7 @@ export type CreateWorkspaceWhiteboardValues = {
   positionY: number;
   zIndex: number;
   colorValue: string | null;
+  contactId: number | null;
 };
 
 export type UpdateWorkspaceWhiteboardValues =
@@ -168,6 +179,7 @@ export type CreateWorkspaceWireframeValues = {
   height: number;
   zIndex: number;
   colorValue: string;
+  contactId: number | null;
 };
 
 export type UpdateWorkspaceWireframeValues =
@@ -179,11 +191,13 @@ export type UpdateWorkspaceWireframeValues =
 export type WorkspaceNoteMutationOutcome =
   | { kind: 'completed'; row: WorkspaceNoteRow }
   | { kind: 'not_found' }
-  | { kind: 'category_not_found' };
+  | { kind: 'category_not_found' }
+  | { kind: 'contact_not_found' };
 
 export type WorkspaceCreationOutcome<TRow> =
   | { kind: 'completed'; row: TRow }
   | { kind: 'category_not_found' }
+  | { kind: 'contact_not_found' }
   | { kind: 'idempotency_conflict' }
   | { kind: 'receipt_inconsistent' };
 
@@ -195,6 +209,7 @@ export type WorkspaceListMutationOutcome =
   | { kind: 'completed'; row: WorkspaceListRow }
   | { kind: 'not_found' }
   | { kind: 'category_not_found' }
+  | { kind: 'contact_not_found' }
   | { kind: 'conflict'; currentUpdatedAt: Date };
 
 export type DeleteWorkspaceListOutcome =
@@ -205,6 +220,7 @@ export type WorkspaceWhiteboardMutationOutcome =
   | { kind: 'completed'; row: WorkspaceWhiteboardRow }
   | { kind: 'not_found' }
   | { kind: 'category_not_found' }
+  | { kind: 'contact_not_found' }
   | { kind: 'conflict'; currentUpdatedAt: Date };
 
 export type DeleteWorkspaceWhiteboardOutcome =
@@ -215,6 +231,7 @@ export type WorkspaceWireframeMutationOutcome =
   | { kind: 'completed'; row: WorkspaceWireframeRow }
   | { kind: 'not_found' }
   | { kind: 'category_not_found' }
+  | { kind: 'contact_not_found' }
   | { kind: 'conflict'; currentUpdatedAt: Date };
 
 export type DeleteWorkspaceWireframeOutcome =
@@ -282,6 +299,16 @@ const noteMutationSelection = `
   width,
   height,
   z_index,
+  contact_id,
+  (
+    SELECT COALESCE(
+      NULLIF(TRIM(CONCAT_WS(' ', contact.first_name, contact.last_name)), ''),
+      contact.company,
+      contact.email
+    )
+    FROM contacts contact
+    WHERE contact.id = contact_id
+  ) AS contact_name,
   share_token,
   is_public,
   shared_at,
@@ -301,6 +328,16 @@ const listMutationSelection = `
   width,
   height,
   z_index,
+  contact_id,
+  (
+    SELECT COALESCE(
+      NULLIF(TRIM(CONCAT_WS(' ', contact.first_name, contact.last_name)), ''),
+      contact.company,
+      contact.email
+    )
+    FROM contacts contact
+    WHERE contact.id = contact_id
+  ) AS contact_name,
   share_token,
   is_public,
   shared_at,
@@ -320,6 +357,16 @@ const whiteboardMutationSelection = `
   position_y,
   z_index,
   color_value,
+  contact_id,
+  (
+    SELECT COALESCE(
+      NULLIF(TRIM(CONCAT_WS(' ', contact.first_name, contact.last_name)), ''),
+      contact.company,
+      contact.email
+    )
+    FROM contacts contact
+    WHERE contact.id = contact_id
+  ) AS contact_name,
   share_token,
   is_public,
   shared_at,
@@ -338,6 +385,16 @@ const wireframeMutationSelection = `
   height,
   z_index,
   color_value,
+  contact_id,
+  (
+    SELECT COALESCE(
+      NULLIF(TRIM(CONCAT_WS(' ', contact.first_name, contact.last_name)), ''),
+      contact.company,
+      contact.email
+    )
+    FROM contacts contact
+    WHERE contact.id = contact_id
+  ) AS contact_name,
   share_token,
   is_public,
   shared_at,
@@ -533,6 +590,16 @@ export class WorkspaceContentRepository {
            content.width,
            content.height,
            content.z_index,
+           content.contact_id,
+           (
+             SELECT COALESCE(
+               NULLIF(TRIM(CONCAT_WS(' ', contact.first_name, contact.last_name)), ''),
+               contact.company,
+               contact.email
+             )
+             FROM contacts contact
+             WHERE contact.id = content.contact_id
+           ) AS contact_name,
            content.share_token,
            content.is_public,
            content.shared_at,
@@ -572,6 +639,16 @@ export class WorkspaceContentRepository {
            content.width,
            content.height,
            content.z_index,
+           content.contact_id,
+           (
+             SELECT COALESCE(
+               NULLIF(TRIM(CONCAT_WS(' ', contact.first_name, contact.last_name)), ''),
+               contact.company,
+               contact.email
+             )
+             FROM contacts contact
+             WHERE contact.id = content.contact_id
+           ) AS contact_name,
            content.share_token,
            content.is_public,
            content.shared_at,
@@ -612,6 +689,16 @@ export class WorkspaceContentRepository {
            content.position_y,
            content.z_index,
            content.color_value,
+           content.contact_id,
+           (
+             SELECT COALESCE(
+               NULLIF(TRIM(CONCAT_WS(' ', contact.first_name, contact.last_name)), ''),
+               contact.company,
+               contact.email
+             )
+             FROM contacts contact
+             WHERE contact.id = content.contact_id
+           ) AS contact_name,
            content.share_token,
            content.is_public,
            content.shared_at,
@@ -651,6 +738,16 @@ export class WorkspaceContentRepository {
            content.height,
            content.z_index,
            content.color_value,
+           content.contact_id,
+           (
+             SELECT COALESCE(
+               NULLIF(TRIM(CONCAT_WS(' ', contact.first_name, contact.last_name)), ''),
+               contact.company,
+               contact.email
+             )
+             FROM contacts contact
+             WHERE contact.id = content.contact_id
+           ) AS contact_name,
            content.share_token,
            content.is_public,
            content.shared_at,
@@ -755,13 +852,19 @@ export class WorkspaceContentRepository {
         values.category,
       );
       if (!category) return { kind: 'category_not_found' };
+      if (
+        values.contactId !== null
+        && !(await this.canBindContact(client, userId, values.contactId))
+      ) {
+        return { kind: 'contact_not_found' };
+      }
 
       const result = await client.query<WorkspaceListRow>(
         `INSERT INTO lists (
            user_id, organization_id, title, category, category_id, items, color_value,
-           position_x, position_y, width, height
+           position_x, position_y, width, height, contact_id
          )
-         VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10, $11)
+         VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, $10, $11, $12)
          RETURNING ${listMutationSelection}`,
         [
           userId,
@@ -775,6 +878,7 @@ export class WorkspaceContentRepository {
           values.positionY,
           values.width,
           values.height,
+          values.contactId,
         ],
       );
       await this.completeCreationReceipt(
@@ -818,6 +922,15 @@ export class WorkspaceContentRepository {
         values.category ?? current.category ?? 'General',
       );
       if (!category) return { kind: 'category_not_found' };
+      const contactId = values.contactId === undefined
+        ? current.contact_id
+        : values.contactId;
+      if (
+        typeof values.contactId === 'number'
+        && !(await this.canBindContact(client, userId, values.contactId))
+      ) {
+        return { kind: 'contact_not_found' };
+      }
 
       const updatedResult = await client.query<WorkspaceListRow>(
         `UPDATE lists SET
@@ -830,11 +943,12 @@ export class WorkspaceContentRepository {
            position_y = $7,
            width = $8,
            height = $9,
+           contact_id = $10,
            updated_at = GREATEST(
              clock_timestamp(),
              updated_at + INTERVAL '1 millisecond'
            )
-         WHERE id = $10 AND user_id = $11
+         WHERE id = $11 AND user_id = $12
          RETURNING ${listMutationSelection}`,
         [
           values.title ?? current.title,
@@ -848,6 +962,7 @@ export class WorkspaceContentRepository {
           values.positionY ?? current.position_y ?? 0,
           values.width ?? current.width ?? 340,
           values.height ?? current.height ?? 265,
+          contactId,
           listId,
           userId,
         ],
@@ -967,13 +1082,19 @@ export class WorkspaceContentRepository {
         values.category,
       );
       if (!category) return { kind: 'category_not_found' };
+      if (
+        values.contactId !== null
+        && !(await this.canBindContact(client, userId, values.contactId))
+      ) {
+        return { kind: 'contact_not_found' };
+      }
 
       const result = await client.query<WorkspaceNoteRow>(
         `INSERT INTO notes (
            user_id, title, content, category, category_id, color_value,
-           position_x, position_y, width, height, z_index
+           position_x, position_y, width, height, z_index, contact_id
          )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
          RETURNING ${noteMutationSelection}`,
         [
           userId,
@@ -987,6 +1108,7 @@ export class WorkspaceContentRepository {
           values.width,
           values.height,
           values.zIndex,
+          values.contactId,
         ],
       );
       await this.completeCreationReceipt(
@@ -997,6 +1119,28 @@ export class WorkspaceContentRepository {
       );
       return { kind: 'completed', row: result.rows[0] };
     });
+  }
+
+  /**
+   * A workspace card may only reference a contact whose organization the
+   * owner currently belongs to. Membership is re-read from PostgreSQL on every
+   * write; the browser's selected organization is not authorization evidence.
+   */
+  private async canBindContact(
+    client: PoolClient,
+    userId: number,
+    contactId: number,
+  ): Promise<boolean> {
+    const result = await client.query(
+      `SELECT 1
+       FROM contacts contact
+       JOIN organization_members membership
+         ON membership.organization_id = contact.organization_id
+        AND membership.user_id = $2
+       WHERE contact.id = $1`,
+      [contactId, userId],
+    );
+    return result.rowCount === 1;
   }
 
   private async categoryForCreate(
@@ -1040,6 +1184,15 @@ export class WorkspaceContentRepository {
         values.category ?? current.category ?? 'General',
       );
       if (!category) return { kind: 'category_not_found' };
+      const contactId = values.contactId === undefined
+        ? current.contact_id
+        : values.contactId;
+      if (
+        typeof values.contactId === 'number'
+        && !(await this.canBindContact(client, userId, values.contactId))
+      ) {
+        return { kind: 'contact_not_found' };
+      }
 
       const updatedResult = await client.query<WorkspaceNoteRow>(
         `UPDATE notes SET
@@ -1053,8 +1206,9 @@ export class WorkspaceContentRepository {
            width = $8,
            height = $9,
            z_index = $10,
+           contact_id = $11,
            updated_at = CURRENT_TIMESTAMP
-         WHERE id = $11 AND user_id = $12
+         WHERE id = $12 AND user_id = $13
          RETURNING ${noteMutationSelection}`,
         [
           values.title ?? current.title,
@@ -1067,6 +1221,7 @@ export class WorkspaceContentRepository {
           values.width ?? current.width,
           values.height ?? current.height,
           values.zIndex ?? current.z_index,
+          contactId,
           noteId,
           userId,
         ],
@@ -1168,13 +1323,20 @@ export class WorkspaceContentRepository {
         values.category,
       );
       if (!category) return { kind: 'category_not_found' };
+      if (
+        values.contactId !== null
+        && !(await this.canBindContact(client, userId, values.contactId))
+      ) {
+        return { kind: 'contact_not_found' };
+      }
 
       const result = await client.query<WorkspaceWhiteboardRow>(
         `INSERT INTO whiteboards (
            user_id, title, category, canvas_data, canvas_width, canvas_height,
-           background_color, position_x, position_y, z_index, color_value
+           background_color, position_x, position_y, z_index, color_value,
+           contact_id
          )
-         VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, $8, $9, $10, $11)
+         VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, $8, $9, $10, $11, $12)
          RETURNING ${whiteboardMutationSelection}`,
         [
           userId,
@@ -1188,6 +1350,7 @@ export class WorkspaceContentRepository {
           values.positionY,
           values.zIndex,
           values.colorValue,
+          values.contactId,
         ],
       );
       await this.completeCreationReceipt(
@@ -1234,6 +1397,15 @@ export class WorkspaceContentRepository {
         values.category ?? current.category ?? 'General',
       );
       if (!category) return { kind: 'category_not_found' };
+      const contactId = values.contactId === undefined
+        ? current.contact_id
+        : values.contactId;
+      if (
+        typeof values.contactId === 'number'
+        && !(await this.canBindContact(client, userId, values.contactId))
+      ) {
+        return { kind: 'contact_not_found' };
+      }
 
       const updatedResult = await client.query<WorkspaceWhiteboardRow>(
         `UPDATE whiteboards SET
@@ -1247,11 +1419,12 @@ export class WorkspaceContentRepository {
            position_y = $8,
            z_index = $9,
            color_value = $10,
+           contact_id = $11,
            updated_at = GREATEST(
              clock_timestamp(),
              updated_at + INTERVAL '1 millisecond'
            )
-         WHERE id = $11 AND user_id = $12
+         WHERE id = $12 AND user_id = $13
          RETURNING ${whiteboardMutationSelection}`,
         [
           values.title ?? current.title ?? 'Untitled Whiteboard',
@@ -1266,6 +1439,7 @@ export class WorkspaceContentRepository {
           values.colorValue === undefined
             ? current.color_value
             : values.colorValue,
+          contactId,
           whiteboardId,
           userId,
         ],
@@ -1376,13 +1550,19 @@ export class WorkspaceContentRepository {
         values.category,
       );
       if (!category) return { kind: 'category_not_found' };
+      if (
+        values.contactId !== null
+        && !(await this.canBindContact(client, userId, values.contactId))
+      ) {
+        return { kind: 'contact_not_found' };
+      }
 
       const result = await client.query<WorkspaceWireframeRow>(
         `INSERT INTO wireframes (
            user_id, title, category, flow_data, position_x, position_y,
-           width, height, z_index, color_value
+           width, height, z_index, color_value, contact_id
          )
-         VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, $8, $9, $10)
+         VALUES ($1, $2, $3, $4::jsonb, $5, $6, $7, $8, $9, $10, $11)
          RETURNING ${wireframeMutationSelection}`,
         [
           userId,
@@ -1395,6 +1575,7 @@ export class WorkspaceContentRepository {
           values.height,
           values.zIndex,
           values.colorValue,
+          values.contactId,
         ],
       );
       await this.completeCreationReceipt(
@@ -1442,6 +1623,16 @@ export class WorkspaceContentRepository {
       );
       if (!category) return { kind: 'category_not_found' };
 
+      const contactId = values.contactId === undefined
+        ? current.contact_id
+        : values.contactId;
+      if (
+        typeof values.contactId === 'number'
+        && !(await this.canBindContact(client, userId, values.contactId))
+      ) {
+        return { kind: 'contact_not_found' };
+      }
+
       const updatedResult = await client.query<WorkspaceWireframeRow>(
         `UPDATE wireframes SET
            title = $1,
@@ -1453,11 +1644,12 @@ export class WorkspaceContentRepository {
            height = $7,
            z_index = $8,
            color_value = $9,
+           contact_id = $10,
            updated_at = GREATEST(
              clock_timestamp(),
              updated_at + INTERVAL '1 millisecond'
            )
-         WHERE id = $10 AND user_id = $11
+         WHERE id = $11 AND user_id = $12
          RETURNING ${wireframeMutationSelection}`,
         [
           values.title ?? current.title ?? 'Untitled Wireframe',
@@ -1469,6 +1661,7 @@ export class WorkspaceContentRepository {
           values.height ?? current.height ?? 600,
           values.zIndex ?? current.z_index ?? 0,
           values.colorValue ?? current.color_value ?? '#3B82F6',
+          contactId,
           wireframeId,
           userId,
         ],
@@ -1818,6 +2011,8 @@ export class WorkspaceContentRepository {
       width: list.width,
       height: list.height,
       z_index: Number(list.z_index ?? 0),
+      contact_id: list.contact_id,
+      contact_name: list.contact_name,
       share_token: list.share_token,
       is_public: Boolean(list.is_public),
       shared_at: list.shared_at
@@ -1862,6 +2057,8 @@ export class WorkspaceContentRepository {
       position_y: Number(wireframe.position_y ?? 0),
       width: Number(wireframe.width ?? 600),
       height: Number(wireframe.height ?? 600),
+      contact_id: wireframe.contact_id,
+      contact_name: wireframe.contact_name,
     };
   }
 

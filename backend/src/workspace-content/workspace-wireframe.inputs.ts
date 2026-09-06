@@ -11,6 +11,9 @@ export class CreateWorkspaceWireframeInput {
   @Field()
   idempotencyKey: string;
 
+  @Field(() => Int, { nullable: true })
+  contactId?: number | null;
+
   @Field(() => String, { nullable: true })
   title?: string | null;
 
@@ -43,6 +46,9 @@ export class CreateWorkspaceWireframeInput {
 export class UpdateWorkspaceWireframeInput {
   @Field()
   mutationId: string;
+
+  @Field(() => Int, { nullable: true })
+  contactId?: number | null;
 
   @Field(() => GraphQLISODateTime)
   expectedUpdatedAt: Date;

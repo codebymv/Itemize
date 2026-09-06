@@ -57,6 +57,12 @@ export class WorkspaceList {
   @Field(() => Int)
   zIndex: number;
 
+  @Field(() => Int, { nullable: true })
+  contactId: number | null;
+
+  @Field(() => String, { nullable: true })
+  contactName: string | null;
+
   @Field(() => String, { nullable: true })
   shareToken: string | null;
 
@@ -119,6 +125,12 @@ export class WorkspaceNote {
 
   @Field(() => Int)
   zIndex: number;
+
+  @Field(() => Int, { nullable: true })
+  contactId: number | null;
+
+  @Field(() => String, { nullable: true })
+  contactName: string | null;
 
   @Field(() => String, { nullable: true })
   shareToken: string | null;
@@ -198,6 +210,12 @@ export class WorkspaceWhiteboard {
   @Field(() => String, { nullable: true })
   colorValue: string | null;
 
+  @Field(() => Int, { nullable: true })
+  contactId: number | null;
+
+  @Field(() => String, { nullable: true })
+  contactName: string | null;
+
   @Field(() => String, { nullable: true })
   shareToken: string | null;
 
@@ -266,6 +284,12 @@ export class WorkspaceWireframe {
 
   @Field()
   colorValue: string;
+
+  @Field(() => Int, { nullable: true })
+  contactId: number | null;
+
+  @Field(() => String, { nullable: true })
+  contactName: string | null;
 
   @Field(() => String, { nullable: true })
   shareToken: string | null;

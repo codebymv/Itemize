@@ -23,6 +23,9 @@ export class CreateWorkspaceListInput {
   @Field()
   idempotencyKey: string;
 
+  @Field(() => Int, { nullable: true })
+  contactId?: number | null;
+
   @Field()
   title: string;
 
@@ -52,6 +55,9 @@ export class CreateWorkspaceListInput {
 export class UpdateWorkspaceListInput {
   @Field()
   mutationId: string;
+
+  @Field(() => Int, { nullable: true })
+  contactId?: number | null;
 
   @Field(() => GraphQLISODateTime)
   expectedUpdatedAt: Date;

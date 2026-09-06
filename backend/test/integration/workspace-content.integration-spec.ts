@@ -23,6 +23,9 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
   let memberToken: string;
   let outsiderToken: string;
   let workCategoryId: number;
+  let memberContactId: number;
+  let boundNoteId: number;
+  let outsiderContactId: number;
   let mutationListId: number;
   let mutationNoteId: number;
   let mutationWhiteboardId: number;
@@ -85,6 +88,24 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
         outsiderId,
         [memberId, outsiderId],
       ],
+    );
+    const contacts = await pool.query<{ id: number }>(
+      `INSERT INTO contacts (
+         organization_id, first_name, last_name, email, source, status, tags
+       )
+       VALUES
+         ($1, 'Casey', 'Client', $3, 'manual', 'active', ARRAY[]::text[]),
+         ($2, 'Outsider', 'Contact', $4, 'manual', 'active', ARRAY[]::text[])
+       RETURNING id`,
+      [
+        memberOrganizationId,
+        outsiderOrganizationId,
+        `casey-${suffix}@test.itemize`,
+        `outsider-contact-${suffix}@test.itemize`,
+      ],
+    );
+    [memberContactId, outsiderContactId] = contacts.rows.map(
+      (row) => Number(row.id),
     );
     memberToken = await jwt.signAsync(
       { id: memberId },
@@ -1662,5 +1683,168 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
       code: 'BAD_USER_INPUT',
       field: 'pageSize',
     });
+  });
+  it('binds workspace content to a contact the owner can reach and exposes it to the contact page', async () => {
+    const contactFields = 'id title contactId contactName updatedAt';
+    const created = await mutation(
+      memberToken,
+      `mutation Create($input: CreateWorkspaceListInput!) {
+        createWorkspaceList(input: $input) { ${contactFields} }
+      }`,
+      {
+        input: {
+          idempotencyKey: 'ab5fc1d2-7b6f-4eb0-af8d-6e7c8b9a0fb5',
+          title: 'Kitchen scope',
+          contactId: memberContactId,
+        },
+      },
+    ).expect(200);
+    expect(created.body.errors).toBeUndefined();
+    expect(created.body.data.createWorkspaceList).toMatchObject({
+      contactId: memberContactId,
+      contactName: 'Casey Client',
+    });
+    const boundListId = Number(created.body.data.createWorkspaceList.id);
+
+    const createdNote = await mutation(
+      memberToken,
+      `mutation Create($input: CreateWorkspaceNoteInput!) {
+        createWorkspaceNote(input: $input) { id contactId }
+      }`,
+      {
+        input: {
+          idempotencyKey: 'fa03b6c7-c0b4-4d05-a4d2-b3cbd05f5ea0',
+          title: 'Kitchen notes',
+        },
+      },
+    ).expect(200);
+    expect(createdNote.body.errors).toBeUndefined();
+    expect(createdNote.body.data.createWorkspaceNote.contactId).toBeNull();
+    boundNoteId = Number(createdNote.body.data.createWorkspaceNote.id);
+
+    const noteUpdate = await mutation(
+      memberToken,
+      `mutation Update($id: Int!, $input: UpdateWorkspaceNoteInput!) {
+        updateWorkspaceNote(id: $id, input: $input) { ${contactFields} }
+      }`,
+      {
+        id: boundNoteId,
+        input: {
+          mutationId: 'bc6fd2e3-8c70-4fc1-b09e-7f8d9c0b1ac6',
+          contactId: memberContactId,
+        },
+      },
+    ).expect(200);
+    expect(noteUpdate.body.errors).toBeUndefined();
+    expect(noteUpdate.body.data.updateWorkspaceNote).toMatchObject({
+      contactId: memberContactId,
+      contactName: 'Casey Client',
+    });
+
+    const listed = await mutation(
+      memberToken,
+      `query Lists { workspaceLists { nodes { id contactId contactName } } }`,
+    ).expect(200);
+    expect(listed.body.errors).toBeUndefined();
+    expect(listed.body.data.workspaceLists.nodes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: boundListId,
+          contactId: memberContactId,
+          contactName: 'Casey Client',
+        }),
+      ]),
+    );
+
+    const contactPage = await mutation(
+      memberToken,
+      `query Content($contactId: Int!) {
+        contactContent(contactId: $contactId) {
+          lists { nodes { id title } total }
+          notes { nodes { id title } total }
+        }
+      }`,
+      { contactId: memberContactId },
+    ).expect(200);
+    expect(contactPage.body.errors).toBeUndefined();
+    expect(contactPage.body.data.contactContent.lists.nodes).toEqual([
+      { id: boundListId, title: 'Kitchen scope' },
+    ]);
+    expect(contactPage.body.data.contactContent.notes.nodes).toEqual([
+      expect.objectContaining({ id: boundNoteId }),
+    ]);
+
+    const revision = await pool.query<{ updated_at: Date }>(
+      'SELECT updated_at FROM lists WHERE id = $1',
+      [boundListId],
+    );
+    const cleared = await mutation(
+      memberToken,
+      `mutation Update($id: Int!, $input: UpdateWorkspaceListInput!) {
+        updateWorkspaceList(id: $id, input: $input) { ${contactFields} }
+      }`,
+      {
+        id: boundListId,
+        input: {
+          mutationId: 'cd70e3f4-9d81-4ad2-b1af-809ead1c2bd7',
+          expectedUpdatedAt: revision.rows[0].updated_at.toISOString(),
+          contactId: null,
+        },
+      },
+    ).expect(200);
+    expect(cleared.body.errors).toBeUndefined();
+    expect(cleared.body.data.updateWorkspaceList).toMatchObject({
+      contactId: null,
+      contactName: null,
+    });
+  });
+
+  it('conceals contacts outside the owner\'s organizations and writes nothing', async () => {
+    const rejectedCreate = await mutation(
+      memberToken,
+      `mutation Create($input: CreateWorkspaceNoteInput!) {
+        createWorkspaceNote(input: $input) { id contactId }
+      }`,
+      {
+        input: {
+          idempotencyKey: 'de81f4a5-ae92-4be3-82b0-91afbe3d3ce8',
+          title: 'Hijacked binding',
+          contactId: outsiderContactId,
+        },
+      },
+    ).expect(200);
+    expect(rejectedCreate.body.data).toBeNull();
+    expect(rejectedCreate.body.errors[0].extensions).toMatchObject({
+      code: 'NOT_FOUND',
+      reason: 'CONTACT_NOT_FOUND',
+    });
+    const stored = await pool.query(
+      `SELECT 1 FROM notes WHERE user_id = $1 AND title = 'Hijacked binding'`,
+      [memberId],
+    );
+    expect(stored.rowCount).toBe(0);
+
+    const rejectedUpdate = await mutation(
+      memberToken,
+      `mutation Update($id: Int!, $input: UpdateWorkspaceNoteInput!) {
+        updateWorkspaceNote(id: $id, input: $input) { id contactId }
+      }`,
+      {
+        id: boundNoteId,
+        input: {
+          mutationId: 'ef92a5b6-bfa3-4cf4-93c1-a2bacf4e4df9',
+          contactId: outsiderContactId,
+        },
+      },
+    ).expect(200);
+    expect(rejectedUpdate.body.errors[0].extensions).toMatchObject({
+      code: 'NOT_FOUND',
+      reason: 'CONTACT_NOT_FOUND',
+    });
+    const unchanged = await pool.query<{ contact_id: number | null }>(
+      'SELECT contact_id FROM notes WHERE id = $1',
+      [boundNoteId],
+    );
+    expect(unchanged.rows[0].contact_id).toBe(memberContactId);
   });
 });
