@@ -6,6 +6,7 @@ import { ListCardProps, Category } from '@/types';
 import { ListCardHeader } from './ListCardHeader';
 import { CategorySelector } from '../CategorySelector';
 import { WorkspaceContactLink } from '@/components/workspace/WorkspaceContactLink';
+import { useListMentionContext } from '@/hooks/useListMentionContext';
 import { ListItemRow } from './ListItemRow';
 import { ListProgressBar } from './ListProgressBar';
 import { ListItemAdd } from './ListItemAdd';
@@ -80,6 +81,7 @@ const ListCard: React.FC<ListCardProps> = ({
     // Refs
     titleEditRef, newItemInputRef
   } = useListCardLogic({ list, onUpdate, onDelete, isCollapsed, onToggleCollapsed, existingCategories, addCategory, updateCategory });
+  const mention = useListMentionContext();
 
   // Handle sharing
   const handleShareList = () => {
@@ -257,6 +259,7 @@ const ListCard: React.FC<ListCardProps> = ({
                       startEditingItem={startEditingItem}
                       handleEditItem={handleEditItem}
                       removeItem={removeItem}
+                      mention={mention}
                     />
                   ))}
                 </SortableContext>
@@ -279,6 +282,7 @@ const ListCard: React.FC<ListCardProps> = ({
               isLoadingSuggestions={isLoadingSuggestions}
               suggestionError={suggestionError}
               dismissSuggestion={clearSuggestions}
+              mention={mention}
             />
           </CardContent>
         </CollapsibleContent>

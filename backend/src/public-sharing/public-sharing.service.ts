@@ -17,6 +17,10 @@ import {
   sanitizeSharedText,
 } from './shared-content-sanitizer';
 import { decryptVaultItemValue } from './vault-item-crypto';
+import {
+  stripMentionMarkup,
+  stripMentionTokens,
+} from '../workspace-content/mention-tokens';
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -53,7 +57,7 @@ export class PublicSharingService {
       items: list.items
         ? list.items.map((item) => ({
             id: item.id,
-            text: sanitizeSharedContent(item.text),
+            text: sanitizeSharedContent(stripMentionTokens(String(item.text ?? ''))),
             completed: item.completed,
           }))
         : [],
@@ -78,7 +82,7 @@ export class PublicSharingService {
     const response = {
       id: note.id,
       title,
-      content: sanitizeSharedContent(note.content),
+      content: sanitizeSharedContent(stripMentionMarkup(String(note.content ?? ''))),
       category: sanitizeSharedContent(note.category),
       color_value: note.color_value,
       created_at: note.created_at,

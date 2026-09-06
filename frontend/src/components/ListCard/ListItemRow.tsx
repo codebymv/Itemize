@@ -1,7 +1,9 @@
 import React from 'react';
 import { Trash2, Edit3, Check, X, GripVertical } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { MentionInput, type MentionContext } from "@/components/workspace/MentionInput";
+import { MentionText } from "@/components/workspace/MentionText";
+import { stripMentionTokens } from "@/lib/mentionTokens";
 import { ListItem } from '@/types';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -15,6 +17,7 @@ interface ListItemRowProps {
   startEditingItem: (item: ListItem) => void;
   handleEditItem: () => void;
   removeItem: (itemId: string) => void;
+  mention?: MentionContext;
 }
 
 const ListItemRow: React.FC<ListItemRowProps> = ({
@@ -25,8 +28,10 @@ const ListItemRow: React.FC<ListItemRowProps> = ({
   toggleItemCompleted,
   startEditingItem,
   handleEditItem,
-  removeItem
+  removeItem,
+  mention,
 }) => {
+  const readableText = stripMentionTokens(item.text);
   const isEditing = editingItemId === item.id;
 
   const {
@@ -56,9 +61,10 @@ const ListItemRow: React.FC<ListItemRowProps> = ({
     >
       {isEditing ? (
         <div className="flex items-center gap-1 w-full">
-          <Input
+          <MentionInput
             value={editingItemText}
-            onChange={(e) => setEditingItemText(e.target.value)}
+            onValueChange={setEditingItemText}
+            mention={mention}
             className="h-8 flex-grow"
             autoFocus
             onKeyDown={(e) => {
@@ -72,7 +78,7 @@ const ListItemRow: React.FC<ListItemRowProps> = ({
             variant="ghost"
             onClick={handleEditItem}
             className="h-8 w-8 p-0"
-            aria-label={`Save changes to ${item.text}`}
+            aria-label={`Save changes to ${readableText}`}
           >
             <Check className="h-4 w-4" />
           </Button>
@@ -81,7 +87,7 @@ const ListItemRow: React.FC<ListItemRowProps> = ({
             variant="ghost"
             onClick={() => setEditingItemText('')}
             className="h-8 w-8 p-0"
-            aria-label={`Cancel editing ${item.text}`}
+            aria-label={`Cancel editing ${readableText}`}
           >
             <X className="h-4 w-4" />
           </Button>
@@ -94,7 +100,7 @@ const ListItemRow: React.FC<ListItemRowProps> = ({
             {...listeners}
             className="interaction-reveal touch-target-mobile mr-2 flex cursor-grab touch-pan-y items-center justify-center active:cursor-grabbing"
             data-sortable-handle
-            aria-label={`Reorder ${item.text}`}
+            aria-label={`Reorder ${readableText}`}
           >
             <GripVertical className="h-4 w-4 text-gray-400 dark:text-gray-300" data-lucide="grip-vertical" />
           </div>
@@ -103,7 +109,7 @@ const ListItemRow: React.FC<ListItemRowProps> = ({
             type="button"
             role="checkbox"
             aria-checked={item.completed}
-            aria-label={`${item.completed ? 'Mark incomplete' : 'Mark complete'}: ${item.text}`}
+            aria-label={`${item.completed ? 'Mark incomplete' : 'Mark complete'}: ${readableText}`}
             className="flex items-center flex-grow min-w-0 cursor-pointer text-left rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             onClick={() => toggleItemCompleted(item.id)}
           >
@@ -114,9 +120,10 @@ const ListItemRow: React.FC<ListItemRowProps> = ({
             }`}>
               {item.completed && <Check className="h-3 w-3 text-white" />}
             </div>
-            <span className={`${item.completed ? 'line-through text-gray-400 dark:text-gray-300' : ''}`} style={{ fontFamily: '"Raleway", sans-serif' }}>
-              {item.text}
-            </span>
+            <MentionText
+              text={item.text}
+              className={`${item.completed ? 'line-through text-gray-400 dark:text-gray-300' : ''}`}
+            />
           </button>
           <div className="interaction-reveal flex">
             <Button
@@ -124,7 +131,7 @@ const ListItemRow: React.FC<ListItemRowProps> = ({
               variant="ghost"
               onClick={() => startEditingItem(item)}
               className="h-8 w-8 p-0"
-              aria-label={`Edit ${item.text}`}
+              aria-label={`Edit ${readableText}`}
             >
               <Edit3 className="h-4 w-4" />
             </Button>
@@ -133,7 +140,7 @@ const ListItemRow: React.FC<ListItemRowProps> = ({
               variant="ghost"
               onClick={() => removeItem(item.id)}
               className="h-8 w-8 p-0 text-red-600"
-              aria-label={`Delete ${item.text}`}
+              aria-label={`Delete ${readableText}`}
             >
               <Trash2 className="h-4 w-4" />
             </Button>

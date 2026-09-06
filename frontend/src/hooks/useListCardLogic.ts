@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useToast } from "@/hooks/use-toast";
 import { useAISuggest } from "@/context/AISuggestContext";
 import { useAISuggestions } from "@/hooks/use-ai-suggestions";
+import { firstMentionBinding } from '@/lib/mentionTokens';
 import { List, ListItem, Category } from '@/types';
 import { useCardTitleEditing } from '@/hooks/useCardTitleEditing';
 import { useCardColorManagement } from '@/hooks/useCardColorManagement';
@@ -195,9 +196,11 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
         text: newItemText.trim(),
         completed: false
       };
+      const binding = firstMentionBinding(newItem.text, list.contact_id);
       onUpdate({
         ...list,
-        items: [...list.items, newItem]
+        items: [...list.items, newItem],
+        ...(binding ? { contact_id: binding.contactId, contact_name: binding.label } : {}),
       });
       setNewItemText('');
     }
@@ -235,7 +238,12 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
         }
         return item;
       });
-      onUpdate({ ...list, items: updatedItems });
+      const binding = firstMentionBinding(editingItemText, list.contact_id);
+      onUpdate({
+        ...list,
+        items: updatedItems,
+        ...(binding ? { contact_id: binding.contactId, contact_name: binding.label } : {}),
+      });
       setEditingItemId(null);
       setEditingItemText('');
     } else if (editingItemText.trim() === '') {

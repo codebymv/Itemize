@@ -1847,4 +1847,42 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
     );
     expect(unchanged.rows[0].contact_id).toBe(memberContactId);
   });
+  it('keeps client mentions the owner may reference, downgrades the rest, and hides ids from public readers', async () => {
+    const created = await mutation(
+      memberToken,
+      `mutation Create($input: CreateWorkspaceListInput!) {
+        createWorkspaceList(input: $input) { id items { id text completed } }
+      }`,
+      {
+        input: {
+          idempotencyKey: '0b1c2d3e-4f50-4617-8293-a4b5c6d7e8f9',
+          title: 'Mentions',
+          items: [
+            { id: 'ok', text: `Call @[Casey Client](contact:${memberContactId}) today`, completed: false },
+            { id: 'nope', text: `Ask @[Outsider Contact](contact:${outsiderContactId}) for keys`, completed: false },
+          ],
+        },
+      },
+    ).expect(200);
+    expect(created.body.errors).toBeUndefined();
+    expect(created.body.data.createWorkspaceList.items).toEqual([
+      { id: 'ok', text: `Call @[Casey Client](contact:${memberContactId}) today`, completed: false },
+      { id: 'nope', text: 'Ask @Outsider Contact for keys', completed: false },
+    ]);
+    const listId = Number(created.body.data.createWorkspaceList.id);
+
+    const shared = await mutation(
+      memberToken,
+      `mutation Share($id: Int!) { enableListSharing(id: $id) { shareToken } }`,
+      { id: listId },
+    ).expect(200);
+    expect(shared.body.errors).toBeUndefined();
+    const publicRead = await request(app.getHttpServer())
+      .get(`/api/shared/list/${shared.body.data.enableListSharing.shareToken}`)
+      .expect(200);
+    expect(publicRead.body.items.map((item: { text: string }) => item.text)).toEqual([
+      'Call @Casey Client today',
+      'Ask @Outsider Contact for keys',
+    ]);
+  });
 });

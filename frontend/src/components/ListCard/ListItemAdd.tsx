@@ -1,7 +1,7 @@
 import React, { KeyboardEvent } from 'react';
 import { Plus, Sparkles, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { MentionInput, type MentionContext } from '@/components/workspace/MentionInput';
 import { SuggestionActions } from '@/components/ai/SuggestionActions';
 
 interface ListItemAddProps {
@@ -17,6 +17,7 @@ interface ListItemAddProps {
   aiEnabled: boolean;
   isLoadingSuggestions: boolean;
   suggestionError: string | null;
+  mention?: MentionContext;
 }
 
 export const ListItemAdd: React.FC<ListItemAddProps> = ({
@@ -32,6 +33,7 @@ export const ListItemAdd: React.FC<ListItemAddProps> = ({
   aiEnabled,
   isLoadingSuggestions,
   suggestionError,
+  mention,
 }) => {
   const acceptanceSuggestion = currentInputSuggestion || currentSuggestion;
 
@@ -55,10 +57,11 @@ export const ListItemAdd: React.FC<ListItemAddProps> = ({
     <div className="flex flex-col border-t p-2">
       <div className="flex items-center gap-2">
         <div className="relative flex-1 rounded-md border">
-          <Input
+          <MentionInput
             ref={inputRef}
             value={newItemText}
-            onChange={(event) => setNewItemText(event.target.value)}
+            onValueChange={setNewItemText}
+            mention={mention}
             placeholder="Add new item..."
             className={`h-8 border-0 focus-visible:ring-0 focus-visible:ring-offset-0 ${aiEnabled ? 'pr-8' : ''}`}
             style={{ fontFamily: '"Raleway", sans-serif' }}

@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback } from "react";
+import { stripMentionTokens } from '@/lib/mentionTokens';
 import { useNavigate } from "react-router-dom";
 import {
   LayoutGrid,
@@ -792,7 +793,7 @@ export function ContentsPage() {
         (list) =>
           list.title?.toLowerCase().includes(query) ||
           list.type?.toLowerCase().includes(query) ||
-          list.items.some((item) => item.text.toLowerCase().includes(query)),
+          list.items.some((item) => stripMentionTokens(item.text).toLowerCase().includes(query)),
       );
     }
 

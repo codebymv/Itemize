@@ -6,6 +6,7 @@ import { useSidebar } from '../ui/sidebar';
 import { List, Note, Whiteboard, Wireframe, Vault, Category } from '../../types';
 import { useAuthState } from '../../contexts/AuthContext';
 import { storage } from '../../lib/storage';
+import { stripMentionTokens } from '@/lib/mentionTokens';
 
 import Spinner from '../../components/ui/Spinner';
 import { DraggableNoteCard } from './DraggableNoteCard';
@@ -633,7 +634,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
         return (
           list.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
           (list.items && list.items.some(item => 
-            item.text && item.text.toLowerCase().includes(searchQuery.toLowerCase())
+            item.text && stripMentionTokens(item.text).toLowerCase().includes(searchQuery.toLowerCase())
           ))
         );
       });

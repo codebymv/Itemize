@@ -1,6 +1,6 @@
 # Workspace inline triggers
 
-*Plan, 2026-09-06. Builds on the contact seam (`contactId` on workspace content). Slice 1 (`@` in notes) built the same day; see the commit for details.*
+*Plan, 2026-09-06. Builds on the contact seam (`contactId` on workspace content). Slices 1 (`@` in notes) and 2 (`@` in list items) built the same day; see the commits for details. Titles were left as plain text: a pill inside a card heading competes with the title, and the chip already states the binding there.*
 
 Type `@`, `$`, `#`, or `/` anywhere you can type on the canvas and a list appears at the caret — the Slack composer pattern applied to clients, money documents, categories, and actions. The client chip becomes the result of a gesture, not the entry point.
 
@@ -49,7 +49,7 @@ adapters: notes (TipTap Mention + Suggestion), plain inputs (list items, titles)
 ```
 
 - Rich text: TipTap mention node `<span data-type="mention" data-entity="contact" data-id="1">@Casey Sanchez</span>`.
-- Plain text: token `@[Casey Sanchez](contact:1)` inside the existing string — no schema change to list `items`.
+- Plain text: token `@[Casey Sanchez](contact:1)` inside the existing string — no schema change to list `items`. The repository checks every mentioned id against organization membership inside the save transaction and rewrites the rest to `@label`; shared/public list projections strip tokens to labels, and public note HTML loses the mention node's attributes.
 - Hydration on read resolves ids to current labels/status for the owner.
 - Save (already replay-safe) parses nodes/tokens, validates ids, and upserts `workspace_references` in the same transaction.
 - `references` on the four workspace types; `referencedBy` on invoice and estimate.

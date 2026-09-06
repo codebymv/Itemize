@@ -1,6 +1,11 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
+import {
+  collectMentionTokens,
+  downgradeMentionTokens,
+  stripMentionTokens,
+} from './mention-tokens';
 import { RealtimeOutboxService } from '../realtime-outbox/realtime-outbox.service';
 import { sanitizeNoteHtml } from './note-html';
 
@@ -859,6 +864,7 @@ export class WorkspaceContentRepository {
         return { kind: 'contact_not_found' };
       }
 
+      const items = await this.sanitizeListItemMentions(client, userId, values.items);
       const result = await client.query<WorkspaceListRow>(
         `INSERT INTO lists (
            user_id, organization_id, title, category, category_id, items, color_value,
@@ -872,7 +878,7 @@ export class WorkspaceContentRepository {
           values.title,
           category.name,
           category.id,
-          JSON.stringify(values.items),
+          JSON.stringify(items),
           values.colorValue,
           values.positionX,
           values.positionY,
@@ -932,6 +938,9 @@ export class WorkspaceContentRepository {
         return { kind: 'contact_not_found' };
       }
 
+      const items = values.items === undefined
+        ? current.items
+        : await this.sanitizeListItemMentions(client, userId, values.items);
       const updatedResult = await client.query<WorkspaceListRow>(
         `UPDATE lists SET
            title = $1,
@@ -954,7 +963,7 @@ export class WorkspaceContentRepository {
           values.title ?? current.title,
           category.name,
           category.id,
-          JSON.stringify(values.items ?? current.items),
+          JSON.stringify(items),
           values.colorValue === undefined
             ? current.color_value
             : values.colorValue,
@@ -1141,6 +1150,31 @@ export class WorkspaceContentRepository {
       [contactId, userId],
     );
     return result.rowCount === 1;
+  }
+
+  /**
+   * List item text may mention clients as tokens. Every mentioned id is checked
+   * against the owner's current organization membership inside the save
+   * transaction; anything else is rewritten to plain text so an unauthorized
+   * id is never stored and the rest of the save proceeds unchanged.
+   */
+  private async sanitizeListItemMentions(
+    client: PoolClient,
+    userId: number,
+    items: WorkspaceListItemRow[],
+  ): Promise<WorkspaceListItemRow[]> {
+    const mentioned = new Set(
+      items.flatMap((item) => collectMentionTokens(item.text).map((token) => token.contactId)),
+    );
+    if (mentioned.size === 0) return items;
+    const allowed = new Set<number>();
+    for (const contactId of mentioned) {
+      if (await this.canBindContact(client, userId, contactId)) allowed.add(contactId);
+    }
+    return items.map((item) => ({
+      ...item,
+      text: downgradeMentionTokens(item.text, allowed),
+    }));
   }
 
   private async categoryForCreate(
@@ -2029,7 +2063,9 @@ export class WorkspaceContentRepository {
       id: list.id,
       title: list.title,
       category: list.category ?? 'General',
-      items: list.items,
+      items: (Array.isArray(list.items) ? (list.items as WorkspaceListItemRow[]) : []).map(
+        (item) => ({ ...item, text: stripMentionTokens(String(item.text ?? '')) }),
+      ),
       color_value: list.color_value,
       updated_at: new Date(list.updated_at).toISOString(),
     };
