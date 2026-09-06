@@ -96,6 +96,9 @@ export class ContactContent {
 
   @Field(() => ContactContentCollection)
   wireframes: ContactContentCollection;
+
+  @Field(() => ContactContentCollection)
+  frames: ContactContentCollection;
 }
 
 @ObjectType()

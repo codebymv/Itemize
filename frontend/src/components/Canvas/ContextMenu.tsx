@@ -1,6 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { CheckSquare, StickyNote, Palette, GitBranch, KeyRound } from 'lucide-react';
+import { CheckSquare, StickyNote, Palette, GitBranch, KeyRound, Frame } from 'lucide-react';
 import { List } from '../../types';
 
 interface ContextMenuProps {
@@ -10,6 +10,7 @@ interface ContextMenuProps {
   onAddWhiteboard?: () => void; // Add whiteboard support
   onAddWireframe?: () => void; // Add wireframe support
   onAddVault?: () => void; // Add vault support
+  onAddFrame?: () => void;
   onClose: () => void;
   isFromButton?: boolean;
   absolutePosition?: { x: number, y: number };
@@ -22,6 +23,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
   onAddWhiteboard,
   onAddWireframe,
   onAddVault,
+  onAddFrame,
   onClose,
   isFromButton = false,
   absolutePosition
@@ -126,6 +128,15 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
         >
           <KeyRound className="h-4 w-4 mr-2" />
           <span>Add Vault</span>
+        </button>
+      )}
+      {onAddFrame && (
+        <button 
+          className="dropdown-menu-item interaction-navigation relative flex w-full cursor-pointer select-none items-center rounded-sm border-none bg-transparent px-2 py-1.5 text-left text-sm outline-none font-raleway"
+          onClick={(e) => handleClickItem(e, onAddFrame)}
+        >
+          <Frame className="h-4 w-4 mr-2" />
+          <span>Add Frame</span>
         </button>
       )}
     </div>

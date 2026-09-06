@@ -38,12 +38,14 @@ const snapshot = {
   whiteboards: [],
   wireframes: [],
   vaults: [],
+  frames: [],
   pages: {
     lists: { total: 1, hasNextPage: false },
     notes: { total: 1, hasNextPage: false },
     whiteboards: { total: 0, hasNextPage: false },
     wireframes: { total: 0, hasNextPage: false },
     vaults: { total: 0, hasNextPage: false },
+    frames: { total: 0, hasNextPage: false },
   },
 };
 

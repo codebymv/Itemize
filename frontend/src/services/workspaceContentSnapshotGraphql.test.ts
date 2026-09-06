@@ -58,6 +58,22 @@ const note = {
   updatedAt: '2026-07-18T12:01:00.000Z',
 };
 
+const frame = {
+  id: 9,
+  userId: 7,
+  title: 'Sanchez kitchen',
+  colorValue: '#3B82F6',
+  positionX: 1000,
+  positionY: 1000,
+  width: 1400,
+  height: 900,
+  zIndex: 0,
+  contactId: 3,
+  contactName: 'Casey Sanchez',
+  createdAt: '2026-09-06T12:00:00.000Z',
+  updatedAt: '2026-09-06T12:01:00.000Z',
+};
+
 describe('workspace content snapshot GraphQL consumer', () => {
   beforeEach(() => vi.clearAllMocks());
 
@@ -69,6 +85,7 @@ describe('workspace content snapshot GraphQL consumer', () => {
       workspaceWhiteboards: { nodes: [], pageInfo: { ...pageInfo, total: 0 } },
       workspaceWireframes: { nodes: [], pageInfo: { ...pageInfo, total: 0 } },
       workspaceVaults: { nodes: [], pageInfo: { ...pageInfo, total: 0 } },
+      workspaceFrames: { nodes: [frame], pageInfo: { ...pageInfo, total: 1 } },
     });
 
     await expect(getWorkspaceContentSnapshotViaGraphql(controller.signal))
@@ -81,9 +98,11 @@ describe('workspace content snapshot GraphQL consumer', () => {
           contact_name: 'Casey Sanchez',
         }],
         notes: [{ id: 5, content: 'Details' }],
+        frames: [{ id: 9, title: 'Sanchez kitchen', contact_name: 'Casey Sanchez', width: 1400 }],
         pages: {
           lists: { total: 1, hasNextPage: false },
           vaults: { total: 0, hasNextPage: false },
+          frames: { total: 1, hasNextPage: false },
         },
       });
     expect(graphqlRequest).toHaveBeenCalledOnce();
@@ -100,6 +119,7 @@ describe('workspace content snapshot GraphQL consumer', () => {
       'workspaceWhiteboards',
       'workspaceWireframes',
       'workspaceVaults',
+      'workspaceFrames',
     ]) expect(query).toContain(field);
     expect(query).toContain('contactId contactName');
   });

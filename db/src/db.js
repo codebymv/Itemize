@@ -75,6 +75,9 @@ const {
   runWorkspaceReferencesMigration,
 } = require('./db_workspace_references_migrations');
 const {
+  runWorkspaceFramesMigration,
+} = require('./db_workspace_frames_migrations');
+const {
   runEmailTemplatePublishReceiptMigration,
 } = require('./db_email_template_publish_receipt_migrations');
 const {
@@ -723,6 +726,7 @@ const initializeDatabase = async (pool) => {
     );
     await runMigrationOnce(pool, 'email_template_versions_v1', runEmailTemplateVersionsMigration);
     await runMigrationOnce(pool, 'workspace_references_v1', runWorkspaceReferencesMigration);
+    await runMigrationOnce(pool, 'workspace_frames_v1', runWorkspaceFramesMigration);
     await runMigrationOnce(
       pool,
       'email_template_creation_receipts_v1',

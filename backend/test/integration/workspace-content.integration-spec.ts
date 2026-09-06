@@ -2043,4 +2043,192 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
       .expect(200);
     expect(publicRead.body.content).toBe('<p>Bill $INV and $X</p>');
   });
+  it('creates, replays, revises, binds, moves, and deletes a frame, and lists it on the contact page', async () => {
+    const frameFields = 'id userId title colorValue positionX positionY width height zIndex contactId contactName updatedAt';
+    const createDocument = `mutation Create($input: CreateWorkspaceFrameInput!) {
+      createWorkspaceFrame(input: $input) { ${frameFields} }
+    }`;
+    const createInput = {
+      idempotencyKey: '5d2a7c9e-3f41-4b8a-9c6d-1e2f3a4b5c6d',
+      title: 'Sanchez kitchen',
+      positionX: 100,
+      positionY: 200,
+      width: 1200,
+      height: 800,
+      contactId: memberContactId,
+    };
+
+    const created = await mutation(memberToken, createDocument, { input: createInput }).expect(200);
+    expect(created.body.errors).toBeUndefined();
+    const frame = created.body.data.createWorkspaceFrame;
+    expect(frame).toMatchObject({
+      userId: memberId,
+      title: 'Sanchez kitchen',
+      colorValue: '#3B82F6',
+      positionX: 100,
+      positionY: 200,
+      width: 1200,
+      height: 800,
+      zIndex: 0,
+      contactId: memberContactId,
+      contactName: 'Casey Client',
+    });
+    const frameId = Number(frame.id);
+
+    // Same key + same payload replays the row; same key + different payload is refused.
+    const replay = await mutation(memberToken, createDocument, { input: createInput }).expect(200);
+    expect(replay.body.errors).toBeUndefined();
+    expect(replay.body.data.createWorkspaceFrame.id).toBe(frame.id);
+    const reused = await mutation(memberToken, createDocument, {
+      input: { ...createInput, title: 'Something else' },
+    }).expect(200);
+    expect(reused.body.errors?.[0]?.extensions?.code).toBe('CONFLICT');
+    const frameCount = await pool.query<{ total: number }>(
+      'SELECT COUNT(*)::int AS total FROM workspace_frames WHERE user_id = $1',
+      [memberId],
+    );
+    expect(frameCount.rows[0].total).toBe(1);
+
+    // Mutations without CSRF are rejected before touching the row.
+    const noCsrf = await mutation(memberToken, createDocument, {
+      input: { ...createInput, idempotencyKey: '6e3b8d0f-4a52-4c9b-8d7e-2f3a4b5c6d7e' },
+    }, false).expect(200);
+    expect(noCsrf.body.errors[0].extensions.code).toBe('FORBIDDEN');
+
+    // An outsider's client is concealed and nothing is written.
+    const foreign = await mutation(memberToken, createDocument, {
+      input: {
+        ...createInput,
+        idempotencyKey: '7f4c9e10-5b63-4dac-9e8f-3a4b5c6d7e8f',
+        contactId: outsiderContactId,
+      },
+    }).expect(200);
+    expect(foreign.body.errors?.[0]?.extensions).toMatchObject({
+      code: 'NOT_FOUND',
+      reason: 'CONTACT_NOT_FOUND',
+    });
+
+    // The outsider cannot see or touch the frame.
+    const outsiderPage = await query(
+      outsiderToken,
+      `query { workspaceFrames { nodes { id } pageInfo { total } } }`,
+    ).expect(200);
+    expect(outsiderPage.body.data.workspaceFrames.pageInfo.total).toBe(0);
+    const outsiderUpdate = await mutation(
+      outsiderToken,
+      `mutation Update($id: Int!, $input: UpdateWorkspaceFrameInput!) {
+        updateWorkspaceFrame(id: $id, input: $input) { id }
+      }`,
+      {
+        id: frameId,
+        input: {
+          mutationId: '8a5d0f21-6c74-4ebd-af90-4b5c6d7e8f90',
+          expectedUpdatedAt: frame.updatedAt,
+          title: 'Hijacked',
+        },
+      },
+    ).expect(200);
+    expect(outsiderUpdate.body.errors?.[0]?.extensions?.code).toBe('NOT_FOUND');
+
+    // Owner reads it back and the contact page lists it.
+    const ownerPage = await query(
+      memberToken,
+      `query { workspaceFrames { nodes { ${frameFields} } pageInfo { total } } }`,
+    ).expect(200);
+    expect(ownerPage.body.data.workspaceFrames.nodes).toEqual([
+      expect.objectContaining({ id: frame.id, contactName: 'Casey Client' }),
+    ]);
+    const contactPage = await query(
+      memberToken,
+      `query Content($contactId: Int!) {
+        contactContent(contactId: $contactId) {
+          frames { nodes { id title category } total hasMore }
+        }
+      }`,
+      { contactId: memberContactId },
+    ).expect(200);
+    expect(contactPage.body.errors).toBeUndefined();
+    expect(contactPage.body.data.contactContent.frames).toEqual({
+      nodes: [{ id: frameId, title: 'Sanchez kitchen', category: null }],
+      total: 1,
+      hasMore: false,
+    });
+
+    // Moving through the position batch does not disturb the editor revision.
+    const moved = await mutation(
+      memberToken,
+      `mutation Move($input: BatchCanvasPositionsInput!) {
+        batchCanvasPositions(input: $input) {
+          updated { type id positionX positionY width height }
+          failed { type id error }
+        }
+      }`,
+      {
+        input: {
+          mutationId: '9b6e1032-7d85-4fce-b0a1-5c6d7e8f9a01',
+          updates: [{ type: 'frame', id: frameId, positionX: 400, positionY: 500, width: 1300, height: 900 }],
+        },
+      },
+    ).expect(200);
+    expect(moved.body.errors).toBeUndefined();
+    expect(moved.body.data.batchCanvasPositions.failed).toEqual([]);
+    expect(moved.body.data.batchCanvasPositions.updated).toEqual([
+      { type: 'frame', id: frameId, positionX: 400, positionY: 500, width: 1300, height: 900 },
+    ]);
+
+    // Revision-guarded rename + unlink; the revision from creation is still valid after the move.
+    const renamed = await mutation(
+      memberToken,
+      `mutation Update($id: Int!, $input: UpdateWorkspaceFrameInput!) {
+        updateWorkspaceFrame(id: $id, input: $input) { ${frameFields} }
+      }`,
+      {
+        id: frameId,
+        input: {
+          mutationId: 'ac7f2143-8e96-4a0f-91b2-6d7e8f9a0b12',
+          expectedUpdatedAt: frame.updatedAt,
+          title: 'Sanchez kitchen, phase 2',
+          contactId: null,
+        },
+      },
+    ).expect(200);
+    expect(renamed.body.errors).toBeUndefined();
+    expect(renamed.body.data.updateWorkspaceFrame).toMatchObject({
+      title: 'Sanchez kitchen, phase 2',
+      contactId: null,
+      contactName: null,
+      positionX: 400,
+      width: 1300,
+    });
+    const stale = await mutation(
+      memberToken,
+      `mutation Update($id: Int!, $input: UpdateWorkspaceFrameInput!) {
+        updateWorkspaceFrame(id: $id, input: $input) { id }
+      }`,
+      {
+        id: frameId,
+        input: {
+          mutationId: 'bd803254-9fa7-4b10-a2c3-7e8f9a0b1c23',
+          expectedUpdatedAt: frame.updatedAt,
+          title: 'Too late',
+        },
+      },
+    ).expect(200);
+    expect(stale.body.errors?.[0]?.extensions).toMatchObject({
+      code: 'CONFLICT',
+      reason: 'STALE_FRAME_REVISION',
+    });
+
+    const deleted = await mutation(
+      memberToken,
+      `mutation Delete($id: Int!, $mutationId: String!) {
+        deleteWorkspaceFrame(id: $id, mutationId: $mutationId) { deletedId }
+      }`,
+      { id: frameId, mutationId: 'ce914365-a0b8-4c21-b3d4-8f9a0b1c2d34' },
+    ).expect(200);
+    expect(deleted.body.errors).toBeUndefined();
+    expect(deleted.body.data.deleteWorkspaceFrame.deletedId).toBe(frameId);
+    const gone = await pool.query('SELECT 1 FROM workspace_frames WHERE id = $1', [frameId]);
+    expect(gone.rowCount).toBe(0);
+  });
 });

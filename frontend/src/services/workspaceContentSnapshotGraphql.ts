@@ -1,4 +1,4 @@
-import type { List, Note, Vault, Whiteboard, Wireframe } from '@/types';
+import type { List, Note, Vault, Whiteboard, Wireframe, WorkspaceFrame } from '@/types';
 import { graphqlRequest } from './graphqlClient';
 import {
   listFields,
@@ -20,13 +20,15 @@ import {
   VAULT_FIELDS,
   type GraphqlVault,
 } from './workspaceVaultGraphql';
+import { frameFields, mapFrame, type GraphqlWorkspaceFrame } from './workspaceFramesGraphql';
 
 type WorkspaceContentKind =
   | 'lists'
   | 'notes'
   | 'whiteboards'
   | 'wireframes'
-  | 'vaults';
+  | 'vaults'
+  | 'frames';
 
 type WorkspaceContentPageState = Record<WorkspaceContentKind, {
   total: number;
@@ -39,6 +41,7 @@ export type WorkspaceContentSnapshot = {
   whiteboards: Whiteboard[];
   wireframes: Wireframe[];
   vaults: Vault[];
+  frames: WorkspaceFrame[];
   pages: WorkspaceContentPageState;
 };
 
@@ -82,6 +85,7 @@ export const getWorkspaceContentSnapshotViaGraphql = async (
     workspaceWhiteboards: Page<GraphqlWorkspaceWhiteboard>;
     workspaceWireframes: Page<GraphqlWorkspaceWireframe>;
     workspaceVaults: Page<GraphqlVault>;
+    workspaceFrames: Page<GraphqlWorkspaceFrame>;
   };
   const variables = { page: { page: 1, pageSize: 50 } };
   const data = await graphqlRequest<Data, typeof variables>(
@@ -106,6 +110,10 @@ export const getWorkspaceContentSnapshotViaGraphql = async (
         nodes { ${VAULT_FIELDS} }
         pageInfo { page pageSize total totalPages hasNextPage hasPreviousPage }
       }
+      workspaceFrames(page: $page) {
+        nodes { ${frameFields} }
+        pageInfo { page pageSize total totalPages hasNextPage hasPreviousPage }
+      }
     }`,
     variables,
     undefined,
@@ -118,12 +126,14 @@ export const getWorkspaceContentSnapshotViaGraphql = async (
     whiteboards: data.workspaceWhiteboards.nodes.map(mapWhiteboard) as Whiteboard[],
     wireframes: data.workspaceWireframes.nodes.map(mapWireframe) as Wireframe[],
     vaults: data.workspaceVaults.nodes.map(legacyVault),
+    frames: data.workspaceFrames.nodes.map(mapFrame),
     pages: {
       lists: pageState(data.workspaceLists.pageInfo),
       notes: pageState(data.workspaceNotes.pageInfo),
       whiteboards: pageState(data.workspaceWhiteboards.pageInfo),
       wireframes: pageState(data.workspaceWireframes.pageInfo),
       vaults: pageState(data.workspaceVaults.pageInfo),
+      frames: pageState(data.workspaceFrames.pageInfo),
     },
   };
 };

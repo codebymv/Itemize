@@ -22,6 +22,7 @@ import {
   Network,
   ListChecks,
   Users,
+  Frame,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -164,6 +165,7 @@ export function ContactDetailPage() {
     notes: [],
     whiteboards: [],
     wireframes: [],
+    frames: [],
   };
   const hasInvalidContactId = contactId === null;
   const loading = organizationLoading
@@ -674,7 +676,8 @@ export function ContactDetailPage() {
                 {relatedContent.lists.length
                   + relatedContent.notes.length
                   + relatedContent.whiteboards.length
-                  + relatedContent.wireframes.length}
+                  + relatedContent.wireframes.length
+                  + relatedContent.frames.length}
               </Badge>
             </div>
           </CardHeader>
@@ -712,6 +715,13 @@ export function ContactDetailPage() {
                   focusType="wireframe"
                   icon={<GitBranch className="h-4 w-4 text-muted-foreground" />}
                   items={relatedContent.wireframes}
+                />
+                <Separator />
+                <RelatedContentGroup
+                  title="Frames"
+                  focusType="frame"
+                  icon={<Frame className="h-4 w-4 text-muted-foreground" />}
+                  items={relatedContent.frames}
                 />
               </div>
             </div>

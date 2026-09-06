@@ -15,6 +15,7 @@ export type ContactContentRows = {
   notes: ContactContentRow[];
   whiteboards: ContactContentRow[];
   wireframes: ContactContentRow[];
+  frames: ContactContentRow[];
 };
 
 @Injectable()
@@ -39,6 +40,7 @@ export class ContactContentRepository {
         notes: await this.findRows(client, 'notes', contactId, limit),
         whiteboards: await this.findRows(client, 'whiteboards', contactId, limit),
         wireframes: await this.findRows(client, 'wireframes', contactId, limit),
+        frames: await this.findRows(client, 'workspace_frames', contactId, limit),
       };
     } finally {
       client.release();
@@ -47,12 +49,13 @@ export class ContactContentRepository {
 
   private async findRows(
     client: PoolClient,
-    table: 'lists' | 'notes' | 'whiteboards' | 'wireframes',
+    table: 'lists' | 'notes' | 'whiteboards' | 'wireframes' | 'workspace_frames',
     contactId: number,
     limit: number,
   ): Promise<ContactContentRow[]> {
     const result = await client.query<ContactContentRow>(
-      `SELECT id, title, category, created_at, COUNT(*) OVER()::int AS total
+      `SELECT id, title, ${table === 'workspace_frames' ? 'NULL::varchar AS category' : 'category'},
+              created_at, COUNT(*) OVER()::int AS total
        FROM ${table}
        WHERE contact_id = $1
        ORDER BY created_at DESC, id DESC

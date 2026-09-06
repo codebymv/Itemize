@@ -78,7 +78,7 @@ export interface CreateNotePayload {
 }
 
 export type CanvasPositionUpdate = {
-  type: "list" | "note" | "whiteboard" | "wireframe" | "vault";
+  type: "list" | "note" | "whiteboard" | "wireframe" | "vault" | "frame";
   id: number | string;
   position_x: number;
   position_y: number;

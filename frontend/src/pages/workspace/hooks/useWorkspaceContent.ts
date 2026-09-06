@@ -6,20 +6,22 @@ import {
   getWorkspaceContentSnapshotViaGraphql,
   type WorkspaceContentSnapshot,
 } from '@/services/workspaceContentSnapshotGraphql';
-import type { List, Note, Vault, Whiteboard, Wireframe } from '@/types';
+import type { List, Note, Vault, Whiteboard, Wireframe, WorkspaceFrame } from '@/types';
 
 const EMPTY_LISTS: List[] = [];
 const EMPTY_NOTES: Note[] = [];
 const EMPTY_WHITEBOARDS: Whiteboard[] = [];
 const EMPTY_WIREFRAMES: Wireframe[] = [];
 const EMPTY_VAULTS: Vault[] = [];
+const EMPTY_FRAMES: WorkspaceFrame[] = [];
 
 type WorkspaceRowsKey =
   | 'lists'
   | 'notes'
   | 'whiteboards'
   | 'wireframes'
-  | 'vaults';
+  | 'vaults'
+  | 'frames';
 
 export function useWorkspaceContent(scopeKey?: string | null) {
   const queryClient = useQueryClient();
@@ -70,6 +72,10 @@ export function useWorkspaceContent(scopeKey?: string | null) {
     action => updateRows('vaults', action),
     [updateRows],
   );
+  const setFrames: Dispatch<SetStateAction<WorkspaceFrame[]>> = useCallback(
+    action => updateRows('frames', action),
+    [updateRows],
+  );
 
   const refresh = useCallback(async (): Promise<boolean> => {
     const result = await snapshotQuery.refetch();
@@ -84,12 +90,14 @@ export function useWorkspaceContent(scopeKey?: string | null) {
     whiteboards: snapshot?.whiteboards ?? EMPTY_WHITEBOARDS,
     wireframes: snapshot?.wireframes ?? EMPTY_WIREFRAMES,
     vaults: snapshot?.vaults ?? EMPTY_VAULTS,
+    frames: snapshot?.frames ?? EMPTY_FRAMES,
     pages: snapshot?.pages,
     setLists,
     setNotes,
     setWhiteboards,
     setWireframes,
     setVaults,
+    setFrames,
     loading,
     isLoading: loading,
     refreshing,

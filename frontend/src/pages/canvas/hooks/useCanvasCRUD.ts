@@ -33,7 +33,7 @@ import {
 import type { CreateItemPresetPayload } from "@/config/contentPresets";
 
 type PositionUpdate = {
-  type: "note" | "wireframe" | "vault" | "whiteboard" | "list";
+  type: "note" | "wireframe" | "vault" | "whiteboard" | "list" | "frame";
   id: number | string;
   position_x: number;
   position_y: number;

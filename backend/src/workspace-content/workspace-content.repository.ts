@@ -253,9 +253,11 @@ export type CanvasPositionKind =
   | 'note'
   | 'whiteboard'
   | 'wireframe'
-  | 'vault';
+  | 'vault'
+  | 'frame';
 
-type WorkspaceCreationKind = Exclude<CanvasPositionKind, 'vault'>;
+// Vaults and frames create through their own modules; only these claim receipts here.
+type WorkspaceCreationKind = Exclude<CanvasPositionKind, 'vault' | 'frame'>;
 
 type WorkspaceCreationReceiptClaim =
   | { kind: 'claimed' }
@@ -493,8 +495,10 @@ export class WorkspaceContentRepository {
         const positionY = roundsCoordinates
           ? Math.round(update.positionY)
           : update.positionY;
-        const supportsWidth = ['list', 'note', 'vault'].includes(update.type);
-        const supportsHeight = ['note', 'vault'].includes(update.type);
+        const supportsWidth = ['list', 'note', 'vault', 'frame'].includes(update.type);
+        const supportsHeight = ['note', 'vault', 'frame'].includes(update.type);
+        // Frames have no share projection; like vaults they return no token columns.
+        const unshareable = update.type === 'vault' || update.type === 'frame';
         const assignments = [
           'position_x = $1',
           'position_y = $2',
@@ -535,7 +539,7 @@ export class WorkspaceContentRepository {
              position_y,
              ${supportsWidth ? 'width' : 'NULL::double precision AS width'},
              ${supportsHeight ? 'height' : 'NULL::double precision AS height'},
-             ${update.type === 'vault'
+             ${unshareable
                ? 'NULL::varchar AS share_token, FALSE AS is_public'
                : 'share_token, is_public'},
              clock_timestamp() AS occurred_at`,
@@ -2138,6 +2142,7 @@ export class WorkspaceContentRepository {
       whiteboard: 'whiteboards',
       wireframe: 'wireframes',
       vault: 'vaults',
+      frame: 'workspace_frames',
     }[type];
   }
 

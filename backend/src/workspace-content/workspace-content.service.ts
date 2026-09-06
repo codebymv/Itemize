@@ -77,6 +77,7 @@ const CANVAS_POSITION_TYPES = new Set<CanvasPositionKind>([
   'whiteboard',
   'wireframe',
   'vault',
+  'frame',
 ]);
 const COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
 const MUTATION_ID_PATTERN =
@@ -1429,7 +1430,7 @@ export class WorkspaceContentService {
   }
 
   private creationFingerprint(
-    entityType: Exclude<CanvasPositionKind, 'vault'>,
+    entityType: Exclude<CanvasPositionKind, 'vault' | 'frame'>,
     values: object,
   ): string {
     return createHash('sha256')

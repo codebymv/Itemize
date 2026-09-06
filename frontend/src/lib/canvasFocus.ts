@@ -1,11 +1,11 @@
-export type CanvasFocusType = 'list' | 'note' | 'whiteboard' | 'wireframe';
+export type CanvasFocusType = 'list' | 'note' | 'whiteboard' | 'wireframe' | 'frame';
 
 export interface CanvasFocusTarget {
   type: CanvasFocusType;
   id: number;
 }
 
-const FOCUS_TYPES: readonly CanvasFocusType[] = ['list', 'note', 'whiteboard', 'wireframe'];
+const FOCUS_TYPES: readonly CanvasFocusType[] = ['list', 'note', 'whiteboard', 'wireframe', 'frame'];
 
 export const CANVAS_FOCUS_PARAM = 'focus';
 

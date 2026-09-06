@@ -113,6 +113,8 @@ describe('contact to estimate handoff', () => {
         notes: [],
         whiteboards: [],
         wireframes: [],
+      frames: [],
+        frames: [],
       },
     });
     contactsApi.getContacts.mockResolvedValue([]);
@@ -122,6 +124,7 @@ describe('contact to estimate handoff', () => {
       notes: [],
       whiteboards: [],
       wireframes: [],
+      frames: [],
     });
     invoicesApi.getProducts.mockResolvedValue([]);
     editorApi.getEstimateEditorBootstrapViaGraphql.mockResolvedValue({

@@ -31,6 +31,7 @@ describe('ContactContentService', () => {
       notes: [],
       whiteboards: [],
       wireframes: [],
+      frames: [],
     });
 
     await expect(service.get(42, 11)).resolves.toEqual({
@@ -47,6 +48,7 @@ describe('ContactContentService', () => {
       notes: { nodes: [], total: 0, hasMore: false },
       whiteboards: { nodes: [], total: 0, hasMore: false },
       wireframes: { nodes: [], total: 0, hasMore: false },
+      frames: { nodes: [], total: 0, hasMore: false },
     });
     expect(repository.find).toHaveBeenCalledWith(42, 11, 100);
   });

@@ -3,7 +3,8 @@ import { useTheme } from 'next-themes';
 import { DraggableListCard } from './DraggableListCard';
 import { ContextMenu } from './ContextMenu';
 import { useSidebar } from '../ui/sidebar';
-import { List, Note, Whiteboard, Wireframe, Vault, Category } from '../../types';
+import { List, Note, Whiteboard, Wireframe, Vault, Category, WorkspaceFrame } from '../../types';
+import { DraggableFrame } from './DraggableFrame';
 import { useAuthState } from '../../contexts/AuthContext';
 import { storage } from '../../lib/storage';
 import { stripMentionTokens } from '@/lib/mentionTokens';
@@ -52,6 +53,13 @@ interface CanvasContainerProps {
   onVaultDelete?: (vaultId: number) => Promise<boolean>;
   onVaultShare?: (vaultId: number) => void;
   onOpenNewVaultModal?: (position: { x: number; y: number }) => void;
+  frames?: WorkspaceFrame[];
+  onFrameMove?: (frameId: number, position: { x: number; y: number }, size?: { width: number; height: number }) => void;
+  onFrameUpdate?: (frameId: number, updatedData: Partial<Pick<WorkspaceFrame, 'title' | 'color_value' | 'contact_id' | 'contact_name'>>) => Promise<unknown>;
+  onFrameDelete?: (frameId: number) => Promise<boolean>;
+  onOpenNewFrame?: (position: { x: number; y: number }) => void;
+  /** The frame whose title should open for editing (just created). */
+  editingFrameId?: number | null;
   addCategory?: (categoryData: { name: string; color_value: string }) => Promise<Category>;
   updateCategory?: (categoryName: string, updatedData: Partial<{ name: string; color_value: string }>) => Promise<void>;
   isWhiteboardCollapsed?: (id: number) => boolean;
@@ -109,6 +117,12 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   onVaultDelete,
   onVaultShare,
   onOpenNewVaultModal,
+  frames = [],
+  onFrameMove,
+  onFrameUpdate,
+  onFrameDelete,
+  onOpenNewFrame,
+  editingFrameId = null,
   addCategory,
   updateCategory,
   isWhiteboardCollapsed,
@@ -442,7 +456,11 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
       return;
     }
 
-    if (e.button === 0 && !isInteractiveElement && (e.target === canvasRef.current || e.target === canvasContentRef.current)) {
+    // A frame's empty body pans like the canvas; only its header drags the frame.
+    const pannableTarget = e.target === canvasRef.current
+      || e.target === canvasContentRef.current
+      || target.hasAttribute('data-canvas-pan');
+    if (e.button === 0 && !isInteractiveElement && pannableTarget) {
       setIsPanning(true);
       setPanStart({
         x: e.clientX - canvasTransform.x,
@@ -566,6 +584,11 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
     if (onOpenNewListModal) {
       onOpenNewListModal(menuPosition);
     }
+  };
+
+  const handleAddFrame = () => {
+    setShowContextMenu(false);
+    onOpenNewFrame?.(menuPosition);
   };
 
   const handleListUpdate = async (updatedList: List) => {
@@ -774,6 +797,19 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
           </div>
         ) : (
           <>
+            {/* Frames sit behind every card; cards belong to them by geometry */}
+            {frames.map(frame => (
+              <DraggableFrame
+                key={frame.id}
+                frame={frame}
+                canvasTransform={canvasTransform}
+                onMove={onFrameMove}
+                onUpdate={onFrameUpdate}
+                onDelete={onFrameDelete}
+                autoEditTitle={editingFrameId === frame.id}
+              />
+            ))}
+
             {/* Draggable list cards */}
             {filteredLists.map(list => (
               <DraggableListCard
@@ -897,6 +933,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
                   onAddWhiteboard={handleRequestAddWhiteboard}
                   onAddWireframe={handleRequestAddWireframe}
                   onAddVault={handleRequestAddVault}
+                  onAddFrame={onOpenNewFrame ? handleAddFrame : undefined}
                   onClose={() => setShowContextMenu(false)}
                   isFromButton={menuIsFromButton}
                 />
@@ -912,7 +949,8 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
           notes.length === 0 &&
           whiteboards.length === 0 &&
           wireframes.length === 0 &&
-          vaults.length === 0 && (
+          vaults.length === 0 &&
+          frames.length === 0 && (
             <EmptyState
               icon={LayoutGrid}
               kind="passive"

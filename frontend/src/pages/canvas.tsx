@@ -37,6 +37,7 @@ import { useCanvasCollapsible } from "./canvas/hooks/useCanvasCollapsible";
 import { useCanvasContextMenu } from "./canvas/hooks/useCanvasContextMenu";
 import { useCanvasSharing } from "./canvas/hooks/useCanvasSharing";
 import { useCanvasCRUD } from "./canvas/hooks/useCanvasCRUD";
+import { useCanvasFrames } from "./canvas/hooks/useCanvasFrames";
 import { createCanvasHeaderTools } from "./canvas/components/CanvasToolbar";
 import { MobileListView as CanvasMobileListView } from "./canvas/components/MobileListView";
 import { findOpenCanvasPosition, type CanvasPositionedItem } from "@/lib/canvasPosition";
@@ -65,11 +66,13 @@ const CanvasPage: React.FC = () => {
     whiteboards,
     wireframes,
     vaults,
+    frames,
     setLists,
     setNotes,
     setWhiteboards,
     setWireframes,
     setVaults,
+    setFrames,
     isLoading,
     error,
   } = canvasData;
@@ -111,6 +114,19 @@ const CanvasPage: React.FC = () => {
 
   const { toast } = useToast();
   const { enqueuePositionUpdate } = useCanvasPositionSync();
+  const {
+    createFrameAt,
+    updateFrame,
+    deleteFrame,
+    moveFrame,
+    editingFrameId,
+  } = useCanvasFrames({
+    frames,
+    setFrames,
+    cards: { lists, notes, whiteboards, wireframes, vaults },
+    setters: { setLists, setNotes, setWhiteboards, setWireframes, setVaults },
+    enqueuePositionUpdate,
+  });
   const updateWireframe = useCallback(
     (updated: Wireframe) => {
       setWireframes((prev) =>
@@ -254,6 +270,7 @@ const CanvasPage: React.FC = () => {
       note: notes,
       whiteboard: whiteboards,
       wireframe: wireframes,
+      frame: frames,
     } as const;
     const item = (collections[focusTarget.type] as ReadonlyArray<{
       id: number | string;
@@ -289,6 +306,7 @@ const CanvasPage: React.FC = () => {
     notes,
     whiteboards,
     wireframes,
+    frames,
     setSearchParams,
   ]);
 
@@ -897,6 +915,12 @@ const CanvasPage: React.FC = () => {
               updateCategory={editCategory}
               onOpenNewNoteModal={handleOpenNewNoteModal}
               onOpenNewListModal={handleOpenNewListModal}
+              frames={frames}
+              onFrameMove={moveFrame}
+              onFrameUpdate={updateFrame}
+              onFrameDelete={deleteFrame}
+              onOpenNewFrame={(position) => { void createFrameAt(position); }}
+              editingFrameId={editingFrameId}
               onOpenNewWhiteboardModal={handleOpenNewWhiteboardModal}
               onOpenNewWireframeModal={(position) => {
                 setNewWireframeInitialPosition(
@@ -1089,6 +1113,22 @@ const CanvasPage: React.FC = () => {
                   getIntelligentPosition(lists, notes, whiteboards, wireframes),
                 );
                 setShowNewVaultModal(true);
+              }}
+              onAddFrame={isMobileView ? undefined : () => {
+                setShowButtonContextMenu(false);
+                // A frame is a region: give it its own open slot, not a card-sized one.
+                void createFrameAt(
+                  findOpenCanvasPosition(
+                    [...lists, ...notes, ...whiteboards, ...wireframes, ...vaults, ...frames],
+                    { width: 1400, height: 900 },
+                    canvasMethodsRef.current?.getViewportCenter()
+                      ? {
+                          x: Math.max(0, (canvasMethodsRef.current.getViewportCenter().x) - 700),
+                          y: Math.max(0, (canvasMethodsRef.current.getViewportCenter().y) - 450),
+                        }
+                      : undefined,
+                  ),
+                );
               }}
               onClose={() => setShowButtonContextMenu(false)}
               isFromButton={true}

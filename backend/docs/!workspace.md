@@ -18,6 +18,12 @@ Capture thoughts with rich text. Notes sit on the canvas like sticky notes and c
 
 Sketch diagrams and brainstorms on an infinite board. Add shapes, text, and drawings, then keep the board next to the lists it belongs with.
 
+## Frames
+
+A frame is a named region on the canvas. Add one from the **Add** menu (or the canvas right-click menu), name it, and drag cards into it — a card belongs to the frame its centre sits in, so there is nothing to link or unlink. Drag the frame by its header and the cards inside come with it; resize it from the bottom-right corner; the empty space inside still pans the canvas. Frames work on every plan.
+
+On Solo and Studio, a frame can be linked to a client from the chip in its header, the same way cards are. Linked frames appear on the client's page under Related Content, and opening one from there centres the canvas on the frame. Deleting a frame leaves its cards where they are.
+
 ## Clients
 
 On Solo and Studio, any list, note, whiteboard, or wireframe can be linked to one client from the chip under its category. Linked items appear on the client's page under Related Content, and opening one from there brings you back to the canvas centered on that card.

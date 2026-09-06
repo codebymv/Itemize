@@ -280,6 +280,7 @@ export type ContactContentResponse = {
   notes: Array<{ id: number; title: string; category: string; created_at: string }>;
   whiteboards: Array<{ id: number; title: string; category: string; created_at: string }>;
   wireframes: Array<{ id: number; title: string; category: string; created_at: string }>;
+  frames: Array<{ id: number; title: string; category: string; created_at: string }>;
 };
 
 export const getContactContent = async (

@@ -485,3 +485,7 @@ label is display-only; the id is authoritative.
   `$` list: invoices, estimates, and payments, the bound client's first.
 - Shared realtime payloads, the public list read, and the public note read
   strip tokens and mention nodes to their visible labels.
+
+## Frames (2026-09-06)
+
+`workspace_frames` (migration 077, marker `workspace_frames_v1`) backs the `WorkspaceFrame` type served by `WorkspaceFramesModule` (AccountScoped): `workspaceFrames(page)`, `createWorkspaceFrame(input { idempotencyKey, … })` (receipt-backed replay; `workspace_creation_receipts.entity_type` now admits `frame`), `updateWorkspaceFrame(id, input { mutationId, expectedUpdatedAt, … })` (`STALE_FRAME_REVISION` on conflict, `CONTACT_NOT_FOUND` conceals unreachable clients), `deleteWorkspaceFrame(id, mutationId)`. `batchCanvasPositions` accepts `type: "frame"` with position, width, and height and never bumps `updated_at`. Membership is spatial — the client computes which cards a frame contains — so no card type gained a field. `contactContent` gains `frames`. Frames have no share projection and no realtime channel; the canvas snapshot query (`WorkspaceContentSnapshot`) reads them alongside the card families.

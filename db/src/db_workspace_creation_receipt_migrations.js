@@ -4,7 +4,7 @@ async function runWorkspaceCreationReceiptMigration(pool) {
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       idempotency_key VARCHAR(128) NOT NULL,
       entity_type VARCHAR(24) NOT NULL
-        CHECK (entity_type IN ('list', 'note', 'whiteboard', 'wireframe')),
+        CHECK (entity_type IN ('list', 'note', 'whiteboard', 'wireframe', 'frame')),
       request_fingerprint CHAR(64) NOT NULL,
       entity_id INTEGER,
       created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,

@@ -186,6 +186,7 @@ const contactContentQuery = `
       notes { nodes { id title category createdAt } total hasMore }
       whiteboards { nodes { id title category createdAt } total hasMore }
       wireframes { nodes { id title category createdAt } total hasMore }
+      frames { nodes { id title category createdAt } total hasMore }
     }
   }
 `;
@@ -202,6 +203,7 @@ const contactDetailBootstrapQuery = `
       notes { nodes { id title category createdAt } total hasMore }
       whiteboards { nodes { id title category createdAt } total hasMore }
       wireframes { nodes { id title category createdAt } total hasMore }
+      frames { nodes { id title category createdAt } total hasMore }
     }
   }
 `;
@@ -249,12 +251,14 @@ const mapContactContent = (collections: {
   notes: GraphqlContactContentCollection;
   whiteboards: GraphqlContactContentCollection;
   wireframes: GraphqlContactContentCollection;
+  frames: GraphqlContactContentCollection;
 }): ContactContentResponse => {
   if (
     collections.lists.hasMore
     || collections.notes.hasMore
     || collections.whiteboards.hasMore
     || collections.wireframes.hasMore
+    || collections.frames.hasMore
   ) {
     throw new GraphqlRequestError(
       'Contact content exceeds the bounded GraphQL preview',
@@ -274,6 +278,7 @@ const mapContactContent = (collections: {
     notes: map(collections.notes),
     whiteboards: map(collections.whiteboards),
     wireframes: map(collections.wireframes),
+    frames: map(collections.frames),
   };
 };
 
@@ -303,6 +308,7 @@ export const getContactDetailBootstrapViaGraphql = async (
       notes: GraphqlContactContentCollection;
       whiteboards: GraphqlContactContentCollection;
       wireframes: GraphqlContactContentCollection;
+      frames: GraphqlContactContentCollection;
     };
   }, typeof variables>(
     contactDetailBootstrapQuery,
@@ -556,6 +562,7 @@ export const getContactContentViaGraphql = async (
       notes: GraphqlContactContentCollection;
       whiteboards: GraphqlContactContentCollection;
       wireframes: GraphqlContactContentCollection;
+      frames: GraphqlContactContentCollection;
     };
   }, typeof variables>(contactContentQuery, variables, organizationId);
   return mapContactContent(data.contactContent);

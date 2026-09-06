@@ -25,6 +25,26 @@ export interface WorkspaceReference {
   declinedAt: string | null;
 }
 
+/**
+ * A named canvas region. Cards belong to a frame by geometry (centre inside
+ * the rectangle); nothing on a card records the frame.
+ */
+export interface WorkspaceFrame {
+  id: number;
+  user_id: number;
+  title: string;
+  color_value: string;
+  position_x: number;
+  position_y: number;
+  width: number;
+  height: number;
+  z_index: number;
+  contact_id: number | null;
+  contact_name: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface List {
   id: string;
   title: string;

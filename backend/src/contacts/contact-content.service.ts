@@ -34,6 +34,7 @@ export class ContactContentService {
         notes: this.collection(result.notes),
         whiteboards: this.collection(result.whiteboards),
         wireframes: this.collection(result.wireframes),
+        frames: this.collection(result.frames),
       };
     } catch (error) {
       if (error instanceof GraphQLError) throw error;

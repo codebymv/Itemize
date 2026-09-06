@@ -330,6 +330,7 @@ describe('contact GraphQL consumer', () => {
           notes: { nodes: [], total: 0, hasMore: false },
           whiteboards: { nodes: [], total: 0, hasMore: false },
           wireframes: { nodes: [], total: 0, hasMore: false },
+          frames: { nodes: [], total: 0, hasMore: false },
         },
       },
     }));
@@ -344,6 +345,7 @@ describe('contact GraphQL consumer', () => {
       notes: [],
       whiteboards: [],
       wireframes: [],
+      frames: [],
     });
     const [, init] = vi.mocked(fetch).mock.calls[0];
     expect(JSON.parse(String(init?.body)).variables).toEqual({ contactId: 11 });
@@ -372,6 +374,7 @@ describe('contact GraphQL consumer', () => {
           notes: { nodes: [], total: 0, hasMore: false },
           whiteboards: { nodes: [], total: 0, hasMore: false },
           wireframes: { nodes: [], total: 0, hasMore: false },
+          frames: { nodes: [], total: 0, hasMore: false },
         },
       },
     }));
@@ -410,6 +413,7 @@ describe('contact GraphQL consumer', () => {
           notes: { nodes: [], total: 0, hasMore: false },
           whiteboards: { nodes: [], total: 0, hasMore: false },
           wireframes: { nodes: [], total: 0, hasMore: false },
+          frames: { nodes: [], total: 0, hasMore: false },
         },
       },
     }));

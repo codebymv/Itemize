@@ -23,7 +23,8 @@ const canonicalize = (value: unknown): unknown => {
   return value;
 };
 
-type WorkspaceCreationType = 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault';
+type WorkspaceCreationType = 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault'
+  | 'frame';
 
 type WorkspaceCreationAttempt = {
   key: string;
