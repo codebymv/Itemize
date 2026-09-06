@@ -48,6 +48,17 @@ describe('WorkspaceContactLink', () => {
     await waitFor(() => expect(onChange).toHaveBeenCalledWith(null, null));
   });
 
+  it('opens the picker from the + beside a linked chip so cards without text can change clients', async () => {
+    const onChange = vi.fn().mockResolvedValue(undefined);
+    render(<WorkspaceContactLink contactId={5} contactName="Casey Sanchez" onChange={onChange} />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Change linked client' }));
+    expect(await screen.findByText('Change linked client', { selector: 'h2' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Pick Casey' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Link client' }));
+    await waitFor(() => expect(onChange).toHaveBeenCalledWith(5, 'Casey Client'));
+  });
+
   it('links a picked client with its display name', async () => {
     const onChange = vi.fn().mockResolvedValue(undefined);
     render(<WorkspaceContactLink contactId={null} onChange={onChange} />);

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link2, UserRound, X } from 'lucide-react';
+import { Plus, UserRound, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -72,36 +72,54 @@ export const WorkspaceContactLink: React.FC<WorkspaceContactLinkProps> = ({
     >
       {isLinked ? (
         <>
-          {canBind ? (
-            <button
-              type="button"
-              onClick={() => setOpen(true)}
-              className="inline-flex max-w-full items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-800 hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200 dark:hover:bg-blue-900"
-              aria-label={`Linked to ${label}. Change linked client`}
-            >
-              <UserRound className="h-3 w-3 shrink-0" aria-hidden="true" />
-              <span className="truncate">{label}</span>
-            </button>
-          ) : (
-            <span
-              className="inline-flex max-w-full items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-800 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200"
-              aria-label={`Linked to ${label}`}
-            >
-              <UserRound className="h-3 w-3 shrink-0" aria-hidden="true" />
-              <span className="truncate">{label}</span>
-            </span>
-          )}
+          <span
+            className="inline-flex max-w-full items-center rounded-full border border-blue-200 bg-blue-50 text-xs font-medium text-blue-800 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200"
+            data-testid="workspace-contact-chip"
+          >
+            {canBind ? (
+              <button
+                type="button"
+                onClick={() => setOpen(true)}
+                className="inline-flex min-w-0 items-center gap-1 rounded-full py-0.5 pl-2 pr-1 hover:bg-blue-100 dark:hover:bg-blue-900"
+                aria-label={`Linked to ${label}`}
+              >
+                <UserRound className="h-3 w-3 shrink-0" aria-hidden="true" />
+                <span className="truncate">{label}</span>
+              </button>
+            ) : (
+              <span
+                className="inline-flex min-w-0 items-center gap-1 py-0.5 px-2"
+                aria-label={`Linked to ${label}`}
+              >
+                <UserRound className="h-3 w-3 shrink-0" aria-hidden="true" />
+                <span className="truncate">{label}</span>
+              </span>
+            )}
+            {canBind && (
+              <button
+                type="button"
+                className="mr-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full hover:bg-blue-200 disabled:opacity-50 dark:hover:bg-blue-800"
+                aria-label="Unlink client"
+                title="Unlink client"
+                disabled={saving}
+                onClick={() => void commit(null, null)}
+              >
+                <X className="h-3 w-3" aria-hidden="true" />
+              </button>
+            )}
+          </span>
           {canBind && (
             <Button
               type="button"
               variant="ghost"
               size="icon"
               className="h-6 w-6"
-              aria-label="Unlink client"
+              aria-label="Change linked client"
+              title="Change linked client"
               disabled={saving}
-              onClick={() => void commit(null, null)}
+              onClick={() => setOpen(true)}
             >
-              <X className="h-3 w-3" aria-hidden="true" />
+              <Plus className="h-3 w-3" aria-hidden="true" />
             </Button>
           )}
         </>
@@ -113,7 +131,7 @@ export const WorkspaceContactLink: React.FC<WorkspaceContactLinkProps> = ({
           className="h-6 px-2 text-xs text-muted-foreground"
           onClick={() => setOpen(true)}
         >
-          <Link2 className="mr-1 h-3 w-3" aria-hidden="true" />
+          <Plus className="mr-1 h-3 w-3" aria-hidden="true" />
           Link to client
         </Button>
       ) : (
@@ -132,7 +150,7 @@ export const WorkspaceContactLink: React.FC<WorkspaceContactLinkProps> = ({
       <Dialog open={open} onOpenChange={(next) => (next ? setOpen(true) : closeDialog())}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Link to a client</DialogTitle>
+            <DialogTitle>{isLinked ? 'Change linked client' : 'Link to a client'}</DialogTitle>
             <DialogDescription>
               This card will appear on the client&apos;s page and can be turned into
               client-facing documents from there.
