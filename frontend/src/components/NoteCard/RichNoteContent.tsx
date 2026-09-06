@@ -24,6 +24,7 @@ import { AutocompleteExtension, type AutocompleteStorage } from './autocompleteS
 import { createContactMentionSuggestion, type MentionContext } from './noteMentionSuggestion';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useSubscription } from '@/contexts/SubscriptionContext';
+import { STATUS_THEME_CLASSES } from '@/lib/statusVisuals';
 
 interface RichNoteContentProps {
   content: string;
@@ -169,7 +170,10 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
         emptyEditorClass: 'is-empty',
       }),
       Mention.configure({
-        HTMLAttributes: { class: 'mention', 'data-entity': 'contact' },
+        HTMLAttributes: {
+          class: `mention rounded-full px-1.5 font-semibold ${STATUS_THEME_CLASSES.blue.badgeClass}`,
+          'data-entity': 'contact',
+        },
         renderText: ({ node }) => `@${node.attrs.label ?? node.attrs.id}`,
         suggestion: createContactMentionSuggestion(mentionContextRef),
       }),

@@ -105,7 +105,7 @@ function RelatedContentGroup({
             <Link
               key={item.id}
               to={buildCanvasFocusPath(focusType, item.id)}
-              className="flex min-w-0 items-center justify-between gap-3 rounded-md border p-3 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="interaction-row flex min-w-0 items-center justify-between gap-3 rounded-md border p-3"
               aria-label={`Open ${item.title} on the canvas`}
             >
               <span className="min-w-0 truncate text-sm">{item.title}</span>

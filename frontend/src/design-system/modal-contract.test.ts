@@ -36,6 +36,7 @@ describe('modal anatomy contract', () => {
     'pages/invoices/RecurringInvoicesPage.tsx',
     'pages/reputation/ReputationPage.tsx',
     'pages/reputation/ReputationSettingsPage.tsx',
+    'components/workspace/WorkspaceContactLink.tsx',
   ])('%s uses the shared modal anatomy', path => {
     const source = read(path)
 

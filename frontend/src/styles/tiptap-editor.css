@@ -107,15 +107,8 @@
   line-height: inherit;
 }
 
-/* Inline client mention (TipTap Mention node). Rendered from ids; label is display-only. */
+/* Inline client mention (TipTap Mention node). Color comes from the status palette via the node's classes. */
 .ProseMirror .mention {
-  display: inline-flex;
-  align-items: center;
-  padding: 0 0.4em;
-  border-radius: 999px;
-  background: hsl(var(--primary) / 0.12);
-  color: hsl(var(--primary));
-  font-weight: 600;
   white-space: nowrap;
   text-decoration: none;
 }

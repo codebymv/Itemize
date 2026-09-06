@@ -1,19 +1,15 @@
 import React, { useState } from 'react';
 import { Plus, UserRound, X } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog } from '@/components/ui/dialog';
+import { ModalBody, ModalContent, ModalFooter, ModalHeader } from '@/components/ui/modal';
 import { ContactCatalogPicker } from '@/components/ContactCatalogPicker';
 import { UpgradeCTA } from '@/components/subscription/UpgradeCTA';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useOrganization } from '@/hooks/useOrganization';
 import { contactDisplayName } from '@/lib/contactDisplayName';
+import { STATUS_THEME_CLASSES } from '@/lib/statusVisuals';
 import { cn } from '@/lib/utils';
 import type { Contact } from '@/types';
 
@@ -29,10 +25,16 @@ export interface WorkspaceContactLinkProps {
 }
 
 /**
- * The client chip shown under a workspace card's category row. Binding is a
- * paid capability: without it an existing link stays visible (workspace data
- * never looks deleted) but cannot be changed, and an empty slot offers the
- * upgrade instead of a picker.
+ * A linked client is Itemize-owned live working state, so the chip reads from
+ * the blue status theme like every other pill in the app.
+ */
+const clientTheme = STATUS_THEME_CLASSES.blue;
+
+/**
+ * The client chip beside a workspace card's category badge. Binding is a paid
+ * capability: without it an existing link stays visible (workspace data never
+ * looks deleted) but cannot be changed, and an empty slot offers the upgrade
+ * instead of a picker.
  */
 export const WorkspaceContactLink: React.FC<WorkspaceContactLinkProps> = ({
   contactId,
@@ -72,15 +74,15 @@ export const WorkspaceContactLink: React.FC<WorkspaceContactLinkProps> = ({
     >
       {isLinked ? (
         <>
-          <span
-            className="inline-flex max-w-full items-center rounded-full border border-blue-200 bg-blue-50 text-xs font-medium text-blue-800 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200"
+          <Badge
+            className={cn('max-w-full gap-0 border-transparent p-0 font-raleway', clientTheme.badgeClass)}
             data-testid="workspace-contact-chip"
           >
             {canBind ? (
               <button
                 type="button"
                 onClick={() => setOpen(true)}
-                className="inline-flex min-w-0 items-center gap-1 rounded-full py-0.5 pl-2 pr-1 hover:bg-blue-100 dark:hover:bg-blue-900"
+                className="interaction-control inline-flex min-w-0 items-center gap-1 rounded-full py-0.5 pl-2.5 pr-1.5 touch-manipulation"
                 aria-label={`Linked to ${label}`}
               >
                 <UserRound className="h-3 w-3 shrink-0" aria-hidden="true" />
@@ -88,7 +90,7 @@ export const WorkspaceContactLink: React.FC<WorkspaceContactLinkProps> = ({
               </button>
             ) : (
               <span
-                className="inline-flex min-w-0 items-center gap-1 py-0.5 px-2"
+                className="inline-flex min-w-0 items-center gap-1 px-2.5 py-0.5"
                 aria-label={`Linked to ${label}`}
               >
                 <UserRound className="h-3 w-3 shrink-0" aria-hidden="true" />
@@ -98,7 +100,7 @@ export const WorkspaceContactLink: React.FC<WorkspaceContactLinkProps> = ({
             {canBind && (
               <button
                 type="button"
-                className="mr-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full hover:bg-blue-200 disabled:opacity-50 dark:hover:bg-blue-800"
+                className="interaction-control relative mr-1 grid h-4 w-4 shrink-0 place-items-center rounded-full touch-manipulation after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] disabled:opacity-50"
                 aria-label="Unlink client"
                 title="Unlink client"
                 disabled={saving}
@@ -107,19 +109,18 @@ export const WorkspaceContactLink: React.FC<WorkspaceContactLinkProps> = ({
                 <X className="h-3 w-3" aria-hidden="true" />
               </button>
             )}
-          </span>
+          </Badge>
           {canBind && (
             <Button
               type="button"
               variant="ghost"
-              size="icon"
-              className="h-6 w-6"
+              size="iconCompact"
               aria-label="Change linked client"
               title="Change linked client"
               disabled={saving}
               onClick={() => setOpen(true)}
             >
-              <Plus className="h-3 w-3" aria-hidden="true" />
+              <Plus className="h-4 w-4" aria-hidden="true" />
             </Button>
           )}
         </>
@@ -127,11 +128,11 @@ export const WorkspaceContactLink: React.FC<WorkspaceContactLinkProps> = ({
         <Button
           type="button"
           variant="ghost"
-          size="sm"
-          className="h-6 px-2 text-xs text-muted-foreground"
+          size="compact"
+          className="font-raleway text-muted-foreground"
           onClick={() => setOpen(true)}
         >
-          <Plus className="mr-1 h-3 w-3" aria-hidden="true" />
+          <Plus className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
           Link to client
         </Button>
       ) : (
@@ -139,8 +140,8 @@ export const WorkspaceContactLink: React.FC<WorkspaceContactLinkProps> = ({
           requiredPlan="starter"
           feature="CONTACTS"
           variant="subtle"
-          size="sm"
-          className="h-6 rounded-full px-2 text-xs shadow-none"
+          size="compact"
+          className="font-raleway"
           description="Link this to a client to turn it into estimates, invoices, and signature requests."
         >
           Link to a client
@@ -148,35 +149,36 @@ export const WorkspaceContactLink: React.FC<WorkspaceContactLinkProps> = ({
       )}
 
       <Dialog open={open} onOpenChange={(next) => (next ? setOpen(true) : closeDialog())}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{isLinked ? 'Change linked client' : 'Link to a client'}</DialogTitle>
-            <DialogDescription>
-              This card will appear on the client&apos;s page and can be turned into
-              client-facing documents from there.
-            </DialogDescription>
-          </DialogHeader>
-          <ContactCatalogPicker
-            organizationId={organizationId}
-            selectedContact={selected}
-            onSelect={setSelected}
-            status="active"
-            allowNone={false}
-            placeholder="Search clients"
+        <ModalContent size="sm">
+          <ModalHeader
+            icon={UserRound}
+            title={isLinked ? 'Change linked client' : 'Link to a client'}
+            description="This card will appear on the client's page and can be turned into client-facing documents from there."
           />
-          <DialogFooter>
+          <ModalBody>
+            <ContactCatalogPicker
+              organizationId={organizationId}
+              selectedContact={selected}
+              onSelect={setSelected}
+              status="active"
+              allowNone={false}
+              placeholder="Search clients"
+            />
+          </ModalBody>
+          <ModalFooter>
             <Button type="button" variant="outline" onClick={closeDialog} disabled={saving}>
               Cancel
             </Button>
             <Button
               type="button"
               disabled={!selected || saving}
+              aria-busy={saving || undefined}
               onClick={() => selected && void commit(selected.id, contactDisplayName(selected))}
             >
               {saving ? 'Linking…' : 'Link client'}
             </Button>
-          </DialogFooter>
-        </DialogContent>
+          </ModalFooter>
+        </ModalContent>
       </Dialog>
     </div>
   );

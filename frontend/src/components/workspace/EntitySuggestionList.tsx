@@ -1,5 +1,6 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 import { UserRound } from 'lucide-react';
+import { STATUS_THEME_CLASSES } from '@/lib/statusVisuals';
 import { cn } from '@/lib/utils';
 import type { EntitySuggestion } from '@/lib/entitySuggestions';
 
@@ -70,8 +71,8 @@ export const EntitySuggestionList = forwardRef<EntitySuggestionListHandle, Entit
               role="option"
               aria-selected={index === activeIndex}
               className={cn(
-                'flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm',
-                index === activeIndex ? 'bg-primary text-primary-foreground' : 'hover:bg-accent',
+                'interaction-control flex min-h-11 w-full items-center gap-2 px-3 py-1.5 text-left text-sm touch-manipulation md:min-h-9',
+                index === activeIndex && 'bg-accent text-accent-foreground',
               )}
               onMouseEnter={() => setActiveIndex(index)}
               onMouseDown={(event) => event.preventDefault()}
@@ -79,8 +80,9 @@ export const EntitySuggestionList = forwardRef<EntitySuggestionListHandle, Entit
             >
               <span
                 className={cn(
-                  'grid h-6 w-6 shrink-0 place-items-center rounded text-[11px] font-semibold',
-                  index === activeIndex ? 'bg-primary-foreground/20' : 'bg-primary/10 text-primary',
+                  'grid h-6 w-6 shrink-0 place-items-center rounded-full text-[11px] font-semibold',
+                  STATUS_THEME_CLASSES.blue.iconBackgroundClass,
+                  STATUS_THEME_CLASSES.blue.iconClass,
                 )}
                 aria-hidden="true"
               >
@@ -88,12 +90,7 @@ export const EntitySuggestionList = forwardRef<EntitySuggestionListHandle, Entit
               </span>
               <span className="truncate font-medium">{item.label}</span>
               {item.detail && (
-                <span
-                  className={cn(
-                    'ml-auto truncate text-xs',
-                    index === activeIndex ? 'text-primary-foreground/80' : 'text-muted-foreground',
-                  )}
-                >
+                <span className="ml-auto truncate text-xs text-muted-foreground">
                   {item.detail}
                 </span>
               )}

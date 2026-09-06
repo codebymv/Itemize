@@ -36,7 +36,7 @@ export interface UpgradeCTAProps {
     /** Button variant */
     variant?: 'default' | 'outline' | 'ghost' | 'subtle';
     /** Button size */
-    size?: 'sm' | 'default' | 'lg' | 'icon';
+    size?: 'compact' | 'sm' | 'default' | 'lg' | 'icon';
     /** Custom button text (default: "Upgrade to {Plan}") */
     children?: React.ReactNode;
     /** Additional CSS classes */

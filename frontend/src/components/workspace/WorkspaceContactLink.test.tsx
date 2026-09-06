@@ -53,7 +53,7 @@ describe('WorkspaceContactLink', () => {
     render(<WorkspaceContactLink contactId={5} contactName="Casey Sanchez" onChange={onChange} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Change linked client' }));
-    expect(await screen.findByText('Change linked client', { selector: 'h2' })).toBeInTheDocument();
+    expect(await screen.findByRole('dialog', { name: 'Change linked client' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Pick Casey' }));
     fireEvent.click(screen.getByRole('button', { name: 'Link client' }));
     await waitFor(() => expect(onChange).toHaveBeenCalledWith(5, 'Casey Client'));
