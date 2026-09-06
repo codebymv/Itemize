@@ -12,4 +12,12 @@ describe('sanitizeNoteHtml', () => {
       '<p><strong>Hello</strong></p>',
     );
   });
+
+  it('keeps mention pills and closes every other data attribute', () => {
+    const pill = '<span class="mention" data-type="mention" data-entity="contact" data-id="7" data-label="Casey Sanchez">@Casey Sanchez</span>';
+    expect(sanitizeNoteHtml(`<p>Call ${pill} today</p>`)).toBe(`<p>Call ${pill} today</p>`);
+    expect(sanitizeNoteHtml('<p><span data-tracking="x" data-id="1">hi</span></p>')).toBe(
+      '<p><span data-id="1">hi</span></p>',
+    );
+  });
 });

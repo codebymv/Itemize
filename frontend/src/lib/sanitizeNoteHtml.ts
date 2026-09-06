@@ -11,6 +11,9 @@ export function sanitizeNoteHtml(value: string): string {
   }
   return DOMPurify.sanitize(value, {
     ALLOWED_TAGS: NOTE_TAGS,
-    ALLOWED_ATTR: ['class', 'style'],
+    // Mention pills are <span data-type="mention" data-entity data-id data-label>.
+    // Data attributes are otherwise closed so nothing else rides along.
+    ALLOWED_ATTR: ['class', 'style', 'data-type', 'data-entity', 'data-id', 'data-label'],
+    ALLOW_DATA_ATTR: false,
   });
 }

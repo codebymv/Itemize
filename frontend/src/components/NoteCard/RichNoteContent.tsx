@@ -6,6 +6,8 @@ import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
 import Placeholder from '@tiptap/extension-placeholder';
 import TextStyle from '@tiptap/extension-text-style';
+import Mention from '@tiptap/extension-mention';
+import { useNavigate } from 'react-router-dom';
 import { Sparkles } from 'lucide-react';
 import { RichTextToolbar } from './RichTextToolbar';
 import { SuggestionActions } from '@/components/ai/SuggestionActions';
@@ -19,6 +21,9 @@ import logger from '@/lib/logger';
 import { migrateNoteContentToHtml, shouldApplyExternalNoteHtml } from './noteEditorHtml';
 import { formatNoteSuggestion } from './noteSuggestionText';
 import { AutocompleteExtension, type AutocompleteStorage } from './autocompleteStorage';
+import { createContactMentionSuggestion, type MentionContext } from './noteMentionSuggestion';
+import { useOrganization } from '@/hooks/useOrganization';
+import { useSubscription } from '@/contexts/SubscriptionContext';
 
 interface RichNoteContentProps {
   content: string;
@@ -33,6 +38,9 @@ interface RichNoteContentProps {
   noteId: number;
   onAutoSave: (content: string) => Promise<void>;
   updatedAt?: string;
+  /** Current client binding; the first `@` mention binds an unbound note. */
+  contactId?: number | null;
+  onLinkContact?: (contactId: number, contactName: string) => Promise<unknown> | unknown;
 }
 
 export const RichNoteContent: React.FC<RichNoteContentProps> = ({
@@ -45,9 +53,27 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
   noteColor = '#FFFFE0',
   noteId,
   onAutoSave,
-  updatedAt
+  updatedAt,
+  contactId = null,
+  onLinkContact,
 }) => {
   const isUpdatingFromProps = useRef(false);
+  const navigate = useNavigate();
+  const { organizationId } = useOrganization();
+  const { hasFeature } = useSubscription();
+  // The editor is created once; the mention plugin reads live values through this ref.
+  const mentionContextRef = useRef<MentionContext>({
+    organizationId: null,
+    canBind: false,
+    contactId: null,
+  });
+  mentionContextRef.current = {
+    organizationId,
+    canBind: hasFeature('contacts') && organizationId !== null,
+    contactId,
+    onLinkContact,
+    onUpgrade: () => navigate('/settings'),
+  };
   const rootRef = useRef<HTMLDivElement>(null);
   
   // Use global AI enabled state from context
@@ -141,6 +167,11 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
       Placeholder.configure({
         placeholder: 'Start typing your note...',
         emptyEditorClass: 'is-empty',
+      }),
+      Mention.configure({
+        HTMLAttributes: { class: 'mention', 'data-entity': 'contact' },
+        renderText: ({ node }) => `@${node.attrs.label ?? node.attrs.id}`,
+        suggestion: createContactMentionSuggestion(mentionContextRef),
       }),
       AutocompleteExtension,
     ],

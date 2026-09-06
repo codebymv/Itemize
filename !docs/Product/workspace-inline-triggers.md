@@ -1,6 +1,6 @@
 # Workspace inline triggers
 
-*Plan, 2026-09-06. Builds on the contact seam (`contactId` on workspace content). Nothing built yet.*
+*Plan, 2026-09-06. Builds on the contact seam (`contactId` on workspace content). Slice 1 (`@` in notes) built the same day; see the commit for details.*
 
 Type `@`, `$`, `#`, or `/` anywhere you can type on the canvas and a list appears at the caret — the Slack composer pattern applied to clients, money documents, categories, and actions. The client chip becomes the result of a gesture, not the entry point.
 
@@ -56,7 +56,7 @@ adapters: notes (TipTap Mention + Suggestion), plain inputs (list items, titles)
 
 ## Traps already found
 
-- `frontend/src/lib/sanitizeNoteHtml.ts` allows only `class`/`style` attributes; mention nodes must be admitted (`data-type`, `data-entity`, `data-id`) or pills silently degrade to text on reload. The backend regex sanitizer keeps them.
+- `frontend/src/lib/sanitizeNoteHtml.ts` (DOMPurify) kept `data-*` attributes by default, so mention nodes survived the read path as-is; slice 1 tightened it to an explicit allowlist (`data-type`, `data-entity`, `data-id`, `data-label`) with other data attributes closed. The backend regex sanitizer keeps them too.
 - List items are `{ id, text, completed }` JSONB with nowhere for metadata — hence the token form.
 - `workspaceListMutationsGraphql.ts`, `workspaceNoteMutationsGraphql.ts`, and the snapshot loader's `mapCanvasList` each carry their own selection/mapper; new fields go in all three (regression tests guard this).
 - Realtime is not needed; pills hydrate on read.

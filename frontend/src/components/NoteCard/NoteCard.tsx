@@ -313,6 +313,10 @@ const NoteCard: React.FC<NoteCardProps> = ({
               noteId={note.id}
               onAutoSave={(content: string) => onUpdate(note.id, { content })}
               updatedAt={note.updated_at}
+              contactId={note.contact_id ?? null}
+              onLinkContact={(contactId, contactName) =>
+                onUpdate(note.id, { contact_id: contactId, contact_name: contactName })
+              }
             />
           </div>
         </CollapsibleContent>

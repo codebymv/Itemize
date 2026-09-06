@@ -20,7 +20,8 @@ import {
   List,
   ListOrdered,
   Type,
-  Quote
+  Quote,
+  AtSign
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
@@ -137,6 +138,17 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
 
       <div className="flex items-center gap-1 flex-shrink-0">
         {/* Text Style Controls */}
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-8 w-8 p-0"
+          aria-label="Mention a client"
+          title="Mention a client (@)"
+          onClick={() => editor.chain().focus().insertContent('@').run()}
+        >
+          <AtSign className="h-3 w-3 md:h-4 md:w-4" />
+        </Button>
         <ToggleGroup 
           type="multiple"
           value={[
