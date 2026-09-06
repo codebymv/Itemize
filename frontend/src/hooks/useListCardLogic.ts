@@ -200,7 +200,7 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
       onUpdate({
         ...list,
         items: [...list.items, newItem],
-        ...(binding ? { contact_id: binding.contactId, contact_name: binding.label } : {}),
+        ...(binding ? { contact_id: binding.entityId, contact_name: binding.label } : {}),
       });
       setNewItemText('');
     }
@@ -242,7 +242,7 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
       onUpdate({
         ...list,
         items: updatedItems,
-        ...(binding ? { contact_id: binding.contactId, contact_name: binding.label } : {}),
+        ...(binding ? { contact_id: binding.entityId, contact_name: binding.label } : {}),
       });
       setEditingItemId(null);
       setEditingItemText('');

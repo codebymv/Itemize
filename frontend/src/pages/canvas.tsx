@@ -39,7 +39,11 @@ import { useCanvasSharing } from "./canvas/hooks/useCanvasSharing";
 import { useCanvasCRUD } from "./canvas/hooks/useCanvasCRUD";
 import { createCanvasHeaderTools } from "./canvas/components/CanvasToolbar";
 import { MobileListView as CanvasMobileListView } from "./canvas/components/MobileListView";
-import { findOpenCanvasPosition } from "@/lib/canvasPosition";
+import { findOpenCanvasPosition, type CanvasPositionedItem } from "@/lib/canvasPosition";
+import {
+  WorkspaceCanvasActionsProvider,
+  type WorkspaceCanvasActions,
+} from "@/components/workspace/WorkspaceCanvasActions";
 import { CANVAS_FOCUS_PARAM, parseCanvasFocus } from "@/lib/canvasFocus";
 import type { PreparedVaultSecurity } from "@/lib/vaultZkSession";
 import type { CreateItemPresetPayload } from "@/config/contentPresets";
@@ -598,6 +602,30 @@ const CanvasPage: React.FC = () => {
     setShowNewListModal(true);
   };
 
+  // `/new list` and `/new note` from a card: the first open slot to its right.
+  const positionBeside = (anchor: CanvasPositionedItem) =>
+    findOpenCanvasPosition(
+      [...lists, ...notes, ...whiteboards, ...wireframes, ...vaults],
+      undefined,
+      {
+        x: (anchor.position_x ?? 0) + (anchor.width ?? 600) + 50,
+        y: anchor.position_y ?? 0,
+      },
+    );
+  // Handed to every card through context, so it must not change identity per render.
+  const canvasActionsRef = useRef({ positionBeside, handleOpenNewListModal, handleOpenNewNoteModal });
+  canvasActionsRef.current = { positionBeside, handleOpenNewListModal, handleOpenNewNoteModal };
+  const canvasActions = useMemo<WorkspaceCanvasActions>(() => ({
+    createListNear: (anchor) => {
+      const current = canvasActionsRef.current;
+      current.handleOpenNewListModal(current.positionBeside(anchor));
+    },
+    createNoteNear: (anchor) => {
+      const current = canvasActionsRef.current;
+      current.handleOpenNewNoteModal(current.positionBeside(anchor));
+    },
+  }), []);
+
   const handleOpenNewWhiteboardModal = (position?: {
     x: number;
     y: number;
@@ -802,6 +830,7 @@ const CanvasPage: React.FC = () => {
             className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] absolute inset-x-0"
             style={{ top: 0, bottom: 0 }}
           >
+            <WorkspaceCanvasActionsProvider value={canvasActions}>
             <CanvasContainer
               lists={filteredData.filteredLists}
               notes={filteredData.filteredNotes}
@@ -906,6 +935,7 @@ const CanvasPage: React.FC = () => {
                 }
               }}
             />
+            </WorkspaceCanvasActionsProvider>
           </div>
         )}
 

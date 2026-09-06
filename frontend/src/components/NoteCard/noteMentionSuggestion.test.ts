@@ -16,7 +16,7 @@ vi.mock('@/lib/entitySuggestions', async (importOriginal) => ({
 const chainSpy = () => {
   const calls: Array<[string, unknown[]]> = [];
   const chain: Record<string, (...args: unknown[]) => unknown> = {};
-  for (const name of ['focus', 'deleteRange', 'insertContentAt', 'run']) {
+  for (const name of ['focus', 'deleteRange', 'insertContent', 'insertContentAt', 'run']) {
     chain[name] = (...args: unknown[]) => {
       calls.push([name, args]);
       return chain;
@@ -99,6 +99,34 @@ describe('noteMentionSuggestion', () => {
     acceptMention(ctx, '@', { editor, range: { from: 0, to: 4 }, props: upgradeSuggestion });
     expect(calls.map(([name]) => name)).toEqual(['focus', 'deleteRange', 'run']);
     expect(ctx.onUpgrade).toHaveBeenCalled();
+  });
+
+  it('lists the card actions on / without needing the Contacts capability', async () => {
+    const run = vi.fn();
+    const ctx = context({ canBind: false, actions: { available: ['share', 'new-note'], run } });
+    await expect(mentionItems(ctx, '/', 'sh')).resolves.toEqual([
+      { kind: 'action', id: 3, label: 'Share', detail: 'Public link for this card', initials: '/', action: 'share' },
+    ]);
+    await expect(mentionItems(context({ actions: undefined }), '/', '')).resolves.toEqual([]);
+  });
+
+  it('runs an action after removing the typed command, and opens @ for the mention door', () => {
+    const run = vi.fn();
+    const ctx = context({ actions: { available: ['share', 'mention-client'], run } });
+    const share = { kind: 'action' as const, id: 3, label: 'Share', detail: null, initials: '/', action: 'share' as const };
+    const mention = { ...share, id: 4, label: 'Mention a client', action: 'mention-client' as const };
+
+    const first = chainSpy();
+    acceptMention(ctx, '/', { editor: first.editor, range: { from: 2, to: 6 }, props: share });
+    expect(first.calls).toEqual([['focus', []], ['deleteRange', [{ from: 2, to: 6 }]], ['run', []]]);
+    expect(run).toHaveBeenCalledWith('share');
+
+    const second = chainSpy();
+    acceptMention(ctx, '/', { editor: second.editor, range: { from: 2, to: 6 }, props: mention });
+    expect(second.calls).toEqual([
+      ['focus', []], ['deleteRange', [{ from: 2, to: 6 }]], ['insertContent', ['@']], ['run', []],
+    ]);
+    expect(run).toHaveBeenCalledTimes(1);
   });
 
   it('asks the right source per sigil, scoping money documents to the bound client', async () => {

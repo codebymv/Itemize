@@ -6,6 +6,7 @@ import {
   firstMentionBinding,
   formatMentionToken,
   parseMentionSegments,
+  replaceMentionTrigger,
   stripMentionTokens,
 } from './mentionTokens';
 
@@ -46,6 +47,15 @@ describe('mentionTokens', () => {
     // A caret right after an @word reopens the list, the same as editing a Slack mention.
     expect(findMentionTrigger('Call @Casey now', 11)).toEqual({ start: 5, char: '@', query: 'Casey' });
     expect(findMentionTrigger('Call @Casey now', 5)).toBeNull();
+    expect(findMentionTrigger('/sha', 4, ['@', '$', '/'])).toEqual({ start: 0, char: '/', query: 'sha' });
+    expect(findMentionTrigger('/sha', 4)).toBeNull();
+    expect(findMentionTrigger('and/or', 6, ['/'])).toBeNull();
+  });
+
+  it('replaces the open trigger with nothing or with another sigil', () => {
+    const trigger = findMentionTrigger('Tile /sha now', 9, ['/']);
+    expect(replaceMentionTrigger('Tile /sha now', trigger!, 9)).toEqual({ value: 'Tile  now', caret: 5 });
+    expect(replaceMentionTrigger('Tile /sha now', trigger!, 9, '@')).toEqual({ value: 'Tile @ now', caret: 6 });
   });
 
   it('replaces the trigger with a token and moves the caret past it', () => {

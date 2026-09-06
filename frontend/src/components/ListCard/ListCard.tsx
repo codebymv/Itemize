@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import { CardContent } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { useListCardLogic } from '@/hooks/useListCardLogic';
@@ -7,6 +7,7 @@ import { ListCardHeader } from './ListCardHeader';
 import { CategorySelector } from '../CategorySelector';
 import { WorkspaceContactLink } from '@/components/workspace/WorkspaceContactLink';
 import { useListMentionContext } from '@/hooks/useListMentionContext';
+import { useWorkspaceActions } from '@/hooks/useWorkspaceActions';
 import { ListItemRow } from './ListItemRow';
 import { ListProgressBar } from './ListProgressBar';
 import { ListItemAdd } from './ListItemAdd';
@@ -81,12 +82,12 @@ const ListCard: React.FC<ListCardProps> = ({
     // Refs
     titleEditRef, newItemInputRef
   } = useListCardLogic({ list, onUpdate, onDelete, isCollapsed, onToggleCollapsed, existingCategories, addCategory, updateCategory });
-  const mention = useListMentionContext(list.contact_id);
-
   // Handle sharing
-  const handleShareList = () => {
+  const handleShareList = useCallback(() => {
     onShare(list.id);
-  };
+  }, [list.id, onShare]);
+  const actions = useWorkspaceActions({ source: 'list', card: list }, { onShare: handleShareList });
+  const mention = useListMentionContext(list.contact_id, actions);
 
   // Handle delete confirmation
   const handleDeleteConfirmation = () => {

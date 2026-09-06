@@ -67,6 +67,64 @@ describe('MentionInput', () => {
     await waitFor(() => expect(input.value).toBe('Chase $[INV-0012](invoice:4) '));
   });
 
+  it('opens the action list on /, runs the picked action, and removes the typed command', async () => {
+    const run = vi.fn();
+    render(<Harness mention={{
+      organizationId: 9,
+      canBind: true,
+      triggers: ['@', '$', '/'],
+      actions: { available: ['turn-into-estimate', 'share', 'mention-client'], run },
+    }} />);
+    const input = screen.getByLabelText('Add new item') as HTMLInputElement;
+
+    typeAt(input, 'Tile /sha');
+    const list = await screen.findByRole('listbox', { name: 'Actions' });
+    expect(list).toBeInTheDocument();
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual(['SharePublic link for this card']);
+
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(run).toHaveBeenCalledWith('share');
+    await waitFor(() => expect(input.value).toBe('Tile '));
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  it('turns /mention into an open @ list instead of running anything', async () => {
+    vi.mocked(fetchContactSuggestions).mockResolvedValue([casey]);
+    const run = vi.fn();
+    render(<Harness mention={{
+      organizationId: 9,
+      canBind: true,
+      triggers: ['@', '$', '/'],
+      actions: { available: ['share', 'mention-client', 'reference-document'], run },
+    }} />);
+    const input = screen.getByLabelText('Add new item') as HTMLInputElement;
+
+    typeAt(input, '/men');
+    fireEvent.click(await screen.findByRole('option', { name: /Mention a client/ }));
+    await waitFor(() => expect(input.value).toBe('@'));
+    expect(run).not.toHaveBeenCalled();
+    expect(await screen.findByRole('option', { name: /Casey Sanchez/ })).toBeInTheDocument();
+    expect(fetchContactSuggestions).toHaveBeenCalledWith('', 9);
+  });
+
+  it('shows nothing for a slash that matches no action, and hides door actions whose sigil is not offered', async () => {
+    render(<Harness mention={{
+      organizationId: 9,
+      canBind: true,
+      triggers: ['@', '/'],
+      actions: { available: ['share', 'reference-document'], run: vi.fn() },
+    }} />);
+    const input = screen.getByLabelText('Add new item') as HTMLInputElement;
+
+    typeAt(input, '/usr/bin');
+    await act(async () => { await Promise.resolve(); });
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+
+    typeAt(input, '/');
+    await screen.findByRole('listbox', { name: 'Actions' });
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual(['SharePublic link for this card']);
+  });
+
   it('ignores $ on a surface that only offers clients', () => {
     render(<Harness mention={{ organizationId: 9, canBind: true }} />);
     typeAt(screen.getByLabelText('Add new item') as HTMLInputElement, 'costs $5');

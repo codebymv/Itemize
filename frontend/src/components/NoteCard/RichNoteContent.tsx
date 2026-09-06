@@ -24,6 +24,8 @@ import { AutocompleteExtension, type AutocompleteStorage } from './autocompleteS
 import { createEntityMentionSuggestion, type MentionContext } from './noteMentionSuggestion';
 import { MoneyMention, REFERENCE_STATUS_META, ReferenceStatus } from './noteMoneyMention';
 import type { WorkspaceReference } from '@/types';
+import type { WorkspaceActionSurface } from '@/lib/workspaceActions';
+import { createWorkspaceActionsExtension } from './noteWorkspaceActions';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { STATUS_THEME_CLASSES } from '@/lib/statusVisuals';
@@ -46,6 +48,8 @@ interface RichNoteContentProps {
   onLinkContact?: (contactId: number, contactName: string) => Promise<unknown> | unknown;
   /** Hydrated references so money pills can show live state. */
   references?: WorkspaceReference[];
+  /** The card's `/` actions. */
+  actions?: WorkspaceActionSurface;
 }
 
 export const RichNoteContent: React.FC<RichNoteContentProps> = ({
@@ -62,6 +66,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
   contactId = null,
   onLinkContact,
   references,
+  actions,
 }) => {
   const isUpdatingFromProps = useRef(false);
   const navigate = useNavigate();
@@ -77,6 +82,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
     organizationId,
     canBind: hasFeature('contacts') && organizationId !== null,
     contactId,
+    actions,
     onLinkContact,
     onUpgrade: () => navigate('/settings'),
   };
@@ -190,6 +196,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
         suggestion: createEntityMentionSuggestion('$', mentionContextRef),
       }),
       ReferenceStatus,
+      createWorkspaceActionsExtension(mentionContextRef),
       AutocompleteExtension,
     ],
     content: '',

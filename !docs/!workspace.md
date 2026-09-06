@@ -26,6 +26,8 @@ Linking uses the same client access as Contacts: you can only link clients in an
 
 Type `@` in a note or list item to mention a client from the keyboard — the first mention on an unlinked card links it. Type `$` to reference an invoice, estimate, or payment; the reference shows the document's live state ("sent · viewed 2d"), and the document's page lists every card that mentions it under Referenced in.
 
+Type `/` for the card's actions: **Turn into estimate** opens a new estimate draft with the list's items as line items and its linked client filled in; **New list** and **New note** place a card beside this one; **Share** opens the share dialog; **Mention a client** and **Reference a document** open the `@` and `$` lists. The list only appears when something matches, so paths like `/usr/bin` stay plain text. `/` works on every plan.
+
 ## Next
 
 - [Invoices](/help/!invoices)

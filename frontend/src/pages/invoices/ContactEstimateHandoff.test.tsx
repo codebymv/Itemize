@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ContactDetailPage } from '@/pages/contacts/ContactDetailPage';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { EstimateEditorPage } from './EstimateEditorPage';
+import { ESTIMATE_PREFILL_STATE } from '@/lib/workspaceActions';
 
 const contactsApi = vi.hoisted(() => ({
   getContact: vi.fn(),
@@ -186,6 +187,39 @@ describe('contact to estimate handoff', () => {
         '123 Main St, Phoenix, AZ, 85001, US',
       );
     });
+  });
+
+  it('prefills line items handed over by a list through router state, with the client from the URL', async () => {
+    editorApi.getEstimateEditorBootstrapViaGraphql.mockResolvedValue({
+      contacts: [],
+      estimate: null,
+      initialContact: contact,
+    });
+    renderApp(
+      <MemoryRouter
+        initialEntries={[{
+          pathname: '/estimates/new',
+          search: '?contactId=17',
+          state: {
+            [ESTIMATE_PREFILL_STATE]: {
+              source: { type: 'list', id: 'list-7', title: 'Kitchen scope' },
+              lineItems: [{ name: 'Demo old cabinets' }, { name: 'Tile per $INV-0012' }],
+            },
+          },
+        }]}
+      >
+        <Routes>
+          <Route path="/estimates/:id" element={<EstimateEditorPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(document.querySelector('#estimate-customer-name')).toHaveValue('Ada Lovelace');
+    });
+    const names = Array.from(document.querySelectorAll<HTMLInputElement>('input[placeholder="Item name"]'))
+      .map((input) => input.value);
+    expect(names).toEqual(['Demo old cabinets', 'Tile per $INV-0012']);
   });
 
   it('ignores malformed contact identifiers', async () => {

@@ -13,6 +13,11 @@ import {
   type EntitySuggestion,
 } from '@/lib/entitySuggestions';
 import type { MentionTriggerChar } from '@/lib/mentionTokens';
+import {
+  actionSuggestions,
+  triggerForAction,
+  type WorkspaceActionSurface,
+} from '@/lib/workspaceActions';
 
 /**
  * Live values the suggestion plugins read at call time. The editor is created
@@ -22,6 +27,8 @@ export interface MentionContext {
   organizationId: number | null;
   canBind: boolean;
   contactId: number | null;
+  /** The card's `/` actions; without them `/` lists nothing. */
+  actions?: WorkspaceActionSurface;
   onLinkContact?: (contactId: number, contactName: string) => Promise<unknown> | unknown;
   onUpgrade?: () => void;
 }
@@ -36,9 +43,22 @@ export interface MentionCommandProps {
 export const nodeNameFor = (char: MentionTriggerChar): 'mention' | 'moneyMention' =>
   char === '@' ? 'mention' : 'moneyMention';
 
+const LIST_LABELS: Record<MentionTriggerChar, { label: string; empty: string }> = {
+  '@': { label: 'Client suggestions', empty: 'No matching clients' },
+  $: { label: 'Document suggestions', empty: 'No matching documents' },
+  '/': { label: 'Actions', empty: 'No matching actions' },
+};
+
+const PLUGIN_KEYS: Record<MentionTriggerChar, string> = {
+  '@': 'contactMentionSuggestion',
+  $: 'moneyMentionSuggestion',
+  '/': 'workspaceActionSuggestion',
+};
+
 /**
  * Inserts the pill and, for a client on an unbound card, binds the card in
- * the same gesture. Money references never bind.
+ * the same gesture. Money references never bind. An action row removes the
+ * typed `/query` and either opens another sigil or runs the action.
  */
 export const acceptMention = (
   context: MentionContext,
@@ -48,6 +68,13 @@ export const acceptMention = (
   if (props.kind === 'upgrade') {
     editor.chain().focus().deleteRange(range).run();
     context.onUpgrade?.();
+    return;
+  }
+  if (props.kind === 'action') {
+    const sigil = props.action ? triggerForAction(props.action) : null;
+    const chain = editor.chain().focus().deleteRange(range);
+    (sigil ? chain.insertContent(sigil) : chain).run();
+    if (!sigil && props.action) context.actions?.run(props.action);
     return;
   }
   editor
@@ -74,6 +101,7 @@ export const mentionItems = async (
   char: MentionTriggerChar,
   query: string,
 ): Promise<EntitySuggestion[]> => {
+  if (char === '/') return actionSuggestions(context.actions?.available ?? [], query);
   if (!context.canBind || context.organizationId === null) return [upgradeSuggestion];
   return char === '$'
     ? fetchMoneySuggestions(query, context.organizationId, context.contactId)
@@ -107,8 +135,8 @@ export const createEntityMentionSuggestion = (
 ): Omit<SuggestionOptions<EntitySuggestion>, 'editor'> => ({
   char,
   allowSpaces: false,
-  // Two suggestion plugins share one editor; each needs its own key.
-  pluginKey: new PluginKey(char === '@' ? 'contactMentionSuggestion' : 'moneyMentionSuggestion'),
+  // Three suggestion plugins share one editor; each needs its own key.
+  pluginKey: new PluginKey(PLUGIN_KEYS[char]),
   items: ({ query }) => mentionItems(contextRef.current, char, query),
   command: ({ editor, range, props }) =>
     acceptMention(contextRef.current, char, { editor, range, props }),
@@ -126,8 +154,16 @@ export const createEntityMentionSuggestion = (
     const listProps = (props: SuggestionProps<EntitySuggestion>) => ({
       items: props.items,
       onSelect: props.command,
-      emptyLabel: char === '$' ? 'No matching documents' : 'No matching clients',
+      label: LIST_LABELS[char].label,
+      emptyLabel: LIST_LABELS[char].empty,
     });
+
+    // A `/` with nothing behind it is text ("and /or", a path), not a request.
+    const showHost = (props: SuggestionProps<EntitySuggestion>) => {
+      if (!host) return;
+      host.hidden = char === '/' && props.items.length === 0;
+      if (!host.hidden) placePopup(host, props.clientRect);
+    };
 
     return {
       onStart: (props: SuggestionProps<EntitySuggestion>) => {
@@ -141,13 +177,14 @@ export const createEntityMentionSuggestion = (
           editor: props.editor,
         });
         host.appendChild(renderer.element);
-        placePopup(host, props.clientRect);
+        showHost(props);
       },
       onUpdate: (props: SuggestionProps<EntitySuggestion>) => {
         renderer?.updateProps(listProps(props));
-        if (host) placePopup(host, props.clientRect);
+        showHost(props);
       },
       onKeyDown: ({ event }) => {
+        if (host?.hidden) return false;
         if (event.key === 'Escape') {
           destroy();
           return true;

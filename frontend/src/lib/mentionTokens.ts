@@ -6,13 +6,13 @@
  * for entities the owner may not reference, so the client never has to guess.
  */
 export type ReferenceEntityType = 'contact' | 'invoice' | 'estimate' | 'payment';
-export type MentionTriggerChar = '@' | '$';
+export type MentionTriggerChar = '@' | '$' | '/';
 
 const MENTION_TOKEN =
   /([@$])\[([^\]\n]{1,200})\]\((contact|invoice|estimate|payment):(\d{1,12})\)/g;
 
 /** A sigil plus a query with no whitespace, at the start or after whitespace, ending at the caret. */
-const TRIGGER_BEFORE_CARET = /(^|\s)([@$])([^\s@$]{0,80})$/;
+const TRIGGER_BEFORE_CARET = /(^|\s)([@$/])([^\s@$]{0,80})$/;
 
 const sigilFor = (entityType: ReferenceEntityType): MentionTriggerChar =>
   entityType === 'contact' ? '@' : '$';
@@ -101,6 +101,21 @@ export const applyMentionTrigger = (
   const next = value.slice(0, trigger.start) + inserted + value.slice(caret);
   return { value: next, caret: trigger.start + inserted.length };
 };
+
+/**
+ * Removes the open trigger (sigil and query) and puts `replacement` in its
+ * place — empty for an action that ran, or another sigil so `/mention` turns
+ * into an open `@` list.
+ */
+export const replaceMentionTrigger = (
+  value: string,
+  trigger: MentionTrigger,
+  caret: number,
+  replacement = '',
+): { value: string; caret: number } => ({
+  value: value.slice(0, trigger.start) + replacement + value.slice(caret),
+  caret: trigger.start + replacement.length,
+});
 
 /**
  * The binding a plain-text save should carry: the first mentioned client when

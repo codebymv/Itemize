@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, useLocation, Link } from 'react-router-dom';
+import { readEstimatePrefill } from '@/lib/workspaceActions';
 import {
     Save,
     Send,
@@ -124,6 +125,7 @@ export function EstimateEditorPage() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
+    const location = useLocation();
     const { toast } = useToast();
     const {
         begin: beginEstimateSend,
@@ -228,6 +230,11 @@ export function EstimateEditorPage() {
         ? Number(id)
         : null;
     const hasInvalidEstimateId = !isNew && estimateId === null;
+    // A list's `/turn into estimate` hands its items over through router state.
+    const prefill = useMemo(
+        () => (isNew ? readEstimatePrefill(location.state) : null),
+        [isNew, location.state],
+    );
     const initialContactCandidate = Number(searchParams.get('contactId'));
     const initialContactId = isNew
         && Number.isSafeInteger(initialContactCandidate)
@@ -301,12 +308,22 @@ export function EstimateEditorPage() {
                     tax_rate: item.tax_rate || 0,
                 })));
             }
-        } else if (data.initialContact) {
-            populateContact(data.initialContact);
+        } else {
+            if (data.initialContact) populateContact(data.initialContact);
+            if (prefill && prefill.lineItems.length > 0) {
+                setLineItems(prefill.lineItems.map((item) => ({
+                    id: crypto.randomUUID(),
+                    name: item.name,
+                    description: '',
+                    quantity: 1,
+                    unit_price: 0,
+                    tax_rate: 0,
+                })));
+            }
         }
         initializedBootstrapRef.current = bootstrapKey;
         setInitialized(true);
-    }, [bootstrapKey, bootstrapQuery.data, populateContact]);
+    }, [bootstrapKey, bootstrapQuery.data, populateContact, prefill]);
 
     useEffect(() => {
         if (initializedBootstrapRef.current !== bootstrapKey) setInitialized(false);

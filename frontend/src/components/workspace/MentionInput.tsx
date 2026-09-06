@@ -22,11 +22,17 @@ import {
 import {
   applyMentionTrigger,
   findMentionTrigger,
+  replaceMentionTrigger,
   type MentionTrigger,
   type MentionTriggerChar,
 } from '@/lib/mentionTokens';
+import {
+  actionSuggestions,
+  triggerForAction,
+  type WorkspaceActionSurface,
+} from '@/lib/workspaceActions';
 
-/** What a plain input needs to know to offer `@` clients and `$` money documents. */
+/** What a plain input needs to know to offer `@` clients, `$` money documents, and `/` actions. */
 export interface MentionContext {
   organizationId: number | null;
   canBind: boolean;
@@ -34,8 +40,16 @@ export interface MentionContext {
   contactId?: number | null;
   /** Which sigils this surface offers; defaults to `@` only. */
   triggers?: readonly MentionTriggerChar[];
+  /** The card's `/` actions; required for `/` to open anything. */
+  actions?: WorkspaceActionSurface;
   onUpgrade?: () => void;
 }
+
+const LIST_LABELS: Record<MentionTriggerChar, { label: string; empty: string }> = {
+  '@': { label: 'Client suggestions', empty: 'No matching clients' },
+  $: { label: 'Document suggestions', empty: 'No matching documents' },
+  '/': { label: 'Actions', empty: 'No matching actions' },
+};
 
 export interface MentionInputProps
   extends Omit<React.ComponentProps<typeof Input>, 'value' | 'onChange'> {
@@ -63,7 +77,16 @@ const placeBelow = (host: HTMLElement, anchor: HTMLElement) => {
 const loadSuggestions = (
   trigger: MentionTrigger,
   mention: MentionContext,
+  triggers: readonly MentionTriggerChar[],
 ): Promise<EntitySuggestion[]> => {
+  if (trigger.char === '/') {
+    // A door action only makes sense where its sigil is offered.
+    const available = (mention.actions?.available ?? []).filter((id) => {
+      const sigil = triggerForAction(id);
+      return sigil === null || triggers.includes(sigil);
+    });
+    return Promise.resolve(actionSuggestions(available, trigger.query));
+  }
   if (!mention.canBind || mention.organizationId === null) {
     return Promise.resolve([upgradeSuggestion]);
   }
@@ -91,6 +114,8 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
     const enabled = Boolean(mention);
     const open = enabled && trigger !== null;
     const triggers = mention?.triggers ?? DEFAULT_TRIGGERS;
+    // `/usr/bin` is a path, not a request: the action list only shows when something matches.
+    const visible = open && trigger !== null && (trigger.char !== '/' || rows.length > 0);
 
     const syncTrigger = useCallback((nextValue: string, caret: number | null) => {
       if (!enabled) return;
@@ -101,7 +126,7 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
       if (!open || !mention || !trigger) return;
       let cancelled = false;
       setLoading(true);
-      void loadSuggestions(trigger, mention)
+      void loadSuggestions(trigger, mention, triggers)
         .then((next) => {
           if (!cancelled) setRows(next);
         })
@@ -114,10 +139,10 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
       return () => {
         cancelled = true;
       };
-    }, [open, mention, trigger]);
+    }, [open, mention, trigger, triggers]);
 
     useLayoutEffect(() => {
-      if (!open || !hostRef.current || !inputRef.current) return;
+      if (!visible || !hostRef.current || !inputRef.current) return;
       const host = hostRef.current;
       const anchor = inputRef.current;
       placeBelow(host, anchor);
@@ -128,7 +153,16 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
         window.removeEventListener('resize', reposition);
         window.removeEventListener('scroll', reposition, true);
       };
-    }, [open, rows]);
+    }, [visible, rows]);
+
+    const restoreCaret = useCallback((caret: number) => {
+      requestAnimationFrame(() => {
+        const element = inputRef.current;
+        if (!element) return;
+        element.focus();
+        element.setSelectionRange(caret, caret);
+      });
+    }, []);
 
     const select = useCallback((item: EntitySuggestion) => {
       if (!trigger) return;
@@ -138,6 +172,16 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
         return;
       }
       const caret = inputRef.current?.selectionStart ?? value.length;
+      if (item.kind === 'action') {
+        const sigil = item.action ? triggerForAction(item.action) : null;
+        const next = replaceMentionTrigger(value, trigger, caret, sigil ?? '');
+        onValueChange(next.value);
+        // `/mention` becomes an open `@`; anything else runs with the text gone.
+        setTrigger(sigil ? findMentionTrigger(next.value, next.caret, triggers) : null);
+        restoreCaret(next.caret);
+        if (!sigil && item.action) mention?.actions?.run(item.action);
+        return;
+      }
       const next = applyMentionTrigger(value, trigger, caret, {
         entityType: item.kind,
         entityId: item.id,
@@ -145,13 +189,8 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
       });
       onValueChange(next.value);
       setTrigger(null);
-      requestAnimationFrame(() => {
-        const element = inputRef.current;
-        if (!element) return;
-        element.focus();
-        element.setSelectionRange(next.caret, next.caret);
-      });
-    }, [mention, onValueChange, trigger, value]);
+      restoreCaret(next.caret);
+    }, [mention, onValueChange, restoreCaret, trigger, triggers, value]);
 
     return (
       <>
@@ -164,7 +203,7 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
             syncTrigger(event.target.value, event.target.selectionStart);
           }}
           onKeyDown={(event) => {
-            if (open) {
+            if (visible) {
               if (event.key === 'Escape') {
                 event.preventDefault();
                 setTrigger(null);
@@ -182,9 +221,9 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
             onBlur?.(event);
           }}
           aria-autocomplete={enabled ? 'list' : undefined}
-          aria-expanded={enabled ? open : undefined}
+          aria-expanded={enabled ? visible : undefined}
         />
-        {open && createPortal(
+        {visible && trigger && createPortal(
           <div
             ref={hostRef}
             style={{ position: 'fixed', zIndex: 10050 }}
@@ -194,7 +233,8 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
               ref={listRef}
               items={rows}
               loading={loading}
-              emptyLabel={trigger?.char === '$' ? 'No matching documents' : 'No matching clients'}
+              label={LIST_LABELS[trigger.char].label}
+              emptyLabel={LIST_LABELS[trigger.char].empty}
               onSelect={select}
             />
           </div>,

@@ -1,6 +1,6 @@
 # Workspace inline triggers
 
-*Plan, 2026-09-06. Builds on the contact seam (`contactId` on workspace content). Slices 1 (`@` in notes), 2 (`@` in list items), and 3 (references + `$`) built the same day; see the commits for details. Titles were left as plain text: a pill inside a card heading competes with the title, and the chip already states the binding there.*
+*Plan, 2026-09-06. Builds on the contact seam (`contactId` on workspace content). Slices 1 (`@` in notes), 2 (`@` in list items), 3 (references + `$`), and 4 (`/` actions) built the same day; see the commits for details. Titles were left as plain text: a pill inside a card heading competes with the title, and the chip already states the binding there.*
 
 Type `@`, `$`, `#`, or `/` anywhere you can type on the canvas and a list appears at the caret — the Slack composer pattern applied to clients, money documents, categories, and actions. The client chip becomes the result of a gesture, not the entry point.
 
@@ -20,7 +20,7 @@ Type `@`, `$`, `#`, or `/` anywhere you can type on the canvas and a list appear
 | `@` | bind | contacts in the current organization | inserts a pill; if the card is unbound, binds it through `contactId`. Special rows: *New client "…"*; on Free a single upgrade row. |
 | `$` | reference | invoices, estimates, payments — bound client's first | inserts a pill with live status (`$INV-0012 · sent · viewed 2d`). Special row: *New estimate for <client>*. |
 | `#` | organize | categories now, frames once they exist | sets category / frame. Wait for the frames slice; build once. |
-| `/` | command | actions: turn into estimate, new list, share, archive | runs the action. `Ctrl K` is the global version; `/` is in-context. |
+| `/` | command | the card's actions: turn into estimate (lists), new list / new note (canvas only), share, and two doors — mention a client (`@`), reference a document (`$`) | runs the action; the typed `/query` is removed. Rows are `lib/workspaceActions.ts`; a card's set comes from `useWorkspaceActions` (lists promote, canvas cards spawn neighbours through `WorkspaceCanvasActions` context). The list only shows when a row matches, so `/usr/bin` stays text. Archive waits for the archive slice; `Ctrl K` remains the global search. |
 
 ## Two primitives
 
@@ -66,7 +66,7 @@ adapters: notes (TipTap Mention + Suggestion), plain inputs (list items, titles)
 1. **`@` in notes (~1.5 days).** `@tiptap/extension-mention` + `@tiptap/suggestion`; lift the picker's query into `useEntitySuggestions`; sanitizer allowlist; first mention binds; toolbar `@` button; Free upgrade row. *Accept:* typing `@Cas`, Enter, reload, and the client page shows pill, chip, and the note under Related Content — no modal.
 2. **`@` in list items and titles (~1 day).** Input adapter, token insert, parser + pill renderer, server-side id validation. *Accept:* `Call @Casey about tile` renders a pill, survives edits, binds an unbound list.
 3. **References + `$` (~3 days).** `workspace_references` migration; money-document suggestion query; hydrated `references` / `referencedBy`; status pills; public projections strip; *New estimate for <client>* row. *Accept:* `$INV-0012` shows "sent · viewed", the invoice page lists the note, a public viewer sees only text.
-4. **`/` actions (~2 days), then `#` with frames.** *Accept:* `/turn into estimate` on a bound list opens a prefilled draft.
+4. **`/` actions (built), then `#` with frames.** *Accept:* `/turn into estimate` on a bound list opens a prefilled draft. The handoff keeps the URL to `?contactId=` and carries the list's items through router state (`ESTIMATE_PREFILL_STATE`, validated by `readEstimatePrefill`); the editor applies them once on bootstrap. Found while wiring it: the slice-2 list binding read `binding.contactId` off a token whose field is `entityId`, so `@` in list items never bound the card — fixed with a hook regression test.
 
 ## Verification
 

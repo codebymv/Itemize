@@ -3,16 +3,19 @@ import { graphqlRequest } from '@/services/graphqlClient';
 import { contactDisplayName } from '@/lib/contactDisplayName';
 import { formatMoney } from '@/lib/numberFormat';
 import type { ReferenceEntityType } from '@/lib/mentionTokens';
+import type { WorkspaceActionId } from '@/lib/workspaceActions';
 import type { Contact } from '@/types';
 
-/** One row in an inline trigger list: `@` clients, `$` money documents, or the upgrade row. */
+/** One row in an inline trigger list: `@` clients, `$` money documents, `/` actions, or the upgrade row. */
 export interface EntitySuggestion {
-  kind: ReferenceEntityType | 'upgrade';
+  kind: ReferenceEntityType | 'upgrade' | 'action';
   id: number;
   label: string;
   detail: string | null;
   initials: string;
   status?: string | null;
+  /** Set for `kind: 'action'` rows. */
+  action?: WorkspaceActionId;
 }
 
 export const SUGGESTION_LIMIT = 6;

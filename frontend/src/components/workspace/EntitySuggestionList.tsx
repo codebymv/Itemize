@@ -1,15 +1,42 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
-import { UserRound } from 'lucide-react';
+import {
+  AtSign,
+  DollarSign,
+  FileText,
+  ListChecks,
+  Share2,
+  StickyNote,
+  UserRound,
+  type LucideIcon,
+} from 'lucide-react';
 import { STATUS_THEME_CLASSES } from '@/lib/statusVisuals';
 import { cn } from '@/lib/utils';
 import type { EntitySuggestion } from '@/lib/entitySuggestions';
+import type { WorkspaceActionId } from '@/lib/workspaceActions';
 
 export interface EntitySuggestionListProps {
   items: EntitySuggestion[];
   loading?: boolean;
   emptyLabel?: string;
+  /** Names the listbox for assistive tech; defaults to clients. */
+  label?: string;
   onSelect: (item: EntitySuggestion) => void;
 }
+
+const ACTION_ICONS: Record<WorkspaceActionId, LucideIcon> = {
+  'turn-into-estimate': FileText,
+  'new-list': ListChecks,
+  'new-note': StickyNote,
+  share: Share2,
+  'mention-client': AtSign,
+  'reference-document': DollarSign,
+};
+
+const RowGlyph: React.FC<{ item: EntitySuggestion }> = ({ item }) => {
+  if (item.kind === 'contact') return <>{item.initials}</>;
+  const Icon = item.kind === 'action' && item.action ? ACTION_ICONS[item.action] : UserRound;
+  return <Icon className="h-3.5 w-3.5" />;
+};
 
 /** Imperative surface the editor's suggestion plugin drives with its own keydown events. */
 export interface EntitySuggestionListHandle {
@@ -23,7 +50,7 @@ export interface EntitySuggestionListHandle {
  * Escape is left to the caller so the typed text survives.
  */
 export const EntitySuggestionList = forwardRef<EntitySuggestionListHandle, EntitySuggestionListProps>(
-  ({ items, loading = false, emptyLabel = 'No matching clients', onSelect }, ref) => {
+  ({ items, loading = false, emptyLabel = 'No matching clients', label = 'Client suggestions', onSelect }, ref) => {
     const [activeIndex, setActiveIndex] = useState(0);
 
     useEffect(() => {
@@ -53,7 +80,7 @@ export const EntitySuggestionList = forwardRef<EntitySuggestionListHandle, Entit
     return (
       <div
         role="listbox"
-        aria-label="Client suggestions"
+        aria-label={label}
         aria-activedescendant={items[activeIndex] ? `entity-suggestion-${items[activeIndex].kind}-${items[activeIndex].id}` : undefined}
         className="w-max min-w-[18rem] max-w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md"
         data-testid="entity-suggestion-list"
@@ -86,7 +113,7 @@ export const EntitySuggestionList = forwardRef<EntitySuggestionListHandle, Entit
                 )}
                 aria-hidden="true"
               >
-                {item.kind === 'contact' ? item.initials : <UserRound className="h-3.5 w-3.5" />}
+                <RowGlyph item={item} />
               </span>
               <span className="truncate font-medium">{item.label}</span>
               {item.detail && (
