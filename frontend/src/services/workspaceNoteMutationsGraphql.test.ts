@@ -127,4 +127,27 @@ describe('workspace note GraphQL mutation consumer', () => {
     expect(reconciliation.variables).toEqual({ id: 9 });
     expect(reconciliation.query).toContain('workspaceNote(id: $id)');
   });
+  it('carries the client binding through the update document and response', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      response({
+        data: {
+          updateWorkspaceNote: {
+            ...note,
+            contactId: 3,
+            contactName: 'Casey Sanchez',
+          },
+        },
+      }),
+    );
+
+    await expect(
+      updateWorkspaceNoteViaGraphql(9, { contact_id: 3 }),
+    ).resolves.toMatchObject({ contact_id: 3, contact_name: 'Casey Sanchez' });
+
+    const body = JSON.parse(
+      String((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body),
+    );
+    expect(body.query).toContain('contactId contactName');
+    expect(body.variables.input.contactId).toBe(3);
+  });
 });

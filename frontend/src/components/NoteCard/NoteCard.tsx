@@ -13,6 +13,7 @@ import { useNoteCardLogic } from '@/hooks/useNoteCardLogic';
 import { Note } from '@/types';
 import { RichNoteContent } from './RichNoteContent';
 import { CategorySelector } from '../CategorySelector';
+import { WorkspaceContactLink } from '@/components/workspace/WorkspaceContactLink';
 
 import { Category } from '@/types';
 import { DeleteDialog } from '../ui/delete-dialog';
@@ -281,6 +282,13 @@ const NoteCard: React.FC<NoteCardProps> = ({
           handleEditCategory={handleEditCategory}
           handleAddCustomCategory={handleAddCustomCategory}
           handleUpdateCategoryColor={handleUpdateCategoryColor}
+        />
+        <WorkspaceContactLink
+          contactId={note.contact_id}
+          contactName={note.contact_name}
+          onChange={(contactId, contactName) =>
+            onUpdate(note.id, { contact_id: contactId, contact_name: contactName })
+          }
         />
 
         <CollapsibleContent className="flex-1">

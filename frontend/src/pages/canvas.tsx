@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Plus,
   Filter,
@@ -40,6 +40,7 @@ import { useCanvasCRUD } from "./canvas/hooks/useCanvasCRUD";
 import { createCanvasHeaderTools } from "./canvas/components/CanvasToolbar";
 import { MobileListView as CanvasMobileListView } from "./canvas/components/MobileListView";
 import { findOpenCanvasPosition } from "@/lib/canvasPosition";
+import { CANVAS_FOCUS_PARAM, parseCanvasFocus } from "@/lib/canvasFocus";
 import type { PreparedVaultSecurity } from "@/lib/vaultZkSession";
 import type { CreateItemPresetPayload } from "@/config/contentPresets";
 
@@ -233,6 +234,59 @@ const CanvasPage: React.FC = () => {
       }),
     );
   };
+
+  // Deep links from the contact page (`/canvas?focus=list:12`) center that
+  // card once the workspace has loaded, then drop the parameter so refreshes
+  // and later navigation are not pulled back to it.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const focusParam = searchParams.get(CANVAS_FOCUS_PARAM);
+  const focusTarget = useMemo(() => parseCanvasFocus(focusParam), [focusParam]);
+  const focusCreatedItemRef = useRef(focusCreatedItem);
+  focusCreatedItemRef.current = focusCreatedItem;
+  useEffect(() => {
+    if (!focusTarget || isLoading) return;
+    const collections = {
+      list: lists,
+      note: notes,
+      whiteboard: whiteboards,
+      wireframe: wireframes,
+    } as const;
+    const item = (collections[focusTarget.type] as ReadonlyArray<{
+      id: number | string;
+      position_x?: number | null;
+      position_y?: number | null;
+      width?: number | null;
+      height?: number | null;
+      canvas_width?: number | null;
+      canvas_height?: number | null;
+    }>).find((entry) => String(entry.id) === String(focusTarget.id));
+    if (item) {
+      focusCreatedItemRef.current(
+        item,
+        { x: item.position_x ?? 2000, y: item.position_y ?? 2000 },
+        {
+          width: item.width ?? item.canvas_width ?? 600,
+          height: item.height ?? item.canvas_height ?? 420,
+        },
+      );
+    }
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        next.delete(CANVAS_FOCUS_PARAM);
+        return next;
+      },
+      { replace: true },
+    );
+  }, [
+    focusTarget,
+    isLoading,
+    lists,
+    notes,
+    whiteboards,
+    wireframes,
+    setSearchParams,
+  ]);
 
   const handleCreateNote = async (
     title: string,

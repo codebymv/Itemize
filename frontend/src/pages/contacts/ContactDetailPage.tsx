@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Mail,
@@ -61,6 +61,7 @@ import { ComposeEmailModal } from './components/ComposeEmailModal';
 import { useOrganization } from '@/hooks/useOrganization';
 import { getContactStatusVisual } from './constants/contactStatusConstants';
 import { EmptyState } from '@/components/EmptyState';
+import { buildCanvasFocusPath, type CanvasFocusType } from '@/lib/canvasFocus';
 import { ErrorState } from '@/components/ErrorState';
 import { OrganizationErrorState } from '@/components/OrganizationErrorState';
 
@@ -75,10 +76,12 @@ function RelatedContentGroup({
   title,
   icon,
   items,
+  focusType,
 }: {
   title: string;
   icon: React.ReactNode;
   items: RelatedContactItem[];
+  focusType: CanvasFocusType;
 }) {
   return (
     <section aria-labelledby={`related-${title.toLowerCase()}`}>
@@ -99,9 +102,11 @@ function RelatedContentGroup({
       ) : (
         <div className="space-y-2">
           {items.map((item) => (
-            <div
+            <Link
               key={item.id}
-              className="flex min-w-0 items-center justify-between gap-3 rounded-md border p-3"
+              to={buildCanvasFocusPath(focusType, item.id)}
+              className="flex min-w-0 items-center justify-between gap-3 rounded-md border p-3 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label={`Open ${item.title} on the canvas`}
             >
               <span className="min-w-0 truncate text-sm">{item.title}</span>
               {item.category && (
@@ -109,7 +114,7 @@ function RelatedContentGroup({
                   {item.category}
                 </Badge>
               )}
-            </div>
+            </Link>
           ))}
         </div>
       )}
@@ -683,24 +688,28 @@ export function ContactDetailPage() {
               <div className="space-y-3">
                 <RelatedContentGroup
                   title="Lists"
+                  focusType="list"
                   icon={<ListChecks className="h-4 w-4 text-muted-foreground" />}
                   items={relatedContent.lists}
                 />
                 <Separator />
                 <RelatedContentGroup
                   title="Notes"
+                  focusType="note"
                   icon={<FileText className="h-4 w-4 text-muted-foreground" />}
                   items={relatedContent.notes}
                 />
                 <Separator />
                 <RelatedContentGroup
                   title="Whiteboards"
+                  focusType="whiteboard"
                   icon={<Palette className="h-4 w-4 text-muted-foreground" />}
                   items={relatedContent.whiteboards}
                 />
                 <Separator />
                 <RelatedContentGroup
                   title="Wireframes"
+                  focusType="wireframe"
                   icon={<GitBranch className="h-4 w-4 text-muted-foreground" />}
                   items={relatedContent.wireframes}
                 />

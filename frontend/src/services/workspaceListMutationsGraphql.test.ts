@@ -134,4 +134,34 @@ describe('workspace list GraphQL mutation consumer', () => {
     expect(fetch).not.toHaveBeenCalled();
     expect(fetchCsrfToken).not.toHaveBeenCalled();
   });
+  it('carries the client binding through the update document and response', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      response({
+        data: {
+          updateWorkspaceList: {
+            ...list,
+            contactId: 3,
+            contactName: 'Casey Sanchez',
+          },
+        },
+      }),
+    );
+
+    await expect(
+      updateWorkspaceListViaGraphql({
+        id: 9,
+        title: 'Tasks',
+        type: 'General',
+        items: list.items,
+        updated_at: list.updatedAt,
+        contact_id: 3,
+      }),
+    ).resolves.toMatchObject({ contact_id: 3, contact_name: 'Casey Sanchez' });
+
+    const body = JSON.parse(
+      String((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body),
+    );
+    expect(body.query).toContain('contactId contactName');
+    expect(body.variables.input.contactId).toBe(3);
+  });
 });

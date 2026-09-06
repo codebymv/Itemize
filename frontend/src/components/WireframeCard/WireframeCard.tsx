@@ -18,6 +18,7 @@ import { useWireframeCardLogic } from '@/hooks/useWireframeCardLogic';
 import { WireframeCardProps } from '@/types';
 import WireframeCanvas from './WireframeCanvas';
 import { CategorySelector } from '../CategorySelector';
+import { WorkspaceContactLink } from '@/components/workspace/WorkspaceContactLink';
 import { DeleteDialog } from '../ui/delete-dialog';
 import { WorkspaceContentCard } from '../workspace/WorkspaceContentCard';
 
@@ -249,6 +250,13 @@ const WireframeCard: React.FC<WireframeCardProps> = ({
           handleEditCategory={handleEditCategory}
           handleAddCustomCategory={handleAddCustomCategory}
           handleUpdateCategoryColor={handleUpdateCategoryColor}
+        />
+        <WorkspaceContactLink
+          contactId={wireframe.contact_id}
+          contactName={wireframe.contact_name}
+          onChange={(contactId, contactName) =>
+            onUpdate(wireframe.id, { contact_id: contactId, contact_name: contactName })
+          }
         />
 
         <CollapsibleContent className="flex-1 flex flex-col min-h-0">

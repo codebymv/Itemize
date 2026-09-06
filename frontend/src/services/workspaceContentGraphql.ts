@@ -44,6 +44,8 @@ export type GraphqlWorkspaceList = {
   width: number | null;
   height: number | null;
   zIndex: number;
+  contactId: number | null;
+  contactName: string | null;
   shareToken: string | null;
   isPublic: boolean;
   sharedAt: string | null;
@@ -64,6 +66,8 @@ export type GraphqlWorkspaceNote = {
   width: number | null;
   height: number | null;
   zIndex: number;
+  contactId: number | null;
+  contactName: string | null;
   shareToken: string | null;
   isPublic: boolean;
   sharedAt: string | null;
@@ -85,6 +89,8 @@ export type GraphqlWorkspaceWhiteboard = {
   positionY: number;
   zIndex: number;
   colorValue: string | null;
+  contactId: number | null;
+  contactName: string | null;
   shareToken: string | null;
   isPublic: boolean;
   sharedAt: string | null;
@@ -105,6 +111,8 @@ export type GraphqlWorkspaceWireframe = {
   height: number;
   zIndex: number;
   colorValue: string;
+  contactId: number | null;
+  contactName: string | null;
   shareToken: string | null;
   isPublic: boolean;
   sharedAt: string | null;
@@ -126,6 +134,8 @@ export type LegacyWorkspaceList = {
   width: number | null;
   height: number | null;
   z_index: number;
+  contact_id: number | null;
+  contact_name: string | null;
   share_token: string | null;
   is_public: boolean;
   shared_at: string | null;
@@ -146,6 +156,8 @@ export type LegacyWorkspaceNote = {
   width: number | null;
   height: number | null;
   z_index: number;
+  contact_id: number | null;
+  contact_name: string | null;
   share_token: string | null;
   is_public: boolean;
   shared_at: string | null;
@@ -167,6 +179,8 @@ export type LegacyWorkspaceWhiteboard = {
   position_y: number;
   z_index: number;
   color_value: string | null;
+  contact_id: number | null;
+  contact_name: string | null;
   share_token: string | null;
   is_public: boolean;
   shared_at: string | null;
@@ -187,6 +201,8 @@ export type LegacyWorkspaceWireframe = {
   height: number;
   z_index: number;
   color_value: string;
+  contact_id: number | null;
+  contact_name: string | null;
   share_token: string | null;
   is_public: boolean;
   shared_at: string | null;
@@ -207,12 +223,14 @@ export const listFields = `
   id userId title category categoryId
   items { id text completed }
   colorValue positionX positionY width height zIndex
+  contactId contactName
   shareToken isPublic sharedAt createdAt updatedAt
 `;
 
 export const noteFields = `
   id userId title content category categoryId
   colorValue positionX positionY width height zIndex
+  contactId contactName
   shareToken isPublic sharedAt createdAt updatedAt
 `;
 
@@ -220,12 +238,14 @@ export const whiteboardFields = `
   id userId title category categoryId canvasData
   canvasWidth canvasHeight backgroundColor
   positionX positionY zIndex colorValue
+  contactId contactName
   shareToken isPublic sharedAt createdAt updatedAt
 `;
 
 export const wireframeFields = `
   id userId title category categoryId flowData
   positionX positionY width height zIndex colorValue
+  contactId contactName
   shareToken isPublic sharedAt createdAt updatedAt
 `;
 
@@ -314,6 +334,8 @@ export const mapList = (list: GraphqlWorkspaceList): LegacyWorkspaceList => ({
   width: list.width,
   height: list.height,
   z_index: list.zIndex,
+  contact_id: list.contactId,
+  contact_name: list.contactName,
   share_token: list.shareToken,
   is_public: list.isPublic,
   shared_at: list.sharedAt,
@@ -334,6 +356,8 @@ export const mapNote = (note: GraphqlWorkspaceNote): LegacyWorkspaceNote => ({
   width: note.width,
   height: note.height,
   z_index: note.zIndex,
+  contact_id: note.contactId,
+  contact_name: note.contactName,
   share_token: note.shareToken,
   is_public: note.isPublic,
   shared_at: note.sharedAt,
@@ -367,6 +391,8 @@ export const mapWhiteboard = (
     position_x: whiteboard.positionX,
     position_y: whiteboard.positionY,
     z_index: whiteboard.zIndex,
+    contact_id: whiteboard.contactId,
+    contact_name: whiteboard.contactName,
     color_value: whiteboard.colorValue,
     share_token: whiteboard.shareToken,
     is_public: whiteboard.isPublic,
@@ -402,6 +428,8 @@ export const mapWireframe = (
     width: wireframe.width,
     height: wireframe.height,
     z_index: wireframe.zIndex,
+    contact_id: wireframe.contactId,
+    contact_name: wireframe.contactName,
     color_value: wireframe.colorValue,
     share_token: wireframe.shareToken,
     is_public: wireframe.isPublic,

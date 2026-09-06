@@ -26,6 +26,7 @@ const listFields = `
   id userId title category categoryId
   items { id text completed }
   colorValue positionX positionY width height zIndex
+  contactId contactName
   shareToken isPublic sharedAt createdAt updatedAt
 `;
 
@@ -61,6 +62,8 @@ const mapList = (list: GraphqlWorkspaceList): LegacyWorkspaceList => ({
   width: list.width,
   height: list.height,
   z_index: list.zIndex,
+  contact_id: list.contactId,
+  contact_name: list.contactName,
   share_token: list.shareToken,
   is_public: list.isPublic,
   shared_at: list.sharedAt,
@@ -83,6 +86,7 @@ const mapInput = (input: ListPayload) => ({
     : { positionY: input.position_y }),
   ...(input.width === undefined ? {} : { width: input.width }),
   ...(input.height === undefined ? {} : { height: input.height }),
+  ...(input.contact_id === undefined ? {} : { contactId: input.contact_id }),
 });
 
 export const createWorkspaceListViaGraphql = async (

@@ -146,6 +146,7 @@ export interface ListPayload {
   width?: number;
   height?: number;
   updated_at?: string;
+  contact_id?: number | null;
 }
 
 export interface NotePayload {
@@ -159,6 +160,7 @@ export interface NotePayload {
   width?: number;
   height?: number;
   z_index?: number;
+  contact_id?: number | null;
 }
 
 export interface WhiteboardPayload {
@@ -173,6 +175,7 @@ export interface WhiteboardPayload {
   position_y?: number;
   z_index?: number;
   color_value?: string;
+  contact_id?: number | null;
 }
 
 // Backend response types
@@ -278,6 +281,8 @@ export const createList = async (listData: ListPayload, token?: string) => {
       share_token: response.share_token,
       is_public: response.is_public,
       shared_at: response.shared_at ? new Date(response.shared_at) : undefined,
+    contact_id: response.contact_id,
+    contact_name: response.contact_name,
     };
   } catch (error) {
     console.error("Failed to create list:", error);
@@ -306,6 +311,8 @@ export const updateList = async (
     share_token: response.share_token,
     is_public: response.is_public,
     shared_at: response.shared_at ? new Date(response.shared_at) : undefined,
+    contact_id: response.contact_id,
+    contact_name: response.contact_name,
   };
 };
 
@@ -496,6 +503,7 @@ export interface WireframePayload {
   height?: number;
   z_index?: number;
   color_value?: string;
+  contact_id?: number | null;
 }
 
 export const getWireframes = async (token?: string) => {

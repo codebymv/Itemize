@@ -27,6 +27,7 @@ type GraphqlWorkspaceNote = {
 const noteFields = `
   id userId title content category categoryId
   colorValue positionX positionY width height zIndex
+  contactId contactName
   shareToken isPublic sharedAt createdAt updatedAt
 `;
 
@@ -61,6 +62,8 @@ const mapNote = (note: GraphqlWorkspaceNote): LegacyWorkspaceNote => ({
   width: note.width,
   height: note.height,
   z_index: note.zIndex,
+  contact_id: note.contactId,
+  contact_name: note.contactName,
   share_token: note.shareToken,
   is_public: note.isPublic,
   shared_at: note.sharedAt,
@@ -84,6 +87,7 @@ const mapInput = (input: CreateNotePayload | NotePayload) => ({
   ...(input.width === undefined ? {} : { width: input.width }),
   ...(input.height === undefined ? {} : { height: input.height }),
   ...(input.z_index === undefined ? {} : { zIndex: input.z_index }),
+  ...(input.contact_id === undefined ? {} : { contactId: input.contact_id }),
 });
 
 export const createWorkspaceNoteViaGraphql = async (

@@ -773,6 +773,8 @@ export function useCanvasCRUD(
         shared_at: response.shared_at
           ? new Date(response.shared_at).toISOString()
           : undefined,
+        contact_id: response.contact_id ?? null,
+        contact_name: response.contact_name ?? null,
       };
 
       recentlyCreatedListIds.current.add(newList.id);

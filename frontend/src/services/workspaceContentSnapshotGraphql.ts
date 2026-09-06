@@ -67,6 +67,8 @@ const mapCanvasList = (row: GraphqlWorkspaceList): List => {
     ...(list.share_token === null ? {} : { share_token: list.share_token }),
     is_public: list.is_public,
     ...(list.shared_at === null ? {} : { shared_at: list.shared_at }),
+    contact_id: list.contact_id,
+    contact_name: list.contact_name,
   };
 };
 

@@ -440,3 +440,21 @@ wireframe CRUD/share/position router, mixed canvas-position handler, and
 list/note/whiteboard share handlers. The generated ledger now contains zero
 GraphQL-disposition REST operations; only explicit HTTP protocol boundaries
 remain.
+
+## Contact bindings (2026-09-06)
+
+`WorkspaceList`, `WorkspaceNote`, `WorkspaceWhiteboard`, and `WorkspaceWireframe`
+expose `contactId: Int` and a derived `contactName: String` (person name, else
+company, else email). Every create and update input accepts an optional
+`contactId`; `null` clears the binding and an omitted field leaves it unchanged.
+
+Authorization is decided inside the mutation transaction: the repository
+re-reads `organization_members` and only binds a contact whose organization the
+owner currently belongs to. The browser's selected organization is not
+consulted. Any other contact id is concealed as `NOT_FOUND` with reason
+`CONTACT_NOT_FOUND`, and the transaction writes nothing.
+
+Owner realtime payloads carry `contact_id`/`contact_name`; shared and public
+projections deliberately do not. `contactContent(contactId)` on the contact
+page reads the same columns, and its items deep-link to
+`/canvas?focus=<type>:<id>`.

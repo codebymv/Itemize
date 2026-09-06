@@ -14,6 +14,7 @@ import { useWhiteboardCardLogic } from '../../hooks/useWhiteboardCardLogic';
 import { WhiteboardCardProps, Category } from '../../types';
 import { WhiteboardCanvas } from './WhiteboardCanvas';
 import { CategorySelector } from '../CategorySelector';
+import { WorkspaceContactLink } from '@/components/workspace/WorkspaceContactLink';
 import { DeleteDialog } from '../ui/delete-dialog';
 import { WorkspaceContentCard } from '../workspace/WorkspaceContentCard';
 
@@ -263,6 +264,13 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
           handleEditCategory={handleEditCategory}
           handleAddCustomCategory={handleAddCustomCategory}
           handleUpdateCategoryColor={handleUpdateCategoryColor}
+        />
+        <WorkspaceContactLink
+          contactId={whiteboard.contact_id}
+          contactName={whiteboard.contact_name}
+          onChange={(contactId, contactName) =>
+            onUpdate(whiteboard.id, { contact_id: contactId, contact_name: contactName })
+          }
         />
 
         <CollapsibleContent className="flex-1">

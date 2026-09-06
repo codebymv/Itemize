@@ -73,6 +73,7 @@ const mapInput = (
   ...(input.color_value === undefined
     ? {}
     : { colorValue: input.color_value }),
+  ...(input.contact_id === undefined ? {} : { contactId: input.contact_id }),
 });
 
 export const createWorkspaceWhiteboardViaGraphql = async (

@@ -26,6 +26,8 @@ export interface List {
   share_token?: string; // Share token for public sharing
   is_public?: boolean; // Whether the list is publicly shared
   shared_at?: Date | string; // Timestamp when sharing was enabled
+  contact_id?: number | null;
+  contact_name?: string | null;
 }
 
 // Category type for API responses
@@ -77,6 +79,8 @@ export interface Note {
   share_token?: string;
   is_public?: boolean;
   shared_at?: string;
+  contact_id?: number | null;
+  contact_name?: string | null;
 }
 
 export interface CanvasPath {
@@ -110,6 +114,8 @@ export interface Whiteboard {
   share_token?: string;
   is_public?: boolean;
   shared_at?: string;
+  contact_id?: number | null;
+  contact_name?: string | null;
 }
 
 // Props for NoteCard component
@@ -203,6 +209,8 @@ export interface Wireframe {
   share_token?: string;
   is_public?: boolean;
   shared_at?: string;
+  contact_id?: number | null;
+  contact_name?: string | null;
 }
 
 // Props for WireframeCard component

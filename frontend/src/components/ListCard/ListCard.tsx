@@ -5,6 +5,7 @@ import { useListCardLogic } from '@/hooks/useListCardLogic';
 import { ListCardProps, Category } from '@/types';
 import { ListCardHeader } from './ListCardHeader';
 import { CategorySelector } from '../CategorySelector';
+import { WorkspaceContactLink } from '@/components/workspace/WorkspaceContactLink';
 import { ListItemRow } from './ListItemRow';
 import { ListProgressBar } from './ListProgressBar';
 import { ListItemAdd } from './ListItemAdd';
@@ -211,6 +212,13 @@ const ListCard: React.FC<ListCardProps> = ({
           handleEditCategory={handleEditCategory}
           handleAddCustomCategory={handleAddCustomCategory}
           handleUpdateCategoryColor={handleUpdateCategoryColor}
+        />
+        <WorkspaceContactLink
+          contactId={list.contact_id}
+          contactName={list.contact_name}
+          onChange={(contactId, contactName) =>
+            onUpdate({ ...list, contact_id: contactId, contact_name: contactName })
+          }
         />
 
         <CollapsibleContent>

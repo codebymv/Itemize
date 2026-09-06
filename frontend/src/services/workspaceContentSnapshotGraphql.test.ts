@@ -29,6 +29,8 @@ const list = {
   width: 340,
   height: 265,
   zIndex: 1,
+  contactId: 3,
+  contactName: 'Casey Sanchez',
   shareToken: null,
   isPublic: false,
   sharedAt: null,
@@ -71,7 +73,13 @@ describe('workspace content snapshot GraphQL consumer', () => {
 
     await expect(getWorkspaceContentSnapshotViaGraphql(controller.signal))
       .resolves.toMatchObject({
-        lists: [{ id: 4, title: 'Tasks', type: 'Work' }],
+        lists: [{
+          id: 4,
+          title: 'Tasks',
+          type: 'Work',
+          contact_id: 3,
+          contact_name: 'Casey Sanchez',
+        }],
         notes: [{ id: 5, content: 'Details' }],
         pages: {
           lists: { total: 1, hasNextPage: false },
@@ -93,5 +101,6 @@ describe('workspace content snapshot GraphQL consumer', () => {
       'workspaceWireframes',
       'workspaceVaults',
     ]) expect(query).toContain(field);
+    expect(query).toContain('contactId contactName');
   });
 });
