@@ -27,6 +27,7 @@ const listFields = `
   items { id text completed }
   colorValue positionX positionY width height zIndex
   contactId contactName
+  references { entityType entityId label status total currency sentAt viewedAt paidAt acceptedAt declinedAt }
   shareToken isPublic sharedAt createdAt updatedAt
 `;
 
@@ -64,6 +65,7 @@ const mapList = (list: GraphqlWorkspaceList): LegacyWorkspaceList => ({
   z_index: list.zIndex,
   contact_id: list.contactId,
   contact_name: list.contactName,
+  references: list.references ?? [],
   share_token: list.shareToken,
   is_public: list.isPublic,
   shared_at: list.sharedAt,

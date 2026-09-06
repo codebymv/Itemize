@@ -10,6 +10,21 @@ export interface ListItem {
   completed: boolean;
 }
 
+/** A card's reference to a client or money document, hydrated for the owner. */
+export interface WorkspaceReference {
+  entityType: 'contact' | 'invoice' | 'estimate' | 'payment';
+  entityId: number;
+  label: string;
+  status: string | null;
+  total: string | null;
+  currency: string | null;
+  sentAt: string | null;
+  viewedAt: string | null;
+  paidAt: string | null;
+  acceptedAt: string | null;
+  declinedAt: string | null;
+}
+
 export interface List {
   id: string;
   title: string;
@@ -28,6 +43,7 @@ export interface List {
   shared_at?: Date | string; // Timestamp when sharing was enabled
   contact_id?: number | null;
   contact_name?: string | null;
+  references?: WorkspaceReference[];
 }
 
 // Category type for API responses
@@ -81,6 +97,7 @@ export interface Note {
   shared_at?: string;
   contact_id?: number | null;
   contact_name?: string | null;
+  references?: WorkspaceReference[];
 }
 
 export interface CanvasPath {
@@ -116,6 +133,7 @@ export interface Whiteboard {
   shared_at?: string;
   contact_id?: number | null;
   contact_name?: string | null;
+  references?: WorkspaceReference[];
 }
 
 // Props for NoteCard component
@@ -211,6 +229,7 @@ export interface Wireframe {
   shared_at?: string;
   contact_id?: number | null;
   contact_name?: string | null;
+  references?: WorkspaceReference[];
 }
 
 // Props for WireframeCard component

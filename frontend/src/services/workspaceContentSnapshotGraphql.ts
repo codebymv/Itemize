@@ -69,6 +69,7 @@ const mapCanvasList = (row: GraphqlWorkspaceList): List => {
     ...(list.shared_at === null ? {} : { shared_at: list.shared_at }),
     contact_id: list.contact_id,
     contact_name: list.contact_name,
+    references: list.references,
   };
 };
 

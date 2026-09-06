@@ -112,3 +112,10 @@
   white-space: nowrap;
   text-decoration: none;
 }
+
+/* Live state after a money pill ("· sent · viewed 2d"); a decoration, not content. */
+.ProseMirror .mention-status {
+  font-size: 0.85em;
+  opacity: 0.75;
+  white-space: nowrap;
+}

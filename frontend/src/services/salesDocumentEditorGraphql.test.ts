@@ -112,6 +112,7 @@ describe('sales document editor GraphQL bootstrap', () => {
       businesses: [expect.objectContaining({ id: 31, name: 'Itemize QA' })],
       settings: expect.objectContaining({ default_payment_terms: 30 }),
       invoice: null,
+      referencedBy: [],
     });
 
     expect(fetch).toHaveBeenCalledTimes(1);

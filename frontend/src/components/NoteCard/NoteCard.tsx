@@ -318,6 +318,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
               onAutoSave={(content: string) => onUpdate(note.id, { content })}
               updatedAt={note.updated_at}
               contactId={note.contact_id ?? null}
+              references={note.references}
               onLinkContact={(contactId, contactName) =>
                 onUpdate(note.id, { contact_id: contactId, contact_name: contactName })
               }

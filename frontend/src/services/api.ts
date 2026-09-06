@@ -283,6 +283,7 @@ export const createList = async (listData: ListPayload, token?: string) => {
       shared_at: response.shared_at ? new Date(response.shared_at) : undefined,
     contact_id: response.contact_id,
     contact_name: response.contact_name,
+    references: response.references,
     };
   } catch (error) {
     console.error("Failed to create list:", error);
@@ -313,6 +314,7 @@ export const updateList = async (
     shared_at: response.shared_at ? new Date(response.shared_at) : undefined,
     contact_id: response.contact_id,
     contact_name: response.contact_name,
+    references: response.references,
   };
 };
 

@@ -24,6 +24,9 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
   let outsiderToken: string;
   let workCategoryId: number;
   let memberContactId: number;
+  let memberInvoiceId: number;
+  let outsiderInvoiceId: number;
+  let suffixForAssertions = '';
   let boundNoteId: number;
   let outsiderContactId: number;
   let mutationListId: number;
@@ -48,6 +51,7 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
     });
 
     const suffix = `${Date.now()}-${process.pid}`;
+    suffixForAssertions = suffix;
     const users = await pool.query<{ id: number }>(
       `INSERT INTO users (email, name, provider, email_verified)
        VALUES ($1, 'Workspace Member', 'email', true),
@@ -107,6 +111,26 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
     [memberContactId, outsiderContactId] = contacts.rows.map(
       (row) => Number(row.id),
     );
+    const invoices = await pool.query<{ id: number }>(
+      `INSERT INTO invoices (
+         organization_id, contact_id, invoice_number, customer_name, status,
+         total, currency, due_date, sent_at, viewed_at
+       )
+       VALUES
+         ($1, $3, $5, 'Casey Client', 'sent', 1250.50, 'USD', CURRENT_DATE + 14,
+          NOW() - INTERVAL '2 days', NOW() - INTERVAL '1 day'),
+         ($2, $4, $6, 'Outsider Contact', 'draft', 40, 'USD', CURRENT_DATE + 14, NULL, NULL)
+       RETURNING id`,
+      [
+        memberOrganizationId,
+        outsiderOrganizationId,
+        memberContactId,
+        outsiderContactId,
+        `INV-M-${suffix}`,
+        `INV-O-${suffix}`,
+      ],
+    );
+    [memberInvoiceId, outsiderInvoiceId] = invoices.rows.map((row) => Number(row.id));
     memberToken = await jwt.signAsync(
       { id: memberId },
       { secret: process.env.JWT_SECRET, expiresIn: '15m' },
@@ -239,6 +263,9 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
           mutationWireframeId || 0,
         ],
       );
+      await pool.query('DELETE FROM invoices WHERE organization_id = ANY($1::int[])', [
+        [memberOrganizationId, outsiderOrganizationId],
+      ]);
       await pool.query('DELETE FROM organizations WHERE id = ANY($1::int[])', [
         [memberOrganizationId, outsiderOrganizationId].filter(Boolean),
       ]);
@@ -1884,5 +1911,136 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
       'Call @Casey Client today',
       'Ask @Outsider Contact for keys',
     ]);
+  });
+  it('stores money references on save, hydrates their live state for the owner, and traces them back', async () => {
+    const created = await mutation(
+      memberToken,
+      `mutation Create($input: CreateWorkspaceListInput!) {
+        createWorkspaceList(input: $input) {
+          id
+          items { id text completed }
+          references { entityType entityId label status total currency sentAt viewedAt }
+        }
+      }`,
+      {
+        input: {
+          idempotencyKey: '1c2d3e4f-5a6b-4c7d-9e8f-0a1b2c3d4e5f',
+          title: 'Money refs',
+          items: [
+            { id: 'inv', text: `Chase $[INV-old](invoice:${memberInvoiceId}) with @[Casey Client](contact:${memberContactId})`, completed: false },
+            { id: 'foreign', text: `Never $[INV-x](invoice:${outsiderInvoiceId})`, completed: false },
+          ],
+        },
+      },
+    ).expect(200);
+    expect(created.body.errors).toBeUndefined();
+    const list = created.body.data.createWorkspaceList;
+    expect(list.items[0].text).toBe(
+      `Chase $[INV-old](invoice:${memberInvoiceId}) with @[Casey Client](contact:${memberContactId})`,
+    );
+    expect(list.items[1].text).toBe('Never $INV-x');
+    expect(list.references).toHaveLength(2);
+    expect(list.references).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        entityType: 'invoice',
+        entityId: memberInvoiceId,
+        label: `INV-M-${suffixForAssertions}`,
+        status: 'sent',
+        total: '1250.50',
+        currency: 'USD',
+      }),
+      expect.objectContaining({ entityType: 'contact', entityId: memberContactId, label: 'Casey Client' }),
+    ]));
+    const invoiceReference = list.references.find(
+      (reference: { entityType: string }) => reference.entityType === 'invoice',
+    );
+    expect(invoiceReference.viewedAt).not.toBeNull();
+
+    const stored = await pool.query<{ entity_type: string; entity_id: number }>(
+      `SELECT entity_type, entity_id FROM workspace_references
+        WHERE source_type = 'list' AND source_id = $1 ORDER BY entity_type`,
+      [Number(list.id)],
+    );
+    expect(stored.rows.map((row) => `${row.entity_type}:${row.entity_id}`)).toEqual([
+      `contact:${memberContactId}`,
+      `invoice:${memberInvoiceId}`,
+    ]);
+
+    const traced = await mutation(
+      memberToken,
+      `query Trace($type: String!, $id: Int!) {
+        workspaceReferencesTo(entityType: $type, entityId: $id) { sourceType sourceId title }
+      }`,
+      { type: 'invoice', id: memberInvoiceId },
+    ).expect(200);
+    expect(traced.body.errors).toBeUndefined();
+    expect(traced.body.data.workspaceReferencesTo).toEqual([
+      { sourceType: 'list', sourceId: Number(list.id), title: 'Money refs' },
+    ]);
+
+    const suggestions = await mutation(
+      memberToken,
+      `query Money($query: String, $contactId: Int) {
+        moneyDocumentSuggestions(query: $query, contactId: $contactId) { entityType entityId label status contactId }
+      }`,
+      { query: 'INV', contactId: memberContactId },
+    ).expect(200);
+    expect(suggestions.body.errors).toBeUndefined();
+    expect(suggestions.body.data.moneyDocumentSuggestions).toEqual([
+      expect.objectContaining({ entityType: 'invoice', entityId: memberInvoiceId, status: 'sent', contactId: memberContactId }),
+    ]);
+
+    const shared = await mutation(
+      memberToken,
+      `mutation Share($id: Int!) { enableListSharing(id: $id) { shareToken } }`,
+      { id: Number(list.id) },
+    ).expect(200);
+    const publicRead = await request(app.getHttpServer())
+      .get(`/api/shared/list/${shared.body.data.enableListSharing.shareToken}`)
+      .expect(200);
+    expect(publicRead.body.items.map((item: { text: string }) => item.text)).toEqual([
+      'Chase $INV-old with @Casey Client',
+      'Never $INV-x',
+    ]);
+  });
+
+  it('reads references out of note mention nodes and strips them for public readers', async () => {
+    const content = `<p>Bill <span data-type="moneyMention" data-entity="invoice" data-id="${memberInvoiceId}" data-label="INV">$INV</span> and <span data-type="moneyMention" data-entity="invoice" data-id="${outsiderInvoiceId}" data-label="X">$X</span></p>`;
+    const created = await mutation(
+      memberToken,
+      `mutation Create($input: CreateWorkspaceNoteInput!) {
+        createWorkspaceNote(input: $input) { id content references { entityType entityId status } }
+      }`,
+      { input: { idempotencyKey: '2d3e4f5a-6b7c-4d8e-8f9a-1b2c3d4e5f60', title: 'Billing', content } },
+    ).expect(200);
+    expect(created.body.errors).toBeUndefined();
+    const note = created.body.data.createWorkspaceNote;
+    expect(note.content).toContain(`data-id="${memberInvoiceId}"`);
+    expect(note.content).not.toContain(`data-id="${outsiderInvoiceId}"`);
+    expect(note.content).toContain('and $X');
+    expect(note.references).toEqual([
+      expect.objectContaining({ entityType: 'invoice', entityId: memberInvoiceId, status: 'sent' }),
+    ]);
+
+    const traced = await mutation(
+      memberToken,
+      `query Trace($type: String!, $id: Int!) {
+        workspaceReferencesTo(entityType: $type, entityId: $id) { sourceType sourceId }
+      }`,
+      { type: 'invoice', id: memberInvoiceId },
+    ).expect(200);
+    expect(traced.body.data.workspaceReferencesTo).toEqual(expect.arrayContaining([
+      { sourceType: 'note', sourceId: Number(note.id) },
+    ]));
+
+    const shared = await mutation(
+      memberToken,
+      `mutation Share($id: Int!) { enableNoteSharing(id: $id) { shareToken } }`,
+      { id: Number(note.id) },
+    ).expect(200);
+    const publicRead = await request(app.getHttpServer())
+      .get(`/api/shared/note/${shared.body.data.enableNoteSharing.shareToken}`)
+      .expect(200);
+    expect(publicRead.body.content).toBe('<p>Bill $INV and $X</p>');
   });
 });

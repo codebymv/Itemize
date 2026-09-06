@@ -1,11 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
-import {
-  collectMentionTokens,
-  downgradeMentionTokens,
-  stripMentionTokens,
-} from './mention-tokens';
+import { stripMentionTokens } from './mention-tokens';
+import { WorkspaceReferencesService } from '../workspace-references/workspace-references.service';
 import { RealtimeOutboxService } from '../realtime-outbox/realtime-outbox.service';
 import { sanitizeNoteHtml } from './note-html';
 
@@ -411,6 +408,7 @@ export class WorkspaceContentRepository {
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,
     private readonly realtimeOutbox: RealtimeOutboxService,
+    private readonly references: WorkspaceReferencesService,
   ) {}
 
   async contentExists(
@@ -864,7 +862,6 @@ export class WorkspaceContentRepository {
         return { kind: 'contact_not_found' };
       }
 
-      const items = await this.sanitizeListItemMentions(client, userId, values.items);
       const result = await client.query<WorkspaceListRow>(
         `INSERT INTO lists (
            user_id, organization_id, title, category, category_id, items, color_value,
@@ -878,7 +875,7 @@ export class WorkspaceContentRepository {
           values.title,
           category.name,
           category.id,
-          JSON.stringify(items),
+          JSON.stringify(values.items),
           values.colorValue,
           values.positionX,
           values.positionY,
@@ -887,13 +884,14 @@ export class WorkspaceContentRepository {
           values.contactId,
         ],
       );
+      const row = await this.persistListReferences(client, userId, result.rows[0], values.items);
       await this.completeCreationReceipt(
         client,
         userId,
         idempotencyKey,
-        Number(result.rows[0].id),
+        Number(row.id),
       );
-      return { kind: 'completed', row: result.rows[0] };
+      return { kind: 'completed', row };
     });
   }
 
@@ -939,8 +937,13 @@ export class WorkspaceContentRepository {
       }
 
       const items = values.items === undefined
-        ? current.items
-        : await this.sanitizeListItemMentions(client, userId, values.items);
+        ? (current.items as WorkspaceListItemRow[])
+        : await this.references.commitListReferences(
+            client,
+            userId,
+            { sourceType: 'list', sourceId: listId },
+            values.items,
+          );
       const updatedResult = await client.query<WorkspaceListRow>(
         `UPDATE lists SET
            title = $1,
@@ -1120,13 +1123,14 @@ export class WorkspaceContentRepository {
           values.contactId,
         ],
       );
+      const row = await this.persistNoteReferences(client, userId, result.rows[0]);
       await this.completeCreationReceipt(
         client,
         userId,
         idempotencyKey,
-        Number(result.rows[0].id),
+        Number(row.id),
       );
-      return { kind: 'completed', row: result.rows[0] };
+      return { kind: 'completed', row };
     });
   }
 
@@ -1153,28 +1157,49 @@ export class WorkspaceContentRepository {
   }
 
   /**
-   * List item text may mention clients as tokens. Every mentioned id is checked
-   * against the owner's current organization membership inside the save
-   * transaction; anything else is rewritten to plain text so an unauthorized
-   * id is never stored and the rest of the save proceeds unchanged.
+   * A freshly inserted list gets its references stored once its id exists.
+   * Tokens the owner may not reference are rewritten to text and persisted.
    */
-  private async sanitizeListItemMentions(
+  private async persistListReferences(
     client: PoolClient,
     userId: number,
+    row: WorkspaceListRow,
     items: WorkspaceListItemRow[],
-  ): Promise<WorkspaceListItemRow[]> {
-    const mentioned = new Set(
-      items.flatMap((item) => collectMentionTokens(item.text).map((token) => token.contactId)),
+  ): Promise<WorkspaceListRow> {
+    const committed = await this.references.commitListReferences(
+      client,
+      userId,
+      { sourceType: 'list', sourceId: Number(row.id) },
+      items,
     );
-    if (mentioned.size === 0) return items;
-    const allowed = new Set<number>();
-    for (const contactId of mentioned) {
-      if (await this.canBindContact(client, userId, contactId)) allowed.add(contactId);
-    }
-    return items.map((item) => ({
-      ...item,
-      text: downgradeMentionTokens(item.text, allowed),
-    }));
+    if (JSON.stringify(committed) === JSON.stringify(items)) return row;
+    const result = await client.query<WorkspaceListRow>(
+      `UPDATE lists SET items = $1::jsonb WHERE id = $2 AND user_id = $3
+       RETURNING ${listMutationSelection}`,
+      [JSON.stringify(committed), row.id, userId],
+    );
+    return result.rows[0];
+  }
+
+  private async persistNoteReferences(
+    client: PoolClient,
+    userId: number,
+    row: WorkspaceNoteRow,
+  ): Promise<WorkspaceNoteRow> {
+    const content = row.content ?? '';
+    const committed = await this.references.commitNoteReferences(
+      client,
+      userId,
+      { sourceType: 'note', sourceId: Number(row.id) },
+      content,
+    );
+    if (committed === content) return row;
+    const result = await client.query<WorkspaceNoteRow>(
+      `UPDATE notes SET content = $1 WHERE id = $2 AND user_id = $3
+       RETURNING ${noteMutationSelection}`,
+      [committed, row.id, userId],
+    );
+    return result.rows[0];
   }
 
   private async categoryForCreate(
@@ -1228,6 +1253,14 @@ export class WorkspaceContentRepository {
         return { kind: 'contact_not_found' };
       }
 
+      const content = values.content === undefined
+        ? (current.content ?? '')
+        : await this.references.commitNoteReferences(
+            client,
+            userId,
+            { sourceType: 'note', sourceId: noteId },
+            values.content,
+          );
       const updatedResult = await client.query<WorkspaceNoteRow>(
         `UPDATE notes SET
            title = $1,
@@ -1246,7 +1279,7 @@ export class WorkspaceContentRepository {
          RETURNING ${noteMutationSelection}`,
         [
           values.title ?? current.title,
-          values.content ?? current.content,
+          content,
           category.name,
           category.id,
           values.colorValue ?? current.color_value,

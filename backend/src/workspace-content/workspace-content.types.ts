@@ -6,6 +6,7 @@ import {
   ObjectType,
 } from '@nestjs/graphql';
 import { PageInfo } from '../common/pagination';
+import { WorkspaceReference } from '../workspace-references/workspace-references.types';
 
 @ObjectType()
 export class WorkspaceListItem {
@@ -59,6 +60,9 @@ export class WorkspaceList {
 
   @Field(() => Int, { nullable: true })
   contactId: number | null;
+
+  @Field(() => [WorkspaceReference])
+  references: WorkspaceReference[];
 
   @Field(() => String, { nullable: true })
   contactName: string | null;
@@ -128,6 +132,9 @@ export class WorkspaceNote {
 
   @Field(() => Int, { nullable: true })
   contactId: number | null;
+
+  @Field(() => [WorkspaceReference])
+  references: WorkspaceReference[];
 
   @Field(() => String, { nullable: true })
   contactName: string | null;
@@ -213,6 +220,9 @@ export class WorkspaceWhiteboard {
   @Field(() => Int, { nullable: true })
   contactId: number | null;
 
+  @Field(() => [WorkspaceReference])
+  references: WorkspaceReference[];
+
   @Field(() => String, { nullable: true })
   contactName: string | null;
 
@@ -287,6 +297,9 @@ export class WorkspaceWireframe {
 
   @Field(() => Int, { nullable: true })
   contactId: number | null;
+
+  @Field(() => [WorkspaceReference])
+  references: WorkspaceReference[];
 
   @Field(() => String, { nullable: true })
   contactName: string | null;

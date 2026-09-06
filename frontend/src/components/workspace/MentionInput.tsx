@@ -15,6 +15,7 @@ import {
 } from '@/components/workspace/EntitySuggestionList';
 import {
   fetchContactSuggestions,
+  fetchMoneySuggestions,
   upgradeSuggestion,
   type EntitySuggestion,
 } from '@/lib/entitySuggestions';
@@ -22,12 +23,17 @@ import {
   applyMentionTrigger,
   findMentionTrigger,
   type MentionTrigger,
+  type MentionTriggerChar,
 } from '@/lib/mentionTokens';
 
-/** What a plain input needs to know to offer `@` clients. Built once per card. */
+/** What a plain input needs to know to offer `@` clients and `$` money documents. */
 export interface MentionContext {
   organizationId: number | null;
   canBind: boolean;
+  /** The card's bound client, so `$` lists that client's documents first. */
+  contactId?: number | null;
+  /** Which sigils this surface offers; defaults to `@` only. */
+  triggers?: readonly MentionTriggerChar[];
   onUpgrade?: () => void;
 }
 
@@ -39,6 +45,7 @@ export interface MentionInputProps
 }
 
 const POPUP_OFFSET_PX = 4;
+const DEFAULT_TRIGGERS: readonly MentionTriggerChar[] = ['@'];
 
 const placeBelow = (host: HTMLElement, anchor: HTMLElement) => {
   const rect = anchor.getBoundingClientRect();
@@ -53,10 +60,22 @@ const placeBelow = (host: HTMLElement, anchor: HTMLElement) => {
   host.style.top = `${top}px`;
 };
 
+const loadSuggestions = (
+  trigger: MentionTrigger,
+  mention: MentionContext,
+): Promise<EntitySuggestion[]> => {
+  if (!mention.canBind || mention.organizationId === null) {
+    return Promise.resolve([upgradeSuggestion]);
+  }
+  return trigger.char === '$'
+    ? fetchMoneySuggestions(trigger.query, mention.organizationId, mention.contactId ?? null)
+    : fetchContactSuggestions(trigger.query, mention.organizationId);
+};
+
 /**
- * A plain `Input` that offers the Slack-style client list when the user types
- * `@`. Accepting a row replaces `@query` with a mention token; the card that
- * saves the text decides whether that mention also binds the card.
+ * A plain `Input` that offers the Slack-style list when the user types a
+ * trigger sigil. Accepting a row replaces the query with a token; the card
+ * that saves the text decides whether a client mention also binds the card.
  */
 export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
   ({ value, onValueChange, mention, onKeyDown, onBlur, ...inputProps }, forwardedRef) => {
@@ -71,22 +90,18 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
 
     const enabled = Boolean(mention);
     const open = enabled && trigger !== null;
+    const triggers = mention?.triggers ?? DEFAULT_TRIGGERS;
 
     const syncTrigger = useCallback((nextValue: string, caret: number | null) => {
       if (!enabled) return;
-      setTrigger(findMentionTrigger(nextValue, caret ?? nextValue.length));
-    }, [enabled]);
+      setTrigger(findMentionTrigger(nextValue, caret ?? nextValue.length, triggers));
+    }, [enabled, triggers]);
 
-    // Fetch rows for the open trigger; the Free plan gets the single upgrade row.
     useEffect(() => {
-      if (!open || !mention) return;
-      if (!mention.canBind || mention.organizationId === null) {
-        setRows([upgradeSuggestion]);
-        return;
-      }
+      if (!open || !mention || !trigger) return;
       let cancelled = false;
       setLoading(true);
-      void fetchContactSuggestions(trigger?.query ?? '', mention.organizationId)
+      void loadSuggestions(trigger, mention)
         .then((next) => {
           if (!cancelled) setRows(next);
         })
@@ -99,7 +114,7 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
       return () => {
         cancelled = true;
       };
-    }, [open, mention, trigger?.query]);
+    }, [open, mention, trigger]);
 
     useLayoutEffect(() => {
       if (!open || !hostRef.current || !inputRef.current) return;
@@ -123,7 +138,11 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
         return;
       }
       const caret = inputRef.current?.selectionStart ?? value.length;
-      const next = applyMentionTrigger(value, trigger, caret, { contactId: item.id, label: item.label });
+      const next = applyMentionTrigger(value, trigger, caret, {
+        entityType: item.kind,
+        entityId: item.id,
+        label: item.label,
+      });
       onValueChange(next.value);
       setTrigger(null);
       requestAnimationFrame(() => {
@@ -171,7 +190,13 @@ export const MentionInput = forwardRef<HTMLInputElement, MentionInputProps>(
             style={{ position: 'fixed', zIndex: 10050 }}
             data-testid="mention-input-popup"
           >
-            <EntitySuggestionList ref={listRef} items={rows} loading={loading} onSelect={select} />
+            <EntitySuggestionList
+              ref={listRef}
+              items={rows}
+              loading={loading}
+              emptyLabel={trigger?.char === '$' ? 'No matching documents' : 'No matching clients'}
+              onSelect={select}
+            />
           </div>,
           document.body,
         )}

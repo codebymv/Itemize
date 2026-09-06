@@ -24,6 +24,8 @@ On Solo and Studio, any list, note, whiteboard, or wireframe can be linked to on
 
 Linking uses the same client access as Contacts: you can only link clients in an organization you belong to. If a trial ends, existing links stay visible but can't be changed, and public share links never show the client.
 
+Type `@` in a note or list item to mention a client from the keyboard — the first mention on an unlinked card links it. Type `$` to reference an invoice, estimate, or payment; the reference shows the document's live state ("sent · viewed 2d"), and the document's page lists every card that mentions it under Referenced in.
+
 ## Next
 
 - [Invoices](/help/!invoices)

@@ -24,6 +24,7 @@ export class SalesDocumentEditorResolver {
   ): Promise<InvoiceEditorBootstrap> {
     return this.editor.invoiceBootstrap(
       this.organizationId(),
+      this.userId(),
       invoiceId,
       this.requestsField(info, 'products'),
     );
@@ -39,6 +40,7 @@ export class SalesDocumentEditorResolver {
   ): Promise<EstimateEditorBootstrap> {
     return this.editor.estimateBootstrap(
       this.organizationId(),
+      this.userId(),
       estimateId,
       initialContactId,
       this.requestsField(info, 'products'),
@@ -66,6 +68,12 @@ export class SalesDocumentEditorResolver {
         ? includesField(node.selectionSet.selections)
         : false,
     );
+  }
+
+  private userId(): number {
+    const identity = this.requestContext.current().identity;
+    if (!identity) throw new Error('Verified user identity is unavailable');
+    return identity.userId;
   }
 
   private organizationId(): number {

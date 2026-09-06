@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { GraphQLError } from 'graphql';
 import { itemizeGraphqlError } from '../common/graphql-error';
+import { WorkspaceReferencesService } from '../workspace-references/workspace-references.service';
+import type { WorkspaceReference } from '../workspace-references/workspace-references.types';
 import { GetStartedService } from '../get-started/get-started.service';
 import { sanitizeNoteHtml } from './note-html';
 import { normalizeWhiteboardCanvasData } from './whiteboard-canvas-data';
@@ -85,6 +87,7 @@ export class WorkspaceContentService {
   constructor(
     private readonly content: WorkspaceContentRepository,
     private readonly getStarted: GetStartedService,
+    private readonly references: WorkspaceReferencesService,
   ) {}
 
   async contentExists(
@@ -115,7 +118,7 @@ export class WorkspaceContentService {
     this.id(noteId);
     try {
       const row = await this.content.findNoteById(userId, noteId);
-      return row ? this.mapNote(row) : null;
+      return row ? await this.mapOne(userId, 'note', row, (r, refs) => this.mapNote(r, refs)) : null;
     } catch (error) {
       this.rethrow(error);
     }
@@ -131,7 +134,7 @@ export class WorkspaceContentService {
         userId,
         whiteboardId,
       );
-      return row ? this.mapWhiteboard(row) : null;
+      return row ? await this.mapOne(userId, 'whiteboard', row, (r, refs) => this.mapWhiteboard(r, refs)) : null;
     } catch (error) {
       this.rethrow(error);
     }
@@ -147,7 +150,7 @@ export class WorkspaceContentService {
         userId,
         wireframeId,
       );
-      return row ? this.mapWireframe(row) : null;
+      return row ? await this.mapOne(userId, 'wireframe', row, (r, refs) => this.mapWireframe(r, refs)) : null;
     } catch (error) {
       this.rethrow(error);
     }
@@ -168,7 +171,7 @@ export class WorkspaceContentService {
         offset: normalizedPage.offset,
       });
       return {
-        nodes: result.rows.map((row) => this.mapList(row)),
+        nodes: await this.withReferences(userId, 'list', result.rows, (row, references) => this.mapList(row, references)),
         pageInfo: pageInfo(
           normalizedPage.page,
           normalizedPage.pageSize,
@@ -195,7 +198,7 @@ export class WorkspaceContentService {
         offset: normalizedPage.offset,
       });
       return {
-        nodes: result.rows.map((row) => this.mapNote(row)),
+        nodes: await this.withReferences(userId, 'note', result.rows, (row, references) => this.mapNote(row, references)),
         pageInfo: pageInfo(
           normalizedPage.page,
           normalizedPage.pageSize,
@@ -222,7 +225,7 @@ export class WorkspaceContentService {
         offset: normalizedPage.offset,
       });
       return {
-        nodes: result.rows.map((row) => this.mapWhiteboard(row)),
+        nodes: await this.withReferences(userId, 'whiteboard', result.rows, (row, references) => this.mapWhiteboard(row, references)),
         pageInfo: pageInfo(
           normalizedPage.page,
           normalizedPage.pageSize,
@@ -249,7 +252,7 @@ export class WorkspaceContentService {
         offset: normalizedPage.offset,
       });
       return {
-        nodes: result.rows.map((row) => this.mapWireframe(row)),
+        nodes: await this.withReferences(userId, 'wireframe', result.rows, (row, references) => this.mapWireframe(row, references)),
         pageInfo: pageInfo(
           normalizedPage.page,
           normalizedPage.pageSize,
@@ -315,7 +318,7 @@ export class WorkspaceContentService {
           'SERVICE_UNAVAILABLE',
         );
       }
-      const list = this.mapList(outcome.row);
+      const list = await this.mapOne(userId, 'list', outcome.row, (r, refs) => this.mapList(r, refs));
       await this.getStarted.record({
         organizationId,
         userId,
@@ -402,7 +405,7 @@ export class WorkspaceContentService {
           },
         );
       }
-      return this.mapList(outcome.row);
+      return this.mapOne(userId, 'list', outcome.row, (r, refs) => this.mapList(r, refs));
     } catch (error) {
       this.rethrow(error);
     }
@@ -485,7 +488,7 @@ export class WorkspaceContentService {
           'SERVICE_UNAVAILABLE',
         );
       }
-      return this.mapNote(outcome.row);
+      return this.mapOne(userId, 'note', outcome.row, (r, refs) => this.mapNote(r, refs));
     } catch (error) {
       this.rethrow(error);
     }
@@ -564,7 +567,7 @@ export class WorkspaceContentService {
       if (outcome.kind === 'contact_not_found') {
         throw this.contactNotFound();
       }
-      return this.mapNote(outcome.row);
+      return this.mapOne(userId, 'note', outcome.row, (r, refs) => this.mapNote(r, refs));
     } catch (error) {
       this.rethrow(error);
     }
@@ -653,7 +656,7 @@ export class WorkspaceContentService {
           'SERVICE_UNAVAILABLE',
         );
       }
-      return this.mapWhiteboard(outcome.row);
+      return this.mapOne(userId, 'whiteboard', outcome.row, (r, refs) => this.mapWhiteboard(r, refs));
     } catch (error) {
       this.rethrow(error);
     }
@@ -752,7 +755,7 @@ export class WorkspaceContentService {
           },
         );
       }
-      return this.mapWhiteboard(outcome.row);
+      return this.mapOne(userId, 'whiteboard', outcome.row, (r, refs) => this.mapWhiteboard(r, refs));
     } catch (error) {
       this.rethrow(error);
     }
@@ -835,7 +838,7 @@ export class WorkspaceContentService {
           'SERVICE_UNAVAILABLE',
         );
       }
-      return this.mapWireframe(outcome.row);
+      return this.mapOne(userId, 'wireframe', outcome.row, (r, refs) => this.mapWireframe(r, refs));
     } catch (error) {
       this.rethrow(error);
     }
@@ -922,7 +925,7 @@ export class WorkspaceContentService {
           },
         );
       }
-      return this.mapWireframe(outcome.row);
+      return this.mapOne(userId, 'wireframe', outcome.row, (r, refs) => this.mapWireframe(r, refs));
     } catch (error) {
       this.rethrow(error);
     }
@@ -1235,7 +1238,36 @@ export class WorkspaceContentService {
     };
   }
 
-  private mapList(row: WorkspaceListRow): WorkspaceList {
+  /** Maps rows with their hydrated references, one batched read per projection. */
+  private async withReferences<TRow extends { id: number }, TOut>(
+    userId: number,
+    sourceType: 'list' | 'note' | 'whiteboard' | 'wireframe',
+    rows: TRow[],
+    map: (row: TRow, references: WorkspaceReference[]) => TOut,
+  ): Promise<TOut[]> {
+    if (rows.length === 0) return [];
+    const hydrated = await this.references.hydrate(
+      userId,
+      rows.map((row) => ({ sourceType, sourceId: Number(row.id) })),
+    );
+    return rows.map((row) =>
+      map(row, hydrated.get(`${sourceType}:${Number(row.id)}`) ?? []),
+    );
+  }
+
+  private async mapOne<TRow extends { id: number }, TOut>(
+    userId: number,
+    sourceType: 'list' | 'note' | 'whiteboard' | 'wireframe',
+    row: TRow,
+    map: (row: TRow, references: WorkspaceReference[]) => TOut,
+  ): Promise<TOut> {
+    return (await this.withReferences(userId, sourceType, [row], map))[0];
+  }
+
+  private mapList(
+    row: WorkspaceListRow,
+    references: WorkspaceReference[] = [],
+  ): WorkspaceList {
     return {
       id: Number(row.id),
       userId: Number(row.user_id),
@@ -1251,6 +1283,7 @@ export class WorkspaceContentService {
       zIndex: Number(row.z_index ?? 0),
       contactId: row.contact_id === null ? null : Number(row.contact_id),
       contactName: row.contact_name ?? null,
+      references,
       shareToken: row.share_token,
       isPublic: Boolean(row.is_public),
       sharedAt: row.shared_at ? new Date(row.shared_at) : null,
@@ -1259,7 +1292,10 @@ export class WorkspaceContentService {
     };
   }
 
-  private mapNote(row: WorkspaceNoteRow): WorkspaceNote {
+  private mapNote(
+    row: WorkspaceNoteRow,
+    references: WorkspaceReference[] = [],
+  ): WorkspaceNote {
     return {
       id: Number(row.id),
       userId: Number(row.user_id),
@@ -1275,6 +1311,7 @@ export class WorkspaceContentService {
       zIndex: Number(row.z_index ?? 0),
       contactId: row.contact_id === null ? null : Number(row.contact_id),
       contactName: row.contact_name ?? null,
+      references,
       shareToken: row.share_token,
       isPublic: Boolean(row.is_public),
       sharedAt: row.shared_at ? new Date(row.shared_at) : null,
@@ -1285,6 +1322,7 @@ export class WorkspaceContentService {
 
   private mapWhiteboard(
     row: WorkspaceWhiteboardRow,
+    references: WorkspaceReference[] = [],
   ): WorkspaceWhiteboard {
     return {
       id: Number(row.id),
@@ -1301,6 +1339,7 @@ export class WorkspaceContentService {
       zIndex: Number(row.z_index ?? 0),
       contactId: row.contact_id === null ? null : Number(row.contact_id),
       contactName: row.contact_name ?? null,
+      references,
       colorValue: row.color_value,
       shareToken: row.share_token,
       isPublic: Boolean(row.is_public),
@@ -1310,7 +1349,10 @@ export class WorkspaceContentService {
     };
   }
 
-  private mapWireframe(row: WorkspaceWireframeRow): WorkspaceWireframe {
+  private mapWireframe(
+    row: WorkspaceWireframeRow,
+    references: WorkspaceReference[] = [],
+  ): WorkspaceWireframe {
     return {
       id: Number(row.id),
       userId: Number(row.user_id),
@@ -1329,6 +1371,7 @@ export class WorkspaceContentService {
       zIndex: Number(row.z_index ?? 0),
       contactId: row.contact_id === null ? null : Number(row.contact_id),
       contactName: row.contact_name ?? null,
+      references,
       colorValue: row.color_value ?? '#3B82F6',
       shareToken: row.share_token,
       isPublic: Boolean(row.is_public),

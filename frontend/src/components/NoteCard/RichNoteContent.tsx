@@ -21,7 +21,9 @@ import logger from '@/lib/logger';
 import { migrateNoteContentToHtml, shouldApplyExternalNoteHtml } from './noteEditorHtml';
 import { formatNoteSuggestion } from './noteSuggestionText';
 import { AutocompleteExtension, type AutocompleteStorage } from './autocompleteStorage';
-import { createContactMentionSuggestion, type MentionContext } from './noteMentionSuggestion';
+import { createEntityMentionSuggestion, type MentionContext } from './noteMentionSuggestion';
+import { MoneyMention, REFERENCE_STATUS_META, ReferenceStatus } from './noteMoneyMention';
+import type { WorkspaceReference } from '@/types';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { STATUS_THEME_CLASSES } from '@/lib/statusVisuals';
@@ -42,6 +44,8 @@ interface RichNoteContentProps {
   /** Current client binding; the first `@` mention binds an unbound note. */
   contactId?: number | null;
   onLinkContact?: (contactId: number, contactName: string) => Promise<unknown> | unknown;
+  /** Hydrated references so money pills can show live state. */
+  references?: WorkspaceReference[];
 }
 
 export const RichNoteContent: React.FC<RichNoteContentProps> = ({
@@ -57,6 +61,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
   updatedAt,
   contactId = null,
   onLinkContact,
+  references,
 }) => {
   const isUpdatingFromProps = useRef(false);
   const navigate = useNavigate();
@@ -175,8 +180,16 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
           'data-entity': 'contact',
         },
         renderText: ({ node }) => `@${node.attrs.label ?? node.attrs.id}`,
-        suggestion: createContactMentionSuggestion(mentionContextRef),
+        suggestion: createEntityMentionSuggestion('@', mentionContextRef),
       }),
+      MoneyMention.configure({
+        HTMLAttributes: {
+          class: `mention rounded-full px-1.5 font-semibold ${STATUS_THEME_CLASSES.blue.badgeClass}`,
+        },
+        renderText: ({ node }) => `$${node.attrs.label ?? node.attrs.id}`,
+        suggestion: createEntityMentionSuggestion('$', mentionContextRef),
+      }),
+      ReferenceStatus,
       AutocompleteExtension,
     ],
     content: '',
@@ -195,6 +208,15 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
       }
     },
   });
+
+  // Money pills read their live state from storage; a meta transaction refreshes the widgets.
+  useEffect(() => {
+    if (!editor) return;
+    const storage = editor.storage.referenceStatus as { references: WorkspaceReference[] } | undefined;
+    if (!storage) return;
+    storage.references = references ?? [];
+    editor.view.dispatch(editor.state.tr.setMeta(REFERENCE_STATUS_META, true));
+  }, [editor, references]);
 
   // Add keyboard shortcuts for formatting (Apple-style)
   useEffect(() => {

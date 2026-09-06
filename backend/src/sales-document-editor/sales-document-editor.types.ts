@@ -5,6 +5,7 @@ import { InvoiceBusiness } from '../invoice-businesses/invoice-business.types';
 import { InvoiceSettings } from '../invoice-settings/invoice-settings.types';
 import { Invoice } from '../invoices/invoice.types';
 import { Product } from '../products/product.types';
+import { WorkspaceReferenceSource } from '../workspace-references/workspace-references.types';
 
 @ObjectType()
 export class InvoiceEditorBootstrap {
@@ -22,6 +23,10 @@ export class InvoiceEditorBootstrap {
 
   @Field(() => Invoice, { nullable: true })
   invoice: Invoice | null;
+
+  /** The signed-in user's workspace cards that mention this document. */
+  @Field(() => [WorkspaceReferenceSource])
+  referencedBy: WorkspaceReferenceSource[];
 }
 
 @ObjectType()
@@ -37,4 +42,8 @@ export class EstimateEditorBootstrap {
 
   @Field(() => Contact, { nullable: true })
   initialContact: Contact | null;
+
+  /** The signed-in user's workspace cards that mention this document. */
+  @Field(() => [WorkspaceReferenceSource])
+  referencedBy: WorkspaceReferenceSource[];
 }

@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fetchContactSuggestions } from '@/lib/entitySuggestions';
+import { fetchContactSuggestions, fetchMoneySuggestions } from '@/lib/entitySuggestions';
 import { MentionInput, type MentionContext } from './MentionInput';
 
 vi.mock('@/lib/entitySuggestions', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@/lib/entitySuggestions')>()),
   fetchContactSuggestions: vi.fn(),
+  fetchMoneySuggestions: vi.fn(),
 }));
 
 const casey = { kind: 'contact' as const, id: 12, label: 'Casey Sanchez', detail: 'Sanchez Kitchens', initials: 'CS' };
+const invoice = { kind: 'invoice' as const, id: 4, label: 'INV-0012', detail: '$1,250.50', initials: 'IN', status: 'sent' };
 
 function Harness({ mention, onEnter }: { mention: MentionContext; onEnter?: () => void }) {
   const [value, setValue] = useState('');
@@ -29,7 +31,10 @@ const typeAt = (input: HTMLInputElement, text: string) => {
 };
 
 describe('MentionInput', () => {
-  beforeEach(() => vi.mocked(fetchContactSuggestions).mockReset());
+  beforeEach(() => {
+    vi.mocked(fetchContactSuggestions).mockReset();
+    vi.mocked(fetchMoneySuggestions).mockReset();
+  });
 
   it('opens the client list on @, inserts a token on Enter, and keeps Enter from reaching the caller', async () => {
     vi.mocked(fetchContactSuggestions).mockResolvedValue([casey]);
@@ -48,6 +53,25 @@ describe('MentionInput', () => {
 
     fireEvent.keyDown(input, { key: 'Enter' });
     expect(onEnter).toHaveBeenCalledTimes(1);
+  });
+
+  it('opens money documents on $ when the surface offers it, scoped to the bound client', async () => {
+    vi.mocked(fetchMoneySuggestions).mockResolvedValue([invoice]);
+    render(<Harness mention={{ organizationId: 9, canBind: true, contactId: 12, triggers: ['@', '$'] }} />);
+    const input = screen.getByLabelText('Add new item') as HTMLInputElement;
+
+    typeAt(input, 'Chase $INV');
+    expect(await screen.findByRole('option', { name: /INV-0012/ })).toBeInTheDocument();
+    expect(fetchMoneySuggestions).toHaveBeenCalledWith('INV', 9, 12);
+    fireEvent.keyDown(input, { key: 'Tab' });
+    await waitFor(() => expect(input.value).toBe('Chase $[INV-0012](invoice:4) '));
+  });
+
+  it('ignores $ on a surface that only offers clients', () => {
+    render(<Harness mention={{ organizationId: 9, canBind: true }} />);
+    typeAt(screen.getByLabelText('Add new item') as HTMLInputElement, 'costs $5');
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    expect(fetchMoneySuggestions).not.toHaveBeenCalled();
   });
 
   it('closes on Escape and leaves the typed text in place', async () => {

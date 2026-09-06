@@ -1,4 +1,5 @@
 import type { CanvasPositionUpdate } from './api';
+import type { WorkspaceReference } from '@/types';
 import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
 import { rememberWorkspaceWhiteboardRevision } from './workspaceWhiteboardRevision';
 import { rememberWorkspaceWireframeRevision } from './workspaceWireframeRevision';
@@ -46,6 +47,7 @@ export type GraphqlWorkspaceList = {
   zIndex: number;
   contactId: number | null;
   contactName: string | null;
+  references: WorkspaceReference[];
   shareToken: string | null;
   isPublic: boolean;
   sharedAt: string | null;
@@ -68,6 +70,7 @@ export type GraphqlWorkspaceNote = {
   zIndex: number;
   contactId: number | null;
   contactName: string | null;
+  references: WorkspaceReference[];
   shareToken: string | null;
   isPublic: boolean;
   sharedAt: string | null;
@@ -91,6 +94,7 @@ export type GraphqlWorkspaceWhiteboard = {
   colorValue: string | null;
   contactId: number | null;
   contactName: string | null;
+  references: WorkspaceReference[];
   shareToken: string | null;
   isPublic: boolean;
   sharedAt: string | null;
@@ -113,6 +117,7 @@ export type GraphqlWorkspaceWireframe = {
   colorValue: string;
   contactId: number | null;
   contactName: string | null;
+  references: WorkspaceReference[];
   shareToken: string | null;
   isPublic: boolean;
   sharedAt: string | null;
@@ -136,6 +141,7 @@ export type LegacyWorkspaceList = {
   z_index: number;
   contact_id: number | null;
   contact_name: string | null;
+  references: WorkspaceReference[];
   share_token: string | null;
   is_public: boolean;
   shared_at: string | null;
@@ -158,6 +164,7 @@ export type LegacyWorkspaceNote = {
   z_index: number;
   contact_id: number | null;
   contact_name: string | null;
+  references: WorkspaceReference[];
   share_token: string | null;
   is_public: boolean;
   shared_at: string | null;
@@ -181,6 +188,7 @@ export type LegacyWorkspaceWhiteboard = {
   color_value: string | null;
   contact_id: number | null;
   contact_name: string | null;
+  references: WorkspaceReference[];
   share_token: string | null;
   is_public: boolean;
   shared_at: string | null;
@@ -203,6 +211,7 @@ export type LegacyWorkspaceWireframe = {
   color_value: string;
   contact_id: number | null;
   contact_name: string | null;
+  references: WorkspaceReference[];
   share_token: string | null;
   is_public: boolean;
   shared_at: string | null;
@@ -224,6 +233,7 @@ export const listFields = `
   items { id text completed }
   colorValue positionX positionY width height zIndex
   contactId contactName
+  references { entityType entityId label status total currency sentAt viewedAt paidAt acceptedAt declinedAt }
   shareToken isPublic sharedAt createdAt updatedAt
 `;
 
@@ -231,6 +241,7 @@ export const noteFields = `
   id userId title content category categoryId
   colorValue positionX positionY width height zIndex
   contactId contactName
+  references { entityType entityId label status total currency sentAt viewedAt paidAt acceptedAt declinedAt }
   shareToken isPublic sharedAt createdAt updatedAt
 `;
 
@@ -239,6 +250,7 @@ export const whiteboardFields = `
   canvasWidth canvasHeight backgroundColor
   positionX positionY zIndex colorValue
   contactId contactName
+  references { entityType entityId label status total currency sentAt viewedAt paidAt acceptedAt declinedAt }
   shareToken isPublic sharedAt createdAt updatedAt
 `;
 
@@ -246,6 +258,7 @@ export const wireframeFields = `
   id userId title category categoryId flowData
   positionX positionY width height zIndex colorValue
   contactId contactName
+  references { entityType entityId label status total currency sentAt viewedAt paidAt acceptedAt declinedAt }
   shareToken isPublic sharedAt createdAt updatedAt
 `;
 
@@ -336,6 +349,7 @@ export const mapList = (list: GraphqlWorkspaceList): LegacyWorkspaceList => ({
   z_index: list.zIndex,
   contact_id: list.contactId,
   contact_name: list.contactName,
+  references: list.references ?? [],
   share_token: list.shareToken,
   is_public: list.isPublic,
   shared_at: list.sharedAt,
@@ -358,6 +372,7 @@ export const mapNote = (note: GraphqlWorkspaceNote): LegacyWorkspaceNote => ({
   z_index: note.zIndex,
   contact_id: note.contactId,
   contact_name: note.contactName,
+  references: note.references ?? [],
   share_token: note.shareToken,
   is_public: note.isPublic,
   shared_at: note.sharedAt,
@@ -393,6 +408,7 @@ export const mapWhiteboard = (
     z_index: whiteboard.zIndex,
     contact_id: whiteboard.contactId,
     contact_name: whiteboard.contactName,
+    references: whiteboard.references ?? [],
     color_value: whiteboard.colorValue,
     share_token: whiteboard.shareToken,
     is_public: whiteboard.isPublic,
@@ -430,6 +446,7 @@ export const mapWireframe = (
     z_index: wireframe.zIndex,
     contact_id: wireframe.contactId,
     contact_name: wireframe.contactName,
+    references: wireframe.references ?? [],
     color_value: wireframe.colorValue,
     share_token: wireframe.shareToken,
     is_public: wireframe.isPublic,

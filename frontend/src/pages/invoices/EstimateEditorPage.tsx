@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import {
     Save,
     Send,
@@ -16,6 +16,7 @@ import {
     WalletCards,
     ChevronDown,
     ChevronUp,
+  Network
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +24,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { SectionCardTitle } from '@/components/ui/section-card-title';
 import {
     Select,
     SelectContent,
@@ -69,7 +71,8 @@ import {
     sendEstimate,
     updateEstimate,
 } from '@/services/estimatesApi';
-import { getEstimateEditorBootstrapViaGraphql } from '@/services/salesDocumentEditorGraphql';
+import { getEstimateEditorBootstrapViaGraphql, type WorkspaceReferenceSource } from '@/services/salesDocumentEditorGraphql';
+import { buildCanvasFocusPath } from '@/lib/canvasFocus';
 import type { JsonRecord } from '@/types';
 import { CustomerInfoSection } from './components/CustomerInfoSection';
 import { LineItemsTable } from './components/LineItemsTable';
@@ -236,6 +239,7 @@ export function EstimateEditorPage() {
         estimateId ?? 'new',
         initialContactId ?? 'none',
     ].join(':');
+    const [referencedBy, setReferencedBy] = useState<WorkspaceReferenceSource[]>([]);
     const bootstrapQuery = useQuery({
         queryKey: [
             'estimate-editor-bootstrap',
@@ -257,6 +261,7 @@ export function EstimateEditorPage() {
         if (!bootstrapQuery.data
             || initializedBootstrapRef.current === bootstrapKey) return;
         const data = bootstrapQuery.data;
+        setReferencedBy(data.referencedBy ?? []);
         const contactList = data.initialContact
             && !data.contacts.some((contact) => contact.id === data.initialContact?.id)
             ? [data.initialContact, ...data.contacts]
@@ -866,6 +871,30 @@ export function EstimateEditorPage() {
                         </CollapsibleContent>
                     </Card>
                 </Collapsible>
+
+                {/* Where this document is referenced in the workspace */}
+                {referencedBy.length > 0 && (
+                    <Card>
+                        <CardHeader>
+                            <SectionCardTitle icon={Network}>Referenced in</SectionCardTitle>
+                        </CardHeader>
+                        <CardContent surface="inset">
+                            <div className="space-y-2">
+                                {referencedBy.map((source) => (
+                                    <Link
+                                        key={`${source.sourceType}-${source.sourceId}`}
+                                        to={buildCanvasFocusPath(source.sourceType, source.sourceId)}
+                                        className="interaction-row flex min-w-0 items-center justify-between gap-3 rounded-md border p-3"
+                                        aria-label={`Open ${source.title || source.sourceType} on the canvas`}
+                                    >
+                                        <span className="min-w-0 truncate text-sm">{source.title || 'Untitled'}</span>
+                                        <Badge variant="outline" className="shrink-0 text-xs capitalize">{source.sourceType}</Badge>
+                                    </Link>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
 
                 <div className="flex justify-end gap-4">
                     <Button variant="outline" onClick={() => {

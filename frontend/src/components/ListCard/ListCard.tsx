@@ -81,7 +81,7 @@ const ListCard: React.FC<ListCardProps> = ({
     // Refs
     titleEditRef, newItemInputRef
   } = useListCardLogic({ list, onUpdate, onDelete, isCollapsed, onToggleCollapsed, existingCategories, addCategory, updateCategory });
-  const mention = useListMentionContext();
+  const mention = useListMentionContext(list.contact_id);
 
   // Handle sharing
   const handleShareList = () => {
@@ -260,6 +260,7 @@ const ListCard: React.FC<ListCardProps> = ({
                       handleEditItem={handleEditItem}
                       removeItem={removeItem}
                       mention={mention}
+                      references={list.references}
                     />
                   ))}
                 </SortableContext>

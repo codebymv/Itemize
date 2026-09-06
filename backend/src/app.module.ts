@@ -86,6 +86,7 @@ import { TagsModule } from './tags/tags.module';
 import { TrialRemindersModule } from './trial-reminders/trial-reminders.module';
 import { VaultModule } from './vaults/vault.module';
 import { WorkspaceContentModule } from './workspace-content/workspace-content.module';
+import { WorkspaceReferencesModule } from './workspace-references/workspace-references.module';
 import { RealtimeOutboxModule } from './realtime-outbox/realtime-outbox.module';
 import { WorkflowsModule } from './workflows/workflows.module';
 import { WorkflowExecutionModule } from './workflow-execution/workflow-execution.module';
@@ -123,6 +124,7 @@ const observabilityPlugins = [
     CategoriesModule,
     VaultModule,
     WorkspaceContentModule,
+    WorkspaceReferencesModule,
     RealtimeOutboxModule,
     ContactsModule,
     ConversationsModule,

@@ -28,6 +28,7 @@ const noteFields = `
   id userId title content category categoryId
   colorValue positionX positionY width height zIndex
   contactId contactName
+  references { entityType entityId label status total currency sentAt viewedAt paidAt acceptedAt declinedAt }
   shareToken isPublic sharedAt createdAt updatedAt
 `;
 
@@ -64,6 +65,7 @@ const mapNote = (note: GraphqlWorkspaceNote): LegacyWorkspaceNote => ({
   z_index: note.zIndex,
   contact_id: note.contactId,
   contact_name: note.contactName,
+  references: note.references ?? [],
   share_token: note.shareToken,
   is_public: note.isPublic,
   shared_at: note.sharedAt,

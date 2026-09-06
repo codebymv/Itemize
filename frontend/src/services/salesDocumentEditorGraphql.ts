@@ -38,17 +38,26 @@ import {
   mapInvoice,
 } from './invoicesGraphql';
 
+export interface WorkspaceReferenceSource {
+  sourceType: 'list' | 'note' | 'whiteboard' | 'wireframe';
+  sourceId: number;
+  title: string;
+  updatedAt: string;
+}
+
 export interface InvoiceEditorBootstrapData {
   contacts: Contact[];
   businesses: Business[];
   settings: PaymentSettings;
   invoice: Invoice | null;
+  referencedBy: WorkspaceReferenceSource[];
 }
 
 export interface EstimateEditorBootstrapData {
   contacts: Contact[];
   estimate: Estimate | null;
   initialContact: Contact | null;
+  referencedBy: WorkspaceReferenceSource[];
 }
 
 type Capability = 'unknown' | 'aggregate' | 'legacy';
@@ -62,6 +71,7 @@ const invoiceBootstrapQuery = `
       businesses { ${invoiceBusinessFields} }
       settings { ${invoiceSettingsFields} }
       invoice { ${invoiceDetailFields} }
+      referencedBy { sourceType sourceId title updatedAt }
     }
   }
 `;
@@ -75,6 +85,7 @@ const estimateBootstrapQuery = `
       contacts { ${contactFields} }
       estimate { ${estimateDetailFields} }
       initialContact { ${contactFields} }
+      referencedBy { sourceType sourceId title updatedAt }
     }
   }
 `;
@@ -102,6 +113,7 @@ const legacyInvoiceBootstrap = async (
     businesses: businesses.businesses,
     settings,
     invoice,
+    referencedBy: [],
   };
 };
 
@@ -127,6 +139,7 @@ const legacyEstimateBootstrap = async (
     contacts: contactsResponse.contacts,
     estimate,
     initialContact,
+    referencedBy: [],
   };
 };
 
@@ -145,6 +158,7 @@ export const getInvoiceEditorBootstrapViaGraphql = async (
         businesses: GraphqlInvoiceBusiness[];
         settings: GraphqlInvoiceSettings;
         invoice: GraphqlInvoice | null;
+        referencedBy: WorkspaceReferenceSource[];
       };
     }, { invoiceId: number | null }>(
       invoiceBootstrapQuery,
@@ -160,6 +174,7 @@ export const getInvoiceEditorBootstrapViaGraphql = async (
       invoice: data.invoiceEditorBootstrap.invoice
         ? mapInvoice(data.invoiceEditorBootstrap.invoice)
         : null,
+      referencedBy: data.invoiceEditorBootstrap.referencedBy ?? [],
     };
   } catch (error) {
     if (invoiceCapability === 'unknown'
@@ -190,6 +205,7 @@ export const getEstimateEditorBootstrapViaGraphql = async (
       estimateEditorBootstrap: {
         contacts: GraphqlContact[];
         estimate: GraphqlEstimate | null;
+        referencedBy: WorkspaceReferenceSource[];
         initialContact: GraphqlContact | null;
       };
     }, { estimateId: number | null; initialContactId: number | null }>(
@@ -207,6 +223,7 @@ export const getEstimateEditorBootstrapViaGraphql = async (
       initialContact: data.estimateEditorBootstrap.initialContact
         ? mapContact(data.estimateEditorBootstrap.initialContact)
         : null,
+      referencedBy: data.estimateEditorBootstrap.referencedBy ?? [],
     };
   } catch (error) {
     if (estimateCapability === 'unknown'

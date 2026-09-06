@@ -4,6 +4,7 @@ import { InvoiceBusinessesService } from '../invoice-businesses/invoice-business
 import { InvoiceSettingsService } from '../invoice-settings/invoice-settings.service';
 import { InvoicesService } from '../invoices/invoices.service';
 import { ProductsService } from '../products/products.service';
+import type { WorkspaceReferencesService } from '../workspace-references/workspace-references.service';
 import { SalesDocumentEditorService } from './sales-document-editor.service';
 
 describe('SalesDocumentEditorService', () => {
@@ -13,6 +14,7 @@ describe('SalesDocumentEditorService', () => {
   const settings = { get: jest.fn() };
   const invoices = { get: jest.fn() };
   const estimates = { get: jest.fn() };
+  const references = { referencesTo: jest.fn().mockResolvedValue([]) };
   const service = new SalesDocumentEditorService(
     contacts as unknown as ContactsService,
     products as unknown as ProductsService,
@@ -20,6 +22,7 @@ describe('SalesDocumentEditorService', () => {
     settings as unknown as InvoiceSettingsService,
     invoices as unknown as InvoicesService,
     estimates as unknown as EstimatesService,
+    references as unknown as WorkspaceReferencesService,
   );
 
   beforeEach(() => {
@@ -43,7 +46,7 @@ describe('SalesDocumentEditorService', () => {
   });
 
   it('returns the complete invoice editor bootstrap in one service operation', async () => {
-    await expect(service.invoiceBootstrap(42, 41, true)).resolves.toMatchObject({
+    await expect(service.invoiceBootstrap(42, 7, 41, true)).resolves.toMatchObject({
       contacts: [{ id: 11 }],
       products: [{ id: 21 }],
       businesses: [{ id: 31 }],
@@ -70,7 +73,7 @@ describe('SalesDocumentEditorService', () => {
       pageInfo: { page: 1, pageSize: 100, total: 101, totalPages: 2 },
     });
 
-    const result = await service.invoiceBootstrap(42, null, true);
+    const result = await service.invoiceBootstrap(42, 7, null, true);
 
     expect(result.products).toEqual([{ id: 21 }]);
     expect(result.businesses).toEqual([{ id: 31 }]);
@@ -81,8 +84,8 @@ describe('SalesDocumentEditorService', () => {
   });
 
   it('does not query the legacy product catalog when the field is omitted', async () => {
-    const invoice = await service.invoiceBootstrap(42);
-    const estimate = await service.estimateBootstrap(42);
+    const invoice = await service.invoiceBootstrap(42, 7, 7);
+    const estimate = await service.estimateBootstrap(42, 7, 7);
 
     expect(invoice.products).toEqual([]);
     expect(estimate.products).toEqual([]);
@@ -90,12 +93,12 @@ describe('SalesDocumentEditorService', () => {
   });
 
   it('reuses a listed initial contact and fetches only an unlisted one', async () => {
-    const listed = await service.estimateBootstrap(42, null, 11);
+    const listed = await service.estimateBootstrap(42, 7, null, 11);
     expect(listed.initialContact).toEqual({ id: 11 });
     expect(contacts.get).not.toHaveBeenCalled();
 
     contacts.get.mockResolvedValue({ id: 99 });
-    const unlisted = await service.estimateBootstrap(42, 51, 99);
+    const unlisted = await service.estimateBootstrap(42, 7, 51, 99);
     expect(unlisted.initialContact).toEqual({ id: 99 });
     expect(contacts.get).toHaveBeenCalledWith(42, 99);
     expect(estimates.get).toHaveBeenCalledWith(42, 51);

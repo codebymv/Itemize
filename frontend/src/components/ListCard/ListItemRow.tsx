@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { MentionInput, type MentionContext } from "@/components/workspace/MentionInput";
 import { MentionText } from "@/components/workspace/MentionText";
 import { stripMentionTokens } from "@/lib/mentionTokens";
-import { ListItem } from '@/types';
+import { ListItem, WorkspaceReference } from '@/types';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
@@ -18,6 +18,7 @@ interface ListItemRowProps {
   handleEditItem: () => void;
   removeItem: (itemId: string) => void;
   mention?: MentionContext;
+  references?: WorkspaceReference[];
 }
 
 const ListItemRow: React.FC<ListItemRowProps> = ({
@@ -30,6 +31,7 @@ const ListItemRow: React.FC<ListItemRowProps> = ({
   handleEditItem,
   removeItem,
   mention,
+  references,
 }) => {
   const readableText = stripMentionTokens(item.text);
   const isEditing = editingItemId === item.id;
@@ -122,6 +124,7 @@ const ListItemRow: React.FC<ListItemRowProps> = ({
             </div>
             <MentionText
               text={item.text}
+              references={references}
               className={`${item.completed ? 'line-through text-gray-400 dark:text-gray-300' : ''}`}
             />
           </button>

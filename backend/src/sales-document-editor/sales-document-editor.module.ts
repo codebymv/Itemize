@@ -5,6 +5,7 @@ import { InvoiceBusinessesModule } from '../invoice-businesses/invoice-businesse
 import { InvoiceSettingsModule } from '../invoice-settings/invoice-settings.module';
 import { InvoicesModule } from '../invoices/invoices.module';
 import { ProductsModule } from '../products/products.module';
+import { WorkspaceReferencesModule } from '../workspace-references/workspace-references.module';
 import { SalesDocumentEditorResolver } from './sales-document-editor.resolver';
 import { SalesDocumentEditorService } from './sales-document-editor.service';
 
@@ -16,6 +17,7 @@ import { SalesDocumentEditorService } from './sales-document-editor.service';
     InvoiceSettingsModule,
     InvoicesModule,
     EstimatesModule,
+    WorkspaceReferencesModule,
   ],
   providers: [SalesDocumentEditorService, SalesDocumentEditorResolver],
 })

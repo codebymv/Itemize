@@ -7,6 +7,7 @@ import {
 } from './workspace-content.repository';
 import { GetStartedService } from '../get-started/get-started.service';
 import { WorkspaceContentService } from './workspace-content.service';
+import type { WorkspaceReferencesService } from '../workspace-references/workspace-references.service';
 
 const creationKey = 'e1ccf127-fbea-4c3f-a3d5-c6d6ee993e0c';
 
@@ -156,6 +157,7 @@ describe('WorkspaceContentService', () => {
     service = new WorkspaceContentService(
       repository,
       getStarted as unknown as GetStartedService,
+      { hydrate: jest.fn().mockResolvedValue(new Map()) } as unknown as WorkspaceReferencesService,
     );
   });
 

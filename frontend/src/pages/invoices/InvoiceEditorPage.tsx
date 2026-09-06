@@ -18,6 +18,7 @@ import {
     MoreHorizontal,
     WalletCards,
     Repeat,
+  Network
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -84,7 +85,8 @@ import {
     Invoice,
     createRecurringTemplateFromInvoice,
 } from '@/services/invoicesApi';
-import { getInvoiceEditorBootstrapViaGraphql } from '@/services/salesDocumentEditorGraphql';
+import { getInvoiceEditorBootstrapViaGraphql, type WorkspaceReferenceSource } from '@/services/salesDocumentEditorGraphql';
+import { buildCanvasFocusPath } from '@/lib/canvasFocus';
 import {
     getRecurringInvoice,
     pauseRecurringInvoice,
@@ -153,6 +155,7 @@ export function InvoiceEditorPage() {
         : null;
     const hasInvalidInvoiceId = !isNew && invoiceId === null;
     const bootstrapKey = `${organizationId ?? 'none'}:${invoiceId ?? 'new'}`;
+    const [referencedBy, setReferencedBy] = useState<WorkspaceReferenceSource[]>([]);
     const bootstrapQuery = useQuery({
         queryKey: ['invoice-editor-bootstrap', organizationId, invoiceId],
         queryFn: ({ signal }) => getInvoiceEditorBootstrapViaGraphql(
@@ -462,6 +465,7 @@ export function InvoiceEditorPage() {
         if (!bootstrapQuery.data
             || initializedBootstrapRef.current === bootstrapKey) return;
         const data = bootstrapQuery.data;
+        setReferencedBy(data.referencedBy ?? []);
         setInitialized(false);
         setContacts(data.contacts);
         setBusinesses(data.businesses);
@@ -1205,6 +1209,30 @@ export function InvoiceEditorPage() {
                         </CollapsibleContent>
                     </Card>
                 </Collapsible>
+
+                {/* Where this document is referenced in the workspace */}
+                {referencedBy.length > 0 && (
+                    <Card>
+                        <CardHeader>
+                            <SectionCardTitle icon={Network}>Referenced in</SectionCardTitle>
+                        </CardHeader>
+                        <CardContent surface="inset">
+                            <div className="space-y-2">
+                                {referencedBy.map((source) => (
+                                    <Link
+                                        key={`${source.sourceType}-${source.sourceId}`}
+                                        to={buildCanvasFocusPath(source.sourceType, source.sourceId)}
+                                        className="interaction-row flex min-w-0 items-center justify-between gap-3 rounded-md border p-3"
+                                        aria-label={`Open ${source.title || source.sourceType} on the canvas`}
+                                    >
+                                        <span className="min-w-0 truncate text-sm">{source.title || 'Untitled'}</span>
+                                        <Badge variant="outline" className="shrink-0 text-xs capitalize">{source.sourceType}</Badge>
+                                    </Link>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Actions */}
                 <div className="flex justify-end gap-4">

@@ -1,5 +1,6 @@
 import type { Pool, PoolClient } from 'pg';
 import { RealtimeOutboxService } from '../realtime-outbox/realtime-outbox.service';
+import type { WorkspaceReferencesService } from '../workspace-references/workspace-references.service';
 import { WorkspaceContentRepository } from './workspace-content.repository';
 
 describe('WorkspaceContentRepository canvas position revisions', () => {
@@ -32,7 +33,14 @@ describe('WorkspaceContentRepository canvas position revisions', () => {
       enqueue: jest.fn().mockResolvedValue(undefined),
     } as unknown as RealtimeOutboxService;
 
-    const repository = new WorkspaceContentRepository(pool, realtime);
+    const repository = new WorkspaceContentRepository(
+      pool,
+      realtime,
+      {
+        commitListReferences: jest.fn(async (_client, _user, _source, items) => items),
+        commitNoteReferences: jest.fn(async (_client, _user, _source, html) => html),
+      } as unknown as WorkspaceReferencesService,
+    );
     await repository.batchCanvasPositions(4, 'move-1', [{
       type: 'wireframe',
       id: 12,
@@ -109,6 +117,10 @@ describe('WorkspaceContentRepository canvas position revisions', () => {
     const repository = new WorkspaceContentRepository(
       pool,
       { enqueue: jest.fn() } as unknown as RealtimeOutboxService,
+      {
+        commitListReferences: jest.fn(async (_client, _user, _source, items) => items),
+        commitNoteReferences: jest.fn(async (_client, _user, _source, html) => html),
+      } as unknown as WorkspaceReferencesService,
     );
     const values = {
       title: 'Plan',

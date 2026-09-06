@@ -1,6 +1,6 @@
 # Workspace inline triggers
 
-*Plan, 2026-09-06. Builds on the contact seam (`contactId` on workspace content). Slices 1 (`@` in notes) and 2 (`@` in list items) built the same day; see the commits for details. Titles were left as plain text: a pill inside a card heading competes with the title, and the chip already states the binding there.*
+*Plan, 2026-09-06. Builds on the contact seam (`contactId` on workspace content). Slices 1 (`@` in notes), 2 (`@` in list items), and 3 (references + `$`) built the same day; see the commits for details. Titles were left as plain text: a pill inside a card heading competes with the title, and the chip already states the binding there.*
 
 Type `@`, `$`, `#`, or `/` anywhere you can type on the canvas and a list appears at the caret — the Slack composer pattern applied to clients, money documents, categories, and actions. The client chip becomes the result of a gesture, not the entry point.
 
@@ -27,7 +27,7 @@ Type `@`, `$`, `#`, or `/` anywhere you can type on the canvas and a list appear
 | Primitive | Meaning | Cardinality | Storage |
 | --- | --- | --- | --- |
 | Binding | this card is *about* this client | one per card | `contact_id` on the card (shipped) |
-| Reference | this text *points at* that entity | many per card | `workspace_references` (new): source type/id, entity type/id, owner |
+| Reference | this text *points at* that entity | many per card | `workspace_references` (shipped in slice 3): source type/id, entity type/id, owner, label |
 
 A mention pill is a reference. The first `@` on an unbound card also creates the binding; unlinking from the chip removes the binding without touching the text.
 

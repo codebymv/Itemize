@@ -458,3 +458,30 @@ Owner realtime payloads carry `contact_id`/`contact_name`; shared and public
 projections deliberately do not. `contactContent(contactId)` on the contact
 page reads the same columns, and its items deep-link to
 `/canvas?focus=<type>:<id>`.
+
+## Inline references (2026-09-06)
+
+Workspace text can reference clients and money documents inline. Plain text
+(list items) stores tokens — `@[Casey Sanchez](contact:12)`,
+`$[INV-0012](invoice:4)` — and notes store mention nodes
+(`<span data-type="mention|moneyMention" data-entity=... data-id=...>`). The
+label is display-only; the id is authoritative.
+
+- On every list or note save the repository re-reads `organization_members`
+  for each mentioned contact, invoice, estimate, or payment. Anything the owner
+  cannot reach is rewritten to plain text before storage; the surviving set is
+  written to `workspace_references` in the same transaction.
+- `WorkspaceList`, `WorkspaceNote`, `WorkspaceWhiteboard`, and
+  `WorkspaceWireframe` expose `references: [WorkspaceReference!]!`, hydrated
+  for the owner with the entity's current label and state (`status`, `total`,
+  `currency`, `sentAt`, `viewedAt`, `paidAt`, `acceptedAt`, `declinedAt`).
+  Entities the owner can no longer reach are omitted, so a pill degrades to
+  text.
+- `workspaceReferencesTo(entityType, entityId)` (account-scoped) lists the
+  signed-in user's cards that reference an entity; `invoiceEditorBootstrap`
+  and `estimateEditorBootstrap` carry it as `referencedBy` so the editor keeps
+  its single bootstrap read.
+- `moneyDocumentSuggestions(query, contactId)` (organization-scoped) backs the
+  `$` list: invoices, estimates, and payments, the bound client's first.
+- Shared realtime payloads, the public list read, and the public note read
+  strip tokens and mention nodes to their visible labels.
