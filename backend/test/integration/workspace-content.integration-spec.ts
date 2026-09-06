@@ -393,6 +393,7 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
       }`,
       {
         input: {
+          idempotencyKey: '5d0b7c8e-2c1a-4f6b-9a3e-1f2d3c4b5a60',
           title: ' GraphQL tasks ',
           category: 'work',
           colorValue: '#abcdef',
@@ -544,6 +545,7 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
       }`,
       {
         input: {
+          idempotencyKey: '6e1c8d9f-3d2b-4a7c-8b4f-2a3e4d5c6b71',
           title: 'Default category note',
           positionX: 2013.7268237520689,
           positionY: 1987.125,
@@ -578,6 +580,7 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
       }`,
       {
         input: {
+          idempotencyKey: '7f2d9eaf-4e3c-4b8d-9c5a-3b4f5e6d7c82',
           title: ' GraphQL note ',
           content: 'Created through Nest',
           category: 'work',
@@ -782,6 +785,7 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
       }`,
       {
         input: {
+          idempotencyKey: '8a3eafb0-5f4d-4c9e-8d6b-4c5a6f7e8d93',
           title: ' GraphQL whiteboard ',
           category: 'work',
           canvasData: JSON.stringify([{ drawMode: true, paths: [] }]),
@@ -1092,6 +1096,7 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
       }`,
       {
         input: {
+          idempotencyKey: '9b4fb0c1-6a5e-4daf-9e7c-5d6b7a8f9ea4',
           title: ' GraphQL flow ',
           category: 'work',
           flowData: JSON.stringify({
