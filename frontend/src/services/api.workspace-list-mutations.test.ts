@@ -63,7 +63,7 @@ describe('workspace list API GraphQL mutations', () => {
 
     await createList({ title: 'Tasks', items: [] }, 'ignored-token');
     await updateList(update, 'ignored-token');
-    await deleteList('9', 'ignored-token');
+    await deleteList(9, 'ignored-token');
 
     expect(createWorkspaceListViaGraphql).toHaveBeenCalledWith({
       title: 'Tasks',
@@ -71,7 +71,7 @@ describe('workspace list API GraphQL mutations', () => {
       width: 320,
     }, expect.any(String));
     expect(updateWorkspaceListViaGraphql).toHaveBeenCalledWith(update);
-    expect(deleteWorkspaceListViaGraphql).toHaveBeenCalledWith('9');
+    expect(deleteWorkspaceListViaGraphql).toHaveBeenCalledWith(9);
     expect(api.post).not.toHaveBeenCalled();
     expect(api.put).not.toHaveBeenCalled();
     expect(api.delete).not.toHaveBeenCalled();

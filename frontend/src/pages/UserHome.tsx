@@ -28,7 +28,7 @@ interface ListItem {
 }
 
 interface List {
-  id: string;
+  id: number;
   title: string;
   type: string; // maps to 'category' in backend
   items: ListItem[];
@@ -73,7 +73,7 @@ const UserHome = () => {
       
       // Map response data to our List type, ensuring correct category mapping and defaults
       const listsWithDataMapped = (rows as BackendList[]).map((listFromBackend) => ({
-        id: String(listFromBackend.id),
+        id: Number(listFromBackend.id),
         title: listFromBackend.title,
         type: listFromBackend.category || 'General', // Map backend 'category' to frontend 'type'
         items: listFromBackend.items || [], // Ensure items is an array
@@ -104,7 +104,7 @@ const UserHome = () => {
       
       const newList: List = {
         ...response,
-        id: String(response.id),
+        id: Number(response.id),
         type: response.type || 'General',
         items: response.items || [],
         createdAt: response.createdAt || new Date(),
@@ -147,7 +147,7 @@ const UserHome = () => {
     }
   };
  
-  const deleteList = async (listId: string): Promise<boolean> => {
+  const deleteList = async (listId: number): Promise<boolean> => {
     try {
       await deleteListRequest(listId);
       
@@ -223,7 +223,7 @@ const UserHome = () => {
   };
 
   // Handle sharing a list
-  const handleShare = async (listId: string) => {
+  const handleShare = async (listId: number) => {
     const list = lists.find(l => l.id === listId);
     if (!list) return;
 

@@ -2,14 +2,14 @@ import { useState, useCallback, useMemo } from 'react';
 import { List } from '@/types';
 
 export function useCanvasCollapsible(lists: List[]) {
-  const [collapsedListIds, setCollapsedListIds] = useState<Set<string>>(new Set());
+  const [collapsedListIds, setCollapsedListIds] = useState<Set<number>>(new Set());
   const [collapsedNoteIds, setCollapsedNoteIds] = useState<Set<number>>(new Set());
   const [collapsedWhiteboardIds, setCollapsedWhiteboardIds] = useState<Set<number>>(new Set());
   const [collapsedWireframeIds, setCollapsedWireframeIds] = useState<Set<number>>(new Set());
 
-  const isListCollapsed = useCallback((listId: string) => collapsedListIds.has(listId), [collapsedListIds]);
+  const isListCollapsed = useCallback((listId: number) => collapsedListIds.has(listId), [collapsedListIds]);
 
-  const toggleListCollapsed = useCallback((listId: string) => {
+  const toggleListCollapsed = useCallback((listId: number) => {
     setCollapsedListIds(prev => {
       const newSet = new Set(prev);
       if (newSet.has(listId)) {
@@ -65,7 +65,7 @@ export function useCanvasCollapsible(lists: List[]) {
 
   // Create stable toggle callbacks for each list to prevent unnecessary re-renders
   const listToggleCallbacks = useMemo(() => {
-    const callbacks: Record<string, () => void> = {};
+    const callbacks: Record<number, () => void> = {};
     lists.forEach(list => {
       callbacks[list.id] = () => toggleListCollapsed(list.id);
     });

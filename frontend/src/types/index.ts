@@ -47,7 +47,8 @@ export interface WorkspaceFrame {
 }
 
 export interface List {
-  id: string;
+  /** Numeric server id; list *items* carry string uuids. */
+  id: number;
   title: string;
   type: string; // Represents category
   items: ListItem[];
@@ -84,8 +85,8 @@ export interface Category {
 export interface ListCardProps {
   list: List;
   onUpdate: (list: List) => void;
-  onDelete: (listId: string) => Promise<boolean>;
-  onShare: (listId: string) => void;
+  onDelete: (listId: number) => Promise<boolean>;
+  onShare: (listId: number) => void;
   existingCategories: Category[];
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;

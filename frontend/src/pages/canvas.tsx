@@ -470,7 +470,7 @@ const CanvasPage: React.FC = () => {
         const listsToUpdate = lists.filter(
           (list) => (list.type || "General") === categoryName,
         );
-        const failedListIds: string[] = [];
+        const failedListIds: number[] = [];
 
         for (const list of listsToUpdate) {
           try {
@@ -663,8 +663,7 @@ const CanvasPage: React.FC = () => {
     const { position } = placed;
     switch (card.type) {
       case "list":
-        // List ids are typed as strings but arrive as numbers; the state match is strict.
-        handleListPositionUpdate(card.id as string, position);
+        handleListPositionUpdate(Number(card.id), position);
         break;
       case "note":
         handleNotePositionUpdate(Number(card.id), position);

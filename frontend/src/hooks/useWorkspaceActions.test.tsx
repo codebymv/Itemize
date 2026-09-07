@@ -14,7 +14,7 @@ vi.mock('@/hooks/useWorkspaceArchive', () => ({ useWorkspaceArchive: () => ({ ar
 import type { List, Note } from '@/types';
 
 const list: List = {
-  id: 'list-7',
+  id: 7,
   title: 'Kitchen scope',
   type: 'General',
   items: [{ id: 'a', text: 'Demo old cabinets', completed: false }],
@@ -84,7 +84,7 @@ describe('useWorkspaceActions', () => {
     expect(lastLocation?.search).toBe('?contactId=12');
     expect(lastLocation?.state).toEqual({
       [ESTIMATE_PREFILL_STATE]: {
-        source: { type: 'list', id: 'list-7', title: 'Kitchen scope' },
+        source: { type: 'list', id: '7', title: 'Kitchen scope' },
         lineItems: [{ name: 'Demo old cabinets' }],
       },
     });

@@ -55,7 +55,7 @@ const pageState = (page: GraphqlPageInfo) => ({
 const mapCanvasList = (row: GraphqlWorkspaceList): List => {
   const list = mapList(row);
   return {
-    id: list.id as unknown as string,
+    id: list.id,
     title: list.title,
     type: list.type,
     items: list.items,

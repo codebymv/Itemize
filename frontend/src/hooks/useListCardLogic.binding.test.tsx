@@ -22,7 +22,7 @@ vi.mock('@/hooks/use-ai-suggestions', () => ({
 vi.mock('@/hooks/use-toast', () => ({ useToast: () => ({ toast: vi.fn() }) }));
 
 const list: List = {
-  id: 'list-7',
+  id: 7,
   title: 'Kitchen scope',
   type: 'General',
   items: [{ id: 'a', text: 'Demo', completed: false }],

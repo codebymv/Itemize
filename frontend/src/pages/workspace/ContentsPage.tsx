@@ -273,7 +273,7 @@ export function ContentsPage() {
   });
 
   const handleListDelete = useCallback(
-    async (id: string): Promise<boolean> => {
+    async (id: number): Promise<boolean> => {
       try {
         await apiDeleteList(id, token);
         toast({
@@ -296,7 +296,7 @@ export function ContentsPage() {
   );
 
   const handleListShare = useCallback(
-    (id: string) => {
+    (id: number) => {
       const list = lists.find((candidate) => candidate.id === id);
       if (list)
         setWorkspaceShareTarget({
@@ -564,7 +564,7 @@ export function ContentsPage() {
       let result: { shareToken: string; shareUrl: string };
       switch (workspaceShareTarget.itemType) {
         case "list":
-          result = await apiShareList(String(id), token);
+          result = await apiShareList(Number(id), token);
           break;
         case "note":
           result = await apiShareNote(Number(id), token);
@@ -647,7 +647,7 @@ export function ContentsPage() {
       if (!workspaceShareTarget) throw new Error("No workspace item selected");
       switch (workspaceShareTarget.itemType) {
         case "list":
-          await apiUnshareList(String(id), token, mutationId);
+          await apiUnshareList(Number(id), token, mutationId);
           break;
         case "note":
           await apiUnshareNote(Number(id), token, mutationId);

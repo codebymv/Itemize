@@ -318,7 +318,7 @@ export const updateList = async (
   };
 };
 
-export const deleteList = async (listId: string, token?: string) => {
+export const deleteList = async (listId: number, token?: string) => {
   void token;
   return deleteWorkspaceContentWithReconciliation(
     "list",
@@ -796,13 +796,13 @@ export const unlockVault = async (
 };
 
 // Share list
-export const shareList = async (listId: string, _token?: string) => {
+export const shareList = async (listId: number, _token?: string) => {
   return enableListSharingViaGraphql(Number(listId));
 };
 
 // Unshare list
 export const unshareList = async (
-  listId: string,
+  listId: number,
   _token: string | undefined,
   mutationId: string,
 ) => {

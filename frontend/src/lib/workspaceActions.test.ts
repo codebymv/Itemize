@@ -44,7 +44,7 @@ describe('workspaceActions', () => {
 
   it('turns a list into line items without ids, tokens, or blanks', () => {
     const list: List = {
-      id: 'list-7',
+      id: 7,
       title: 'Kitchen scope',
       type: 'General',
       items: [
@@ -54,7 +54,7 @@ describe('workspaceActions', () => {
       ],
     };
     expect(estimatePrefillFromList(list)).toEqual({
-      source: { type: 'list', id: 'list-7', title: 'Kitchen scope' },
+      source: { type: 'list', id: '7', title: 'Kitchen scope' },
       lineItems: [
         { name: 'Demo old cabinets' },
         { name: 'Tile per $INV-0012 with @Casey Sanchez' },
@@ -64,26 +64,26 @@ describe('workspaceActions', () => {
 
   it('reads only a well-formed prefill back out of router state', () => {
     const prefill = estimatePrefillFromList({
-      id: 'list-7',
+      id: 7,
       title: 'Kitchen scope',
       type: 'General',
       items: [{ id: 'a', text: 'Demo', completed: false }],
     });
     expect(readEstimatePrefill({ [ESTIMATE_PREFILL_STATE]: prefill })).toEqual(prefill);
-    // The canvas hands ids over as numbers even though `List.id` is typed as a string.
+    // Router state may carry the numeric id; it is normalised to the string the prefill uses.
     expect(readEstimatePrefill({ [ESTIMATE_PREFILL_STATE]: { ...prefill, source: { ...prefill.source, id: 7 } } }))
       .toEqual({ ...prefill, source: { ...prefill.source, id: '7' } });
-    expect(estimatePrefillFromList({ id: 9 as unknown as string, title: 'n', type: 'General', items: [] }).source.id).toBe('9');
+    expect(estimatePrefillFromList({ id: 9, title: 'n', type: 'General', items: [] }).source.id).toBe('9');
     expect(readEstimatePrefill(null)).toBeNull();
     expect(readEstimatePrefill({})).toBeNull();
     expect(readEstimatePrefill({ [ESTIMATE_PREFILL_STATE]: { source: { type: 'note', id: '1', title: 'x' }, lineItems: [] } })).toBeNull();
     expect(readEstimatePrefill({
       [ESTIMATE_PREFILL_STATE]: {
-        source: { type: 'list', id: 'list-7', title: 'Kitchen scope' },
+        source: { type: 'list', id: '7', title: 'Kitchen scope' },
         lineItems: [{ name: ' Demo ' }, { name: 4 }, 'junk', { name: '' }],
       },
     })).toEqual({
-      source: { type: 'list', id: 'list-7', title: 'Kitchen scope' },
+      source: { type: 'list', id: '7', title: 'Kitchen scope' },
       lineItems: [{ name: 'Demo' }],
     });
   });

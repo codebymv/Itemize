@@ -30,10 +30,11 @@ const frame: WorkspaceFrame = {
   contact_name: null,
   created_at: '2026-09-06T00:00:00.000Z',
   updated_at: '2026-09-06T00:00:00.000Z',
+  archived_at: null,
 };
 
-const inside: List = { id: '5', title: 'Scope', type: 'General', items: [], position_x: 1100, position_y: 1200, width: 400, height: 300 };
-const outside: List = { id: '6', title: 'Elsewhere', type: 'General', items: [], position_x: 4000, position_y: 4000, width: 400, height: 300 };
+const inside: List = { id: 5, title: 'Scope', type: 'General', items: [], position_x: 1100, position_y: 1200, width: 400, height: 300 };
+const outside: List = { id: 6, title: 'Elsewhere', type: 'General', items: [], position_x: 4000, position_y: 4000, width: 400, height: 300 };
 const note: Note = {
   id: 9, user_id: 7, title: 'Notes', content: '', color_value: '#fff',
   position_x: 1500, position_y: 1300, width: 500, height: 300, z_index: 1,
@@ -72,9 +73,9 @@ describe('useCanvasFrames', () => {
     expect(enqueuePositionUpdate).toHaveBeenCalledWith({
       type: 'frame', id: 1, position_x: 1300, position_y: 1050, width: 1400, height: 900,
     });
-    expect(enqueuePositionUpdate).toHaveBeenCalledWith({ type: 'list', id: '5', position_x: 1400, position_y: 1250 });
+    expect(enqueuePositionUpdate).toHaveBeenCalledWith({ type: 'list', id: 5, position_x: 1400, position_y: 1250 });
     expect(enqueuePositionUpdate).toHaveBeenCalledWith({ type: 'note', id: 9, position_x: 1800, position_y: 1350 });
-    expect(enqueuePositionUpdate).not.toHaveBeenCalledWith(expect.objectContaining({ id: '6' }));
+    expect(enqueuePositionUpdate).not.toHaveBeenCalledWith(expect.objectContaining({ id: 6 }));
     expect(enqueuePositionUpdate).toHaveBeenCalledTimes(3);
 
     const nextLists = (setters.setLists.mock.calls[0][0] as (lists: List[]) => List[])([inside, outside]);

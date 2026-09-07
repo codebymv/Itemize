@@ -68,7 +68,7 @@ export function ContentModal({ content, onClose, categories }: ContentModalProps
     }
   }, [token, toast]);
 
-  const handleListDelete = useCallback(async (listId: string): Promise<boolean> => {
+  const handleListDelete = useCallback(async (listId: number): Promise<boolean> => {
     if (!token) return false;
     try {
       await apiDeleteList(listId, token);

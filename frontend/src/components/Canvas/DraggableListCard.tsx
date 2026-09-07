@@ -10,10 +10,10 @@ const SNAP_THRESHOLD = 10; // px
 
 interface DraggableListCardProps {
   list: List;
-  onPositionChange: (listId: string, newPosition: { x: number; y: number }, newSize?: { width: number }) => void;
+  onPositionChange: (listId: number, newPosition: { x: number; y: number }, newSize?: { width: number }) => void;
   onUpdate: (listData: List) => Promise<unknown>;
-  onDelete: (listId: string) => Promise<boolean>;
-  onShare: (listId: string) => void;
+  onDelete: (listId: number) => Promise<boolean>;
+  onShare: (listId: number) => void;
   existingCategories: Category[];
   canvasTransform: { x: number; y: number; scale: number };
   isCollapsed?: boolean;

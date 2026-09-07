@@ -337,7 +337,7 @@ export function SharedPage() {
     try {
       switch (contentToUnshare.type) {
         case 'list':
-          await apiUnshareList(contentToUnshare.id as string, token, mutationId);
+          await apiUnshareList(Number(contentToUnshare.id), token, mutationId);
           setLists(prev => prev.map(l =>
             l.id === contentToUnshare.id
               ? { ...l, is_public: false, share_token: undefined }

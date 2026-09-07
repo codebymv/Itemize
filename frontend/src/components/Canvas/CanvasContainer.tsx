@@ -25,11 +25,11 @@ interface CanvasContainerProps {
   onReady?: (methods: CanvasContainerMethods) => void;
   onOpenNewNoteModal?: (position: { x: number; y: number }) => void;
   onOpenNewListModal?: (position: { x: number; y: number }) => void;
-  onListShare?: (listId: string) => void;
+  onListShare?: (listId: number) => void;
   lists: List[];
   onListUpdate: (updatedList: List) => Promise<unknown>;
-  onListPositionUpdate: (listId: string, newPosition: { x: number; y: number }, newSize?: { width: number }) => void;
-  onListDelete: (listId: string) => Promise<boolean>;
+  onListPositionUpdate: (listId: number, newPosition: { x: number; y: number }, newSize?: { width: number }) => void;
+  onListDelete: (listId: number) => Promise<boolean>;
   notes: Note[];
   onNoteUpdate: (noteId: number, updatedData: Partial<Omit<Note, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<Note | null>;
   onNotePositionUpdate?: (noteId: number, newPosition: { x: number; y: number }, newSize?: { width: number; height: number }) => void;
@@ -602,7 +602,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
     }
   };
 
-  const handleListDelete = async (listId: string): Promise<boolean> => {
+  const handleListDelete = async (listId: number): Promise<boolean> => {
     try {
       // Use the passed handler from parent
       return await onListDelete(listId);

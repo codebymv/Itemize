@@ -4,7 +4,7 @@ import type { List } from '@/types';
 import { useQueuedListUpdates } from './useQueuedListUpdates';
 
 const list = (items: List['items'], updatedAt: string): List => ({
-  id: '7',
+  id: 7,
   title: 'Release checklist',
   type: 'General',
   items,

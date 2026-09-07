@@ -68,9 +68,9 @@ export function useCanvasSharing(
   const [currentShareItem, setCurrentShareItem] = useState<ShareItem | null>(null);
   const { setLists, setNotes, setWhiteboards, setWireframes, setVaults } = updateState;
 
-  const handleListShare = async (listId: string): Promise<{ shareToken: string; shareUrl: string }> => {
+  const handleListShare = async (listId: number): Promise<{ shareToken: string; shareUrl: string }> => {
     try {
-      const result = await enableListSharingViaGraphql(Number(listId));
+      const result = await enableListSharingViaGraphql(listId);
       setLists((current) => current.map((list) => (
         list.id === listId ? { ...list, ...sharedFields(result) } : list
       )));
@@ -81,9 +81,9 @@ export function useCanvasSharing(
     }
   };
 
-  const handleListUnshare = async (listId: string, mutationId: string): Promise<void> => {
+  const handleListUnshare = async (listId: number, mutationId: string): Promise<void> => {
     try {
-      await disableListSharingViaGraphql(Number(listId), mutationId);
+      await disableListSharingViaGraphql(listId, mutationId);
       setLists((current) => current.map((list) => (
         list.id === listId ? { ...list, ...unsharedFields } : list
       )));
@@ -211,7 +211,7 @@ export function useCanvasSharing(
     }
   };
 
-  const handleShareList = (listId: string) => {
+  const handleShareList = (listId: number) => {
     const list = lists.find(l => l.id === listId);
     if (!list) return;
 

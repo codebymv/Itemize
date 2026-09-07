@@ -70,7 +70,7 @@ export function useCanvasCRUD(
   enqueuePositionUpdate: (update: PositionUpdate) => void,
 ) {
   const { toast } = useToast();
-  const recentlyCreatedListIds = useRef<Set<string>>(new Set());
+  const recentlyCreatedListIds = useRef<Set<number>>(new Set());
   const { isCategoryInUse, addCategory } = categoriesHook;
   const { setLists, setNotes, setWhiteboards, setWireframes, setVaults } =
     updateState;
@@ -676,7 +676,7 @@ export function useCanvasCRUD(
   };
 
   const handleListPositionUpdate = (
-    listId: string,
+    listId: number,
     newPosition: { x: number; y: number },
     newSize?: { width: number },
   ) => {
@@ -704,7 +704,7 @@ export function useCanvasCRUD(
 
   const updateList = (updatedList: List) => enqueueListUpdate(updatedList);
 
-  const deleteList = async (listId: string): Promise<boolean> => {
+  const deleteList = async (listId: number): Promise<boolean> => {
     try {
       await apiDeleteList(listId, token);
 

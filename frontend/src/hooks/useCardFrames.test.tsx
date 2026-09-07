@@ -22,11 +22,12 @@ const frame = (values: Partial<WorkspaceFrame>): WorkspaceFrame => ({
   contact_name: null,
   created_at: '2026-09-06T00:00:00.000Z',
   updated_at: '2026-09-06T00:00:00.000Z',
+  archived_at: null,
   ...values,
 });
 
 const list: List = {
-  id: '5',
+  id: 5,
   title: 'Scope',
   type: 'Renovation',
   items: [],
@@ -59,6 +60,6 @@ describe('useCardFrames', () => {
     expect(result.current?.frames).toHaveLength(2);
 
     result.current?.moveTo(2);
-    expect(canvas.moveCardToFrame).toHaveBeenCalledWith(expect.objectContaining({ type: 'list', id: '5', position_x: 1100 }), 2);
+    expect(canvas.moveCardToFrame).toHaveBeenCalledWith(expect.objectContaining({ type: 'list', id: 5, position_x: 1100 }), 2);
   });
 });

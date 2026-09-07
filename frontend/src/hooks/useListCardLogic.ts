@@ -12,7 +12,7 @@ import logger from '@/lib/logger';
 interface UseListCardLogicProps {
   list: List;
   onUpdate: (list: List) => void;
-  onDelete: (listId: string) => void;
+  onDelete: (listId: number) => void;
   isCollapsed?: boolean;
   onToggleCollapsed?: () => void;
   existingCategories?: Category[];

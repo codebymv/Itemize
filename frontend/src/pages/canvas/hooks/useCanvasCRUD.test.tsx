@@ -40,7 +40,7 @@ describe('useCanvasCRUD creation coordinates', () => {
 
   it('preserves zero coordinates returned by the canvas and API', async () => {
     vi.mocked(createList).mockResolvedValue({
-      id: '1',
+      id: 1,
       title: 'Origin list',
       type: 'General',
       items: [],
@@ -73,7 +73,7 @@ describe('useCanvasCRUD creation coordinates', () => {
 
   it('uses a safe default when no creation position is supplied or returned', async () => {
     vi.mocked(createList).mockResolvedValue({
-      id: '2',
+      id: 2,
       title: 'Default list',
       type: 'General',
       items: [],
@@ -99,7 +99,7 @@ describe('useCanvasCRUD creation coordinates', () => {
 
   it('passes preset content into list, note, and wireframe creation payloads', async () => {
     vi.mocked(createList).mockResolvedValue({
-      id: '3',
+      id: 3,
       title: 'Launch',
       type: 'General',
       items: [],
@@ -173,7 +173,7 @@ describe('useCanvasCRUD creation coordinates', () => {
   });
 
   it('keeps scratch creation on the standard canvas dimensions', async () => {
-    vi.mocked(createList).mockResolvedValue({ id: '6', title: 'List', items: [] });
+    vi.mocked(createList).mockResolvedValue({ id: 6, title: 'List', items: [] });
     vi.mocked(createNote).mockResolvedValue({ id: 7, title: 'Note' });
     vi.mocked(createWireframe).mockResolvedValue({ id: 8, title: 'Wireframe' });
     const { result } = renderHook(() => useCanvasCRUD(

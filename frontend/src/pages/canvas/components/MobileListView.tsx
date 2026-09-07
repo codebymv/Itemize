@@ -26,10 +26,10 @@ interface MobileListViewProps {
   onUpdateList: (list: List) => Promise<unknown>;
   onUpdateNote: (noteId: number, data: Partial<Omit<Note, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<Note | null>;
   onUpdateWhiteboard: (whiteboardId: number, data: Partial<Omit<Whiteboard, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => Promise<Whiteboard | null>;
-  onDeleteList: (listId: string) => Promise<boolean>;
+  onDeleteList: (listId: number) => Promise<boolean>;
   onDeleteNote: (noteId: number) => Promise<boolean>;
   onDeleteWhiteboard: (whiteboardId: number) => Promise<boolean>;
-  onShareList: (listId: string) => void;
+  onShareList: (listId: number) => void;
   onShareNote: (noteId: number) => void;
   onShareWhiteboard: (whiteboardId: number) => void;
   addCategory: (data: { name: string; color_value: string }) => Promise<unknown>;

@@ -11,7 +11,7 @@ vi.mock('@/services/workspaceContentSnapshotGraphql', () => ({
 }));
 
 const list: List = {
-  id: '1',
+  id: 1,
   title: 'Launch checklist',
   type: 'General',
   items: [],

@@ -26,7 +26,7 @@ interface ListItem {
 }
 
 interface List {
-  id: string;
+  id: number;
   title: string;
   type: string;
   items: ListItem[];
@@ -42,14 +42,14 @@ const Index = () => {
 
   // Sharing modal states
   const [showShareModal, setShowShareModal] = useState(false);
-  const [currentShareItem, setCurrentShareItem] = useState<{ id: string; title: string; itemType: 'list'; shareData?: { shareToken: string; shareUrl: string } } | null>(null);
+  const [currentShareItem, setCurrentShareItem] = useState<{ id: number; title: string; itemType: 'list'; shareData?: { shareToken: string; shareUrl: string } } | null>(null);
 
   const { toast } = useToast();
   const { categories } = useDatabaseCategories();
 
   const createList = (title: string, type: string, items: ListItem[] = []) => {
     const newList: List = {
-      id: Date.now().toString(),
+      id: Date.now(),
       title,
       type,
       items,
@@ -78,7 +78,7 @@ const Index = () => {
     return true;
   };
 
-  const deleteList = async (listId: string): Promise<boolean> => {
+  const deleteList = async (listId: number): Promise<boolean> => {
     try {
       setLists(prev => prev.filter(list => list.id !== listId));
       toast({
@@ -156,7 +156,7 @@ const Index = () => {
   };
 
   // Sharing functions
-  const handleShareList = async (listId: string) => {
+  const handleShareList = async (listId: number) => {
     const list = lists.find(l => l.id === listId);
     if (!list) return;
 
@@ -164,7 +164,7 @@ const Index = () => {
     setShowShareModal(true);
   };
 
-  const handleListShare = async (listId: string): Promise<{ shareToken: string; shareUrl: string }> => {
+  const handleListShare = async (listId: number): Promise<{ shareToken: string; shareUrl: string }> => {
     try {
       return await enableListSharingViaGraphql(Number(listId));
     } catch (error) {
@@ -174,7 +174,7 @@ const Index = () => {
   };
 
   const handleListUnshare = async (
-    listId: string,
+    listId: number,
     mutationId: string,
   ): Promise<void> => {
     try {
