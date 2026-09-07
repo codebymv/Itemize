@@ -1,21 +1,16 @@
-import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
+import React from "react";
 import { Badge } from "@/components/ui/badge";
 import {
   ExternalLink,
-  Loader2,
   Zap,
   Crown,
   Building2,
   User,
 } from "lucide-react";
-import {
-  useSubscriptionFeatures,
-  useSubscriptionState,
-} from "@/contexts/SubscriptionContext";
+import { useSubscriptionState } from "@/contexts/SubscriptionContext";
 import { Plan, PLAN_METADATA, PLAN_PRICING } from "@/lib/subscription";
-import { useToast } from "@/hooks/use-toast";
 import { Spinner } from "@/components/ui/Spinner";
+import { useManageSubscription } from "@/pages/settings/components/useManageSubscription";
 
 const PLAN_ICONS = {
   free: User,
@@ -24,14 +19,9 @@ const PLAN_ICONS = {
   pro: Building2,
 };
 
-const getErrorMessage = (error: unknown, fallback: string): string =>
-  error instanceof Error ? error.message : fallback;
-
 export function SubscriptionStatus() {
   const { subscription, planName, isLoading } = useSubscriptionState();
-  const { openBillingPortal } = useSubscriptionFeatures();
-  const { toast } = useToast();
-  const [isOpeningPortal, setIsOpeningPortal] = useState(false);
+  const manage = useManageSubscription();
 
   if (isLoading) {
     return (
@@ -73,28 +63,10 @@ export function SubscriptionStatus() {
   };
 
   const renewalDate = getRenewalDate();
-  const isPaidPlan =
-    currentPlan !== "free" && subscription?.status === "active";
-
-  const handleManageSubscription = async () => {
-    if (isOpeningPortal) return;
-
-    setIsOpeningPortal(true);
-    try {
-      await openBillingPortal();
-    } catch (error) {
-      setIsOpeningPortal(false);
-      toast({
-        title: "Error",
-        description: getErrorMessage(error, "Failed to open billing portal"),
-        variant: "destructive",
-      });
-    }
-  };
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-6 border-b border-border pb-5">
+      <div className="grid grid-cols-2 gap-6">
         <div className="min-w-0 space-y-2">
           <p className="text-sm font-medium text-muted-foreground">
             Current Plan
@@ -111,6 +83,17 @@ export function SubscriptionStatus() {
           <div className="whitespace-nowrap text-2xl font-semibold text-foreground">
             {currentPlan === "free" ? "$0" : `$${planPricing.monthly}/month`}
           </div>
+          {manage.available && (
+            <button
+              type="button"
+              onClick={() => void manage.open()}
+              disabled={manage.opening}
+              className="interaction-button--link inline-flex min-h-11 items-center gap-1 text-sm text-icon-accent"
+            >
+              <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+              {manage.opening ? "Opening billing…" : "Manage"}
+            </button>
+          )}
         </div>
       </div>
 
@@ -134,22 +117,6 @@ export function SubscriptionStatus() {
             </Badge>
           )}
         </div>
-      )}
-
-      {isPaidPlan && subscription?.status !== "canceled" && (
-        <Button
-          className="w-full bg-primary interaction-button--primary text-primary-foreground"
-          onClick={handleManageSubscription}
-          disabled={isOpeningPortal}
-          aria-busy={isOpeningPortal}
-        >
-          {isOpeningPortal ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <ExternalLink className="mr-2 h-4 w-4" />
-          )}
-          {isOpeningPortal ? "Opening billing…" : "Manage Subscription"}
-        </Button>
       )}
     </div>
   );
