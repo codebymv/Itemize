@@ -19,7 +19,10 @@ export const useDatabaseCategories = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { token } = useAuth();
+  const { currentUser } = useAuth();
+  // Auth moved to cookies with the GraphQL cutover and the API ignores tokens;
+  // the only thing that matters here is whether someone is signed in.
+  const token = currentUser ? 'cookie' : null;
   const { toast } = useToast();
   const {
     begin: beginCategoryCreate,

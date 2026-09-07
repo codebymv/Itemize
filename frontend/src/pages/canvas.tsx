@@ -137,6 +137,12 @@ const CanvasPage: React.FC = () => {
       whiteboard: (whiteboardId, binding) => handleUpdateWhiteboard(whiteboardId, binding),
       wireframe: (wireframeId, binding) => handleUpdateWireframe(wireframeId, binding),
     },
+    categoryUpdaters: {
+      list: (list, category) => updateList({ ...list, type: category }),
+      note: (noteId, category) => handleUpdateNote(noteId, { category }),
+      whiteboard: (whiteboardId, category) => handleUpdateWhiteboard(whiteboardId, { category }),
+      wireframe: (wireframeId, category) => handleUpdateWireframe(wireframeId, { category }),
+    },
   });
 
   // A card dropped into a bound frame takes the frame's client if it has none.

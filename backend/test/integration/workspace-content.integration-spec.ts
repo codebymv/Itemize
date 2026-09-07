@@ -2044,13 +2044,14 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
     expect(publicRead.body.content).toBe('<p>Bill $INV and $X</p>');
   });
   it('creates, replays, revises, binds, moves, and deletes a frame, and lists it on the contact page', async () => {
-    const frameFields = 'id userId title colorValue positionX positionY width height zIndex contactId contactName updatedAt';
+    const frameFields = 'id userId title category colorValue positionX positionY width height zIndex contactId contactName updatedAt';
     const createDocument = `mutation Create($input: CreateWorkspaceFrameInput!) {
       createWorkspaceFrame(input: $input) { ${frameFields} }
     }`;
     const createInput = {
       idempotencyKey: '5d2a7c9e-3f41-4b8a-9c6d-1e2f3a4b5c6d',
       title: 'Sanchez kitchen',
+      category: 'Renovation',
       positionX: 100,
       positionY: 200,
       width: 1200,
@@ -2058,12 +2059,26 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
       contactId: memberContactId,
     };
 
+    await pool.query(
+      `INSERT INTO categories (user_id, name, color_value) VALUES ($1, 'Renovation', '#3B82F6')
+       ON CONFLICT DO NOTHING`,
+      [memberId],
+    );
+    const unknownCategory = await mutation(memberToken, createDocument, {
+      input: { ...createInput, idempotencyKey: '0d1e2f30-4a5b-4c6d-8e7f-90a1b2c3d4e5', category: 'Nowhere' },
+    }).expect(200);
+    expect(unknownCategory.body.errors?.[0]?.extensions).toMatchObject({
+      code: 'BAD_USER_INPUT',
+      reason: 'FRAME_CATEGORY_NOT_FOUND',
+    });
+
     const created = await mutation(memberToken, createDocument, { input: createInput }).expect(200);
     expect(created.body.errors).toBeUndefined();
     const frame = created.body.data.createWorkspaceFrame;
     expect(frame).toMatchObject({
       userId: memberId,
       title: 'Sanchez kitchen',
+      category: 'Renovation',
       colorValue: '#3B82F6',
       positionX: 100,
       positionY: 200,
@@ -2149,7 +2164,7 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
     ).expect(200);
     expect(contactPage.body.errors).toBeUndefined();
     expect(contactPage.body.data.contactContent.frames).toEqual({
-      nodes: [{ id: frameId, title: 'Sanchez kitchen', category: null }],
+      nodes: [{ id: frameId, title: 'Sanchez kitchen', category: 'Renovation' }],
       total: 1,
       hasMore: false,
     });
@@ -2189,6 +2204,7 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
           expectedUpdatedAt: frame.updatedAt,
           title: 'Sanchez kitchen, phase 2',
           contactId: null,
+          category: null,
         },
       },
     ).expect(200);
@@ -2197,6 +2213,7 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
       title: 'Sanchez kitchen, phase 2',
       contactId: null,
       contactName: null,
+      category: null,
       positionX: 400,
       width: 1300,
     });

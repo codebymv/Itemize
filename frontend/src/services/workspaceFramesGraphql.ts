@@ -4,7 +4,7 @@ import { reconcileWorkspaceUpdate } from './workspaceMutationReconciliation';
 
 /** Field selection shared by the snapshot loader and every frame mutation. */
 export const frameFields = `
-  id userId title colorValue positionX positionY width height zIndex
+  id userId title category colorValue positionX positionY width height zIndex
   contactId contactName createdAt updatedAt archivedAt
 `;
 
@@ -12,6 +12,7 @@ export type GraphqlWorkspaceFrame = {
   id: number;
   userId: number;
   title: string;
+  category: string | null;
   colorValue: string;
   positionX: number;
   positionY: number;
@@ -27,6 +28,7 @@ export type GraphqlWorkspaceFrame = {
 
 export type WorkspaceFramePayload = {
   title?: string;
+  category?: string | null;
   color_value?: string;
   position_x?: number;
   position_y?: number;
@@ -61,6 +63,7 @@ export const mapFrame = (row: GraphqlWorkspaceFrame): WorkspaceFrame => {
     id: row.id,
     user_id: row.userId,
     title: row.title,
+    category: row.category ?? null,
     color_value: row.colorValue,
     position_x: row.positionX,
     position_y: row.positionY,
@@ -77,6 +80,7 @@ export const mapFrame = (row: GraphqlWorkspaceFrame): WorkspaceFrame => {
 
 const mapInput = (input: WorkspaceFramePayload) => ({
   ...(input.title === undefined ? {} : { title: input.title }),
+  ...(input.category === undefined ? {} : { category: input.category }),
   ...(input.color_value === undefined ? {} : { colorValue: input.color_value }),
   ...(input.position_x === undefined ? {} : { positionX: input.position_x }),
   ...(input.position_y === undefined ? {} : { positionY: input.position_y }),

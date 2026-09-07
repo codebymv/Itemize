@@ -20,6 +20,7 @@ const frame: WorkspaceFrame = {
   id: 1,
   user_id: 7,
   title: 'Sanchez kitchen',
+  category: null,
   color_value: '#3B82F6',
   position_x: 1000,
   position_y: 1000,
@@ -52,6 +53,7 @@ const setup = (overrides: { frames?: WorkspaceFrame[]; lists?: List[]; notes?: N
   };
   const enqueuePositionUpdate = vi.fn();
   const contactUpdaters = { list: vi.fn(), note: vi.fn(), whiteboard: vi.fn(), wireframe: vi.fn() };
+  const categoryUpdaters = { list: vi.fn(), note: vi.fn(), whiteboard: vi.fn(), wireframe: vi.fn() };
   const hook = renderHook(() => useCanvasFrames({
     frames: overrides.frames ?? [frame],
     setFrames,
@@ -65,8 +67,9 @@ const setup = (overrides: { frames?: WorkspaceFrame[]; lists?: List[]; notes?: N
     setters,
     enqueuePositionUpdate,
     contactUpdaters,
+    categoryUpdaters,
   }));
-  return { hook, setFrames, setters, enqueuePositionUpdate, contactUpdaters };
+  return { hook, setFrames, setters, enqueuePositionUpdate, contactUpdaters, categoryUpdaters };
 };
 
 describe('useCanvasFrames', () => {
@@ -198,5 +201,38 @@ describe('useCanvasFrames', () => {
 
     hook.result.current.inheritFrameContact('note', note, { x: 5000, y: 5000 });
     expect(contactUpdaters.note).not.toHaveBeenCalled();
+  });
+  it('setting a category on a frame pushes it onto every card inside', async () => {
+    const saved = { ...frame, category: 'Renovation', updated_at: '2026-09-06T00:03:00.000Z' };
+    framesApi.updateWorkspaceFrameViaGraphql.mockResolvedValue(saved);
+    const { hook, categoryUpdaters } = setup();
+    await act(async () => {
+      await hook.result.current.updateFrame(1, { category: 'Renovation' });
+    });
+    expect(framesApi.updateWorkspaceFrameViaGraphql).toHaveBeenCalledWith(1, { category: 'Renovation' });
+    expect(categoryUpdaters.list).toHaveBeenCalledWith(inside, 'Renovation');
+    expect(categoryUpdaters.note).toHaveBeenCalledWith(9, 'Renovation');
+    expect(categoryUpdaters.list).not.toHaveBeenCalledWith(outside, expect.anything());
+  });
+
+  it('clearing a frame category pushes nothing', async () => {
+    const saved = { ...frame, category: null, updated_at: '2026-09-06T00:04:00.000Z' };
+    framesApi.updateWorkspaceFrameViaGraphql.mockResolvedValue(saved);
+    const { hook, categoryUpdaters } = setup({ frames: [{ ...frame, category: 'Renovation' }] });
+    await act(async () => {
+      await hook.result.current.updateFrame(1, { category: null });
+    });
+    expect(categoryUpdaters.list).not.toHaveBeenCalled();
+    expect(categoryUpdaters.note).not.toHaveBeenCalled();
+  });
+
+  it('a card on the default category takes the frame category when it enters; a categorised card keeps its own', () => {
+    const categorised = { ...frame, category: 'Renovation' };
+    const { hook, categoryUpdaters } = setup({ frames: [categorised] });
+    hook.result.current.inheritFrameContact('list', outside, { x: 1100, y: 1200 });
+    expect(categoryUpdaters.list).toHaveBeenCalledWith(outside, 'Renovation');
+
+    hook.result.current.inheritFrameContact('note', { ...note, category: 'Marketing' }, { x: 1100, y: 1200 });
+    expect(categoryUpdaters.note).not.toHaveBeenCalled();
   });
 });

@@ -11,8 +11,10 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { WorkspaceContactLink } from '@/components/workspace/WorkspaceContactLink';
+import { CategorySelector } from '@/components/CategorySelector';
+import { useCardCategoryManagement } from '@/hooks/useCardCategoryManagement';
 import { cn } from '@/lib/utils';
-import type { WorkspaceFrame } from '@/types';
+import type { Category, WorkspaceFrame } from '@/types';
 
 export const FRAME_HEADER_HEIGHT = 48;
 const MIN_FRAME_SIZE = 200;
@@ -25,8 +27,12 @@ export interface DraggableFrameProps {
   onMove?: (frameId: number, position: { x: number; y: number }, size?: { width: number; height: number }) => void;
   onUpdate?: (
     frameId: number,
-    updatedData: Partial<Pick<WorkspaceFrame, 'title' | 'color_value' | 'contact_id' | 'contact_name'>>,
+    updatedData: Partial<Pick<WorkspaceFrame, 'title' | 'category' | 'color_value' | 'contact_id' | 'contact_name'>>,
   ) => Promise<unknown>;
+  /** Category tools, the same ones the cards use; absent where there is no catalog. */
+  existingCategories?: Category[];
+  addCategory?: (categoryData: { name: string; color_value: string }) => Promise<unknown>;
+  updateCategory?: (categoryName: string, updatedData: Partial<{ name: string; color_value: string }>) => Promise<void>;
   onDelete?: (frameId: number) => Promise<boolean>;
   /** Archive the frame; its cards stay on the canvas. */
   onArchive?: (frameId: number) => void;
@@ -50,6 +56,9 @@ export const DraggableFrame: React.FC<DraggableFrameProps> = ({
   onArchive,
   autoEditTitle = false,
   resolveContained,
+  existingCategories = [],
+  addCategory,
+  updateCategory,
 }) => {
   const frameRef = useRef<HTMLDivElement>(null);
   const transformRef = useRef(canvasTransform);
@@ -67,6 +76,26 @@ export const DraggableFrame: React.FC<DraggableFrameProps> = ({
   const [colorPreview, setColorPreview] = useState<string | null>(null);
   const [showDelete, setShowDelete] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
+
+  // The frame's category is a push, not a label: picking one writes it onto every card inside.
+  const category = useCardCategoryManagement({
+    onUpdateCategory: async (next) => {
+      if (next === 'General') {
+        await onUpdate?.(frame.id, { category: null });
+        return;
+      }
+      if (next.trim() && addCategory && !existingCategories.some((entry) => entry.name === next)) {
+        await addCategory({ name: next.trim(), color_value: frame.color_value });
+      }
+      await onUpdate?.(frame.id, { category: next });
+    },
+    onAddCustomCategory: async (next) => {
+      if (addCategory) await addCategory({ name: next, color_value: frame.color_value });
+      await onUpdate?.(frame.id, { category: next });
+    },
+    onUpdateCategoryColor: (name, color) => updateCategory?.(name, { color_value: color }),
+  });
+  const categoryColor = existingCategories.find((entry) => entry.name === frame.category)?.color_value;
 
   // Geometry lives on the element during a gesture and comes back from props after it.
   useEffect(() => {
@@ -272,6 +301,23 @@ export const DraggableFrame: React.FC<DraggableFrameProps> = ({
         )}
         {/* Everything between the title and the chip is drag surface. */}
         <div className="min-w-0 flex-1 self-stretch" aria-hidden="true" />
+        <CategorySelector
+          className="mb-0 px-0"
+          currentCategory={frame.category ?? 'General'}
+          categoryColor={categoryColor}
+          itemColor={frame.color_value}
+          existingCategories={existingCategories}
+          isEditingCategory={category.isEditingCategory}
+          showNewCategoryInput={category.showNewCategoryInput}
+          newCategory={category.newCategory}
+          isSavingCategory={category.isSavingCategory}
+          setNewCategory={category.setNewCategory}
+          setIsEditingCategory={category.setIsEditingCategory}
+          setShowNewCategoryInput={category.setShowNewCategoryInput}
+          handleEditCategory={category.handleEditCategory}
+          handleAddCustomCategory={category.handleAddCustomCategory}
+          handleUpdateCategoryColor={category.handleUpdateCategoryColor}
+        />
         <WorkspaceContactLink
           contactId={frame.contact_id}
           contactName={frame.contact_name}

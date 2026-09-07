@@ -26,6 +26,10 @@ export class WorkspaceFrame {
   @Field()
   colorValue: string;
 
+  /** Flows down onto the cards inside; null pushes nothing. */
+  @Field(() => String, { nullable: true })
+  category: string | null;
+
   @Field(() => Float)
   positionX: number;
 

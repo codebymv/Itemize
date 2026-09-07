@@ -16,6 +16,7 @@ import {
 import { WorkspaceFrame, WorkspaceFramePage } from './workspace-frames.types';
 
 const MAX_TITLE_LENGTH = 200;
+const MAX_CATEGORY_LENGTH = 100;
 const MIN_FRAME_DIMENSION = 200;
 const MAX_FRAME_DIMENSION = 10_000;
 const MAX_PAGE_SIZE = 100;
@@ -54,6 +55,7 @@ export class WorkspaceFramesService {
   async createFrame(userId: number, input: CreateWorkspaceFrameInput): Promise<WorkspaceFrame> {
     const values: WorkspaceFrameValues = {
       title: input.title === undefined || input.title === null ? DEFAULT_TITLE : this.title(input.title),
+      category: input.category === undefined || input.category === null ? null : this.category(input.category),
       colorValue: input.colorValue === undefined || input.colorValue === null
         ? DEFAULT_COLOR
         : this.color(input.colorValue),
@@ -87,6 +89,7 @@ export class WorkspaceFramesService {
         );
       }
       if (outcome.kind === 'contact_not_found') throw this.contactNotFound();
+      if (outcome.kind === 'category_not_found') throw this.categoryNotFound();
       if (outcome.kind !== 'completed') {
         throw itemizeGraphqlError('Workspace frame could not be created', 'SERVICE_UNAVAILABLE');
       }
@@ -104,6 +107,8 @@ export class WorkspaceFramesService {
     this.frameId(frameId);
     const values: Partial<WorkspaceFrameValues> = {};
     if (input.title !== undefined && input.title !== null) values.title = this.title(input.title);
+    // `category: null` clears the flow; undefined leaves it alone.
+    if (input.category !== undefined) values.category = input.category === null ? null : this.category(input.category);
     if (input.colorValue !== undefined && input.colorValue !== null) {
       values.colorValue = this.color(input.colorValue);
     }
@@ -135,6 +140,7 @@ export class WorkspaceFramesService {
       const outcome = await this.repository.updateFrame(userId, frameId, update);
       if (outcome.kind === 'not_found') throw this.notFound();
       if (outcome.kind === 'contact_not_found') throw this.contactNotFound();
+      if (outcome.kind === 'category_not_found') throw this.categoryNotFound();
       if (outcome.kind === 'conflict') {
         throw itemizeGraphqlError(
           'Workspace frame changed since it was loaded',
@@ -168,6 +174,7 @@ export class WorkspaceFramesService {
       id: Number(row.id),
       userId: Number(row.user_id),
       title: row.title,
+      category: row.category ?? null,
       colorValue: row.color_value,
       positionX: Number(row.position_x),
       positionY: Number(row.position_y),
@@ -202,6 +209,18 @@ export class WorkspaceFramesService {
       );
     }
     return title;
+  }
+
+  private category(value: string): string {
+    const category = value.trim();
+    if (category.length === 0 || category.length > MAX_CATEGORY_LENGTH) {
+      throw itemizeGraphqlError(
+        `category must be between 1 and ${MAX_CATEGORY_LENGTH} characters`,
+        'BAD_USER_INPUT',
+        { field: 'category', reason: 'INVALID_FRAME_CATEGORY' },
+      );
+    }
+    return category;
   }
 
   private color(value: string): string {
@@ -288,6 +307,13 @@ export class WorkspaceFramesService {
   private notFound(): GraphQLError {
     return itemizeGraphqlError('Workspace frame not found', 'NOT_FOUND', {
       reason: 'FRAME_NOT_FOUND',
+    });
+  }
+
+  private categoryNotFound(): GraphQLError {
+    return itemizeGraphqlError('Frame category was not found', 'BAD_USER_INPUT', {
+      field: 'category',
+      reason: 'FRAME_CATEGORY_NOT_FOUND',
     });
   }
 

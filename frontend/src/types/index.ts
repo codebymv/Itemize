@@ -33,6 +33,8 @@ export interface WorkspaceFrame {
   id: number;
   user_id: number;
   title: string;
+  /** Flows down onto the cards inside; null pushes nothing. */
+  category: string | null;
   color_value: string;
   position_x: number;
   position_y: number;

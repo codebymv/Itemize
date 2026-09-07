@@ -22,7 +22,7 @@ Sketch diagrams and brainstorms on an infinite board. Add shapes, text, and draw
 
 A frame is a named region on the canvas. Add one from the **Add** menu (or the canvas right-click menu), name it, and drag cards into it — a card belongs to the frame its centre sits in, so there is nothing to link or unlink. Drag the frame by its header and the cards inside come with it; resize it from the bottom-right corner; the empty space inside still pans the canvas. Frames work on every plan.
 
-On Solo and Studio, a frame can be linked to a client from the chip in its header, the same way cards are — and the link flows down: every card inside takes the client, a card dropped into the frame later takes it too (if it has none), and unlinking the frame clears it from the cards that shared it. Linked frames appear on the client's page under Related Content, and opening one from there centres the canvas on the frame. Deleting a frame leaves its cards where they are.
+On Solo and Studio, a frame can be linked to a client from the chip in its header, the same way cards are — and the link flows down: every card inside takes the client, a card dropped into the frame later takes it too (if it has none), and unlinking the frame clears it from the cards that shared it. A frame can also carry a category from the chip beside the client, and that flows down the same way: pick it and every card inside takes it; a card still on General takes it when it enters. Linked frames appear on the client's page under Related Content, and opening one from there centres the canvas on the frame. Deleting a frame leaves its cards where they are.
 
 ## Archive
 

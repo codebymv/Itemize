@@ -6,6 +6,7 @@ export type WorkspaceFrameRow = {
   id: number;
   user_id: number;
   title: string;
+  category: string | null;
   color_value: string;
   position_x: number;
   position_y: number;
@@ -21,6 +22,7 @@ export type WorkspaceFrameRow = {
 
 export type WorkspaceFrameValues = {
   title: string;
+  category: string | null;
   colorValue: string;
   positionX: number;
   positionY: number;
@@ -38,20 +40,22 @@ export type WorkspaceFrameCreationOutcome =
   | { kind: 'completed'; row: WorkspaceFrameRow }
   | { kind: 'idempotency_conflict' }
   | { kind: 'receipt_inconsistent' }
-  | { kind: 'contact_not_found' };
+  | { kind: 'contact_not_found' }
+  | { kind: 'category_not_found' };
 
 export type WorkspaceFrameUpdateOutcome =
   | { kind: 'completed'; row: WorkspaceFrameRow }
   | { kind: 'not_found' }
   | { kind: 'conflict'; currentUpdatedAt: Date }
-  | { kind: 'contact_not_found' };
+  | { kind: 'contact_not_found' }
+  | { kind: 'category_not_found' };
 
 export type DeleteWorkspaceFrameOutcome =
   | { kind: 'deleted'; deletedId: number }
   | { kind: 'not_found' };
 
 const frameSelection = `
-  id, user_id, title, color_value, position_x, position_y, width, height,
+  id, user_id, title, category, color_value, position_x, position_y, width, height,
   z_index, contact_id,
   (
     SELECT COALESCE(
@@ -153,11 +157,13 @@ export class WorkspaceFramesRepository {
       ) {
         return { kind: 'contact_not_found' };
       }
+      const category = values.category === null ? null : await this.categoryName(client, userId, values.category);
+      if (values.category !== null && category === null) return { kind: 'category_not_found' };
 
       const inserted = await client.query<{ id: number }>(
         `INSERT INTO workspace_frames (
-           user_id, title, color_value, position_x, position_y, width, height, contact_id
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+           user_id, title, color_value, position_x, position_y, width, height, contact_id, category
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          RETURNING id`,
         [
           userId,
@@ -168,6 +174,7 @@ export class WorkspaceFramesRepository {
           values.width,
           values.height,
           values.contactId,
+          category,
         ],
       );
       const frameId = Number(inserted.rows[0].id);
@@ -218,6 +225,11 @@ export class WorkspaceFramesRepository {
       const contactId = values.contactId === undefined
         ? current.contact_id
         : values.contactId;
+      let category = values.category === undefined ? current.category : values.category;
+      if (values.category !== undefined && values.category !== null) {
+        category = await this.categoryName(client, userId, values.category);
+        if (category === null) return { kind: 'category_not_found' };
+      }
 
       await client.query(
         `UPDATE workspace_frames SET
@@ -228,6 +240,7 @@ export class WorkspaceFramesRepository {
            width = $5,
            height = $6,
            contact_id = $7,
+           category = $10,
            updated_at = GREATEST(
              clock_timestamp(),
              updated_at + INTERVAL '1 millisecond'
@@ -243,6 +256,7 @@ export class WorkspaceFramesRepository {
           contactId,
           frameId,
           userId,
+          category,
         ],
       );
       const updated = await client.query<WorkspaceFrameRow>(
@@ -261,6 +275,15 @@ export class WorkspaceFramesRepository {
     return result.rowCount === 1
       ? { kind: 'deleted', deletedId: frameId }
       : { kind: 'not_found' };
+  }
+
+  /** Categories are the owner's own rows; the stored name takes the row's casing, like cards do. */
+  private async categoryName(client: PoolClient, userId: number, name: string): Promise<string | null> {
+    const result = await client.query<{ name: string }>(
+      'SELECT name FROM categories WHERE user_id = $1 AND lower(name) = lower($2) ORDER BY id LIMIT 1',
+      [userId, name],
+    );
+    return result.rows[0]?.name ?? null;
   }
 
   /** Same rule as card bindings: the owner must currently belong to the contact's organization. */

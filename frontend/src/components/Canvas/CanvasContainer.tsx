@@ -56,7 +56,7 @@ interface CanvasContainerProps {
   onOpenNewVaultModal?: (position: { x: number; y: number }) => void;
   frames?: WorkspaceFrame[];
   onFrameMove?: (frameId: number, position: { x: number; y: number }, size?: { width: number; height: number }) => void;
-  onFrameUpdate?: (frameId: number, updatedData: Partial<Pick<WorkspaceFrame, 'title' | 'color_value' | 'contact_id' | 'contact_name'>>) => Promise<unknown>;
+  onFrameUpdate?: (frameId: number, updatedData: Partial<Pick<WorkspaceFrame, 'title' | 'category' | 'color_value' | 'contact_id' | 'contact_name'>>) => Promise<unknown>;
   onFrameDelete?: (frameId: number) => Promise<boolean>;
   onFrameArchive?: (frameId: number) => void;
   onOpenNewFrame?: (position: { x: number; y: number }) => void;
@@ -827,6 +827,9 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
                 onDelete={onFrameDelete}
                 onArchive={onFrameArchive}
                 resolveContained={resolveContainedCards}
+                existingCategories={existingCategories}
+                addCategory={addCategory}
+                updateCategory={updateCategory}
                 autoEditTitle={editingFrameId === frame.id}
               />
             ))}

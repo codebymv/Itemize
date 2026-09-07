@@ -62,6 +62,7 @@ const frame = {
   id: 9,
   userId: 7,
   title: 'Sanchez kitchen',
+  category: null,
   colorValue: '#3B82F6',
   positionX: 1000,
   positionY: 1000,

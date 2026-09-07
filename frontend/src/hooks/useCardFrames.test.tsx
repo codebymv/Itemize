@@ -12,6 +12,7 @@ const frame = (values: Partial<WorkspaceFrame>): WorkspaceFrame => ({
   id: 1,
   user_id: 7,
   title: 'Sanchez kitchen',
+  category: null,
   color_value: '#3B82F6',
   position_x: 1000,
   position_y: 1000,

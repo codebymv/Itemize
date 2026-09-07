@@ -11,7 +11,7 @@ import { useDatabaseCategories } from './useDatabaseCategories';
 const toast = vi.fn();
 
 vi.mock('../contexts/AuthContext', () => ({
-  useAuth: () => ({ token: 'category-token' }),
+  useAuth: () => ({ currentUser: { uid: 'user-1' } }),
 }));
 
 vi.mock('./use-toast', () => ({
@@ -59,7 +59,8 @@ describe('useDatabaseCategories', () => {
     const calls = vi.mocked(createCategory).mock.calls;
     expect(calls).toHaveLength(2);
     expect(calls[0][1]).toBe(calls[1][1]);
-    expect(calls[0][2]).toBe('category-token');
+    // Cookies carry auth now; the hook passes a presence marker, and the API ignores it.
+    expect(calls[0][2]).toBe('cookie');
     expect(result.current.categories).toEqual([category]);
     expect(toast).toHaveBeenCalledTimes(1);
 

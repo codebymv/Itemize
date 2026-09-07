@@ -15,6 +15,9 @@ export class CreateWorkspaceFrameInput {
   title?: string | null;
 
   @Field(() => String, { nullable: true })
+  category?: string | null;
+
+  @Field(() => String, { nullable: true })
   colorValue?: string | null;
 
   @Field(() => Float, { nullable: true })
@@ -43,6 +46,10 @@ export class UpdateWorkspaceFrameInput {
 
   @Field(() => String, { nullable: true })
   title?: string | null;
+
+  /** Null clears the frame's category. */
+  @Field(() => String, { nullable: true })
+  category?: string | null;
 
   @Field(() => String, { nullable: true })
   colorValue?: string | null;

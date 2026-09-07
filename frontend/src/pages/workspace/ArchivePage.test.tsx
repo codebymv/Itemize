@@ -30,7 +30,7 @@ const content: ArchivedWorkspaceContent = {
   whiteboards: [],
   wireframes: [],
   frames: [{
-    id: 1, user_id: 7, title: 'Spring campaign', color_value: '#10B981', position_x: 0, position_y: 0,
+    id: 1, user_id: 7, title: 'Spring campaign', category: null, color_value: '#10B981', position_x: 0, position_y: 0,
     width: 1400, height: 900, z_index: 0, contact_id: null, contact_name: null,
     created_at: '2026-09-01T00:00:00.000Z', updated_at: '2026-09-01T00:00:00.000Z', archived_at: '2026-09-06T12:00:00.000Z',
   }],

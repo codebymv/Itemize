@@ -42,6 +42,18 @@ export interface CardContactUpdaters {
   wireframe: (wireframeId: number, binding: FrameContactBinding) => unknown;
 }
 
+/** How the page writes a category onto each card type (lists call it `type`). */
+export interface CardCategoryUpdaters {
+  list: (list: List, category: string) => unknown;
+  note: (noteId: number, category: string) => unknown;
+  whiteboard: (whiteboardId: number, category: string) => unknown;
+  wireframe: (wireframeId: number, category: string) => unknown;
+}
+
+const DEFAULT_CATEGORY = 'General';
+const hasOwnCategory = (category: string | null | undefined): boolean =>
+  Boolean(category) && category !== DEFAULT_CATEGORY;
+
 interface UseCanvasFramesOptions {
   frames: WorkspaceFrame[];
   setFrames: Dispatch<SetStateAction<WorkspaceFrame[]>>;
@@ -49,6 +61,7 @@ interface UseCanvasFramesOptions {
   setters: CanvasCardSetters;
   enqueuePositionUpdate: (update: CanvasPositionUpdate) => void;
   contactUpdaters?: CardContactUpdaters;
+  categoryUpdaters?: CardCategoryUpdaters;
 }
 
 const DEFAULT_FRAME_SIZE = { width: 1400, height: 900 };
@@ -65,6 +78,7 @@ export function useCanvasFrames({
   setters,
   enqueuePositionUpdate,
   contactUpdaters,
+  categoryUpdaters,
 }: UseCanvasFramesOptions) {
   const { toast } = useToast();
   // The frame that was just created opens with its title editable, once.
@@ -122,31 +136,66 @@ export function useCanvasFrames({
     }
   }, [cards, contactUpdaters]);
 
+  /** Setting a frame's category writes it onto every card inside; clearing it pushes nothing. */
+  const propagateCategory = useCallback((frame: WorkspaceFrame, category: string | null) => {
+    if (!categoryUpdaters || category === null) return;
+    for (const list of cardsInFrame(frame, cards.lists)) {
+      if (list.type !== category) void categoryUpdaters.list(list, category);
+    }
+    for (const note of cardsInFrame(frame, cards.notes)) {
+      if (note.category !== category) void categoryUpdaters.note(note.id, category);
+    }
+    for (const whiteboard of cardsInFrame(frame, cards.whiteboards)) {
+      if (whiteboard.category !== category) void categoryUpdaters.whiteboard(whiteboard.id, category);
+    }
+    for (const wireframe of cardsInFrame(frame, cards.wireframes)) {
+      if (wireframe.category !== category) void categoryUpdaters.wireframe(wireframe.id, category);
+    }
+  }, [cards, categoryUpdaters]);
+
   /**
-   * A card that lands in a bound frame without a client of its own takes the
-   * frame's. Called with the card's new position after a drop or a `#` move.
+   * A card that lands in a frame takes what it lacks: the frame's client if
+   * it has none, the frame's category if it is still on the default. Called
+   * with the card's new position after a drop or a `#` move.
    */
   const inheritFrameContact = useCallback((
     type: 'list' | 'note' | 'whiteboard' | 'wireframe',
-    card: { id: number; contact_id?: number | null; width?: number | null; height?: number | null; canvas_width?: number | null; canvas_height?: number | null },
+    card: {
+      id: number;
+      contact_id?: number | null;
+      type?: string;
+      category?: string;
+      width?: number | null;
+      height?: number | null;
+      canvas_width?: number | null;
+      canvas_height?: number | null;
+    },
     position: { x: number; y: number },
   ) => {
-    if (!contactUpdaters) return;
-    if (card.contact_id !== null && card.contact_id !== undefined) return;
     const frame = frameForCard(frames, { ...card, position_x: position.x, position_y: position.y });
-    if (!frame || frame.contact_id === null) return;
-    const binding = { contact_id: frame.contact_id, contact_name: frame.contact_name };
-    if (type === 'list') {
-      const list = cards.lists.find((entry) => entry.id === card.id);
-      if (list) void contactUpdaters.list(list, binding);
-      return;
+    if (!frame) return;
+    const list = type === 'list' ? cards.lists.find((entry) => entry.id === card.id) : undefined;
+    if (contactUpdaters && frame.contact_id !== null && (card.contact_id === null || card.contact_id === undefined)) {
+      const binding = { contact_id: frame.contact_id, contact_name: frame.contact_name };
+      if (type === 'list') {
+        if (list) void contactUpdaters.list(list, binding);
+      } else {
+        void contactUpdaters[type](card.id, binding);
+      }
     }
-    void contactUpdaters[type](card.id, binding);
-  }, [cards.lists, contactUpdaters, frames]);
+    const ownCategory = type === 'list' ? card.type : card.category;
+    if (categoryUpdaters && frame.category !== null && !hasOwnCategory(ownCategory) && frame.category !== ownCategory) {
+      if (type === 'list') {
+        if (list) void categoryUpdaters.list(list, frame.category);
+      } else {
+        void categoryUpdaters[type](card.id, frame.category);
+      }
+    }
+  }, [cards.lists, categoryUpdaters, contactUpdaters, frames]);
 
   const updateFrame = useCallback(async (
     frameId: number,
-    updatedData: Partial<Pick<WorkspaceFrame, 'title' | 'color_value' | 'contact_id' | 'contact_name'>>,
+    updatedData: Partial<Pick<WorkspaceFrame, 'title' | 'category' | 'color_value' | 'contact_id' | 'contact_name'>>,
   ) => {
     if (editingFrameId === frameId) setEditingFrameId(null);
     const previous = frames.find((frame) => frame.id === frameId);
@@ -155,6 +204,7 @@ export function useCanvasFrames({
     try {
       const payload: WorkspaceFramePayload = {
         ...(updatedData.title === undefined ? {} : { title: updatedData.title }),
+        ...(updatedData.category === undefined ? {} : { category: updatedData.category }),
         ...(updatedData.color_value === undefined ? {} : { color_value: updatedData.color_value }),
         ...(updatedData.contact_id === undefined ? {} : { contact_id: updatedData.contact_id }),
       };
@@ -162,6 +212,9 @@ export function useCanvasFrames({
       setFrames((current) => current.map((frame) => (frame.id === frameId ? saved : frame)));
       if (updatedData.contact_id !== undefined && previous) {
         propagateContact(previous, { contact_id: saved.contact_id, contact_name: saved.contact_name });
+      }
+      if (updatedData.category !== undefined && previous) {
+        propagateCategory(previous, saved.category);
       }
       return saved;
     } catch (error) {
@@ -174,7 +227,7 @@ export function useCanvasFrames({
       });
       throw error;
     }
-  }, [editingFrameId, frames, propagateContact, setFrames, toast]);
+  }, [editingFrameId, frames, propagateCategory, propagateContact, setFrames, toast]);
 
   const deleteFrame = useCallback(async (frameId: number) => {
     try {
