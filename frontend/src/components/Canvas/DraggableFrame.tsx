@@ -239,7 +239,7 @@ export const DraggableFrame: React.FC<DraggableFrameProps> = ({
       >
         <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} aria-hidden="true" />
         {isEditingTitle ? (
-          <div className="flex min-w-0 flex-1 items-center gap-1">
+          <div className="flex min-w-0 shrink items-center gap-1">
             <Input
               ref={titleInputRef}
               value={titleDraft}
@@ -263,13 +263,15 @@ export const DraggableFrame: React.FC<DraggableFrameProps> = ({
         ) : (
           <button
             type="button"
-            className="interaction-control min-w-0 flex-1 truncate text-left font-raleway font-semibold text-foreground"
+            className="interaction-control min-w-0 max-w-[50%] shrink truncate rounded px-1 text-left font-raleway font-semibold text-foreground hover:bg-background/60"
             onClick={() => setIsEditingTitle(true)}
             title="Rename frame"
           >
             {frame.title}
           </button>
         )}
+        {/* Everything between the title and the chip is drag surface. */}
+        <div className="min-w-0 flex-1 self-stretch" aria-hidden="true" />
         <WorkspaceContactLink
           contactId={frame.contact_id}
           contactName={frame.contact_name}
