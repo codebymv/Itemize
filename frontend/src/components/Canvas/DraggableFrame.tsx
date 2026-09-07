@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Archive, Check, MoreVertical, Palette, Pencil, Trash2, X } from 'lucide-react';
+import { Archive, Check, MoreVertical, Pencil, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ColorPicker } from '@/components/ui/color-picker';
@@ -266,7 +266,25 @@ export const DraggableFrame: React.FC<DraggableFrameProps> = ({
         onDoubleClick={() => setIsEditingTitle(true)}
         data-frame-header
       >
-        <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} aria-hidden="true" />
+        <ColorPicker
+          color={color}
+          onChange={setColorPreview}
+          onSave={(next) => {
+            setColorPreview(null);
+            if (next !== frame.color_value) void onUpdate?.(frame.id, { color_value: next });
+          }}
+        >
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 shrink-0 rounded-full p-0"
+            aria-label="Change frame color"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <span className="inline-block h-3 w-3 rounded-full border border-gray-400 transition-colors duration-150" style={{ backgroundColor: color }} />
+          </Button>
+        </ColorPicker>
         {isEditingTitle ? (
           <div className="flex min-w-0 shrink items-center gap-1">
             <Input
@@ -336,19 +354,6 @@ export const DraggableFrame: React.FC<DraggableFrameProps> = ({
               <Pencil className="mr-2 h-4 w-4" aria-hidden="true" />
               Rename
             </DropdownMenuItem>
-            <ColorPicker
-              color={color}
-              onChange={setColorPreview}
-              onSave={(next) => {
-                setColorPreview(null);
-                if (next !== frame.color_value) void onUpdate?.(frame.id, { color_value: next });
-              }}
-            >
-              <DropdownMenuItem onSelect={(event) => event.preventDefault()} className="font-raleway">
-                <Palette className="mr-2 h-4 w-4" aria-hidden="true" />
-                Color
-              </DropdownMenuItem>
-            </ColorPicker>
             {onArchive && (
               <DropdownMenuItem onClick={() => onArchive(frame.id)} className="font-raleway">
                 <Archive className="mr-2 h-4 w-4" aria-hidden="true" />
