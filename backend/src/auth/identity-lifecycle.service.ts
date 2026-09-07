@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { THEME_COLORS, isThemeColor } from '../common/theme-color';
+import type { AuthenticationUser } from './auth.repository';
 import bcrypt from 'bcryptjs';
 import { Response } from 'express';
 import { createHash, randomBytes } from 'node:crypto';
@@ -201,6 +203,28 @@ export class IdentityLifecycleService {
     }
     const user = await this.users.updateName(userId, name);
     if (!user) throw itemizeGraphqlError('User not found', 'NOT_FOUND');
+    return this.currentUser(user);
+  }
+
+  /**
+   * Theme colour is validated against the palette so a status hue (red,
+   * green, amber) can never become the product accent.
+   */
+  async updateViewerPreferences(userId: number, rawThemeColor: string) {
+    const themeColor = rawThemeColor?.trim().toLowerCase();
+    if (!isThemeColor(themeColor)) {
+      throw itemizeGraphqlError(
+        `Theme colour must be one of ${THEME_COLORS.join(', ')}`,
+        'BAD_USER_INPUT',
+        { field: 'themeColor' },
+      );
+    }
+    const user = await this.users.updateThemeColor(userId, themeColor);
+    if (!user) throw itemizeGraphqlError('User not found', 'NOT_FOUND');
+    return this.currentUser(user);
+  }
+
+  private currentUser(user: AuthenticationUser) {
     return {
       id: user.id,
       email: user.email,
@@ -209,6 +233,7 @@ export class IdentityLifecycleService {
       emailVerified: user.emailVerified,
       role: user.role,
       createdAt: user.createdAt,
+      themeColor: user.themeColor,
     };
   }
 

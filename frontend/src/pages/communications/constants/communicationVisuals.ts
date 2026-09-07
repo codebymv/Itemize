@@ -2,12 +2,12 @@ import { CheckCircle2, MessageCircle, PauseCircle, Radio } from 'lucide-react';
 import { defineStatus, getUnknownStatusVisual, type StatusVisual } from '@/lib/statusVisuals';
 
 const CONVERSATION_STATUS: Record<'open' | 'closed', StatusVisual> = {
-  open: defineStatus('Open', 'blue', MessageCircle),
+  open: defineStatus('Open', 'theme', MessageCircle),
   closed: defineStatus('Closed', 'green', CheckCircle2),
 };
 
 const AVAILABILITY_STATUS: Record<'active' | 'inactive', StatusVisual> = {
-  active: defineStatus('Active', 'blue', Radio),
+  active: defineStatus('Active', 'theme', Radio),
   inactive: defineStatus('Inactive', 'orange', PauseCircle),
 };
 

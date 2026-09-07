@@ -76,4 +76,8 @@ export class CurrentUser {
 
   @Field(() => GraphQLISODateTime)
   createdAt: Date;
+
+  /** Product accent the viewer chose: blue | purple | pink. */
+  @Field()
+  themeColor: string;
 }

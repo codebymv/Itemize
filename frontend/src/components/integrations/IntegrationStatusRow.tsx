@@ -19,11 +19,11 @@ import { cn } from '@/lib/utils';
 export type IntegrationStatus = 'connected' | 'disconnected' | 'inactive' | 'soon' | 'available' | 'unavailable';
 
 const INTEGRATION_STATUS_VISUALS: Record<IntegrationStatus, StatusVisual> = {
-  connected: defineStatus('Connected', 'blue', CheckCircle2),
+  connected: defineStatus('Connected', 'theme', CheckCircle2),
   disconnected: defineStatus('Not connected', 'gray', Clock3),
   inactive: defineStatus('Inactive', 'orange', Clock3),
   soon: defineStatus('Soon', 'gray', Clock3),
-  available: defineStatus('Available', 'blue', CheckCircle2),
+  available: defineStatus('Available', 'theme', CheckCircle2),
   unavailable: defineStatus('Unavailable', 'red', AlertCircle),
 };
 

@@ -92,6 +92,7 @@ export class SessionService {
       emailVerified: user.emailVerified,
       role: user.role,
       createdAt: user.createdAt,
+      themeColor: user.themeColor,
     };
   }
 

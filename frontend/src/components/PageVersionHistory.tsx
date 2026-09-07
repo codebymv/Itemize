@@ -40,7 +40,7 @@ import { defineStatus } from '@/lib/statusVisuals';
 import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 import { useStableMutationKey } from '@/hooks/useStableMutationKey';
 
-const CURRENT_VERSION_VISUAL = defineStatus('Current', 'blue', Play);
+const CURRENT_VERSION_VISUAL = defineStatus('Current', 'theme', Play);
 const PUBLISHED_VERSION_VISUAL = defineStatus('Published', 'green', Eye);
 
 interface PageVersionHistoryProps {

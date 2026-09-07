@@ -4,7 +4,7 @@ import { getRecipientStatusVisual, getSignatureStatusVisual, getTemplateReadines
 
 describe('signature visual semantics', () => {
   it.each([
-    ['draft', 'blue'],
+    ['draft', 'theme'],
     ['sent', 'orange'],
     ['in_progress', 'orange'],
     ['completed', 'green'],

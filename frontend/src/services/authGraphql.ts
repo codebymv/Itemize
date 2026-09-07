@@ -3,6 +3,7 @@ import {
   graphqlPublicRequest,
   graphqlRequest,
 } from '@/services/graphqlClient';
+import type { ThemeColor } from '@/lib/themeColor';
 
 export type AuthGraphqlUser = {
   uid: number;
@@ -21,6 +22,7 @@ export type CurrentGraphqlUser = {
   emailVerified: boolean;
   role: 'USER' | 'ADMIN';
   createdAt: string;
+  themeColor: string;
 };
 
 export type SignupMode = 'FREE' | 'TRIAL';
@@ -166,12 +168,28 @@ export const updateViewerProfileViaGraphql = async (name: string) => {
   >(
     `mutation UpdateViewerProfile($input: UpdateViewerProfileInput!) {
       updateViewerProfile(input: $input) {
-        id email name provider emailVerified role createdAt
+        id email name provider emailVerified role createdAt themeColor
       }
     }`,
     { input: { name } },
   );
   return data.updateViewerProfile;
+};
+
+/** Theme colour is the only viewer preference stored server-side so far. */
+export const updateViewerPreferencesViaGraphql = async (themeColor: ThemeColor) => {
+  const data = await graphqlMutationRequest<
+    { updateViewerPreferences: CurrentGraphqlUser },
+    { input: { themeColor: ThemeColor } }
+  >(
+    `mutation UpdateViewerPreferences($input: UpdateViewerPreferencesInput!) {
+      updateViewerPreferences(input: $input) {
+        id email name provider emailVerified role createdAt themeColor
+      }
+    }`,
+    { input: { themeColor } },
+  );
+  return data.updateViewerPreferences;
 };
 
 export const loginWithGoogleAccessTokenViaGraphql = async (
@@ -196,7 +214,7 @@ export const getCurrentUserViaGraphql = async (): Promise<CurrentGraphqlUser> =>
     Record<string, never>
   >(
     `query CurrentUser {
-      currentUser { id email name provider emailVerified role createdAt }
+      currentUser { id email name provider emailVerified role createdAt themeColor }
     }`,
     {},
   );

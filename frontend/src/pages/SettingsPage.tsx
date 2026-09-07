@@ -46,6 +46,7 @@ import { SubscriptionStatus } from '@/components/subscription/SubscriptionStatus
 import { CheckoutSuccessModal } from '@/components/subscription/CheckoutSuccessModal';
 import { Plan, shouldStartSoloTrial } from '@/lib/subscription';
 import { TrialStatusCard } from '@/components/trial/TrialStatusCard';
+import { ThemeColorPicker } from '@/pages/settings/components/ThemeColorPicker';
 import { UsageIndicator, UsageIndicatorGrid } from '@/components/trial/UsageIndicator';
 import { useUsageStats } from '@/hooks/useUsageStats';
 import { Mail, MessageSquare, Code2 } from 'lucide-react';
@@ -473,6 +474,11 @@ function PreferencesSettings() {
               <Monitor className="mr-2 h-4 w-4" />
               System
             </Button>
+          </div>
+          <div className="mt-6 flex flex-col gap-2">
+            <Label className="text-sm font-medium">Theme colour</Label>
+            <p className="text-sm text-muted-foreground">Buttons, icons, and highlights across the app. Emails and shared pages keep the Itemize blue.</p>
+            <ThemeColorPicker />
           </div>
         </CardContent>
       </Card>

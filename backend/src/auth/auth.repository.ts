@@ -1,4 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { normalizeThemeColor, type ThemeColor } from '../common/theme-color';
 import { Pool, PoolClient } from 'pg';
 import { itemizeGraphqlError } from '../common/graphql-error';
 import { PG_POOL } from '../database/database.module';
@@ -14,6 +15,7 @@ export type AuthenticationUser = {
   emailVerified: boolean;
   role: string;
   createdAt: Date;
+  themeColor: ThemeColor;
 };
 
 type AuthenticationUserRow = {
@@ -26,11 +28,12 @@ type AuthenticationUserRow = {
   role: string | null;
   created_at: Date | string;
   account_deletion_scheduled_at: Date | string | null;
+  theme_color: string | null;
 };
 
 const USER_COLUMNS = `
   id, email, name, password_hash, provider, email_verified, role, created_at,
-  account_deletion_scheduled_at
+  account_deletion_scheduled_at, theme_color
 `;
 
 const mapUser = (row: AuthenticationUserRow): AuthenticationUser => ({
@@ -42,6 +45,7 @@ const mapUser = (row: AuthenticationUserRow): AuthenticationUser => ({
   emailVerified: row.email_verified === true,
   role: row.role || 'USER',
   createdAt: new Date(row.created_at),
+  themeColor: normalizeThemeColor(row.theme_color),
 });
 
 @Injectable()
@@ -226,6 +230,16 @@ export class AuthRepository {
        WHERE id = $2 AND account_deletion_scheduled_at IS NULL
        RETURNING ${USER_COLUMNS}`,
       [name, userId],
+    );
+    return result.rows[0] ? mapUser(result.rows[0]) : null;
+  }
+
+  async updateThemeColor(userId: number, themeColor: ThemeColor): Promise<AuthenticationUser | null> {
+    const result = await this.pool.query<AuthenticationUserRow>(
+      `UPDATE users SET theme_color = $1, updated_at = NOW()
+       WHERE id = $2 AND account_deletion_scheduled_at IS NULL
+       RETURNING ${USER_COLUMNS}`,
+      [themeColor, userId],
     );
     return result.rows[0] ? mapUser(result.rows[0]) : null;
   }

@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { SHARED_CONTENT_VISUAL } from '@/pages/contentVisuals';
 import { cn } from '@/lib/utils';
-import { DEFAULT_CARD_ACCENT } from '@/lib/cardAccent';
+import { defaultCardAccent } from '@/lib/cardAccent';
 
 type ContentType = 'all' | 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault';
 
@@ -72,7 +72,7 @@ export function ContentCard({ content, onClick, onDelete, formatRelativeTime }: 
   };
 
   const Icon = getTypeIcon(content.type);
-  const color = content.color_value || DEFAULT_CARD_ACCENT;
+  const color = content.color_value || defaultCardAccent();
 
   return (
     <Card

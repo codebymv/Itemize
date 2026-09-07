@@ -6,7 +6,7 @@ describe('recurring status visuals', () => {
     const active = getRecurringStatusVisual('active');
 
     expect(active.label).toBe('Active');
-    expect(active.theme).toBe('blue');
+    expect(active.theme).toBe('theme');
     expect(active.iconClass).toContain('text-icon-accent');
   });
 

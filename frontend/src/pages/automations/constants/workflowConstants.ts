@@ -9,7 +9,7 @@ import type { WorkflowEnrollment } from '@/services/automationsApi';
 export type WorkflowDefinitionStatus = 'active' | 'inactive';
 
 export const WORKFLOW_STATUS_CONFIG: Record<WorkflowDefinitionStatus, StatusVisual> = {
-  active: defineStatus('Active', 'blue', Play),
+  active: defineStatus('Active', 'theme', Play),
   inactive: defineStatus('Inactive', 'orange', Pause),
 };
 

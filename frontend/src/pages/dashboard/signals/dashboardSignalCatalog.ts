@@ -204,7 +204,7 @@ const revenueValues = (
 
 const definitions: SignalDefinition[] = [
   {
-    id: 'contacts-total', title: 'Total contacts', source: 'Contacts', route: '/contacts', icon: Users, theme: 'blue',
+    id: 'contacts-total', title: 'Total contacts', source: 'Contacts', route: '/contacts', icon: Users, theme: 'theme',
     catalogDescription: 'The complete contact base in this organization.',
     resolve: ({ analytics, loading }) => ({ value: number(analytics?.contacts.total), supportingText: `${number(analytics?.contacts.newThisMonth)} added this month`, timeframe: 'All time', status: loading.analytics ? 'loading' : 'ready', numericValue: analytics?.contacts.total ?? 0 }),
   },
@@ -214,12 +214,12 @@ const definitions: SignalDefinition[] = [
     resolve: ({ analytics, loading }) => ({ value: number(analytics?.contacts.newThisMonth), supportingText: `${number(analytics?.contacts.total)} total contacts`, timeframe: 'This month', status: loading.analytics ? 'loading' : 'ready', numericValue: analytics?.contacts.newThisMonth ?? 0 }),
   },
   {
-    id: 'contacts-active', title: 'Active contacts', source: 'Contacts', route: '/contacts', icon: Activity, theme: 'blue',
+    id: 'contacts-active', title: 'Active contacts', source: 'Contacts', route: '/contacts', icon: Activity, theme: 'theme',
     catalogDescription: 'Contacts currently active and available for outreach.',
     resolve: ({ analytics, loading }) => ({ value: number(analytics?.contacts.active), supportingText: `${number(analytics?.contacts.newThisMonth)} new this month`, timeframe: 'Current', status: loading.analytics ? 'loading' : 'ready', numericValue: analytics?.contacts.active ?? 0 }),
   },
   {
-    id: 'contacts-new-week', title: 'Contact intake', source: 'Contacts', route: '/contacts', icon: UserPlus, theme: 'blue',
+    id: 'contacts-new-week', title: 'Contact intake', source: 'Contacts', route: '/contacts', icon: UserPlus, theme: 'theme',
     catalogDescription: 'Contacts added during the current week.',
     resolve: ({ analytics, loading }) => ({ value: number(analytics?.contacts.newThisWeek), supportingText: `${number(analytics?.contacts.newThisMonth)} this month`, timeframe: 'This week', status: loading.analytics ? 'loading' : 'ready', numericValue: analytics?.contacts.newThisWeek ?? 0 }),
   },
@@ -254,7 +254,7 @@ const definitions: SignalDefinition[] = [
     resolve: ({ analytics, loading }) => { const value = analytics?.tasks.overdue ?? 0; return { value: number(value), supportingText: `${number(analytics?.tasks.pending)} pending`, timeframe: 'Current', status: loading.analytics ? 'loading' : 'ready', numericValue: value, requiresAttention: value > 0 }; },
   },
   {
-    id: 'pipelines-configured', title: 'Pipelines', source: 'Pipelines', route: '/pipelines', icon: Workflow, theme: 'blue',
+    id: 'pipelines-configured', title: 'Pipelines', source: 'Pipelines', route: '/pipelines', icon: Workflow, theme: 'theme',
     catalogDescription: 'Sales pipelines configured for this organization.',
     resolve: ({ analytics, loading }) => ({ value: number(analytics?.pipelines.total), supportingText: 'Configured', timeframe: 'Current', status: loading.analytics ? 'loading' : 'ready', numericValue: analytics?.pipelines.total ?? 0 }),
   },
@@ -294,7 +294,7 @@ const definitions: SignalDefinition[] = [
     resolve: ({ analytics, loading }) => ({ value: number(analytics?.signatureMetrics?.signedThisWeek), supportingText: `${number(analytics?.signatureMetrics?.total)} total documents`, timeframe: 'This week', status: loading.analytics ? 'loading' : 'ready', numericValue: analytics?.signatureMetrics?.signedThisWeek ?? 0 }),
   },
   {
-    id: 'workspace-active', title: 'Active workspace items', source: 'Workspace', route: '/canvas', icon: MapIcon, theme: 'blue',
+    id: 'workspace-active', title: 'Active workspace items', source: 'Workspace', route: '/canvas', icon: MapIcon, theme: 'theme',
     catalogDescription: 'Workspace material currently considered active.',
     resolve: ({ analytics, loading }) => ({ value: number(analytics?.workspaceMetrics?.activeItems), supportingText: `${number(analytics?.workspaceMetrics?.lists)} lists · ${number(analytics?.workspaceMetrics?.notes)} notes`, timeframe: 'Current', status: loading.analytics ? 'loading' : 'ready', numericValue: analytics?.workspaceMetrics?.activeItems ?? 0 }),
   },
@@ -304,7 +304,7 @@ const definitions: SignalDefinition[] = [
     resolve: ({ revenue, loading, errors }) => ({ ...currencySummary(revenueValues(revenue, summary => summary.netReceived), 'No received payments'), timeframe: periodLabel(revenue?.period), status: optionalStatus(revenue, loading.revenue, errors.revenue) }),
   },
   {
-    id: 'revenue-booked', title: 'Booked sales', source: 'Sales & Payments', route: '/invoices/payments', icon: DollarSign, theme: 'blue',
+    id: 'revenue-booked', title: 'Booked sales', source: 'Sales & Payments', route: '/invoices/payments', icon: DollarSign, theme: 'theme',
     catalogDescription: 'Sales booked during the selected performance period.',
     resolve: ({ revenue, loading, errors }) => ({ ...currencySummary(revenueValues(revenue, summary => summary.bookedSales), 'No booked sales'), timeframe: periodLabel(revenue?.period), status: optionalStatus(revenue, loading.revenue, errors.revenue) }),
   },
@@ -314,17 +314,17 @@ const definitions: SignalDefinition[] = [
     resolve: ({ revenue, loading, errors }) => { const value = revenue?.currencies.reduce((total, currency) => total + currency.summary.failedCount, 0) ?? 0; return { value: number(value), supportingText: value === 1 ? 'Failed payment' : 'Failed payments', timeframe: periodLabel(revenue?.period), status: optionalStatus(revenue, loading.revenue, errors.revenue), numericValue: value, requiresAttention: value > 0 }; },
   },
   {
-    id: 'deal-win-rate', title: 'Deal win rate', source: 'Pipelines', route: '/pipelines', icon: Target, theme: 'blue',
+    id: 'deal-win-rate', title: 'Deal win rate', source: 'Pipelines', route: '/pipelines', icon: Target, theme: 'theme',
     catalogDescription: 'Won deals as a share of all closed outcomes for the selected period.',
     resolve: ({ conversions, loading, errors }) => ({ value: percent(conversions?.dealWinRate.rate), supportingText: `${number(conversions?.dealWinRate.won)} of ${number(conversions?.dealWinRate.totalClosed)} closed`, timeframe: periodLabel(conversions?.period), status: optionalStatus(conversions, loading.conversions, errors.conversions) }),
   },
   {
-    id: 'form-contact-rate', title: 'Form conversion', source: 'Contacts', route: '/forms', icon: MousePointerClick, theme: 'blue',
+    id: 'form-contact-rate', title: 'Form conversion', source: 'Contacts', route: '/forms', icon: MousePointerClick, theme: 'theme',
     catalogDescription: 'Form submissions that became contacts during the selected period.',
     resolve: ({ conversions, loading, errors }) => ({ value: percent(conversions?.formToContact.rate), supportingText: `${number(conversions?.formToContact.converted)} of ${number(conversions?.formToContact.submissions)} submissions`, timeframe: periodLabel(conversions?.period), status: optionalStatus(conversions, loading.conversions, errors.conversions) }),
   },
   {
-    id: 'email-open-rate', title: 'Email open rate', source: 'Communications', route: '/inbox', icon: Mail, theme: 'blue',
+    id: 'email-open-rate', title: 'Email open rate', source: 'Communications', route: '/inbox', icon: Mail, theme: 'theme',
     catalogDescription: 'Delivered emails opened during the selected performance period.',
     resolve: ({ communications, loading, errors }) => ({ value: percent(communications?.email.rates.open), supportingText: `${number(communications?.email.opened)} opened`, timeframe: periodLabel(communications?.period), status: optionalStatus(communications, loading.communications, errors.communications) }),
   },
@@ -334,7 +334,7 @@ const definitions: SignalDefinition[] = [
     resolve: ({ communications, loading, errors }) => { const value = communications?.email.failed ?? 0; return { value: number(value), supportingText: `${number(communications?.email.total)} total emails`, timeframe: periodLabel(communications?.period), status: optionalStatus(communications, loading.communications, errors.communications), numericValue: value, requiresAttention: value > 0 }; },
   },
   {
-    id: 'sms-inbound', title: 'Inbound SMS', source: 'Communications', route: '/inbox', icon: MessageSquare, theme: 'blue',
+    id: 'sms-inbound', title: 'Inbound SMS', source: 'Communications', route: '/inbox', icon: MessageSquare, theme: 'theme',
     catalogDescription: 'SMS messages received during the selected performance period.',
     resolve: ({ communications, loading, errors }) => ({ value: number(communications?.sms.inbound), supportingText: `${number(communications?.sms.outbound)} outbound`, timeframe: periodLabel(communications?.period), status: optionalStatus(communications, loading.communications, errors.communications), numericValue: communications?.sms.inbound ?? 0 }),
   },

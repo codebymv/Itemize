@@ -17,8 +17,8 @@ export interface EmailTemplatePublicationState {
   isDirty: boolean;
 }
 
-export const NEW_EMAIL_TEMPLATE_VISUAL = defineStatus('New', 'blue', FilePlus2);
-export const DRAFT_EMAIL_TEMPLATE_VISUAL = defineStatus('Draft', 'blue', Pencil);
+export const NEW_EMAIL_TEMPLATE_VISUAL = defineStatus('New', 'theme', FilePlus2);
+export const DRAFT_EMAIL_TEMPLATE_VISUAL = defineStatus('Draft', 'theme', Pencil);
 
 export function getEmailTemplatePublicationVisual({
   exists,

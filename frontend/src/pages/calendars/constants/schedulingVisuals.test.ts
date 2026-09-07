@@ -12,7 +12,7 @@ import { getBookingStatusVisual, getCalendarStatusVisual } from './schedulingVis
 describe('scheduling visual semantics', () => {
   it.each([
     ['pending', 'Pending', 'orange', Clock3],
-    ['confirmed', 'Confirmed', 'blue', CalendarCheck2],
+    ['confirmed', 'Confirmed', 'theme', CalendarCheck2],
     ['cancelled', 'Cancelled', 'red', XCircle],
     ['completed', 'Completed', 'green', CheckCircle2],
     ['no_show', 'No show', 'gray', UserX],
@@ -25,7 +25,7 @@ describe('scheduling visual semantics', () => {
   it('uses blue for available calendars and orange for paused calendars', () => {
     expect(getCalendarStatusVisual(true)).toMatchObject({
       label: 'Active',
-      theme: 'blue',
+      theme: 'theme',
       icon: CalendarCheck2,
     });
     expect(getCalendarStatusVisual(false)).toMatchObject({

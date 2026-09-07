@@ -498,7 +498,7 @@ describe('visual language: theme colour', () => {
    * purple account. This baseline only moves down: lower it in the same
    * commit that removes a raw blue, and never raise it.
    */
-  const RAW_BLUE_BASELINE = 520;
+  const RAW_BLUE_BASELINE = 510;
   const RAW_BLUE = /(?<![\w-])(?:[\w[\]=/.-]+:)*(?:bg|text|border|ring|from|to|via|fill|stroke|outline|decoration|divide|shadow|caret|accent|placeholder)-blue-\d{2,3}(?:\/\d{1,3})?(?![\w-])/g;
 
   const rawBlueByFile = ALL_SOURCES

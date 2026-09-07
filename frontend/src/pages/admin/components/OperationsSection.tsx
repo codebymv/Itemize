@@ -88,7 +88,7 @@ function jobBadgeClass(status: string): string {
         return STATUS_THEME_CLASSES.red.badgeClass;
     }
     if (status === 'retry') return STATUS_THEME_CLASSES.orange.badgeClass;
-    if (status === 'processing') return STATUS_THEME_CLASSES.blue.badgeClass;
+    if (status === 'processing') return STATUS_THEME_CLASSES.theme.badgeClass;
     return STATUS_THEME_CLASSES.gray.badgeClass;
 }
 
@@ -143,10 +143,10 @@ function MetricCard({
     label: string;
     value: string | number;
     icon: typeof Activity;
-    tone: 'blue' | 'green' | 'orange' | 'red';
+    tone: 'theme' | 'green' | 'orange' | 'red';
 }) {
     const tones = {
-        blue: 'bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-300',
+        theme: 'bg-theme-tint text-primary dark:text-icon-accent',
         green: 'bg-green-50 text-green-600 dark:bg-green-950/50 dark:text-green-300',
         orange: 'bg-orange-50 text-orange-600 dark:bg-orange-950/50 dark:text-orange-300',
         red: 'bg-red-50 text-red-600 dark:bg-red-950/50 dark:text-red-300',
@@ -511,7 +511,7 @@ export default function OperationsSection({
                     icon={snapshot.status === 'healthy' ? CheckCircle2 : AlertTriangle}
                     tone={statusTone}
                 />
-                <MetricCard label="Outstanding jobs" value={snapshot.activeJobs} icon={Activity} tone="blue" />
+                <MetricCard label="Outstanding jobs" value={snapshot.activeJobs} icon={Activity} tone="theme" />
                 <MetricCard label="Retrying" value={snapshot.retryingJobs} icon={RefreshCw} tone="orange" />
                 <MetricCard label="Needs review" value={snapshot.actionRequiredJobs} icon={AlertTriangle} tone="red" />
             </ResponsiveCardRail>

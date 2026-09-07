@@ -46,7 +46,8 @@ import {
 } from "./ui/select";
 import { ColorPicker } from "./ui/color-picker";
 import { UI_COLORS, UI_LABELS } from "@/constants/ui";
-import { DEFAULT_CARD_ACCENT } from "@/lib/cardAccent";
+import { useThemeColor } from "@/hooks/useThemeColor";
+import { THEME_PALETTE } from "@/lib/themeColor";
 import {
   Form,
   FormField,
@@ -111,7 +112,6 @@ const itemConfig = {
     label: "Note",
     icon: StickyNote,
     titlePlaceholder: "Enter note title",
-    defaultColor: DEFAULT_CARD_ACCENT,
     requireResult: false,
     showValidationError: false,
   },
@@ -119,7 +119,6 @@ const itemConfig = {
     label: "List",
     icon: CheckSquare,
     titlePlaceholder: "Enter list title",
-    defaultColor: DEFAULT_CARD_ACCENT,
     requireResult: true,
     showValidationError: true,
   },
@@ -127,7 +126,6 @@ const itemConfig = {
     label: "Whiteboard",
     icon: Palette,
     titlePlaceholder: "Enter whiteboard title",
-    defaultColor: DEFAULT_CARD_ACCENT,
     requireResult: false,
     showValidationError: false,
   },
@@ -135,7 +133,6 @@ const itemConfig = {
     label: "Wireframe",
     icon: GitBranch,
     titlePlaceholder: "Enter wireframe title",
-    defaultColor: DEFAULT_CARD_ACCENT,
     requireResult: false,
     showValidationError: false,
   },
@@ -143,7 +140,6 @@ const itemConfig = {
     label: "Vault",
     icon: KeyRound,
     titlePlaceholder: "Enter vault title",
-    defaultColor: DEFAULT_CARD_ACCENT,
     requireResult: true,
     showValidationError: false,
   },
@@ -222,6 +218,9 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
     [itemType],
   );
 
+  // A new card starts on the theme colour; the picker can change it before saving.
+  const themeColor = useThemeColor();
+  const defaultColor = THEME_PALETTE[themeColor][500];
   const form = useForm<CreateItemFormValues>({
     resolver: zodResolver(createItemFormSchema),
     defaultValues: {
@@ -229,7 +228,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
       category: "",
       newCategory: "",
       isAddingNewCategory: false,
-      color: config.defaultColor,
+      color: defaultColor,
       categoryColor: UI_COLORS.neutralGray,
     },
   });
@@ -238,7 +237,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
   const category = form.watch("category") || "";
   const newCategory = form.watch("newCategory") || "";
   const isAddingNewCategory = form.watch("isAddingNewCategory");
-  const color = form.watch("color") || config.defaultColor;
+  const color = form.watch("color") || defaultColor;
   const categoryColor = form.watch("categoryColor") || UI_COLORS.neutralGray;
   const { pending: isLoading, run, dismissIfIdle } = useSingleFlightAction();
   const [error, setError] = useState("");
@@ -276,7 +275,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
         category: "",
         newCategory: "",
         isAddingNewCategory: false,
-        color: config.defaultColor,
+        color: defaultColor,
         categoryColor: UI_COLORS.neutralGray,
       });
       setError("");
@@ -289,7 +288,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
       setCreationStep(supportsPresets ? "source" : "details");
       setSelectedPreset(null);
     }
-  }, [resolvedOpen, config.defaultColor, form, supportsPresets]);
+  }, [resolvedOpen, defaultColor, form, supportsPresets]);
 
   const availableCategories = useMemo(() => {
     const hasGeneral = existingCategories.some((cat) => cat.name === "General");
@@ -356,7 +355,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
         const result = await onCreate(
           finalTitle,
           finalCategory,
-          values.color || config.defaultColor,
+          values.color || defaultColor,
           position || undefined,
           undefined,
           selectedPreset?.createPayload(),
@@ -431,7 +430,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
         const result = await onCreate(
           finalTitle,
           finalCategory,
-          values.color || config.defaultColor,
+          values.color || defaultColor,
           position || undefined,
           preparedVaultSecurity,
         );
@@ -695,7 +694,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
                         setError("");
 
                         if (value === "General") {
-                          form.setValue("color", config.defaultColor, {
+                          form.setValue("color", defaultColor, {
                             shouldDirty: true,
                           });
                         } else {

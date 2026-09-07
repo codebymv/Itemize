@@ -8,7 +8,7 @@ import { useCardTitleEditing } from '@/hooks/useCardTitleEditing';
 import { useCardColorManagement } from '@/hooks/useCardColorManagement';
 import { useCardCategoryManagement } from '@/hooks/useCardCategoryManagement';
 import logger from '@/lib/logger';
-import { DEFAULT_CARD_ACCENT } from '@/lib/cardAccent';
+import { defaultCardAccent } from '@/lib/cardAccent';
 
 interface UseListCardLogicProps {
   list: List;
@@ -128,7 +128,7 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
         try {
           await addCategory({
             name: category.trim(),
-            color_value: DEFAULT_CARD_ACCENT
+            color_value: defaultCardAccent()
           });
         } catch (error) {
           logger.error('Failed to create category in database:', error);
@@ -146,7 +146,7 @@ export const useListCardLogic = ({ list, onUpdate, onDelete, isCollapsed, onTogg
       onUpdate({ ...list, ...updateData });
     },
     onAddCustomCategory: async (category) => {
-      const newCategoryColor = DEFAULT_CARD_ACCENT;
+      const newCategoryColor = defaultCardAccent();
       if (addCategory) {
         await addCategory({
           name: category,

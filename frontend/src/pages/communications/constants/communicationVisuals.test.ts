@@ -6,8 +6,8 @@ import {
 
 describe('communication status visuals', () => {
   it('keeps active work blue and successful conversation closure green', () => {
-    expect(getCommunicationAvailabilityVisual(true)).toMatchObject({ label: 'Active', theme: 'blue' });
-    expect(getCommunicationConversationStatusVisual('open')).toMatchObject({ label: 'Open', theme: 'blue' });
+    expect(getCommunicationAvailabilityVisual(true)).toMatchObject({ label: 'Active', theme: 'theme' });
+    expect(getCommunicationConversationStatusVisual('open')).toMatchObject({ label: 'Open', theme: 'theme' });
     expect(getCommunicationConversationStatusVisual('closed')).toMatchObject({ label: 'Closed', theme: 'green' });
   });
 

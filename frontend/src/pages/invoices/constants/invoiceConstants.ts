@@ -32,7 +32,7 @@ export type InvoiceStatus = Exclude<InvoiceStatusFilter, 'all'>;
 export type InvoiceStatusVisual = StatusVisual;
 
 export const INVOICE_STATUS_CONFIG: Record<InvoiceStatus, InvoiceStatusVisual> = {
-  draft: defineStatus('Draft', 'blue', Clock),
+  draft: defineStatus('Draft', 'theme', Clock),
   sent: defineStatus('Sent', 'orange', Send),
   viewed: defineStatus('Viewed', 'orange', Eye),
   paid: defineStatus('Paid', 'green', CheckCircle),

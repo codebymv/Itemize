@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { CardAccentProvider, contrastTextFor, DEFAULT_CARD_ACCENT } from '@/lib/cardAccent';
+import { CardAccentProvider, contrastTextFor, defaultCardAccent } from '@/lib/cardAccent';
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Collapsible,
@@ -107,14 +107,14 @@ export const VaultCard: React.FC<VaultCardProps> = ({
   const categoryColor = existingCategories.find(
     (c) => c.name === vault.category,
   )?.color_value;
-  const vaultDisplayColor = vault.color_value || categoryColor || DEFAULT_CARD_ACCENT; // Default to blue
+  const vaultDisplayColor = vault.color_value || categoryColor || defaultCardAccent(); // Default to blue
 
   // State for delete confirmation modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // Color preview state
   const [currentColorPreview, setCurrentColorPreview] = useState(
-    vault.color_value || DEFAULT_CARD_ACCENT,
+    vault.color_value || defaultCardAccent(),
   );
 
   // Get theme for styling
@@ -122,7 +122,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
 
   // Sync color preview when vault color changes
   useEffect(() => {
-    setCurrentColorPreview(vault.color_value || DEFAULT_CARD_ACCENT);
+    setCurrentColorPreview(vault.color_value || defaultCardAccent());
   }, [vault.color_value]);
 
   const {

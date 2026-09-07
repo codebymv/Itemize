@@ -12,9 +12,9 @@ const badgeClass = (theme: StatTheme): string => STATUS_THEME_CLASSES[theme].bad
 
 const STATUS_THEMES = {
   // Itemize-owned live/working states
-  active: 'blue',
-  draft: 'blue',
-  info: 'blue',
+  active: 'theme',
+  draft: 'theme',
+  info: 'theme',
   // Successful outcomes
   completed: 'green',
   paid: 'green',

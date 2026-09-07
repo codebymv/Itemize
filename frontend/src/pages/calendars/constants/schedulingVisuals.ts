@@ -11,14 +11,14 @@ import type { Booking } from '@/types';
 
 const BOOKING_STATUS_VISUALS: Record<Booking['status'], StatusVisual> = {
   pending: defineStatus('Pending', 'orange', Clock3),
-  confirmed: defineStatus('Confirmed', 'blue', CalendarCheck2),
+  confirmed: defineStatus('Confirmed', 'theme', CalendarCheck2),
   cancelled: defineStatus('Cancelled', 'red', XCircle),
   completed: defineStatus('Completed', 'green', CheckCircle2),
   no_show: defineStatus('No show', 'gray', UserX),
 };
 
 const CALENDAR_STATUS_VISUALS = {
-  active: defineStatus('Active', 'blue', CalendarCheck2),
+  active: defineStatus('Active', 'theme', CalendarCheck2),
   inactive: defineStatus('Paused', 'orange', CalendarOff),
 } as const;
 

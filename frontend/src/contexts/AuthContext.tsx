@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, useMemo, useCallback } from 'react';
+import { DEFAULT_THEME_COLOR, applyThemeColor, normalizeThemeColor, type ThemeColor } from '@/lib/themeColor';
 import { useLocation } from 'react-router-dom';
 import { markAuthenticatedSession, clearAuthenticatedSession, isLoggedOut, setLoggedOut, hasSessionHint } from '@/lib/api';
 import { storage } from '@/lib/storage';
@@ -21,6 +22,8 @@ export interface User {
   role?: 'USER' | 'ADMIN';
   provider?: string;
   createdAt?: string;
+  /** Product accent the user chose; blue when unset. */
+  themeColor?: ThemeColor;
 }
 
 interface AuthStateContextType {
@@ -38,6 +41,8 @@ interface AuthActionsContextType {
   logout: () => void;
   establishSession: (userData: User) => void;
   setCurrentUser: (user: User | null) => void;
+  /** Merge a change the server confirmed (a preference, a renamed profile) into the session and its cache. */
+  updateCurrentUser: (patch: Partial<User>) => void;
 }
 
 // Custom error class for auth errors with code
@@ -82,6 +87,7 @@ const normalizeUser = (data: Record<string, unknown>): User | null => {
     role: data.role as User['role'],
     provider: data.provider as string | undefined,
     createdAt: data.createdAt as string | undefined,
+    themeColor: normalizeThemeColor(data.themeColor),
   };
 };
 
@@ -259,9 +265,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  const updateCurrentUser = useCallback((patch: Partial<User>) => {
+    setCurrentUser(previous => {
+      if (!previous) return previous;
+      const next = { ...previous, ...patch };
+      storage.setJson('itemize_user', next as unknown as Record<string, unknown>);
+      return next;
+    });
+  }, []);
+
+  // The account's theme colour is the record; the boot script only covers first paint.
+  const themeColor = currentUser?.themeColor;
+  useEffect(() => {
+    if (currentUser) applyThemeColor(normalizeThemeColor(themeColor));
+  }, [currentUser, themeColor]);
+
   const logout = useCallback(() => {
     setToken(null);
     setCurrentUser(null);
+    applyThemeColor(DEFAULT_THEME_COLOR);
 
     clearAuthenticatedSession();
     storage.removeItem('itemize_user');
@@ -304,7 +326,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     logout,
     establishSession,
     setCurrentUser,
-  }), [login, loginWithEmail, register, logout, establishSession, setCurrentUser]);
+    updateCurrentUser,
+  }), [login, loginWithEmail, register, logout, establishSession, setCurrentUser, updateCurrentUser]);
 
   return (
     <AuthStateContext.Provider value={stateValue}>

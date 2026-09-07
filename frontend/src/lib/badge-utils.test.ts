@@ -27,7 +27,7 @@ describe('badge-utils', () => {
   it('keeps the documented status semantics', () => {
     expect(getStatusBadgeClass('paid')).toBe(STATUS_THEME_CLASSES.green.badgeClass);
     expect(getStatusBadgeClass('overdue')).toBe(STATUS_THEME_CLASSES.red.badgeClass);
-    expect(getStatusBadgeClass('draft')).toBe(STATUS_THEME_CLASSES.blue.badgeClass);
+    expect(getStatusBadgeClass('draft')).toBe(STATUS_THEME_CLASSES.theme.badgeClass);
     expect(getStatusBadgeClass('pending')).toBe(STATUS_THEME_CLASSES.orange.badgeClass);
     expect(getStatusBadgeClass('refunded')).toBe(STATUS_THEME_CLASSES.gray.badgeClass);
   });

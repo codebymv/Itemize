@@ -11,7 +11,7 @@ import { defineStatus, getUnknownStatusVisual } from '@/lib/statusVisuals';
 import type { SignatureStatus } from '@/services/signaturesApi';
 
 export const SIGNATURE_STATUS_VISUALS = {
-  draft: defineStatus('Draft', 'blue', FileText),
+  draft: defineStatus('Draft', 'theme', FileText),
   sent: defineStatus('Sent', 'orange', Send),
   in_progress: defineStatus('In progress', 'orange', Clock),
   completed: defineStatus('Completed', 'green', CheckCircle),
@@ -63,7 +63,7 @@ export const getRecipientStatusVisual = (
   if (recipient.status === 'declined') return defineStatus('Declined', 'red', XCircle);
   if (recipient.status === 'viewed') return defineStatus('Viewed', 'orange', Eye);
   if (recipient.status === 'sent') return defineStatus('Sent', 'orange', Send);
-  return defineStatus('Waiting', 'blue', Clock);
+  return defineStatus('Waiting', 'theme', Clock);
 };
 
 export const getTemplateReadinessVisual = (isReady: boolean) => (

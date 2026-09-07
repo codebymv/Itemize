@@ -3,7 +3,7 @@ import { getEstimateStatusVisual } from './estimateConstants';
 
 describe('getEstimateStatusVisual', () => {
   it.each([
-    ['draft', 'blue'],
+    ['draft', 'theme'],
     ['sent', 'orange'],
     ['accepted', 'green'],
     ['declined', 'red'],
@@ -12,8 +12,8 @@ describe('getEstimateStatusVisual', () => {
     const visual = getEstimateStatusVisual(status);
 
     expect(visual.theme).toBe(theme);
-    expect(visual.iconBackgroundClass).toContain(`bg-${theme}-100`);
-    expect(visual.badgeClass).toContain(`bg-${theme}-100`);
+    expect(visual.iconBackgroundClass).toContain((theme === 'theme' ? 'bg-theme-tint' : `bg-${theme}-100`));
+    expect(visual.badgeClass).toContain((theme === 'theme' ? 'bg-theme-tint' : `bg-${theme}-100`));
   });
 
   it('provides a neutral fallback with a readable label', () => {

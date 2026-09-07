@@ -3,7 +3,7 @@ import { getContactStatusVisual } from './contactStatusConstants';
 
 describe('contact status visuals', () => {
   it('keeps active in the Itemize blue family', () => {
-    expect(getContactStatusVisual('active').theme).toBe('blue');
+    expect(getContactStatusVisual('active').theme).toBe('theme');
   });
 
   it('uses orange for inactive and red for archived', () => {

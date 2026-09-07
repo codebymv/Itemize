@@ -92,6 +92,13 @@ export class UpdateViewerProfileInput {
 }
 
 @InputType()
+export class UpdateViewerPreferencesInput {
+  /** blue | purple | pink; validated server-side against the palette. */
+  @Field()
+  themeColor: string;
+}
+
+@InputType()
 export class DeleteViewerAccountInput {
   @Field()
   confirmation: string;

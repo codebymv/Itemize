@@ -10,7 +10,7 @@ import {
 describe('reputation visuals', () => {
   it('uses the shared lifecycle palette for request outcomes', () => {
     expect(getReviewRequestStatusVisual('pending')).toMatchObject({ label: 'Pending', theme: 'orange' });
-    expect(getReviewRequestStatusVisual('clicked')).toMatchObject({ label: 'Clicked', theme: 'blue' });
+    expect(getReviewRequestStatusVisual('clicked')).toMatchObject({ label: 'Clicked', theme: 'theme' });
     expect(getReviewRequestStatusVisual('completed')).toMatchObject({ label: 'Completed', theme: 'green' });
     expect(getReviewRequestStatusVisual('failed')).toMatchObject({ label: 'Failed', theme: 'red' });
   });
@@ -18,9 +18,9 @@ describe('reputation visuals', () => {
   it('keeps sentiment semantic and catalog availability non-successful', () => {
     expect(getReviewSentimentVisual('positive')).toMatchObject({ theme: 'green' });
     expect(getReviewSentimentVisual('neutral')).toMatchObject({ theme: 'gray' });
-    expect(getReviewWidgetAvailabilityVisual(true)).toMatchObject({ label: 'Available', theme: 'blue' });
+    expect(getReviewWidgetAvailabilityVisual(true)).toMatchObject({ label: 'Available', theme: 'theme' });
     expect(getReviewWidgetAvailabilityVisual(false)).toMatchObject({ label: 'Unavailable', theme: 'orange' });
-    expect(getReviewPlatformConnectionVisual(true)).toMatchObject({ label: 'Connected', theme: 'blue' });
+    expect(getReviewPlatformConnectionVisual(true)).toMatchObject({ label: 'Connected', theme: 'theme' });
   });
 
   it('normalizes platform names without losing unknown providers', () => {

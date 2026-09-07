@@ -15,6 +15,7 @@ const user: AuthenticationUser = {
   emailVerified: false,
   role: 'USER',
   createdAt: new Date('2026-01-01T00:00:00.000Z'),
+  themeColor: 'blue' as const,
 };
 
 describe('IdentityLifecycleService', () => {

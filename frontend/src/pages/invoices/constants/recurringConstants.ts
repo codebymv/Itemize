@@ -7,7 +7,7 @@ import {
 } from './statusVisualPrimitives';
 
 export const RECURRING_STATUS_CONFIG: Record<RecurringStatus, StatusVisual> = {
-  active: defineStatus('Active', 'blue', Play),
+  active: defineStatus('Active', 'theme', Play),
   paused: defineStatus('Paused', 'orange', Pause),
   completed: defineStatus('Completed', 'green', CheckCircle),
 };

@@ -113,8 +113,8 @@ export const EntitySuggestionList = forwardRef<EntitySuggestionListHandle, Entit
               <span
                 className={cn(
                   'grid h-6 w-6 shrink-0 place-items-center rounded-full text-[11px] font-semibold',
-                  STATUS_THEME_CLASSES.blue.iconBackgroundClass,
-                  STATUS_THEME_CLASSES.blue.iconClass,
+                  STATUS_THEME_CLASSES.theme.iconBackgroundClass,
+                  STATUS_THEME_CLASSES.theme.iconClass,
                 )}
                 style={item.kind === 'frame' && item.color ? { color: item.color } : undefined}
                 aria-hidden="true"

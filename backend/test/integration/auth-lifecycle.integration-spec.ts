@@ -291,6 +291,60 @@ describe('Authentication lifecycle GraphQL PostgreSQL contract', () => {
     await expect(bcrypt.compare('ChangedPass4', persisted.rows[0].password_hash)).resolves.toBe(true);
   });
 
+  it('records the viewer theme colour and refuses hues from the status family', async () => {
+    const agent = request.agent(app.getHttpServer());
+    await agent
+      .post('/graphql')
+      .send({
+        query: `mutation Login($input: LoginInput!) {
+          login(input: $input) { success user { uid } }
+        }`,
+        variables: { input: { email: primaryEmail, password: 'ChangedPass4' } },
+      })
+      .expect(200);
+    const csrf = await agent
+      .post('/graphql')
+      .send({ query: '{ csrfToken { token } }' })
+      .expect(200);
+    const csrfToken = csrf.body.data.csrfToken.token as string;
+
+    const preferences = await agent
+      .post('/graphql')
+      .set('x-csrf-token', csrfToken)
+      .send({
+        query: `mutation Preferences($input: UpdateViewerPreferencesInput!) {
+          updateViewerPreferences(input: $input) { id themeColor }
+        }`,
+        variables: { input: { themeColor: 'purple' } },
+      })
+      .expect(200);
+    expect(preferences.body.errors).toBeUndefined();
+    expect(preferences.body.data.updateViewerPreferences.themeColor).toBe('purple');
+
+    const current = await agent
+      .post('/graphql')
+      .send({ query: '{ currentUser { themeColor } }' })
+      .expect(200);
+    expect(current.body.data.currentUser.themeColor).toBe('purple');
+
+    const refused = await agent
+      .post('/graphql')
+      .set('x-csrf-token', csrfToken)
+      .send({
+        query: `mutation Preferences($input: UpdateViewerPreferencesInput!) {
+          updateViewerPreferences(input: $input) { themeColor }
+        }`,
+        variables: { input: { themeColor: 'green' } },
+      })
+      .expect(200);
+    expect(refused.body.errors?.[0]?.extensions?.code).toBe('BAD_USER_INPUT');
+    const persisted = await pool.query<{ theme_color: string }>(
+      'SELECT theme_color FROM users WHERE email = $1',
+      [primaryEmail],
+    );
+    expect(persisted.rows[0].theme_color).toBe('purple');
+  });
+
   it('exports a portable account snapshot without credentials or sharing capabilities', async () => {
     const identity = await pool.query<{ id: number; default_organization_id: number }>(
       'SELECT id, default_organization_id FROM users WHERE email = $1',

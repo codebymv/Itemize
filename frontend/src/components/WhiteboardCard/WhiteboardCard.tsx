@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { CardAccentProvider, contrastTextFor, DEFAULT_CARD_ACCENT } from '@/lib/cardAccent';
+import { CardAccentProvider, contrastTextFor, defaultCardAccent } from '@/lib/cardAccent';
 import { CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,7 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
   updateCategory
 }) => {
   const categoryColor = existingCategories.find(c => c.name === whiteboard.category)?.color_value;
-  const whiteboardDisplayColor = whiteboard.color_value || categoryColor || DEFAULT_CARD_ACCENT; // Default to blue if no color is set
+  const whiteboardDisplayColor = whiteboard.color_value || categoryColor || defaultCardAccent(); // Default to blue if no color is set
 
   // Mobile detection using shared hook
   const isMobile = useIsMobile();
@@ -45,7 +45,7 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // Color preview state for ColorPicker
-  const [currentColorPreview, setCurrentColorPreview] = useState(whiteboard.color_value || DEFAULT_CARD_ACCENT);
+  const [currentColorPreview, setCurrentColorPreview] = useState(whiteboard.color_value || defaultCardAccent());
 
   // Toast for error notifications
   const { toast } = useToast();
@@ -54,7 +54,7 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
 
   // Sync color preview when whiteboard color changes externally
   useEffect(() => {
-    setCurrentColorPreview(whiteboard.color_value || DEFAULT_CARD_ACCENT);
+    setCurrentColorPreview(whiteboard.color_value || defaultCardAccent());
   }, [whiteboard.color_value]);
 
   
@@ -176,7 +176,7 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
                     }}
                     onSave={async (finalColor) => { 
                       // Only save if color actually changed from original whiteboard color
-                      if (finalColor !== (whiteboard.color_value || DEFAULT_CARD_ACCENT)) {
+                      if (finalColor !== (whiteboard.color_value || defaultCardAccent())) {
                         try {
                           await handleSaveWhiteboardColor(finalColor);
                         } catch (error) {
@@ -185,7 +185,7 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
                             description: 'Could not save color. Reverting preview.',
                             variant: 'destructive',
                           });
-                          setCurrentColorPreview(whiteboard.color_value || DEFAULT_CARD_ACCENT); // Revert preview on save error
+                          setCurrentColorPreview(whiteboard.color_value || defaultCardAccent()); // Revert preview on save error
                         }
                       }
                     }}

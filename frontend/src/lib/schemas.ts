@@ -6,7 +6,7 @@
  */
 
 import { z } from 'zod';
-import { DEFAULT_CARD_ACCENT } from '@/lib/cardAccent';
+import { defaultCardAccent } from '@/lib/cardAccent';
 
 // =============================================================================
 // Common Schemas
@@ -55,7 +55,7 @@ export const listItemSchema = z.object({
 export const createListSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title too long'),
   type: z.string().max(50).optional().default('General'),
-  color_value: hexColorSchema.optional().default(DEFAULT_CARD_ACCENT),
+  color_value: hexColorSchema.optional().default(defaultCardAccent),
   position_x: z.number().min(0),
   position_y: z.number().min(0),
   width: z.number().positive().optional(),
@@ -98,7 +98,7 @@ export const createNoteSchema = z.object({
   title: z.string().max(200, 'Title too long').optional().default('Untitled Note'),
   content: z.string().max(50000, 'Content too long').optional().default(''),
   category: z.string().max(50).optional(),
-  color_value: hexColorSchema.optional().default(DEFAULT_CARD_ACCENT),
+  color_value: hexColorSchema.optional().default(defaultCardAccent),
   position_x: z.number().min(0),
   position_y: z.number().min(0),
   width: z.number().positive().optional(),
@@ -172,7 +172,7 @@ export const createWhiteboardSchema = z.object({
   canvas_width: z.number().positive().optional().default(750),
   canvas_height: z.number().positive().optional().default(620),
   background_color: hexColorSchema.optional().default('#ffffff'),
-  color_value: hexColorSchema.optional().default(DEFAULT_CARD_ACCENT),
+  color_value: hexColorSchema.optional().default(defaultCardAccent),
   position_x: z.number().min(0),
   position_y: z.number().min(0),
   z_index: z.number().int().optional(),
@@ -245,7 +245,7 @@ export const updateContactSchema = z.object({
  */
 export const createCategorySchema = z.object({
   name: z.string().min(1, 'Category name is required').max(50, 'Category name too long'),
-  color_value: hexColorSchema.optional().default(DEFAULT_CARD_ACCENT),
+  color_value: hexColorSchema.optional().default(defaultCardAccent),
 });
 
 /**

@@ -69,7 +69,7 @@ export function GetStartedCard() {
   const { organizationId } = useOrganization();
   const queryClient = useQueryClient();
   const queryKey = organizationBootstrapQueryKey(organizationId);
-  const { iconBgClass, iconClass } = useStatStyles('blue');
+  const { iconBgClass, iconClass } = useStatStyles('theme');
 
   const { data, isLoading } = useQuery<OrganizationBootstrap, Error, OrganizationBootstrap['getStartedProgress']>({
     queryKey,

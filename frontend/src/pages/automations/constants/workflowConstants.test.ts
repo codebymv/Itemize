@@ -3,7 +3,7 @@ import { getWorkflowEnrollmentStatusVisual, getWorkflowStatusVisual } from './wo
 
 describe('automation status visuals', () => {
   it('uses blue for active definitions and orange for inactive definitions', () => {
-    expect(getWorkflowStatusVisual(true)).toMatchObject({ label: 'Active', theme: 'blue' });
+    expect(getWorkflowStatusVisual(true)).toMatchObject({ label: 'Active', theme: 'theme' });
     expect(getWorkflowStatusVisual(false)).toMatchObject({ label: 'Inactive', theme: 'orange' });
   });
 

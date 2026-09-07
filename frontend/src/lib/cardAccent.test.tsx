@@ -6,10 +6,12 @@ import {
   DEFAULT_CARD_ACCENT,
   accentFor,
   contrastTextFor,
+  defaultCardAccent,
   isDefaultAccent,
   luminanceOf,
   useCardAccent,
 } from './cardAccent';
+import { applyThemeColor } from './themeColor';
 
 describe('cardAccent', () => {
   it('measures luminance and picks readable text', () => {
@@ -22,12 +24,25 @@ describe('cardAccent', () => {
     expect(contrastTextFor('#10B981')).toBe('#ffffff');
   });
 
-  it('treats brand blue, empty, and junk as the default accent', () => {
+  it('treats any theme default, empty, and junk as the default accent', () => {
     expect(isDefaultAccent(DEFAULT_CARD_ACCENT)).toBe(true);
     expect(isDefaultAccent('#3b82f6')).toBe(true);
+    expect(isDefaultAccent('#A855F7')).toBe(true);
     expect(isDefaultAccent(null)).toBe(true);
     expect(isDefaultAccent('#10B981')).toBe(false);
     expect(accentFor('garbage')).toEqual({ color: DEFAULT_CARD_ACCENT, contrast: '#ffffff' });
+  });
+
+  it('starts new cards on the current theme, blue when none is stamped', () => {
+    expect(defaultCardAccent()).toBe('#3B82F6');
+    applyThemeColor('purple');
+    try {
+      expect(defaultCardAccent()).toBe('#A855F7');
+      expect(accentFor(null).color).toBe('#A855F7');
+      expect(renderHook(() => useCardAccent()).result.current.color).toBe('#A855F7');
+    } finally {
+      applyThemeColor('blue');
+    }
   });
 
   it('gives components the nearest card colour, defaulting to brand blue', () => {

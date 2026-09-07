@@ -11,7 +11,7 @@ export type ContentStatus = 'draft' | 'published' | 'archived';
 export type ContentStatusVisual = {
   label: string;
   icon: LucideIcon;
-  theme: 'blue' | 'green' | 'red';
+  theme: 'theme' | 'green' | 'red';
   badgeClass: string;
   iconBackgroundClass: string;
   iconClass: string;
@@ -21,10 +21,10 @@ export const CONTENT_STATUS_VISUALS: Record<ContentStatus, ContentStatusVisual> 
   draft: {
     label: 'Draft',
     icon: Pencil,
-    theme: 'blue',
-    badgeClass: `border-transparent ${STAT_BADGE_CLASSES.blue}`,
-    iconBackgroundClass: STAT_ICON_BG_CLASSES.blue,
-    iconClass: STAT_ICON_CLASSES.blue,
+    theme: 'theme',
+    badgeClass: `border-transparent ${STAT_BADGE_CLASSES.theme}`,
+    iconBackgroundClass: STAT_ICON_BG_CLASSES.theme,
+    iconClass: STAT_ICON_CLASSES.theme,
   },
   published: {
     label: 'Published',
@@ -44,7 +44,7 @@ export const CONTENT_STATUS_VISUALS: Record<ContentStatus, ContentStatusVisual> 
   },
 };
 
-export const SHARED_CONTENT_VISUAL = defineStatus('Shared', 'blue', Share2);
+export const SHARED_CONTENT_VISUAL = defineStatus('Shared', 'theme', Share2);
 
 export function getContentStatusVisual(status: string): ContentStatusVisual {
   return CONTENT_STATUS_VISUALS[status as ContentStatus] ?? CONTENT_STATUS_VISUALS.draft;

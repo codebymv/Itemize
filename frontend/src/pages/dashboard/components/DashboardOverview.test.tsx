@@ -20,7 +20,7 @@ const signals: DashboardSignal[] = [
     source: 'Contacts',
     route: '/contacts',
     icon: Users,
-    theme: 'blue',
+    theme: 'theme',
     value: '6',
     supportingText: '6 added this month',
     timeframe: 'Current',

@@ -3,13 +3,14 @@ import { Clock } from 'lucide-react';
 
 /**
  * The status palette. Five themes carry the app's whole status grammar:
- * blue = Itemize-owned draft/active/working, orange = parked or in flight,
- * green = successful outcome, red = failed or destructive, gray = neutral.
+ * theme = Itemize-owned draft/active/working (it wears the user's theme
+ * colour, blue by default), orange = parked or in flight, green = successful
+ * outcome, red = failed or destructive, gray = neutral.
  *
  * This module is the single definition. Nothing else may declare these
  * classes; `hooks/useStatStyles` and `lib/badge-utils` read from here.
  */
-export type StatTheme = 'green' | 'orange' | 'blue' | 'red' | 'gray';
+export type StatTheme = 'green' | 'orange' | 'theme' | 'red' | 'gray';
 
 export interface StatusThemeClasses {
   iconBackgroundClass: string;
@@ -24,10 +25,10 @@ export interface StatusVisual extends StatusThemeClasses {
 }
 
 export const STATUS_THEME_CLASSES: Record<StatTheme, StatusThemeClasses> = {
-  blue: {
-    iconBackgroundClass: 'bg-blue-100 dark:bg-blue-900',
+  theme: {
+    iconBackgroundClass: 'bg-theme-tint',
     iconClass: 'text-icon-accent',
-    badgeClass: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+    badgeClass: 'bg-theme-tint text-primary dark:text-icon-accent',
   },
   orange: {
     iconBackgroundClass: 'bg-orange-100 dark:bg-orange-900',

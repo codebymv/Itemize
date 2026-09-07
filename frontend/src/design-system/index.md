@@ -28,7 +28,7 @@ Five themes carry the entire status grammar:
 
 | Theme | Meaning | Examples |
 |-------|---------|----------|
-| `blue` | Itemize-owned draft, active, live working state | draft, active, new, info |
+| `theme` | Itemize-owned draft, active, live working state; wears the user's theme colour (blue by default) | draft, active, new, info |
 | `orange` | Parked or in flight | pending, sent, viewed, partial, paused, inactive, scheduled |
 | `green` | Successful outcome | paid, accepted, completed, published, confirmed |
 | `red` | Failed, destructive, or needing attention | overdue, failed, declined, expired, cancelled, archived |
@@ -41,7 +41,7 @@ that one object -- so a pill, a stat card and a detail header can never disagree
 import { defineStatus } from '@/lib/statusVisuals'
 
 const INVOICE_STATUS_CONFIG = {
-  draft: defineStatus('Draft', 'blue', Clock),
+  draft: defineStatus('Draft', 'theme', Clock),
   paid: defineStatus('Paid', 'green', CheckCircle),
   overdue: defineStatus('Overdue', 'red', XCircle),
 }
@@ -752,7 +752,7 @@ Build domain status maps from the shared status visual primitive:
 ```tsx
 import { defineStatus } from '@/lib/statusVisuals'
 
-const status = defineStatus('Active', 'blue', Play)
+const status = defineStatus('Active', 'theme', Play)
 
 <Badge className={status.badgeClass}>{status.label}</Badge>
 ```

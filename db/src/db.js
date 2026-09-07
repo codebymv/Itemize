@@ -84,6 +84,9 @@ const {
   runWorkspaceFrameCategoryMigration,
 } = require('./db_workspace_frame_category_migrations');
 const {
+  runUserThemeColorMigration,
+} = require('./db_user_theme_color_migrations');
+const {
   runEmailTemplatePublishReceiptMigration,
 } = require('./db_email_template_publish_receipt_migrations');
 const {
@@ -735,6 +738,7 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'workspace_frames_v1', runWorkspaceFramesMigration);
     await runMigrationOnce(pool, 'workspace_archive_v1', runWorkspaceArchiveMigration);
     await runMigrationOnce(pool, 'workspace_frame_category_v1', runWorkspaceFrameCategoryMigration);
+    await runMigrationOnce(pool, 'user_theme_color_v1', runUserThemeColorMigration);
     await runMigrationOnce(
       pool,
       'email_template_creation_receipts_v1',

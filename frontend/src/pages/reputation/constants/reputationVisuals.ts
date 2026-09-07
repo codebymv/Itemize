@@ -19,15 +19,15 @@ import type { Review, ReviewRequest } from '@/services/reputationApi';
 const REQUEST_STATUS_VISUALS: Record<ReviewRequest['status'], StatusVisual> = {
   pending: defineStatus('Pending', 'orange', Clock3),
   sent: defineStatus('Sent', 'orange', Send),
-  opened: defineStatus('Opened', 'blue', MailOpen),
-  clicked: defineStatus('Clicked', 'blue', MousePointerClick),
+  opened: defineStatus('Opened', 'theme', MailOpen),
+  clicked: defineStatus('Clicked', 'theme', MousePointerClick),
   completed: defineStatus('Completed', 'green', CheckCircle2),
   failed: defineStatus('Failed', 'red', XCircle),
   unsubscribed: defineStatus('Unsubscribed', 'gray', UserMinus),
 };
 
 const REVIEW_STATUS_VISUALS: Record<Review['status'], StatusVisual> = {
-  new: defineStatus('New', 'blue', Eye),
+  new: defineStatus('New', 'theme', Eye),
   read: defineStatus('Read', 'gray', Eye),
   responded: defineStatus('Responded', 'green', CheckCircle2),
   flagged: defineStatus('Flagged', 'red', Flag),
@@ -41,12 +41,12 @@ const SENTIMENT_VISUALS: Record<NonNullable<Review['sentiment']>, StatusVisual> 
 };
 
 const WIDGET_AVAILABILITY_VISUALS = {
-  available: defineStatus('Available', 'blue', CheckCircle2),
+  available: defineStatus('Available', 'theme', CheckCircle2),
   unavailable: defineStatus('Unavailable', 'orange', Pause),
 } as const;
 
 const PLATFORM_CONNECTION_VISUALS = {
-  connected: defineStatus('Connected', 'blue', CheckCircle2),
+  connected: defineStatus('Connected', 'theme', CheckCircle2),
   disconnected: defineStatus('Disconnected', 'gray', Pause),
 } as const;
 

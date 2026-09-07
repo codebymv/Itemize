@@ -37,10 +37,10 @@ const STATUS_THEMES = {
   scheduled: 'orange',
 
   // Itemize-owned active, draft, and live working states
-  active: 'blue',
-  draft: 'blue',
-  info: 'blue',
-  new: 'blue',
+  active: 'theme',
+  draft: 'theme',
+  info: 'theme',
+  new: 'theme',
 
   // Error, cancelled, destructive, negative
   cancelled: 'red',
@@ -89,7 +89,7 @@ export function getContactStatusBadgeClass(status: string): string {
  * deliberately reach past the five status themes for that reason.
  */
 export const WIDGET_TYPE_CLASSES = {
-  carousel: badgeClass('blue'),
+  carousel: badgeClass('theme'),
   grid: badgeClass('green'),
   list: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
   badge: badgeClass('orange'),

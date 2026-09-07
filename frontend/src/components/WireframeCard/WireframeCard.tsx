@@ -3,7 +3,7 @@
  * Card wrapper for React Flow based wireframe diagrams
  */
 import React, { useEffect, useMemo, useState } from 'react';
-import { CardAccentProvider, contrastTextFor, DEFAULT_CARD_ACCENT } from '@/lib/cardAccent';
+import { CardAccentProvider, contrastTextFor, defaultCardAccent } from '@/lib/cardAccent';
 import { CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,7 @@ const WireframeCard: React.FC<WireframeCardProps> = ({
   updateCategory
 }) => {
   const categoryColor = existingCategories.find(c => c.name === wireframe.category)?.color_value;
-  const wireframeDisplayColor = wireframe.color_value || categoryColor || DEFAULT_CARD_ACCENT;
+  const wireframeDisplayColor = wireframe.color_value || categoryColor || defaultCardAccent();
 
   // Mobile detection
   const isMobile = useIsMobile();
@@ -44,14 +44,14 @@ const WireframeCard: React.FC<WireframeCardProps> = ({
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // Color preview state for ColorPicker
-  const [currentColorPreview, setCurrentColorPreview] = useState(wireframe.color_value || DEFAULT_CARD_ACCENT);
+  const [currentColorPreview, setCurrentColorPreview] = useState(wireframe.color_value || defaultCardAccent());
 
   // Toast for error notifications
   const { toast } = useToast();
 
   // Sync color preview when wireframe color changes externally
   useEffect(() => {
-    setCurrentColorPreview(wireframe.color_value || DEFAULT_CARD_ACCENT);
+    setCurrentColorPreview(wireframe.color_value || defaultCardAccent());
   }, [wireframe.color_value]);
 
   const {
@@ -162,7 +162,7 @@ const WireframeCard: React.FC<WireframeCardProps> = ({
                       setCurrentColorPreview(newColor);
                     }}
                     onSave={async (finalColor) => { 
-                      if (finalColor !== (wireframe.color_value || DEFAULT_CARD_ACCENT)) {
+                      if (finalColor !== (wireframe.color_value || defaultCardAccent())) {
                         try {
                           await handleSaveWireframeColor(finalColor);
                         } catch (error) {
@@ -171,7 +171,7 @@ const WireframeCard: React.FC<WireframeCardProps> = ({
                             description: 'Could not save color. Reverting preview.',
                             variant: 'destructive',
                           });
-                          setCurrentColorPreview(wireframe.color_value || DEFAULT_CARD_ACCENT);
+                          setCurrentColorPreview(wireframe.color_value || defaultCardAccent());
                         }
                       }
                     }}

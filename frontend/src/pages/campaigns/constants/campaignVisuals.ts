@@ -10,7 +10,7 @@ import type { Campaign } from '@/types/campaigns';
 import { defineStatus, type StatusVisual } from '@/lib/statusVisuals';
 
 const CAMPAIGN_STATUS_VISUALS: Record<Campaign['status'], StatusVisual> = {
-  draft: defineStatus('Draft', 'blue', Pencil),
+  draft: defineStatus('Draft', 'theme', Pencil),
   scheduled: defineStatus('Scheduled', 'orange', Clock),
   sending: defineStatus('Sending', 'orange', Send),
   paused: defineStatus('Paused', 'orange', Pause),
@@ -25,7 +25,7 @@ export const CAMPAIGN_SUMMARY_VISUALS = {
   delivered: CAMPAIGN_STATUS_VISUALS.sent,
 } as const;
 
-export const ACTIVE_CATALOG_VISUAL = defineStatus('Available', 'blue', CheckCircle);
+export const ACTIVE_CATALOG_VISUAL = defineStatus('Available', 'theme', CheckCircle);
 export const INACTIVE_CATALOG_VISUAL = defineStatus('Unavailable', 'orange', Pause);
 
 export function getCampaignStatusVisual(status: Campaign['status']): StatusVisual {

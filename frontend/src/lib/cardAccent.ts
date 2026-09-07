@@ -1,5 +1,6 @@
 import React, { createContext, createElement, useContext, useMemo } from 'react';
 import { UI_COLORS } from '@/constants/ui';
+import { THEME_COLORS, THEME_PALETTE, readAppliedThemeColor } from '@/lib/themeColor';
 
 /**
  * A card's accent is its own colour: the dot, the progress bar, the client
@@ -9,6 +10,11 @@ import { UI_COLORS } from '@/constants/ui';
  * cards inside it; each card then owns its own accent again.
  */
 export const DEFAULT_CARD_ACCENT = UI_COLORS.defaultCardAccent;
+
+/** What a new card starts with today: the current theme's 500 step. */
+export const defaultCardAccent = (): string => THEME_PALETTE[readAppliedThemeColor()][500];
+
+const THEME_DEFAULTS = new Set(THEME_COLORS.map(color => THEME_PALETTE[color][500].toUpperCase()));
 
 export interface CardAccent {
   /** The card's colour, always a #RRGGBB string. */
@@ -45,18 +51,21 @@ export const contrastTextFor = (color: string): string => {
 };
 
 export const normalizeAccent = (color: string | null | undefined): string =>
-  color && HEX.test(color.trim()) ? color.trim().toUpperCase() : DEFAULT_CARD_ACCENT;
+  color && HEX.test(color.trim()) ? color.trim().toUpperCase() : defaultCardAccent().toUpperCase();
 
-/** True while a card still wears the colour it was created with. */
+/**
+ * True while a card still wears the colour it was created with: any theme's
+ * default, so a card made under blue still counts as unpainted on purple.
+ */
 export const isDefaultAccent = (color: string | null | undefined): boolean =>
-  !color || normalizeAccent(color) === DEFAULT_CARD_ACCENT.toUpperCase();
+  !color || THEME_DEFAULTS.has(normalizeAccent(color));
 
 export const accentFor = (color: string | null | undefined): CardAccent => {
   const normalized = normalizeAccent(color);
   return { color: normalized, contrast: contrastTextFor(normalized) };
 };
 
-const CardAccentContext = createContext<CardAccent>(accentFor(DEFAULT_CARD_ACCENT));
+const CardAccentContext = createContext<CardAccent | null>(null);
 
 export const CardAccentProvider: React.FC<{ color: string | null | undefined; children: React.ReactNode }> = ({
   color,
@@ -66,7 +75,10 @@ export const CardAccentProvider: React.FC<{ color: string | null | undefined; ch
   return createElement(CardAccentContext.Provider, { value }, children);
 };
 
-export const useCardAccent = (): CardAccent => useContext(CardAccentContext);
+export const useCardAccent = (): CardAccent => {
+  const accent = useContext(CardAccentContext);
+  return useMemo(() => accent ?? accentFor(defaultCardAccent()), [accent]);
+};
 
 /** Inline styles for the two ways an accent shows: as a filled surface, or as ink. */
 export const accentFill = (accent: CardAccent): React.CSSProperties => ({

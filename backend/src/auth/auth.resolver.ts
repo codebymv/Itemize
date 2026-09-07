@@ -13,6 +13,7 @@ import {
   RequestPasswordResetInput,
   ResetPasswordInput,
   ResendVerificationInput,
+  UpdateViewerPreferencesInput,
   UpdateViewerProfileInput,
   VerifyEmailInput,
 } from './auth.inputs';
@@ -132,6 +133,14 @@ export class AuthResolver {
     const identity = this.requestContext.current().identity;
     if (!identity) throw new Error('Verified user identity is unavailable');
     return this.identityLifecycle.updateViewerProfile(identity.userId, input.name);
+  }
+
+  @CsrfProtected()
+  @Mutation(() => CurrentUser)
+  updateViewerPreferences(@Args('input') input: UpdateViewerPreferencesInput) {
+    const identity = this.requestContext.current().identity;
+    if (!identity) throw new Error('Verified user identity is unavailable');
+    return this.identityLifecycle.updateViewerPreferences(identity.userId, input.themeColor);
   }
 
   @Public()

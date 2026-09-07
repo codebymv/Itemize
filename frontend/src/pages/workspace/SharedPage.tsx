@@ -72,7 +72,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useStableMutationKey } from '@/hooks/useStableMutationKey';
 import { getWorkspaceLanding } from '@/lib/workspaceNavigation';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { DEFAULT_CARD_ACCENT } from '@/lib/cardAccent';
+import { defaultCardAccent } from '@/lib/cardAccent';
 
 // Content type definitions
 type ContentType = 'all' | 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault';
@@ -553,7 +553,7 @@ export function SharedPage() {
                             <div className="flex items-center gap-2">
                               <Icon
                                 className="h-5 w-5"
-                                style={{ color: content.color_value || DEFAULT_CARD_ACCENT }}
+                                style={{ color: content.color_value || defaultCardAccent() }}
                               />
                               <span className="text-xs text-muted-foreground hidden sm:inline">
                                 {getTypeLabel(content.type)}

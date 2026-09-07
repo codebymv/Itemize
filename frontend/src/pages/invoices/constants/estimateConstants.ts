@@ -13,7 +13,7 @@ import {
 } from './statusVisualPrimitives';
 
 export const ESTIMATE_STATUS_CONFIG: Record<EstimateStatus, StatusVisual> = {
-  draft: defineStatus('Draft', 'blue', Clock),
+  draft: defineStatus('Draft', 'theme', Clock),
   sent: defineStatus('Sent', 'orange', Send),
   accepted: defineStatus('Accepted', 'green', CheckCircle),
   declined: defineStatus('Declined', 'red', XCircle),

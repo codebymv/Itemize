@@ -8,7 +8,7 @@ import {
 export type ContactStatus = 'active' | 'inactive' | 'archived';
 
 export const CONTACT_STATUS_CONFIG: Record<ContactStatus, StatusVisual> = {
-  active: defineStatus('Active', 'blue', CheckCircle),
+  active: defineStatus('Active', 'theme', CheckCircle),
   inactive: defineStatus('Inactive', 'orange', AlertCircle),
   archived: defineStatus('Archived', 'red', Archive),
 };

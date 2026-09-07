@@ -3,7 +3,7 @@ import { CAMPAIGN_SUMMARY_VISUALS, getCampaignStatusVisual, getCatalogStatusVisu
 
 describe('campaign visual grammar', () => {
   it.each([
-    ['draft', 'blue'],
+    ['draft', 'theme'],
     ['scheduled', 'orange'],
     ['sending', 'orange'],
     ['paused', 'orange'],
@@ -15,7 +15,7 @@ describe('campaign visual grammar', () => {
   });
 
   it('describes catalog eligibility as available or unavailable', () => {
-    expect(getCatalogStatusVisual(true).theme).toBe('blue');
+    expect(getCatalogStatusVisual(true).theme).toBe('theme');
     expect(getCatalogStatusVisual(true).label).toBe('Available');
     expect(getCatalogStatusVisual(false).theme).toBe('orange');
     expect(getCatalogStatusVisual(false).label).toBe('Unavailable');

@@ -29,6 +29,7 @@ The unused Google One Tap `POST /api/auth/google-credential` variant had no ship
 | `POST /api/auth/google-login` | `loginWithGoogleAccessToken(input)` | Verify provider token and audience server-side; require verified provider email; set cookie-only session |
 | `GET /api/auth/me` | `currentUser` | Read the signed access cookie; return normalized user identity; never cache |
 | retired `PUT /api/auth/me` | `updateViewerProfile(input)` | Authenticated and CSRF-protected; trim name; enforce 1-100 characters |
+| new | `updateViewerPreferences(input)` | Authenticated and CSRF-protected; `themeColor` validated against the palette (blue, purple, pink); returns `CurrentUser` incl. `themeColor` |
 | `POST /api/auth/logout` | `logout` | CSRF-protected; expire both session cookies; remain idempotent |
 | retired `POST /api/auth/change-password` | `changePassword(input)` | Verify current password; enforce password policy; replace password hash; notify user |
 | `POST /api/auth/forgot-password` | `requestPasswordReset(input)` | Non-enumerating response; strict rate limit; hashed one-hour token; email side effect |
