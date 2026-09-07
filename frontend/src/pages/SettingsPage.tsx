@@ -477,7 +477,7 @@ function PreferencesSettings() {
           </div>
           <div className="mt-6 flex flex-col gap-2">
             <Label className="text-sm font-medium">Theme colour</Label>
-            <p className="text-sm text-muted-foreground">Buttons, icons, and highlights across the app. Emails and shared pages keep the Itemize blue.</p>
+            <p className="text-sm text-muted-foreground">Buttons, icons, and highlights across the app.</p>
             <ThemeColorPicker />
           </div>
         </CardContent>
