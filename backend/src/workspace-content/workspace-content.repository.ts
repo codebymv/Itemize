@@ -1074,6 +1074,7 @@ export class WorkspaceContentRepository {
         'DELETE FROM lists WHERE id = $1 AND user_id = $2',
         [listId, userId],
       );
+      await this.references.removeSource(client, { sourceType: 'list', sourceId: listId });
       await this.realtimeOutbox.enqueue(client, {
         eventKey: `list:${listId}:delete:${mutationId}:owner`,
         aggregateType: 'list',
@@ -1377,6 +1378,7 @@ export class WorkspaceContentRepository {
         'DELETE FROM notes WHERE id = $1 AND user_id = $2',
         [noteId, userId],
       );
+      await this.references.removeSource(client, { sourceType: 'note', sourceId: noteId });
       if (current.is_public && current.share_token) {
         await this.realtimeOutbox.enqueue(client, {
           eventKey: `note:${noteId}:delete:${mutationId}:shared`,
@@ -1603,6 +1605,7 @@ export class WorkspaceContentRepository {
         'DELETE FROM whiteboards WHERE id = $1 AND user_id = $2',
         [whiteboardId, userId],
       );
+      await this.references.removeSource(client, { sourceType: 'whiteboard', sourceId: whiteboardId });
       if (current.is_public && current.share_token) {
         await this.realtimeOutbox.enqueue(client, {
           eventKey:
@@ -1834,6 +1837,7 @@ export class WorkspaceContentRepository {
         'DELETE FROM wireframes WHERE id = $1 AND user_id = $2',
         [wireframeId, userId],
       );
+      await this.references.removeSource(client, { sourceType: 'wireframe', sourceId: wireframeId });
       if (current.is_public && current.share_token) {
         await this.realtimeOutbox.enqueue(client, {
           eventKey:

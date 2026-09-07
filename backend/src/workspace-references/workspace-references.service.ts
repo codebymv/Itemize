@@ -62,6 +62,11 @@ export class WorkspaceReferencesService {
   }
 
   /** The same contract for a note's HTML, where references are mention nodes. */
+  /** A deleted card takes its references with it; the caller's transaction commits both. */
+  removeSource(client: PoolClient, source: ReferenceSource): Promise<void> {
+    return this.repository.removeForSource(client, source);
+  }
+
   async commitNoteReferences(
     client: PoolClient,
     userId: number,

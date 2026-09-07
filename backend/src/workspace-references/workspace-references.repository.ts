@@ -103,6 +103,14 @@ export class WorkspaceReferencesRepository {
     return allowed;
   }
 
+  /** Drops every reference a deleted card held, inside the caller's delete transaction. */
+  async removeForSource(client: PoolClient, source: ReferenceSource): Promise<void> {
+    await client.query(
+      'DELETE FROM workspace_references WHERE source_type = $1 AND source_id = $2',
+      [source.sourceType, source.sourceId],
+    );
+  }
+
   /** Makes the stored references for a card equal to `tokens`, inside the caller's transaction. */
   async replaceForSource(
     client: PoolClient,

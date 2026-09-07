@@ -4,7 +4,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ChevronDown, MoreVertical, Edit3, Trash2, X, Check, Palette, Share2 } from 'lucide-react';
+import { ChevronDown, MoreVertical, Edit3, Trash2, X, Check, Palette, Share2, Archive } from 'lucide-react';
+import { useWorkspaceArchive } from '@/hooks/useWorkspaceArchive';
 import { cn } from "@/lib/utils";
 import { ColorPicker } from '@/components/ui/color-picker';
 import { Spinner } from '@/components/ui/Spinner';
@@ -90,6 +91,7 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
   } = useWhiteboardCardLogic({ whiteboard, onUpdate, onDelete, isCollapsed, onToggleCollapsed, updateCategory });
 
   // Handle sharing
+  const { archive } = useWorkspaceArchive();
   const handleShareWhiteboard = () => {
     onShare(whiteboard.id);
   };
@@ -236,6 +238,10 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
                       <DropdownMenuItem onClick={handleShareWhiteboard} className="group/menu font-raleway">
                         <Share2 className="mr-2 h-4 w-4" />
                         Share
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => void archive('whiteboard', whiteboard.id)} className="group/menu font-raleway">
+                        <Archive className="mr-2 h-4 w-4" />
+                        Archive
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={handleDeleteConfirmation} className="text-destructive focus:text-destructive">
                         <Trash2 className="mr-2 h-4 w-4" />

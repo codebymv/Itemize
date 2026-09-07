@@ -493,3 +493,5 @@ label is display-only; the id is authoritative.
 ## Archive (2026-09-06)
 
 Migration 078 (`workspace_archive_v1`) adds nullable `archived_at` to `lists`, `notes`, `whiteboards`, `wireframes`, and `workspace_frames`. `WorkspaceContentFilterInput.archived` (`active` default | `archived` | `all`) and `workspaceFrames(archived)` scope reads; every default read, the canvas snapshot, and `contactContent` exclude archived rows. `setWorkspaceContentArchived(input { mutationId, type, id, archived })` (AccountScoped, CSRF) flips the flag without touching `updated_at`, so an open editor's revision survives a restore; `type: "vault"` is refused until the vault module can archive. Each workspace type exposes `archivedAt`. The frontend reads the archive through `ArchivedWorkspaceContent` (one query) on `/archive`.
+
+Deleting a list, note, whiteboard, or wireframe removes its `workspace_references` rows in the same transaction (`WorkspaceReferencesService.removeSource`), so `referencedBy` never lists a card that no longer exists and the table does not accumulate orphans.

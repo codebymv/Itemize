@@ -228,8 +228,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
                   </ColorPicker>
                   <StickyNote className="h-4 w-4" style={{ color: 'var(--note-color)' }} />
                   <CardTitle 
-                    className="text-lg font-medium cursor-pointer"
-                    style={{ fontFamily: '"Raleway", sans-serif' }}
+                    className="text-lg font-medium cursor-pointer font-raleway"
                     onClick={() => setIsEditing(true)}
                   >
                     {noteTitle}
@@ -251,11 +250,11 @@ const NoteCard: React.FC<NoteCardProps> = ({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setIsEditing(true)} className="group/menu" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                      <DropdownMenuItem onClick={() => setIsEditing(true)} className="group/menu font-raleway">
                         <Edit3 className="mr-2 h-4 w-4" />
                         Edit Title
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={handleShareNote} className="group/menu" style={{ fontFamily: '"Raleway", sans-serif' }}>
+                      <DropdownMenuItem onClick={handleShareNote} className="group/menu font-raleway">
                         <Share2 className="mr-2 h-4 w-4" />
                         Share
                       </DropdownMenuItem>

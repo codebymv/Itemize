@@ -2314,4 +2314,43 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
     }).expect(200);
     expect(vault.body.errors?.[0]?.extensions?.code).toBe('BAD_USER_INPUT');
   });
+  it('takes a deleted card\'s references with it', async () => {
+    const created = await mutation(
+      memberToken,
+      `mutation Create($input: CreateWorkspaceListInput!) {
+        createWorkspaceList(input: $input) { id references { entityType entityId } }
+      }`,
+      {
+        input: {
+          idempotencyKey: '5682dcfe-3947-4fba-8c6d-7c8d9eafb0cd',
+          title: 'Short-lived',
+          items: [{ id: 'a', text: `Bill $[INV](invoice:${memberInvoiceId})`, completed: false }],
+        },
+      },
+    ).expect(200);
+    expect(created.body.errors).toBeUndefined();
+    const listId = Number(created.body.data.createWorkspaceList.id);
+    expect(created.body.data.createWorkspaceList.references).toEqual([
+      { entityType: 'invoice', entityId: memberInvoiceId },
+    ]);
+    const before = await pool.query<{ total: number }>(
+      "SELECT COUNT(*)::int AS total FROM workspace_references WHERE source_type = 'list' AND source_id = $1",
+      [listId],
+    );
+    expect(before.rows[0].total).toBe(1);
+
+    const deleted = await mutation(
+      memberToken,
+      `mutation Delete($id: Int!, $mutationId: String!) {
+        deleteWorkspaceList(id: $id, mutationId: $mutationId) { deletedId }
+      }`,
+      { id: listId, mutationId: '6793edaf-4a58-4acb-9d7e-8d9eafb0c1de' },
+    ).expect(200);
+    expect(deleted.body.errors).toBeUndefined();
+    const after = await pool.query<{ total: number }>(
+      "SELECT COUNT(*)::int AS total FROM workspace_references WHERE source_type = 'list' AND source_id = $1",
+      [listId],
+    );
+    expect(after.rows[0].total).toBe(0);
+  });
 });
