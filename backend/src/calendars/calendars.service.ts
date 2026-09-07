@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
 import { itemizeGraphqlError } from '../common/graphql-error';
 import { calendarCreationFingerprint } from './calendar-creation.idempotency';
+import { DEFAULT_CARD_ACCENT } from '../common/brand';
 import {
   CalendarAvailabilityWindowInput,
   CalendarDateOverrideInput,
@@ -113,7 +114,7 @@ export class CalendarsService {
         0,
         8760,
       ),
-      color: this.color(input.color ?? '#3B82F6'),
+      color: this.color(input.color ?? DEFAULT_CARD_ACCENT),
       isActive: input.isActive ?? true,
       availabilityWindows,
     };

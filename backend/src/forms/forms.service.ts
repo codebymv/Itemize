@@ -11,6 +11,7 @@ import {
 import { CreateFormInput, FormFieldInput, FormFilterInput, UpdateFormInput } from './form.inputs';
 import { formCreationFingerprint } from './form-creation.idempotency';
 import { Form, FormField, FormPage, FormSubmission, FormSubmissionPage } from './form.types';
+import { BRAND_BLUE_SOFT } from '../common/brand';
 import {
   FormFieldRow,
   FormFieldValue,
@@ -112,7 +113,7 @@ export class FormsService {
       redirectUrl: normalizeRedirectUrl(input.redirectUrl),
       notifyOnSubmit: input.notifyOnSubmit ?? true,
       notificationEmails: normalizeNotificationEmails(input.notificationEmails),
-      theme: this.record(input.theme ?? { primaryColor: '#3B82F6' }, 'theme'),
+      theme: this.record(input.theme ?? { primaryColor: BRAND_BLUE_SOFT }, 'theme'),
       createContact: input.createContact ?? true,
       contactTags: this.tags(input.contactTags ?? []),
       fields,

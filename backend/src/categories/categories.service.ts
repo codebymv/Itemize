@@ -3,6 +3,7 @@ import { GraphQLError } from 'graphql';
 import { itemizeGraphqlError } from '../common/graphql-error';
 import { CreateCategoryInput, UpdateCategoryInput } from './category.inputs';
 import { Category } from './category.types';
+import { DEFAULT_CARD_ACCENT } from '../common/brand';
 import {
   CategoriesRepository,
   CategoryRow,
@@ -13,7 +14,7 @@ import {
   categoryCreationKey,
 } from './category-creation.idempotency';
 
-const DEFAULT_CATEGORY_COLOR = '#3B82F6';
+const DEFAULT_CATEGORY_COLOR = DEFAULT_CARD_ACCENT;
 const COLOR_PATTERN = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
 
 @Injectable()

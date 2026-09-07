@@ -30,6 +30,7 @@ import {
   UpdatePageValue,
 } from './landing-pages.repository';
 import { landingPageCreationFingerprint } from './landing-page-creation.idempotency';
+import { BRAND_BLUE_DEEP, BRAND_BLUE_SOFT } from '../common/brand';
 
 const PAGE_STATUSES = new Set(['draft', 'published', 'archived']);
 const SECTION_TYPES = new Set([
@@ -39,8 +40,8 @@ const SECTION_TYPES = new Set([
   'team', 'contact', 'map',
 ]);
 const DEFAULT_THEME = {
-  primaryColor: '#3B82F6',
-  secondaryColor: '#1E40AF',
+  primaryColor: BRAND_BLUE_SOFT,
+  secondaryColor: BRAND_BLUE_DEEP,
   backgroundColor: '#FFFFFF',
   textColor: '#1F2937',
   fontFamily: 'Inter',

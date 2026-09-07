@@ -43,6 +43,8 @@ export const BRAND_SURFACES = [
   'components/chat-widget/*Preview*.tsx',
   'components/reputation/*Preview*.tsx',
   'lib/landingPageDocument.ts',
+  // The email body composer previews content the recipient sees; its prose styles are brand.
+  'components/admin/RichTextEditor.tsx',
 ] as const;
 
 const toRegExp = (pattern: string): RegExp => {

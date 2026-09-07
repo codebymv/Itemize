@@ -1,5 +1,6 @@
 import createDOMPurify from 'dompurify';
 import { JSDOM } from 'jsdom';
+import { BRAND_BLUE, BRAND_BLUE_DEEP, BRAND_TINT, BRAND_WASH } from '../common/brand';
 
 const purifier = createDOMPurify(
   new JSDOM('').window as unknown as Parameters<typeof createDOMPurify>[0],
@@ -19,13 +20,13 @@ const ALLOWED_CLASSES = new Set([
 ]);
 
 const CLASS_STYLES: Record<string, string> = {
-  'button-primary': 'display:inline-block;background:#2563eb;color:#ffffff!important;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:700;margin:8px 0',
+  'button-primary': `display:inline-block;background:${BRAND_BLUE};color:#ffffff!important;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:700;margin:8px 0`,
   'button-secondary': 'display:inline-block;background:#e2e8f0;color:#334155!important;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:700;margin:8px 0',
-  'callout-info': 'background:#eff6ff;border-left:4px solid #2563eb;padding:14px 18px;border-radius:0 8px 8px 0;margin:18px 0',
+  'callout-info': `background:${BRAND_WASH};border-left:4px solid ${BRAND_BLUE};padding:14px 18px;border-radius:0 8px 8px 0;margin:18px 0`,
   'callout-warning': 'background:#fffbeb;border-left:4px solid #f59e0b;padding:14px 18px;border-radius:0 8px 8px 0;margin:18px 0',
   'callout-success': 'background:#f0fdf4;border-left:4px solid #22c55e;padding:14px 18px;border-radius:0 8px 8px 0;margin:18px 0',
   'callout-slate': 'background:#f1f5f9;border-left:4px solid #64748b;padding:14px 18px;border-radius:0 8px 8px 0;margin:18px 0',
-  'badge-blue': 'display:inline-block;background:#dbeafe;color:#1e40af;padding:3px 9px;border-radius:6px;font-size:12px;font-weight:700',
+  'badge-blue': `display:inline-block;background:${BRAND_TINT};color:${BRAND_BLUE_DEEP};padding:3px 9px;border-radius:6px;font-size:12px;font-weight:700`,
   'badge-green': 'display:inline-block;background:#dcfce7;color:#166534;padding:3px 9px;border-radius:6px;font-size:12px;font-weight:700',
   'badge-amber': 'display:inline-block;background:#fef3c7;color:#92400e;padding:3px 9px;border-radius:6px;font-size:12px;font-weight:700',
   'badge-orange': 'display:inline-block;background:#ffedd5;color:#9a3412;padding:3px 9px;border-radius:6px;font-size:12px;font-weight:700',
@@ -43,7 +44,7 @@ const TAG_STYLES: Record<string, string> = {
   ol: 'margin:0 0 16px;padding-left:24px',
   li: 'margin:0 0 6px',
   blockquote: 'margin:18px 0;padding:4px 0 4px 16px;border-left:4px solid #cbd5e1;color:#475569',
-  a: 'color:#2563eb;text-decoration:underline',
+  a: `color:${BRAND_BLUE};text-decoration:underline`,
   hr: 'border:0;border-top:1px solid #e2e8f0;margin:24px 0',
 };
 

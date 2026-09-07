@@ -25,6 +25,7 @@ import { normalizeWhiteboardCanvasData, sanitizeWhiteboardPaths } from '@/lib/wh
 import { attachSketchCanvasPointerFix } from '@/utils/sketchCanvasPointer';
 import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
 import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
+import { BRAND_BLUE } from '@/lib/brand';
 // TODO: Integrate coordinate normalization for mobile canvas support
 // import { processCanvasDataForLoad, processCanvasDataForSave } from '@/utils/canvasCoordinates';
 
@@ -41,7 +42,7 @@ interface WhiteboardCanvasProps {
 
 // Pre-defined color palette for easy selection
 const COLOR_PALETTE = [
-  '#2563eb', // Blue (default theme color)
+  BRAND_BLUE, // Blue: a drawing's ink is the Itemize blue, not the app theme
   '#000000', // Black
   '#FF0000', // Red
   '#00FF00', // Green
@@ -72,7 +73,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   // Drawing tool state
   const [currentTool, setCurrentTool] = useState<'pen' | 'eraser'>('pen');
   const accent = useCardAccent();
-  const [strokeColor, setStrokeColor] = useState('#2563eb'); // Default to theme blue
+  const [strokeColor, setStrokeColor] = useState(BRAND_BLUE);
   const [strokeWidth, setStrokeWidth] = useState(isMobile ? 3 : 2); // Slightly thicker for mobile
   const [isDrawing, setIsDrawing] = useState(false);
   const [contentScale, setContentScale] = useState(1);

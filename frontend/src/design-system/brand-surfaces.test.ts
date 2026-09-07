@@ -13,6 +13,7 @@ describe('brand surfaces', () => {
       'components/LandingNav.tsx',
       'components/SharedListCard.tsx',
       'lib/landingPageDocument.ts',
+      'components/admin/RichTextEditor.tsx',
     ]) {
       expect(isBrandSurface(path), path).toBe(true);
     }

@@ -5,6 +5,7 @@ import { stripMentionTokens } from './mention-tokens';
 import { WorkspaceReferencesService } from '../workspace-references/workspace-references.service';
 import { RealtimeOutboxService } from '../realtime-outbox/realtime-outbox.service';
 import { sanitizeNoteHtml } from './note-html';
+import { DEFAULT_CARD_ACCENT } from '../common/brand';
 
 export type WorkspaceListItemRow = {
   id: string;
@@ -1773,7 +1774,7 @@ export class WorkspaceContentRepository {
           values.width ?? current.width ?? 600,
           values.height ?? current.height ?? 600,
           values.zIndex ?? current.z_index ?? 0,
-          values.colorValue ?? current.color_value ?? '#3B82F6',
+          values.colorValue ?? current.color_value ?? DEFAULT_CARD_ACCENT,
           contactId,
           wireframeId,
           userId,
@@ -2162,7 +2163,7 @@ export class WorkspaceContentRepository {
       title: wireframe.title,
       category: wireframe.category ?? 'General',
       flow_data: wireframe.flow_data,
-      color_value: wireframe.color_value ?? '#3B82F6',
+      color_value: wireframe.color_value ?? DEFAULT_CARD_ACCENT,
       updated_at: new Date(wireframe.updated_at).toISOString(),
     };
   }

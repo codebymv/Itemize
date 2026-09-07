@@ -37,12 +37,14 @@ describe('visual language: one palette', () => {
   const PILL = /bg-(blue|green|orange|red|gray|slate|yellow|sky|amber|purple|pink)-100[^"'`]*text-\1-800/;
 
   const PALETTE_OWNER = 'lib/statusVisuals.ts';
+  // The email body composer styles recipient content in the brand blues, not app status.
+  const BRAND_PROSE = 'components/admin/RichTextEditor.tsx';
   // Reputation widget types are a categorical scale, not a status; see badge-utils.
   const CATEGORICAL = { path: 'lib/badge-utils.ts', colors: ['purple', 'pink'] };
 
   it('declares status pill classes in exactly one module', () => {
     const offenders = ALL_SOURCES.filter(file => {
-      if (file.path === PALETTE_OWNER) return false;
+      if (file.path === PALETTE_OWNER || file.path === BRAND_PROSE) return false;
       const matches: string[] = file.body.match(new RegExp(PILL, 'g')) ?? [];
       if (matches.length === 0) return false;
       if (file.path !== CATEGORICAL.path) return true;

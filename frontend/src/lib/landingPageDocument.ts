@@ -6,6 +6,7 @@ import type {
   PublicPage,
 } from '@/services/pagesApi';
 import { publicFormPath } from '@/lib/publicContentRoutes';
+import { BRAND_BLUE } from '@/lib/brand';
 
 export type LandingPageDocument = Pick<
   PublicPage,
@@ -25,7 +26,7 @@ export type LandingPageDocument = Pick<
 >;
 
 const DEFAULT_THEME: PageTheme = {
-  primaryColor: '#2563eb',
+  primaryColor: BRAND_BLUE,
   secondaryColor: '#0f172a',
   backgroundColor: '#ffffff',
   textColor: '#0f172a',

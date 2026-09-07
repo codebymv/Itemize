@@ -1,3 +1,4 @@
+import { BRAND_BLUE } from '@/lib/brand';
 export type WhiteboardSketchPoint = { x: number; y: number };
 
 export type WhiteboardSketchPath = {
@@ -47,7 +48,7 @@ export function sanitizeWhiteboardPaths(value: unknown): WhiteboardSketchPath[] 
     if (typeof path !== 'object' || path === null) {
       return {
         drawMode: true,
-        strokeColor: '#2563eb',
+        strokeColor: BRAND_BLUE,
         strokeWidth: 2,
         paths: [],
       };
@@ -66,7 +67,7 @@ export function sanitizeWhiteboardPaths(value: unknown): WhiteboardSketchPath[] 
 
     return {
       drawMode: typeof pathRecord.drawMode === 'boolean' ? pathRecord.drawMode : true,
-      strokeColor: typeof pathRecord.strokeColor === 'string' ? pathRecord.strokeColor : '#2563eb',
+      strokeColor: typeof pathRecord.strokeColor === 'string' ? pathRecord.strokeColor : BRAND_BLUE,
       strokeWidth: typeof pathRecord.strokeWidth === 'number' ? pathRecord.strokeWidth : 2,
       paths: rawPoints.filter(isSketchPoint),
     };

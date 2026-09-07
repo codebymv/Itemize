@@ -62,6 +62,7 @@ import {
 } from "@/services/reputationConfigurationGraphql";
 import { getReviewsViaGraphql } from "@/services/reputationReviewsGraphql";
 import { ReputationWidgetPreview } from "./components/ReputationWidgetPreview";
+import { BRAND_BLUE } from '@/lib/brand';
 import {
   getReputationPlatformLabel,
   getReviewWidgetAvailabilityVisual,
@@ -79,7 +80,7 @@ const DEFAULT_DRAFT: WidgetDraft = {
   name: "New review widget",
   widget_type: "carousel",
   theme: "auto",
-  primary_color: "#2563EB",
+  primary_color: BRAND_BLUE,
   background_color: "#FFFFFF",
   text_color: "#0F172A",
   border_radius: 12,

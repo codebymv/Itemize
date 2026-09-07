@@ -9,6 +9,7 @@ import { CampaignSendRepository } from './campaign-send.repository';
 import { CampaignSendResult } from './campaign-send.types';
 import { CampaignResumeResult } from './campaign-send.types';
 import { renderEmailTemplateDocument } from '../email-templates/email-template-renderer';
+import { BRAND_BLUE } from '../common/brand';
 import {
   campaignUnsubscribeToken,
   campaignUnsubscribeUrl,
@@ -108,7 +109,7 @@ export class CampaignSendService {
           bodyHtml: claimed.payload.html,
           bodyText: claimed.payload.text,
           data: { ...data, unsubscribe_url: unsubscribeUrl },
-          footerHtml: `Sent with Itemize. <a href="${unsubscribeUrl}" style="color:#2563eb;text-decoration:underline">Unsubscribe</a>`,
+          footerHtml: `Sent with Itemize. <a href="${unsubscribeUrl}" style="color:${BRAND_BLUE};text-decoration:underline">Unsubscribe</a>`,
         });
         const result = await this.provider.send({
           to: claimed.email,

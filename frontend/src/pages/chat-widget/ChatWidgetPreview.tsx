@@ -3,6 +3,7 @@ import { MessageCircle, Send, X } from 'lucide-react';
 import { LiveServicePreview, ServicePreviewBrowser } from '@/components/preview/LiveServicePreview';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
+import { BRAND_BLUE } from '@/lib/brand';
 
 export interface ChatWidgetPreviewConfig {
   name: string;
@@ -24,7 +25,7 @@ const safeHexColor = (value: string, fallback: string) =>
 
 export function ChatWidgetPreview({ config }: { config: ChatWidgetPreviewConfig }) {
   const [availability, setAvailability] = useState<'online' | 'offline'>('online');
-  const primaryColor = safeHexColor(config.primary_color, '#2563EB');
+  const primaryColor = safeHexColor(config.primary_color, BRAND_BLUE);
   const textColor = safeHexColor(config.text_color, '#FFFFFF');
   const isTop = config.position.startsWith('top');
   const isRight = config.position.endsWith('right');

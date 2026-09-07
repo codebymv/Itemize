@@ -1,6 +1,7 @@
 import React from 'react';
 import { SharedItemCard } from '@/components/public/BrandedPublicPage';
 import { sanitizeNoteHtml } from '@/lib/sanitizeNoteHtml';
+import { BRAND_BLUE } from '@/lib/brand';
 
 interface SharedNoteData {
   id: number;
@@ -20,7 +21,7 @@ interface SharedNoteCardProps {
 }
 
 export const SharedNoteCard: React.FC<SharedNoteCardProps> = ({ noteData, isLive = false }) => {
-  const noteColor = noteData.color_value || '#2563eb';
+  const noteColor = noteData.color_value || BRAND_BLUE;
 
 // Render content - just return it, prose classes are on the parent
   const renderContent = (content: string) => {

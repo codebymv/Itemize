@@ -14,6 +14,7 @@ import {
   WorkspaceFramesRepository,
 } from './workspace-frames.repository';
 import { WorkspaceFrame, WorkspaceFramePage } from './workspace-frames.types';
+import { DEFAULT_CARD_ACCENT } from '../common/brand';
 
 const MAX_TITLE_LENGTH = 200;
 const MAX_CATEGORY_LENGTH = 100;
@@ -21,7 +22,7 @@ const MIN_FRAME_DIMENSION = 200;
 const MAX_FRAME_DIMENSION = 10_000;
 const MAX_PAGE_SIZE = 100;
 const DEFAULT_TITLE = 'Untitled frame';
-const DEFAULT_COLOR = '#3B82F6';
+const DEFAULT_COLOR = DEFAULT_CARD_ACCENT;
 const DEFAULT_SIZE = { width: 1400, height: 900 };
 const COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
 const MUTATION_ID_PATTERN =

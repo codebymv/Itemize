@@ -1,3 +1,4 @@
+import { BRAND_BLUE } from './brand';
 export type BrandedTransactionalEmailInput = {
   assetOrigin: string;
   previewText: string;
@@ -17,7 +18,7 @@ const EMAIL_TOKENS = {
   body: '#334155',
   muted: '#64748b',
   border: '#e2e8f0',
-  primary: '#2563eb',
+  primary: BRAND_BLUE,
   radius: '12px',
   controlRadius: '8px',
   font: "'Raleway','Segoe UI',Roboto,Arial,sans-serif",

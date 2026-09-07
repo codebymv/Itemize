@@ -3,6 +3,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
 import { RealtimeOutboxService } from '../realtime-outbox/realtime-outbox.service';
+import { BRAND_BLUE_SOFT } from '../common/brand';
 import {
   ensureChatInboxConversation,
   mirrorChatMessageToInbox,
@@ -243,7 +244,7 @@ export class ChatWidgetRepository {
           organizationId,
           `cw_${randomBytes(16).toString('hex')}`,
           values.name ?? 'Chat Widget',
-          values.primaryColor ?? '#3B82F6',
+          values.primaryColor ?? BRAND_BLUE_SOFT,
           values.textColor ?? '#FFFFFF',
           values.position ?? 'bottom-right',
           values.iconStyle ?? 'chat',

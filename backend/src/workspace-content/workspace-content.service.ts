@@ -8,6 +8,7 @@ import { GetStartedService } from '../get-started/get-started.service';
 import { sanitizeNoteHtml } from './note-html';
 import { normalizeWhiteboardCanvasData } from './whiteboard-canvas-data';
 import { NormalizedPage, PageInput, pageInfo } from '../common/pagination';
+import { DEFAULT_CARD_ACCENT } from '../common/brand';
 import {
   BatchCanvasPositionsInput,
   SetWorkspaceContentArchivedInput,
@@ -63,7 +64,7 @@ import {
   UpdateWorkspaceWireframeInput,
 } from './workspace-wireframe.inputs';
 
-const DEFAULT_NOTE_COLOR = '#3B82F6';
+const DEFAULT_NOTE_COLOR = DEFAULT_CARD_ACCENT;
 const DEFAULT_LIST_WIDTH = 340;
 const DEFAULT_LIST_HEIGHT = 265;
 const MAX_LIST_ITEMS = 100;
@@ -634,7 +635,7 @@ export class WorkspaceContentService {
         : this.whiteboardInteger(input.zIndex, 'zIndex'),
       contactId: this.contactIdInput(input.contactId),
       colorValue: input.colorValue === undefined
-        ? '#3B82F6'
+        ? DEFAULT_CARD_ACCENT
         : this.whiteboardOptionalColor(input.colorValue),
     };
     try {
@@ -816,7 +817,7 @@ export class WorkspaceContentService {
         : this.wireframeInteger(input.zIndex, 'zIndex'),
       contactId: this.contactIdInput(input.contactId),
       colorValue: input.colorValue === undefined
-        ? '#3B82F6'
+        ? DEFAULT_CARD_ACCENT
         : this.wireframeColor(input.colorValue),
     };
     try {
@@ -1426,7 +1427,7 @@ export class WorkspaceContentService {
       contactId: row.contact_id === null ? null : Number(row.contact_id),
       contactName: row.contact_name ?? null,
       references,
-      colorValue: row.color_value ?? '#3B82F6',
+      colorValue: row.color_value ?? DEFAULT_CARD_ACCENT,
       shareToken: row.share_token,
       isPublic: Boolean(row.is_public),
       sharedAt: row.shared_at ? new Date(row.shared_at) : null,

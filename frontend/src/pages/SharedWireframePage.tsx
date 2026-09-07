@@ -13,6 +13,7 @@ import {
   registerSharedRealtimeRecovery,
 } from '@/lib/sharedRealtime';
 import type { FlowData } from '@/types';
+import { BRAND_BLUE } from '@/lib/brand';
 
 interface SharedWireframeData {
   id: number;
@@ -193,7 +194,7 @@ const SharedWireframePage: React.FC = () => {
         creatorName={wireframe.creator_name}
         createdAt={wireframe.created_at}
         isLive={isConnected}
-        accentColor={wireframe.color_value || '#2563eb'}
+        accentColor={wireframe.color_value || BRAND_BLUE}
         className="mx-auto w-full max-w-5xl text-left"
         contentClassName="p-3 sm:p-5"
       >

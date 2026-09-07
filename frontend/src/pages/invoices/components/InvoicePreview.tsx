@@ -10,6 +10,7 @@ import {
 import { getAssetUrl } from '@/lib/api';
 import { Business } from '@/services/invoicesApi';
 import { getInvoiceFooterText } from '../utils/invoiceFormatters';
+import { BRAND_BLUE } from '@/lib/brand';
 
 export interface LineItem {
     id: string;
@@ -190,7 +191,7 @@ export function InvoicePreview({
                             )}
                         </div>
                         <div style={{ textAlign: 'right' }}>
-                            <h1 style={{ fontSize: '32px', fontWeight: 300, color: '#2563eb', margin: '0 0 4px 0' }}>INVOICE</h1>
+                            <h1 style={{ fontSize: '32px', fontWeight: 300, color: BRAND_BLUE, margin: '0 0 4px 0' }}>INVOICE</h1>
                             {invoiceNumber && (
                                 <div className="invoice-preview-invoice-number" style={{ fontSize: '14px', color: '#6b7280' }}>{invoiceNumber}</div>
                             )}
@@ -305,7 +306,7 @@ export function InvoicePreview({
                         marginRight: '-40px',
                         marginBottom: '0',
                         padding: '16px 24px',
-                        backgroundColor: '#2563eb',
+                        backgroundColor: BRAND_BLUE,
                         borderRadius: '0',
                         textAlign: 'center',
                         color: '#ffffff',

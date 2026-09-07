@@ -19,6 +19,7 @@ import {
   hashShareToken,
 } from './vault.crypto';
 import { VaultUnlockRateLimitService } from './vault-unlock-rate-limit.service';
+import { DEFAULT_CARD_ACCENT } from '../common/brand';
 import {
   EnableVaultSharingResult,
   UpdateVaultValue,
@@ -124,7 +125,7 @@ export class VaultService {
     const values = {
       title: this.text(input.title ?? 'Untitled Vault', 'title', 255),
       category: this.text(input.category ?? 'General', 'category', 255),
-      colorValue: this.color(input.colorValue ?? '#3B82F6'),
+      colorValue: this.color(input.colorValue ?? DEFAULT_CARD_ACCENT),
       positionX: this.coordinate(input.positionX, 'positionX'),
       positionY: this.coordinate(input.positionY, 'positionY'),
       width: this.dimension(input.width ?? 400, 'width'),

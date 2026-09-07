@@ -4,12 +4,13 @@ import { itemizeGraphqlError } from '../common/graphql-error';
 import { CreateTagInput, UpdateTagInput } from './tag.inputs';
 import { Tag } from './tag.types';
 import { TagRow, TagsRepository, TagValues } from './tags.repository';
+import { DEFAULT_CARD_ACCENT } from '../common/brand';
 import {
   tagCreationFingerprint,
   tagCreationKey,
 } from './tag-creation.idempotency';
 
-const DEFAULT_TAG_COLOR = '#3B82F6';
+const DEFAULT_TAG_COLOR = DEFAULT_CARD_ACCENT;
 const COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
 
 @Injectable()

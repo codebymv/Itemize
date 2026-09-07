@@ -3,6 +3,7 @@ import { SharedItemCard } from '@/components/public/BrandedPublicPage';
 import { ReactSketchCanvas, ReactSketchCanvasRef } from 'react-sketch-canvas';
 import type { CanvasPath } from 'react-sketch-canvas/dist/types';
 import { normalizeWhiteboardCanvasData } from '@/lib/whiteboardCanvasData';
+import { BRAND_BLUE } from '@/lib/brand';
 
 interface SharedWhiteboardData {
   id: number;
@@ -38,7 +39,7 @@ const toCanvasPaths = (value: unknown): CanvasPath[] => {
 
       return {
         drawMode: pathRecord.drawMode ?? true,
-        strokeColor: pathRecord.strokeColor || '#2563eb',
+        strokeColor: pathRecord.strokeColor || BRAND_BLUE,
         strokeWidth: pathRecord.strokeWidth || 2,
         paths: Array.isArray(pathRecord.paths) ? pathRecord.paths : [],
       };
@@ -46,7 +47,7 @@ const toCanvasPaths = (value: unknown): CanvasPath[] => {
 
     return {
       drawMode: true,
-      strokeColor: '#2563eb',
+      strokeColor: BRAND_BLUE,
       strokeWidth: 2,
       paths: [],
     };
@@ -62,7 +63,7 @@ export const SharedWhiteboardCard: React.FC<SharedWhiteboardCardProps> = ({ whit
 
   // Category display matching canvas logic
   const displayCategory = whiteboardData.category || 'General';
-  const whiteboardColor = whiteboardData.color_value || '#2563eb';
+  const whiteboardColor = whiteboardData.color_value || BRAND_BLUE;
 
   // Check if mobile on mount and resize
   useEffect(() => {

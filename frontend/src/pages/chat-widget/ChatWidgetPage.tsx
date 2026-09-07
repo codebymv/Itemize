@@ -67,6 +67,7 @@ import {
 } from "./ChatWidgetPreview";
 import { getCommunicationAvailabilityVisual } from "@/pages/communications/constants/communicationVisuals";
 import { cn } from "@/lib/utils";
+import { BRAND_BLUE } from '@/lib/brand';
 
 interface LocalChatWidgetConfig extends ChatWidgetPreviewConfig {
   id?: number;
@@ -83,7 +84,7 @@ const DEFAULT_CONFIG: LocalChatWidgetConfig = {
   offline_message:
     "We are currently offline. Leave a message and we will get back to you.",
   placeholder_text: "Type your message...",
-  primary_color: "#2563EB",
+  primary_color: BRAND_BLUE,
   text_color: "#FFFFFF",
   position: "bottom-right",
   show_branding: true,
@@ -574,7 +575,7 @@ export function ChatWidgetPage() {
                           value={
                             isHexColor(config.primary_color)
                               ? config.primary_color
-                              : "#2563EB"
+                              : BRAND_BLUE
                           }
                           onChange={(event) =>
                             updateConfig(

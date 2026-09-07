@@ -1,4 +1,5 @@
 import { brandedTransactionalEmail } from '../common/branded-transactional-email';
+import { BRAND_BLUE } from '../common/brand';
 
 const escapeHtml = (value: string): string => value.replace(/[&<>"']/g, (character) => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -38,8 +39,8 @@ export const wrapAdminEmail = (
     heading: subject,
     bodyHtml: documentBody,
     footerHtml:
-      `<a href="{{unsubscribeUrl}}" style="color:#2563eb;text-decoration:none">Unsubscribe</a> &middot; ` +
-      `<a href="${safeBaseUrl}" style="color:#2563eb;text-decoration:none">Visit Itemize</a>`,
+      `<a href="{{unsubscribeUrl}}" style="color:${BRAND_BLUE};text-decoration:none">Unsubscribe</a> &middot; ` +
+      `<a href="${safeBaseUrl}" style="color:${BRAND_BLUE};text-decoration:none">Visit Itemize</a>`,
   });
 };
 

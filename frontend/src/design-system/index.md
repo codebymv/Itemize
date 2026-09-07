@@ -62,7 +62,8 @@ page icons, active icon tabs, section card titles, links -- is `text-icon-accent
 (`lib/themeColor.ts`; blue is only the default), so never restate a raw
 `blue-600`/`blue-400` on an application surface. Brand surfaces
 (`design-system/brand-surfaces.ts`) are the one exception and stay blue for
-everyone; `visual-language.test.ts` ratchets the remaining raw blues down.
+everyone, importing `BRAND_BLUE` from `lib/brand.ts` rather than a token;
+`visual-language.test.ts` holds application surfaces at zero raw blues.
 
 ### Spacing
 
