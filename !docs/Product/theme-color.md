@@ -29,7 +29,7 @@ All theme tokens are HSL triplets on `:root`, overridden per `data-theme-color` 
 | `--primary-hover` | 700 | 700 | hover on fills |
 | `--icon-accent` (exists) | 600 | 400 | ink: chrome icons, links, emphasis text — the current `text-blue-600 dark:text-blue-400` pairing |
 | `--ring` | 600 | 600 | focus rings, selection rings (wireframe nodes) |
-| `--theme-tint` (new) | 100 | 900/30 | soft backgrounds: `bg-blue-50/100` sites, icon discs |
+| `--theme-tint` (new) | 100 | 950 | soft backgrounds: `bg-blue-50/100` sites, icon discs, banners (950 so dark washes stay as quiet as the old `dark:bg-blue-950`) |
 | `--card-accent-default` (new) | 500 | 500 | what a new card starts with; `isDefaultAccent` compares to this |
 
 Tailwind exposes them as `bg-primary`, `text-primary`, `text-icon-accent` (new colour key `iconAccent`), `ring-ring`, `bg-theme-tint`. The existing `.icon-accent` utility (already used by `SectionCardTitle` and tabs) stays as the class form.
@@ -49,7 +49,7 @@ Tailwind's own scale, so contrast on white/dark grounds matches what blue has to
 - **Storage:** `users.theme_color VARCHAR(16) NOT NULL DEFAULT 'blue'` (migration 080). Exposed as `CurrentUser.themeColor`; set through `updateViewerPreferences(input { mutationId, themeColor })` (AccountScoped, CSRF). Validated against the palette.
 - **Fast paint:** `lib/themeColor.ts` mirrors the value to localStorage (`itemize:theme-color`) and an inline script in `index.html` stamps `data-theme-color` before React mounts, the way `next-themes` stamps mode — no flash of blue on a purple account. Server value wins on load and overwrites the mirror.
 - **UI:** Settings › Appearance, beside Light/Dark: three swatches (blue, purple, pink) with the selected one filled. Saving is optimistic; failure reverts and toasts.
-- **Favicon:** `ThemeFavicon` renders an inline SVG data URL with `fill` from the palette (600 light / 400 dark), replacing the two PNGs.
+- **Favicon and mark:** `ThemeFavicon` tints the shipped PNG on a canvas (600 light / 400 dark) into a data URL; blue keeps the two PNGs. In the app the mark is `components/ThemeMark.tsx`: the PNG as a CSS mask filled with `bg-icon-accent`, used by the sidebar and the notification list. Brand surfaces keep the plain blue `<img src="/icon.png">`.
 - **Default card accent:** `CreateItemModal` defaults to `--card-accent-default`; `isDefaultAccent` compares to the *current* theme's 500. A card with an explicit `color_value` keeps it when the theme changes — the DB value is the record of intent, the same rule as the frame flows.
 
 ## Slices

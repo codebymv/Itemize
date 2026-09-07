@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { ThemeMark } from '@/components/ThemeMark';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { isThisWeek, isToday } from 'date-fns';
 import {
@@ -90,12 +91,7 @@ function NotificationIcon({ notification }: { notification: AppNotification }) {
   switch (getNotificationIconKind(notification)) {
     case 'itemize':
       return (
-        <img
-          src="/icon.png"
-          alt=""
-          aria-hidden="true"
-          className="h-[18px] w-6 max-w-none object-contain"
-        />
+        <ThemeMark className="h-[18px] w-6 max-w-none" />
       );
     case 'viewed':
       return <Eye className="h-4 w-4 text-icon-accent" aria-hidden="true" />;

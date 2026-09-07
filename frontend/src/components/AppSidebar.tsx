@@ -1,4 +1,5 @@
 import React from 'react';
+import { ThemeMark } from '@/components/ThemeMark';
 import { useQuery } from '@tanstack/react-query';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -477,26 +478,11 @@ export function AppSidebar() {
                 'relative block h-8 w-10 min-h-8 min-w-10 max-h-8 max-w-10 shrink-0 overflow-hidden',
                 'transition-[transform,filter] duration-500 ease-out',
                 'group-hover:-translate-y-1 group-hover:translate-x-0.5',
-                'group-hover:drop-shadow-[0_6px_10px_rgba(37,99,235,0.32)]',
+                'group-hover:drop-shadow-[0_6px_10px_hsl(var(--primary)/0.32)]',
             )}
         >
             <span className="relative block h-full w-full overflow-hidden">
-                <img
-                    src="/icon.png"
-                    width={40}
-                    height={32}
-                    alt=""
-                    aria-hidden="true"
-                    className="block h-8 w-10 object-contain dark:hidden"
-                />
-                <img
-                    src="/icon-blue-400.png"
-                    width={40}
-                    height={32}
-                    alt=""
-                    aria-hidden="true"
-                    className="hidden h-8 w-10 object-contain dark:block"
-                />
+                <ThemeMark className="h-8 w-10" />
                 <span
                     aria-hidden="true"
                     className="pointer-events-none absolute inset-0 overflow-hidden"
