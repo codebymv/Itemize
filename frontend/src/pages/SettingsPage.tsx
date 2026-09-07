@@ -477,7 +477,7 @@ function PreferencesSettings() {
           </div>
           <div className="mt-6 flex items-center justify-between gap-4">
             <div>
-              <Label>Theme colour</Label>
+              <Label>Theme color</Label>
               <p className="mt-1 text-sm text-muted-foreground">Buttons, icons, and highlights across the app.</p>
             </div>
             <ThemeColorPicker />

@@ -37,7 +37,7 @@ export function ThemeColorPicker() {
     } catch {
       applyThemeColor(previous);
       toast({
-        title: 'Theme colour not saved',
+        title: 'Theme color not saved',
         description: 'Check your connection and try again.',
         variant: 'destructive',
       });
@@ -47,7 +47,7 @@ export function ThemeColorPicker() {
   };
 
   return (
-    <div role="radiogroup" aria-label="Theme colour" className="flex shrink-0 items-center gap-2">
+    <div role="radiogroup" aria-label="Theme color" className="flex shrink-0 items-center gap-2">
       {THEME_COLORS.map(color => {
         const selected = color === applied;
         const swatch = THEME_PALETTE[color];
