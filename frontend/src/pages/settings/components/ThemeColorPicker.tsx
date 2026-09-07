@@ -47,7 +47,7 @@ export function ThemeColorPicker() {
   };
 
   return (
-    <div role="radiogroup" aria-label="Theme colour" className="flex flex-wrap gap-3">
+    <div role="radiogroup" aria-label="Theme colour" className="flex shrink-0 items-center gap-2">
       {THEME_COLORS.map(color => {
         const selected = color === applied;
         const swatch = THEME_PALETTE[color];
@@ -60,9 +60,10 @@ export function ThemeColorPicker() {
             aria-label={THEME_COLOR_LABELS[color]}
             disabled={saving !== null}
             onClick={() => void choose(color)}
+            title={THEME_COLOR_LABELS[color]}
             className={cn(
-              'interaction-control flex h-11 min-w-11 items-center gap-2 rounded-full border px-2 pr-3 text-sm font-medium',
-              selected ? 'border-foreground/40 bg-accent' : 'border-border',
+              'interaction-control grid h-11 w-11 place-items-center rounded-full border',
+              selected ? 'border-foreground/40 bg-accent' : 'border-transparent',
             )}
           >
             <span
@@ -72,7 +73,6 @@ export function ThemeColorPicker() {
             >
               {selected ? <Check className="h-4 w-4" /> : null}
             </span>
-            {THEME_COLOR_LABELS[color]}
           </button>
         );
       })}

@@ -475,9 +475,11 @@ function PreferencesSettings() {
               System
             </Button>
           </div>
-          <div className="mt-6 flex flex-col gap-2">
-            <Label className="text-sm font-medium">Theme colour</Label>
-            <p className="text-sm text-muted-foreground">Buttons, icons, and highlights across the app.</p>
+          <div className="mt-6 flex items-center justify-between gap-4">
+            <div>
+              <Label>Theme colour</Label>
+              <p className="mt-1 text-sm text-muted-foreground">Buttons, icons, and highlights across the app.</p>
+            </div>
             <ThemeColorPicker />
           </div>
         </CardContent>

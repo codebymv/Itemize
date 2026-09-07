@@ -31,7 +31,8 @@ describe('ThemeColorPicker', () => {
     const radios = screen.getAllByRole('radio');
     expect(radios.map(radio => radio.getAttribute('aria-label'))).toEqual(['Blue', 'Purple', 'Pink']);
     expect(screen.getByRole('radio', { name: 'Blue' })).toHaveAttribute('aria-checked', 'true');
-    radios.forEach(radio => expect(radio).toHaveClass('h-11', 'min-w-11'));
+    radios.forEach(radio => expect(radio).toHaveClass('h-11', 'w-11'));
+    radios.forEach(radio => expect(radio).not.toHaveTextContent(/\S/));
   });
 
   it('applies the theme immediately and records it on the account', async () => {
