@@ -12,6 +12,7 @@ import {
 import { DeleteDialog } from '@/components/ui/delete-dialog';
 import { WorkspaceContactLink } from '@/components/workspace/WorkspaceContactLink';
 import { CategorySelector } from '@/components/CategorySelector';
+import { CardAccentProvider } from '@/lib/cardAccent';
 import { useCardCategoryManagement } from '@/hooks/useCardCategoryManagement';
 import { cn } from '@/lib/utils';
 import type { Category, WorkspaceFrame } from '@/types';
@@ -237,14 +238,15 @@ export const DraggableFrame: React.FC<DraggableFrameProps> = ({
   return (
     <div
       ref={frameRef}
-      className="draggable-frame absolute rounded-xl border-2"
+      className="draggable-frame absolute flex flex-col rounded-xl border-2"
       data-testid={`frame-${frame.id}`}
       style={{
         left: frame.position_x,
         top: frame.position_y,
         width: frame.width,
         height: frame.height,
-        zIndex: isDragging || isResizing ? 999 : 0,
+        // Editing the category or the client needs to sit above the cards for a moment.
+        zIndex: isDragging || isResizing ? 999 : category.isEditingCategory ? 900 : 0,
         borderColor: color,
         backgroundColor: `color-mix(in srgb, ${color} 7%, transparent)`,
         boxShadow: isDragging || isResizing ? '0 8px 16px rgba(0,0,0,0.15)' : 'none',
@@ -253,13 +255,14 @@ export const DraggableFrame: React.FC<DraggableFrameProps> = ({
       }}
     >
       {/* Header: the only surface that drags the frame. */}
+      <CardAccentProvider color={color}>
       <div
         className={cn(
-          'flex items-center gap-2 rounded-t-[10px] px-3 text-sm',
+          'flex flex-wrap items-center gap-2 rounded-t-[10px] px-3 py-1 text-sm',
           isDragging ? 'cursor-grabbing' : 'cursor-grab',
         )}
         style={{
-          height: FRAME_HEADER_HEIGHT,
+          minHeight: FRAME_HEADER_HEIGHT,
           backgroundColor: `color-mix(in srgb, ${color} 18%, transparent)`,
         }}
         onMouseDown={handleHeaderMouseDown}
@@ -367,9 +370,10 @@ export const DraggableFrame: React.FC<DraggableFrameProps> = ({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+      </CardAccentProvider>
 
-      {/* Body: empty space pans the canvas; cards render above this layer. */}
-      <div className="absolute inset-x-0 bottom-0" style={{ top: FRAME_HEADER_HEIGHT }} data-canvas-pan="true" />
+      {/* Body: empty space pans the canvas; cards render above this layer. It starts wherever the header ends. */}
+      <div className="min-h-0 flex-1" data-canvas-pan="true" />
 
       <div
         className="resize-handle absolute bottom-0 right-0 h-4 w-4 cursor-nw-resize"

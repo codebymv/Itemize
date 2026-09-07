@@ -1,6 +1,7 @@
 import { Check, RefreshCw, Sparkles, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { accentFill, accentInk, useCardAccent } from '@/lib/cardAccent';
 
 interface SuggestionActionsProps {
   suggestion?: string | null;
@@ -21,6 +22,7 @@ export function SuggestionActions({
   onRegenerate,
   className,
 }: SuggestionActionsProps) {
+  const accent = useCardAccent();
   if (!suggestion && !isLoading && !error) return null;
 
   return (
@@ -32,7 +34,7 @@ export function SuggestionActions({
       )}
     >
       <div className="flex min-w-0 items-start gap-2 text-sm">
-        <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" aria-hidden="true" />
+        <Sparkles className="mt-0.5 h-4 w-4 shrink-0" style={accentInk(accent)} aria-hidden="true" />
         <div className="min-w-0 flex-1">
           {isLoading ? (
             <p className="text-muted-foreground" role="status">Thinking…</p>
@@ -54,6 +56,7 @@ export function SuggestionActions({
               type="button"
               size="sm"
               className="h-8 px-2.5"
+              style={accentFill(accent)}
               onClick={onAccept}
               aria-label={`Accept suggestion: ${suggestion}`}
             >

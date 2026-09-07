@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { CardAccentProvider, contrastTextFor } from '@/lib/cardAccent';
 import { CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
@@ -112,6 +113,7 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
   };
 
   return (
+    <CardAccentProvider color={whiteboardDisplayColor}>
     <Collapsible
       open={isCollapsibleOpen}
       onOpenChange={(open) => {
@@ -128,7 +130,7 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
         }
       }}
       className="w-full"
-      style={{ '--whiteboard-color': whiteboardDisplayColor } as React.CSSProperties}
+      style={{ '--whiteboard-color': whiteboardDisplayColor, '--card-accent': whiteboardDisplayColor, '--card-accent-contrast': contrastTextFor(whiteboardDisplayColor) } as React.CSSProperties}
     >
       <WorkspaceContentCard className="h-full flex flex-col">
         <CardHeader className="pb-2">
@@ -320,6 +322,7 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
         onConfirm={handleConfirmDelete}
       />
     </Collapsible>
+    </CardAccentProvider>
   );
 };
 

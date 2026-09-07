@@ -3,6 +3,7 @@
  * Card wrapper for React Flow based wireframe diagrams
  */
 import React, { useEffect, useMemo, useState } from 'react';
+import { CardAccentProvider, contrastTextFor } from '@/lib/cardAccent';
 import { CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
@@ -102,6 +103,7 @@ const WireframeCard: React.FC<WireframeCardProps> = ({
   }, [wireframe.flow_data]);
 
   return (
+    <CardAccentProvider color={wireframeDisplayColor}>
     <Collapsible
       open={isCollapsibleOpen}
       onOpenChange={(open) => {
@@ -115,7 +117,7 @@ const WireframeCard: React.FC<WireframeCardProps> = ({
         }
       }}
       className="w-full h-full flex flex-col"
-      style={{ '--wireframe-color': wireframeDisplayColor } as React.CSSProperties}
+      style={{ '--wireframe-color': wireframeDisplayColor, '--card-accent': wireframeDisplayColor, '--card-accent-contrast': contrastTextFor(wireframeDisplayColor) } as React.CSSProperties}
     >
       <WorkspaceContentCard className="h-full flex flex-col">
         <CardHeader className="pb-2">
@@ -296,6 +298,7 @@ const WireframeCard: React.FC<WireframeCardProps> = ({
         onConfirm={handleConfirmDelete}
       />
     </Collapsible>
+    </CardAccentProvider>
   );
 };
 

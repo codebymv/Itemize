@@ -54,6 +54,7 @@ const setup = (overrides: { frames?: WorkspaceFrame[]; lists?: List[]; notes?: N
   const enqueuePositionUpdate = vi.fn();
   const contactUpdaters = { list: vi.fn(), note: vi.fn(), whiteboard: vi.fn(), wireframe: vi.fn() };
   const categoryUpdaters = { list: vi.fn(), note: vi.fn(), whiteboard: vi.fn(), wireframe: vi.fn() };
+  const colorUpdaters = { list: vi.fn(), note: vi.fn(), whiteboard: vi.fn(), wireframe: vi.fn(), vault: vi.fn() };
   const hook = renderHook(() => useCanvasFrames({
     frames: overrides.frames ?? [frame],
     setFrames,
@@ -68,8 +69,9 @@ const setup = (overrides: { frames?: WorkspaceFrame[]; lists?: List[]; notes?: N
     enqueuePositionUpdate,
     contactUpdaters,
     categoryUpdaters,
+    colorUpdaters,
   }));
-  return { hook, setFrames, setters, enqueuePositionUpdate, contactUpdaters, categoryUpdaters };
+  return { hook, setFrames, setters, enqueuePositionUpdate, contactUpdaters, categoryUpdaters, colorUpdaters };
 };
 
 describe('useCanvasFrames', () => {
@@ -234,5 +236,26 @@ describe('useCanvasFrames', () => {
 
     hook.result.current.inheritFrameContact('note', { ...note, category: 'Marketing' }, { x: 1100, y: 1200 });
     expect(categoryUpdaters.note).not.toHaveBeenCalled();
+  });
+  it('recolouring a frame recolours every card inside it', async () => {
+    const saved = { ...frame, color_value: '#10B981', updated_at: '2026-09-06T00:05:00.000Z' };
+    framesApi.updateWorkspaceFrameViaGraphql.mockResolvedValue(saved);
+    const { hook, colorUpdaters } = setup();
+    await act(async () => {
+      await hook.result.current.updateFrame(1, { color_value: '#10B981' });
+    });
+    expect(colorUpdaters.list).toHaveBeenCalledWith(inside, '#10B981');
+    expect(colorUpdaters.note).toHaveBeenCalledWith(9, '#10B981');
+    expect(colorUpdaters.list).not.toHaveBeenCalledWith(outside, expect.anything());
+  });
+
+  it('a card still on the default blue takes the frame colour when it enters; a recoloured card keeps its own', () => {
+    const green = { ...frame, color_value: '#10B981' };
+    const { hook, colorUpdaters } = setup({ frames: [green] });
+    hook.result.current.inheritFrameContact('list', { ...outside, color_value: '#3B82F6' }, { x: 1100, y: 1200 });
+    expect(colorUpdaters.list).toHaveBeenCalledWith(expect.objectContaining({ id: 6 }), '#10B981');
+
+    hook.result.current.inheritFrameContact('note', { ...note, color_value: '#F59E0B' }, { x: 1100, y: 1200 });
+    expect(colorUpdaters.note).not.toHaveBeenCalled();
   });
 });

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { STATUS_THEME_CLASSES } from '@/lib/statusVisuals';
+import { accentFill, useCardAccent } from '@/lib/cardAccent';
 import { parseMentionSegments, referenceKey } from '@/lib/mentionTokens';
 import { describeReference, indexReferences } from '@/lib/referenceStatus';
 import { cn } from '@/lib/utils';
@@ -22,6 +22,7 @@ const sigil = (entityType: string): string => (entityType === 'contact' ? '@' : 
  * when the owner's projection includes it.
  */
 export const MentionText: React.FC<MentionTextProps> = ({ text, references, className }) => {
+  const accent = useCardAccent();
   const segments = parseMentionSegments(text);
   const index = useMemo(() => indexReferences(references), [references]);
   if (segments.every((segment) => segment.kind === 'text')) {
@@ -39,10 +40,8 @@ export const MentionText: React.FC<MentionTextProps> = ({ text, references, clas
         return (
           <span
             key={position}
-            className={cn(
-              'inline whitespace-nowrap rounded-full px-1.5 font-semibold',
-              STATUS_THEME_CLASSES.blue.badgeClass,
-            )}
+            className={cn('inline whitespace-nowrap rounded-full px-1.5 font-semibold')}
+            style={accentFill(accent)}
             data-entity-type={segment.entityType}
             data-entity-id={segment.entityId}
             title={state ? `${label} · ${state}` : undefined}

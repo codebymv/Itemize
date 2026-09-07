@@ -1,4 +1,5 @@
 import React from 'react';
+import { accentInk, useCardAccent } from '@/lib/cardAccent';
 import { Sparkles, Check } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -20,6 +21,7 @@ export const ListAISuggestionButton: React.FC<ListAISuggestionButtonProps> = ({
   currentSuggestion,
   aiEnabled
 }) => {
+  const accent = useCardAccent();
   return (
     <div className="px-6 pb-2">
       <div className="relative">
@@ -31,11 +33,11 @@ export const ListAISuggestionButton: React.FC<ListAISuggestionButtonProps> = ({
           className={cn(
             "w-full flex items-center justify-center",
             suggestions.length > 0 && "mb-2",
-            !aiEnabled && "text-gray-500 hover:text-blue-600",
-            aiEnabled && "border-blue-600"
+            !aiEnabled && "text-gray-500"
           )}
+          style={aiEnabled ? { borderColor: accent.color } : undefined}
         >
-          <Sparkles className={cn("h-4 w-4 mr-1", aiEnabled ? "text-blue-600" : "text-gray-400")} />
+          <Sparkles className={cn("h-4 w-4 mr-1", !aiEnabled && "text-gray-400")} style={aiEnabled ? accentInk(accent) : undefined} />
           {isLoadingSuggestions ? "Thinking..." : 
             aiEnabled 
               ? (currentSuggestion ? "Add Suggestion" : "Get AI Suggestions")

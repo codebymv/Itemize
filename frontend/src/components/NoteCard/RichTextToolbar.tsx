@@ -24,25 +24,26 @@ import {
   AtSign
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
+import { accentFill, useCardAccent, type CardAccent } from "@/lib/cardAccent";
 
 interface RichTextToolbarProps {
   editor: Editor | null;
   className?: string;
 }
 
-/** One class set for every toolbar toggle: the app's primary blue when on, the accent hover when off. */
+/** One class set for every toolbar toggle: the card's accent fills it when on, the hover tint when off. */
 const toggleClass = (active: boolean) =>
   cn(
     'h-8 w-8 p-0 text-foreground',
-    active
-      ? 'bg-blue-600 interaction-button--primary text-white hover:bg-blue-600 hover:text-white data-[state=on]:bg-blue-600 data-[state=on]:text-white'
-      : 'bg-transparent hover:bg-accent hover:text-accent-foreground',
+    active ? 'interaction-button--primary' : 'bg-transparent hover:bg-accent hover:text-accent-foreground',
   );
+const toggleStyle = (active: boolean, accent: CardAccent) => (active ? accentFill(accent) : undefined);
 
 export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
   editor,
   className
 }) => {
+  const accent = useCardAccent();
   if (!editor) return null;
 
   // Helper function to get current heading level
@@ -161,6 +162,7 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
             size="sm"
             aria-label="Bold"
             className={toggleClass(editor.isActive('bold'))}
+            style={toggleStyle(editor.isActive('bold'), accent)}
             onClick={() => editor.chain().focus().toggleBold().run()}
           >
             <Bold className="h-3 w-3 md:h-4 md:w-4" />
@@ -171,6 +173,7 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
             size="sm"
             aria-label="Italic"
             className={toggleClass(editor.isActive('italic'))}
+            style={toggleStyle(editor.isActive('italic'), accent)}
             onClick={() => editor.chain().focus().toggleItalic().run()}
           >
             <Italic className="h-3 w-3 md:h-4 md:w-4" />
@@ -181,6 +184,7 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
             size="sm"
             aria-label="Underline"
             className={toggleClass(editor.isActive('underline'))}
+            style={toggleStyle(editor.isActive('underline'), accent)}
             onClick={() => editor.chain().focus().toggleUnderline().run()}
           >
             <Underline className="h-3 w-3 md:h-4 md:w-4" />
@@ -191,6 +195,7 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
             size="sm"
             aria-label="Strikethrough"
             className={toggleClass(editor.isActive('strike'))}
+            style={toggleStyle(editor.isActive('strike'), accent)}
             onClick={() => editor.chain().focus().toggleStrike().run()}
           >
             <Strikethrough className="h-3 w-3 md:h-4 md:w-4" />
@@ -230,6 +235,7 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
             aria-label="Bulleted list"
             onClick={() => editor.chain().focus().toggleBulletList().run()}
             className={toggleClass(editor.isActive('bulletList'))}
+            style={toggleStyle(editor.isActive('bulletList'), accent)}
           >
             <List className="h-3 w-3 md:h-4 md:w-4" />
           </Button>
@@ -241,6 +247,7 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
             aria-label="Numbered list"
             onClick={() => editor.chain().focus().toggleOrderedList().run()}
             className={toggleClass(editor.isActive('orderedList'))}
+            style={toggleStyle(editor.isActive('orderedList'), accent)}
           >
             <ListOrdered className="h-3 w-3 md:h-4 md:w-4" />
           </Button>
@@ -252,6 +259,7 @@ export const RichTextToolbar: React.FC<RichTextToolbarProps> = ({
             aria-label="Quote"
             onClick={() => editor.chain().focus().toggleBlockquote().run()}
             className={toggleClass(editor.isActive('blockquote'))}
+            style={toggleStyle(editor.isActive('blockquote'), accent)}
           >
             <Quote className="h-3 w-3 md:h-4 md:w-4" />
           </Button>

@@ -239,6 +239,12 @@
 /* Keep one-off authored utilities available as an explicit override. */
 @tailwind utilities;
 
+/* A card's @ and $ pills wear the card's accent; brand blue is only the fallback. */
+.mention-accent {
+  background-color: var(--card-accent, #3b82f6);
+  color: var(--card-accent-contrast, #ffffff);
+}
+
 /* Let the dashboard overview compress attention into its heading only when the
    framed section itself has enough room. This avoids viewport/sidebar guesses. */
 .dashboard-overview-frame {

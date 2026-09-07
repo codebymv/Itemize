@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { CardAccentProvider, contrastTextFor } from '@/lib/cardAccent';
 import { CardHeader, CardTitle } from "@/components/ui/card";
 import { useWorkspaceActions } from '@/hooks/useWorkspaceActions';
 import { useCardFrames } from '@/hooks/useCardFrames';
@@ -131,6 +132,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
   const noteDisplayColor = note.color_value || categoryColor || '#FFFFE0'; // Default to light yellow if no color is set
 
   return (
+    <CardAccentProvider color={noteDisplayColor}>
     <Collapsible
       open={isCollapsibleOpen}
       onOpenChange={(open) => {
@@ -148,7 +150,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
         onCollapsibleChange?.(open);
       }}
       className="w-full"
-      style={{ '--note-color': noteDisplayColor } as React.CSSProperties}
+      style={{ '--note-color': noteDisplayColor, '--card-accent': noteDisplayColor, '--card-accent-contrast': contrastTextFor(noteDisplayColor) } as React.CSSProperties}
     >
       <WorkspaceContentCard className="h-full flex flex-col">
         <CardHeader className="pb-2">
@@ -346,6 +348,7 @@ const NoteCard: React.FC<NoteCardProps> = ({
         onConfirm={handleConfirmDelete}
       />
     </Collapsible>
+    </CardAccentProvider>
   );
 };
 

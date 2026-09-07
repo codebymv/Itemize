@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState, useMemo } from 'react';
+import { CardAccentProvider, contrastTextFor } from '@/lib/cardAccent';
 import { CardContent } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
 import { useListCardLogic } from '@/hooks/useListCardLogic';
@@ -171,6 +172,7 @@ const ListCard: React.FC<ListCardProps> = ({
   );
 
   return (
+    <CardAccentProvider color={listDisplayColor}>
     <Collapsible
       open={isCollapsibleOpen}
       onOpenChange={(open) => {
@@ -184,7 +186,7 @@ const ListCard: React.FC<ListCardProps> = ({
         }
       }}
       className="w-full"
-      style={{ '--list-color': listDisplayColor } as React.CSSProperties}
+      style={{ '--list-color': listDisplayColor, '--card-accent': listDisplayColor, '--card-accent-contrast': contrastTextFor(listDisplayColor) } as React.CSSProperties}
     >
       <WorkspaceContentCard>
         <ListCardHeader
@@ -304,6 +306,7 @@ const ListCard: React.FC<ListCardProps> = ({
         onConfirm={handleConfirmDelete}
       />
     </Collapsible>
+    </CardAccentProvider>
   );
 };
 

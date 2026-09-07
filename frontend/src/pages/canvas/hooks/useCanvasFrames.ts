@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { cardsInFrame, frameForCard, shiftedPosition } from '@/lib/frameContainment';
+import { isDefaultAccent } from '@/lib/cardAccent';
 import logger from '@/lib/logger';
 import type { CanvasPositionUpdate } from '@/services/api';
 import {
@@ -50,6 +51,15 @@ export interface CardCategoryUpdaters {
   wireframe: (wireframeId: number, category: string) => unknown;
 }
 
+/** How the page writes a colour onto each card type. */
+export interface CardColorUpdaters {
+  list: (list: List, color: string) => unknown;
+  note: (noteId: number, color: string) => unknown;
+  whiteboard: (whiteboardId: number, color: string) => unknown;
+  wireframe: (wireframeId: number, color: string) => unknown;
+  vault: (vaultId: number, color: string) => unknown;
+}
+
 const DEFAULT_CATEGORY = 'General';
 const hasOwnCategory = (category: string | null | undefined): boolean =>
   Boolean(category) && category !== DEFAULT_CATEGORY;
@@ -62,6 +72,7 @@ interface UseCanvasFramesOptions {
   enqueuePositionUpdate: (update: CanvasPositionUpdate) => void;
   contactUpdaters?: CardContactUpdaters;
   categoryUpdaters?: CardCategoryUpdaters;
+  colorUpdaters?: CardColorUpdaters;
 }
 
 const DEFAULT_FRAME_SIZE = { width: 1400, height: 900 };
@@ -79,6 +90,7 @@ export function useCanvasFrames({
   enqueuePositionUpdate,
   contactUpdaters,
   categoryUpdaters,
+  colorUpdaters,
 }: UseCanvasFramesOptions) {
   const { toast } = useToast();
   // The frame that was just created opens with its title editable, once.
@@ -153,10 +165,31 @@ export function useCanvasFrames({
     }
   }, [cards, categoryUpdaters]);
 
+  /** A frame's colour is the colour of everything inside it: changing it recolours every contained card. */
+  const propagateColor = useCallback((frame: WorkspaceFrame, color: string) => {
+    if (!colorUpdaters) return;
+    for (const list of cardsInFrame(frame, cards.lists)) {
+      if (list.color_value !== color) void colorUpdaters.list(list, color);
+    }
+    for (const note of cardsInFrame(frame, cards.notes)) {
+      if (note.color_value !== color) void colorUpdaters.note(note.id, color);
+    }
+    for (const whiteboard of cardsInFrame(frame, cards.whiteboards)) {
+      if (whiteboard.color_value !== color) void colorUpdaters.whiteboard(whiteboard.id, color);
+    }
+    for (const wireframe of cardsInFrame(frame, cards.wireframes)) {
+      if (wireframe.color_value !== color) void colorUpdaters.wireframe(wireframe.id, color);
+    }
+    for (const vault of cardsInFrame(frame, cards.vaults)) {
+      if (vault.color_value !== color) void colorUpdaters.vault(vault.id, color);
+    }
+  }, [cards, colorUpdaters]);
+
   /**
    * A card that lands in a frame takes what it lacks: the frame's client if
-   * it has none, the frame's category if it is still on the default. Called
-   * with the card's new position after a drop or a `#` move.
+   * it has none, the frame's category if it is still on the default, the
+   * frame's colour if it still wears the default blue. Called with the
+   * card's new position after a drop or a `#` move.
    */
   const inheritFrameContact = useCallback((
     type: 'list' | 'note' | 'whiteboard' | 'wireframe',
@@ -165,6 +198,7 @@ export function useCanvasFrames({
       contact_id?: number | null;
       type?: string;
       category?: string;
+      color_value?: string | null;
       width?: number | null;
       height?: number | null;
       canvas_width?: number | null;
@@ -191,7 +225,14 @@ export function useCanvasFrames({
         void categoryUpdaters[type](card.id, frame.category);
       }
     }
-  }, [cards.lists, categoryUpdaters, contactUpdaters, frames]);
+    if (colorUpdaters && isDefaultAccent(card.color_value) && frame.color_value !== card.color_value) {
+      if (type === 'list') {
+        if (list) void colorUpdaters.list(list, frame.color_value);
+      } else {
+        void colorUpdaters[type](card.id, frame.color_value);
+      }
+    }
+  }, [cards.lists, categoryUpdaters, colorUpdaters, contactUpdaters, frames]);
 
   const updateFrame = useCallback(async (
     frameId: number,
@@ -216,6 +257,9 @@ export function useCanvasFrames({
       if (updatedData.category !== undefined && previous) {
         propagateCategory(previous, saved.category);
       }
+      if (updatedData.color_value !== undefined && previous) {
+        propagateColor(previous, saved.color_value);
+      }
       return saved;
     } catch (error) {
       logger.error('Failed to update frame:', error);
@@ -227,7 +271,7 @@ export function useCanvasFrames({
       });
       throw error;
     }
-  }, [editingFrameId, frames, propagateCategory, propagateContact, setFrames, toast]);
+  }, [editingFrameId, frames, propagateCategory, propagateColor, propagateContact, setFrames, toast]);
 
   const deleteFrame = useCallback(async (frameId: number) => {
     try {

@@ -9,7 +9,7 @@ import { UpgradeCTA } from '@/components/subscription/UpgradeCTA';
 import { useSubscription } from '@/contexts/SubscriptionContext';
 import { useOrganization } from '@/hooks/useOrganization';
 import { contactDisplayName } from '@/lib/contactDisplayName';
-import { STATUS_THEME_CLASSES } from '@/lib/statusVisuals';
+import { accentFill, useCardAccent } from '@/lib/cardAccent';
 import { cn } from '@/lib/utils';
 import type { Contact } from '@/types';
 
@@ -25,10 +25,10 @@ export interface WorkspaceContactLinkProps {
 }
 
 /**
- * A linked client is Itemize-owned live working state, so the chip reads from
- * the blue status theme like every other pill in the app.
+ * The chip wears the card's own accent (its colour), so a green list has a
+ * green client chip and a frame's header chip matches the frame. Brand blue
+ * is only what a card starts with.
  */
-const clientTheme = STATUS_THEME_CLASSES.blue;
 
 /**
  * The client chip beside a workspace card's category badge. Binding is a paid
@@ -46,6 +46,7 @@ export const WorkspaceContactLink: React.FC<WorkspaceContactLinkProps> = ({
   const { organizationId } = useOrganization();
   const canBind = hasFeature('contacts') && organizationId !== null;
   const [open, setOpen] = useState(false);
+  const accent = useCardAccent();
   const [selected, setSelected] = useState<Contact | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -75,7 +76,8 @@ export const WorkspaceContactLink: React.FC<WorkspaceContactLinkProps> = ({
       {isLinked ? (
         <>
           <Badge
-            className={cn('max-w-full gap-0 border-transparent p-0 font-raleway', clientTheme.badgeClass)}
+            className="max-w-full gap-0 border p-0 font-raleway"
+            style={accentFill(accent)}
             data-testid="workspace-contact-chip"
           >
             {canBind ? (

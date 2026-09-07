@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { CardAccentProvider, contrastTextFor } from '@/lib/cardAccent';
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Collapsible,
@@ -327,6 +328,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
   }, [isEditing, handleEditTitle, titleEditRef]);
 
   return (
+    <CardAccentProvider color={vaultDisplayColor}>
     <Collapsible
       open={isCollapsibleOpen}
       onOpenChange={(open) => {
@@ -340,7 +342,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
         }
       }}
       className="w-full h-full flex flex-col"
-      style={{ "--vault-color": vaultDisplayColor } as React.CSSProperties}
+      style={{ "--vault-color": vaultDisplayColor, '--card-accent': vaultDisplayColor, '--card-accent-contrast': contrastTextFor(vaultDisplayColor) } as React.CSSProperties}
     >
       <WorkspaceContentCard className="h-full flex flex-col overflow-hidden">
         <CardHeader className="pb-2">
@@ -874,5 +876,6 @@ export const VaultCard: React.FC<VaultCardProps> = ({
         </DialogContent>
       </Dialog>
     </Collapsible>
+    </CardAccentProvider>
   );
 };

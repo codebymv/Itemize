@@ -29,7 +29,6 @@ import { createFrameMentionExtension, createWorkspaceActionsExtension } from './
 import type { FrameSurface } from '@/lib/frameSuggestions';
 import { useOrganization } from '@/hooks/useOrganization';
 import { useSubscription } from '@/contexts/SubscriptionContext';
-import { STATUS_THEME_CLASSES } from '@/lib/statusVisuals';
 
 interface RichNoteContentProps {
   content: string;
@@ -187,7 +186,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
       }),
       Mention.configure({
         HTMLAttributes: {
-          class: `mention rounded-full px-1.5 font-semibold ${STATUS_THEME_CLASSES.blue.badgeClass}`,
+          class: 'mention mention-accent rounded-full px-1.5 font-semibold',
           'data-entity': 'contact',
         },
         renderText: ({ node }) => `@${node.attrs.label ?? node.attrs.id}`,
@@ -195,7 +194,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
       }),
       MoneyMention.configure({
         HTMLAttributes: {
-          class: `mention rounded-full px-1.5 font-semibold ${STATUS_THEME_CLASSES.blue.badgeClass}`,
+          class: 'mention mention-accent rounded-full px-1.5 font-semibold',
         },
         renderText: ({ node }) => `$${node.attrs.label ?? node.attrs.id}`,
         suggestion: createEntityMentionSuggestion('$', mentionContextRef),
