@@ -12,6 +12,7 @@ export type WorkspaceActionId =
   | 'new-list'
   | 'new-note'
   | 'share'
+  | 'archive'
   | 'mention-client'
   | 'reference-document'
   | 'move-to-frame';
@@ -34,6 +35,7 @@ export const WORKSPACE_ACTIONS: readonly WorkspaceActionDefinition[] = [
   { id: 'new-list', label: 'New list', detail: 'Beside this card', keywords: ['list', 'add', 'create'] },
   { id: 'new-note', label: 'New note', detail: 'Beside this card', keywords: ['note', 'add', 'create'] },
   { id: 'share', label: 'Share', detail: 'Public link for this card', keywords: ['share', 'link', 'publish'] },
+  { id: 'archive', label: 'Archive', detail: 'Off the canvas, kept under Workspace › Archive', keywords: ['archive', 'hide', 'done', 'park'] },
   { id: 'mention-client', label: 'Mention a client', detail: 'Same as typing @', keywords: ['client', 'contact', 'mention'] },
   {
     id: 'reference-document',

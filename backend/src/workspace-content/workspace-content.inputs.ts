@@ -7,6 +7,26 @@ export class WorkspaceContentFilterInput {
 
   @Field(() => Int, { nullable: true })
   categoryId?: number;
+
+  /** `active` (default), `archived`, or `all`. */
+  @Field(() => String, { nullable: true })
+  archived?: string | null;
+}
+
+@InputType()
+export class SetWorkspaceContentArchivedInput {
+  @Field()
+  mutationId: string;
+
+  /** list | note | whiteboard | wireframe | frame */
+  @Field()
+  type: string;
+
+  @Field(() => Int)
+  id: number;
+
+  @Field()
+  archived: boolean;
 }
 
 @InputType()

@@ -28,7 +28,7 @@ const listFields = `
   colorValue positionX positionY width height zIndex
   contactId contactName
   references { entityType entityId label status total currency sentAt viewedAt paidAt acceptedAt declinedAt }
-  shareToken isPublic sharedAt createdAt updatedAt
+  shareToken isPublic sharedAt createdAt updatedAt archivedAt
 `;
 
 const createListMutation = `
@@ -71,6 +71,7 @@ const mapList = (list: GraphqlWorkspaceList): LegacyWorkspaceList => ({
   shared_at: list.sharedAt,
   created_at: list.createdAt,
   updated_at: list.updatedAt,
+  archived_at: list.archivedAt ?? null,
 });
 
 const mapInput = (input: ListPayload) => ({

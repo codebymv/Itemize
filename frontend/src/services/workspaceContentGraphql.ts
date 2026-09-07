@@ -53,6 +53,7 @@ export type GraphqlWorkspaceList = {
   sharedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  archivedAt: string | null;
 };
 
 export type GraphqlWorkspaceNote = {
@@ -76,6 +77,7 @@ export type GraphqlWorkspaceNote = {
   sharedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  archivedAt: string | null;
 };
 
 export type GraphqlWorkspaceWhiteboard = {
@@ -100,6 +102,7 @@ export type GraphqlWorkspaceWhiteboard = {
   sharedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  archivedAt: string | null;
 };
 
 export type GraphqlWorkspaceWireframe = {
@@ -123,6 +126,7 @@ export type GraphqlWorkspaceWireframe = {
   sharedAt: string | null;
   createdAt: string;
   updatedAt: string;
+  archivedAt: string | null;
 };
 
 export type LegacyWorkspaceList = {
@@ -147,6 +151,7 @@ export type LegacyWorkspaceList = {
   shared_at: string | null;
   created_at: string;
   updated_at: string;
+  archived_at: string | null;
 };
 
 export type LegacyWorkspaceNote = {
@@ -170,6 +175,7 @@ export type LegacyWorkspaceNote = {
   shared_at: string | null;
   created_at: string;
   updated_at: string;
+  archived_at: string | null;
 };
 
 export type LegacyWorkspaceWhiteboard = {
@@ -194,6 +200,7 @@ export type LegacyWorkspaceWhiteboard = {
   shared_at: string | null;
   created_at: string;
   updated_at: string;
+  archived_at: string | null;
 };
 
 export type LegacyWorkspaceWireframe = {
@@ -217,6 +224,7 @@ export type LegacyWorkspaceWireframe = {
   shared_at: string | null;
   created_at: string;
   updated_at: string;
+  archived_at: string | null;
 };
 
 export type LegacyPageInfo = {
@@ -234,7 +242,7 @@ export const listFields = `
   colorValue positionX positionY width height zIndex
   contactId contactName
   references { entityType entityId label status total currency sentAt viewedAt paidAt acceptedAt declinedAt }
-  shareToken isPublic sharedAt createdAt updatedAt
+  shareToken isPublic sharedAt createdAt updatedAt archivedAt
 `;
 
 export const noteFields = `
@@ -242,7 +250,7 @@ export const noteFields = `
   colorValue positionX positionY width height zIndex
   contactId contactName
   references { entityType entityId label status total currency sentAt viewedAt paidAt acceptedAt declinedAt }
-  shareToken isPublic sharedAt createdAt updatedAt
+  shareToken isPublic sharedAt createdAt updatedAt archivedAt
 `;
 
 export const whiteboardFields = `
@@ -251,7 +259,7 @@ export const whiteboardFields = `
   positionX positionY zIndex colorValue
   contactId contactName
   references { entityType entityId label status total currency sentAt viewedAt paidAt acceptedAt declinedAt }
-  shareToken isPublic sharedAt createdAt updatedAt
+  shareToken isPublic sharedAt createdAt updatedAt archivedAt
 `;
 
 export const wireframeFields = `
@@ -259,7 +267,7 @@ export const wireframeFields = `
   positionX positionY width height zIndex colorValue
   contactId contactName
   references { entityType entityId label status total currency sentAt viewedAt paidAt acceptedAt declinedAt }
-  shareToken isPublic sharedAt createdAt updatedAt
+  shareToken isPublic sharedAt createdAt updatedAt archivedAt
 `;
 
 const listsQuery = `
@@ -355,6 +363,7 @@ export const mapList = (list: GraphqlWorkspaceList): LegacyWorkspaceList => ({
   shared_at: list.sharedAt,
   created_at: list.createdAt,
   updated_at: list.updatedAt,
+  archived_at: list.archivedAt ?? null,
 });
 
 export const mapNote = (note: GraphqlWorkspaceNote): LegacyWorkspaceNote => ({
@@ -378,6 +387,7 @@ export const mapNote = (note: GraphqlWorkspaceNote): LegacyWorkspaceNote => ({
   shared_at: note.sharedAt,
   created_at: note.createdAt,
   updated_at: note.updatedAt,
+  archived_at: note.archivedAt ?? null,
 });
 
 export const mapWhiteboard = (
@@ -415,6 +425,7 @@ export const mapWhiteboard = (
     shared_at: whiteboard.sharedAt,
     created_at: whiteboard.createdAt,
     updated_at: whiteboard.updatedAt,
+    archived_at: whiteboard.archivedAt ?? null,
   };
 };
 
@@ -453,6 +464,7 @@ export const mapWireframe = (
     shared_at: wireframe.sharedAt,
     created_at: wireframe.createdAt,
     updated_at: wireframe.updatedAt,
+    archived_at: wireframe.archivedAt ?? null,
   };
 };
 

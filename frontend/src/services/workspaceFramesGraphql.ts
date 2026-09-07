@@ -5,7 +5,7 @@ import { reconcileWorkspaceUpdate } from './workspaceMutationReconciliation';
 /** Field selection shared by the snapshot loader and every frame mutation. */
 export const frameFields = `
   id userId title colorValue positionX positionY width height zIndex
-  contactId contactName createdAt updatedAt
+  contactId contactName createdAt updatedAt archivedAt
 `;
 
 export type GraphqlWorkspaceFrame = {
@@ -22,6 +22,7 @@ export type GraphqlWorkspaceFrame = {
   contactName: string | null;
   createdAt: string;
   updatedAt: string;
+  archivedAt: string | null;
 };
 
 export type WorkspaceFramePayload = {
@@ -70,6 +71,7 @@ export const mapFrame = (row: GraphqlWorkspaceFrame): WorkspaceFrame => {
     contact_name: row.contactName,
     created_at: row.createdAt,
     updated_at: row.updatedAt,
+    archived_at: row.archivedAt ?? null,
   };
 };
 

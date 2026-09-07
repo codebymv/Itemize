@@ -1,5 +1,5 @@
 import React from 'react';
-import { MoreVertical, Edit3, Trash2, X, Check, ChevronDown, Palette, CheckSquare, Share2 } from 'lucide-react';
+import { MoreVertical, Edit3, Trash2, X, Check, ChevronDown, Palette, CheckSquare, Share2, Archive } from 'lucide-react';
 import { CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,7 @@ interface ListCardHeaderProps {
   handleEditTitle: () => void;
   handleDeleteList: () => void;
   handleShareList: () => void;
+  handleArchiveList?: () => void;
   titleEditRef: React.RefObject<HTMLInputElement>;
   onColorSave: (newColor: string) => Promise<void>;
   isSavingColor?: boolean;
@@ -37,6 +38,7 @@ export const ListCardHeader: React.FC<ListCardHeaderProps> = ({
   handleEditTitle,
   handleDeleteList,
   handleShareList,
+  handleArchiveList,
   titleEditRef,
   onColorSave,
   isSavingColor
@@ -159,6 +161,12 @@ export const ListCardHeader: React.FC<ListCardHeaderProps> = ({
                     <Share2 className="mr-2 h-4 w-4" />
                     Share
                   </DropdownMenuItem>
+                  {handleArchiveList && (
+                    <DropdownMenuItem onClick={handleArchiveList} className="group/menu font-raleway">
+                      <Archive className="mr-2 h-4 w-4" />
+                      Archive
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onClick={handleDeleteList} className="text-destructive focus:text-destructive">
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete List

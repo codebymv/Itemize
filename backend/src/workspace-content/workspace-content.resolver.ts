@@ -4,6 +4,7 @@ import { AccountScoped, CsrfProtected, OrganizationScoped } from '../common/meta
 import { RequestContextService } from '../request-context/request-context.service';
 import {
   BatchCanvasPositionsInput,
+  SetWorkspaceContentArchivedInput,
   WorkspaceContentFilterInput,
 } from './workspace-content.inputs';
 import { WorkspaceContentService } from './workspace-content.service';
@@ -38,6 +39,7 @@ import {
   WorkspaceWireframe,
   WorkspaceWireframePage,
   WorkspaceShareLink,
+  WorkspaceArchiveResult,
   DisableWorkspaceSharingResult,
 } from './workspace-content.types';
 
@@ -329,6 +331,14 @@ export class WorkspaceContentResolver {
         mutationId,
       ),
     };
+  }
+
+  @CsrfProtected()
+  @Mutation(() => WorkspaceArchiveResult)
+  setWorkspaceContentArchived(
+    @Args('input') input: SetWorkspaceContentArchivedInput,
+  ): Promise<WorkspaceArchiveResult> {
+    return this.content.setArchived(this.userId(), input);
   }
 
   @CsrfProtected()

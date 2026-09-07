@@ -16,6 +16,7 @@ const listRow = (
 ): WorkspaceListRow => ({
   id: 2,
   user_id: 7,
+  archived_at: null,
   title: 'Tasks',
   category: 'General',
   category_id: 1,
@@ -41,6 +42,7 @@ const noteRow = (
 ): WorkspaceNoteRow => ({
   id: 3,
   user_id: 7,
+  archived_at: null,
   title: 'Plan',
   content: 'Details',
   category: 'General',
@@ -66,6 +68,7 @@ const whiteboardRow = (
 ): WorkspaceWhiteboardRow => ({
   id: 4,
   user_id: 7,
+  archived_at: null,
   title: 'Sketch',
   category: 'General',
   category_id: 1,
@@ -92,6 +95,7 @@ const wireframeRow = (
 ): WorkspaceWireframeRow => ({
   id: 5,
   user_id: 7,
+  archived_at: null,
   title: 'Flow',
   category: 'General',
   category_id: 1,

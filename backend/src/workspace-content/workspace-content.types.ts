@@ -81,6 +81,9 @@ export class WorkspaceList {
 
   @Field(() => GraphQLISODateTime)
   updatedAt: Date;
+
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  archivedAt: Date | null;
 }
 
 @ObjectType()
@@ -153,6 +156,9 @@ export class WorkspaceNote {
 
   @Field(() => GraphQLISODateTime)
   updatedAt: Date;
+
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  archivedAt: Date | null;
 }
 
 @ObjectType()
@@ -240,6 +246,9 @@ export class WorkspaceWhiteboard {
 
   @Field(() => GraphQLISODateTime)
   updatedAt: Date;
+
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  archivedAt: Date | null;
 }
 
 @ObjectType()
@@ -318,6 +327,9 @@ export class WorkspaceWireframe {
 
   @Field(() => GraphQLISODateTime)
   updatedAt: Date;
+
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  archivedAt: Date | null;
 }
 
 @ObjectType()
@@ -390,4 +402,16 @@ export class BatchCanvasPositionsResult {
 
   @Field(() => [CanvasPositionFailure])
   failed: CanvasPositionFailure[];
+}
+
+@ObjectType()
+export class WorkspaceArchiveResult {
+  @Field()
+  type: string;
+
+  @Field(() => Int)
+  id: number;
+
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  archivedAt: Date | null;
 }

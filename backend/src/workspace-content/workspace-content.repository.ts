@@ -32,6 +32,7 @@ export type WorkspaceListRow = {
   shared_at: Date | null;
   created_at: Date;
   updated_at: Date;
+  archived_at: Date | null;
 };
 
 export type WorkspaceNoteRow = {
@@ -54,6 +55,7 @@ export type WorkspaceNoteRow = {
   shared_at: Date | null;
   created_at: Date;
   updated_at: Date;
+  archived_at: Date | null;
 };
 
 export type WorkspaceWhiteboardRow = {
@@ -77,6 +79,7 @@ export type WorkspaceWhiteboardRow = {
   shared_at: Date | null;
   created_at: Date;
   updated_at: Date;
+  archived_at: Date | null;
 };
 
 export type WorkspaceWireframeRow = {
@@ -99,12 +102,17 @@ export type WorkspaceWireframeRow = {
   shared_at: Date | null;
   created_at: Date;
   updated_at: Date;
+  archived_at: Date | null;
 };
+
+export type WorkspaceArchiveFilter = 'active' | 'archived' | 'all';
 
 export type WorkspaceContentCriteria = {
   userId: number;
   search?: string;
   categoryId?: number;
+  /** Defaults to active: archived cards leave every default read. */
+  archived?: WorkspaceArchiveFilter;
   pageSize: number;
   offset: number;
 };
@@ -317,7 +325,8 @@ const noteMutationSelection = `
   is_public,
   shared_at,
   created_at,
-  updated_at`;
+  updated_at,
+  archived_at`;
 
 const listMutationSelection = `
   id,
@@ -346,7 +355,8 @@ const listMutationSelection = `
   is_public,
   shared_at,
   created_at,
-  updated_at`;
+  updated_at,
+  archived_at`;
 
 const whiteboardMutationSelection = `
   id,
@@ -375,7 +385,8 @@ const whiteboardMutationSelection = `
   is_public,
   shared_at,
   created_at,
-  updated_at`;
+  updated_at,
+  archived_at`;
 
 const wireframeMutationSelection = `
   id,
@@ -403,7 +414,8 @@ const wireframeMutationSelection = `
   is_public,
   shared_at,
   created_at,
-  updated_at`;
+  updated_at,
+  archived_at`;
 
 @Injectable()
 export class WorkspaceContentRepository {
@@ -574,6 +586,29 @@ export class WorkspaceContentRepository {
     });
   }
 
+  /**
+   * Archive or restore one card or frame. Archiving is not a content change:
+   * `updated_at` stays put so an open editor's revision survives a restore.
+   */
+  async setArchived(
+    userId: number,
+    type: CanvasPositionKind,
+    id: number,
+    archived: boolean,
+  ): Promise<{ id: number; archivedAt: Date | null } | null> {
+    const table = this.canvasTable(type);
+    const result = await this.pool.query<{ id: number; archived_at: Date | null }>(
+      `UPDATE ${table}
+       SET archived_at = CASE WHEN $3 THEN COALESCE(archived_at, CURRENT_TIMESTAMP) ELSE NULL END
+       WHERE id = $1 AND user_id = $2
+       RETURNING id, archived_at`,
+      [id, userId, archived],
+    );
+    const row = result.rows[0];
+    if (!row) return null;
+    return { id: Number(row.id), archivedAt: row.archived_at ? new Date(row.archived_at) : null };
+  }
+
   async findLists(
     criteria: WorkspaceContentCriteria,
   ): Promise<{ rows: WorkspaceListRow[]; total: number }> {
@@ -611,7 +646,8 @@ export class WorkspaceContentRepository {
            content.is_public,
            content.shared_at,
            content.created_at,
-           content.updated_at
+           content.updated_at,
+           content.archived_at
          ${query.from}
          ${query.where}
          ORDER BY content.updated_at DESC, content.id DESC
@@ -660,7 +696,8 @@ export class WorkspaceContentRepository {
            content.is_public,
            content.shared_at,
            content.created_at,
-           content.updated_at
+           content.updated_at,
+           content.archived_at
          ${query.from}
          ${query.where}
          ORDER BY content.updated_at DESC, content.id DESC
@@ -710,7 +747,8 @@ export class WorkspaceContentRepository {
            content.is_public,
            content.shared_at,
            content.created_at,
-           content.updated_at
+           content.updated_at,
+           content.archived_at
          ${query.from}
          ${query.where}
          ORDER BY content.updated_at DESC, content.id DESC
@@ -759,7 +797,8 @@ export class WorkspaceContentRepository {
            content.is_public,
            content.shared_at,
            content.created_at,
-           content.updated_at
+           content.updated_at,
+           content.archived_at
          ${query.from}
          ${query.where}
          ORDER BY content.updated_at DESC, content.id DESC
@@ -2013,6 +2052,9 @@ export class WorkspaceContentRepository {
       parameters.push(criteria.categoryId);
       clauses.push(`category.id = $${parameters.length}`);
     }
+    const archived = criteria.archived ?? 'active';
+    if (archived === 'active') clauses.push('content.archived_at IS NULL');
+    if (archived === 'archived') clauses.push('content.archived_at IS NOT NULL');
     if (criteria.search) {
       parameters.push(`%${criteria.search}%`);
       clauses.push(

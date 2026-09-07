@@ -10,6 +10,7 @@ import { normalizeWhiteboardCanvasData } from './whiteboard-canvas-data';
 import { NormalizedPage, PageInput, pageInfo } from '../common/pagination';
 import {
   BatchCanvasPositionsInput,
+  SetWorkspaceContentArchivedInput,
   WorkspaceContentFilterInput,
 } from './workspace-content.inputs';
 import {
@@ -23,6 +24,7 @@ import {
   WorkspaceWireframe,
   WorkspaceWireframePage,
   WorkspaceShareLink,
+  WorkspaceArchiveResult,
   BatchCanvasPositionsResult,
 } from './workspace-content.types';
 import {
@@ -35,6 +37,7 @@ import {
   UpdateWorkspaceListValues,
   UpdateWorkspaceWhiteboardValues,
   UpdateWorkspaceWireframeValues,
+  WorkspaceArchiveFilter,
   WorkspaceContentRepository,
   WorkspaceListRow,
   UpdateWorkspaceNoteValues,
@@ -1212,7 +1215,7 @@ export class WorkspaceContentService {
 
   private normalizeFilter(
     filter: WorkspaceContentFilterInput,
-  ): WorkspaceContentFilterInput {
+  ): { search?: string; categoryId?: number; archived?: WorkspaceArchiveFilter } {
     const search = filter.search?.trim();
     if (search && search.length > 200) {
       throw itemizeGraphqlError(
@@ -1231,12 +1234,59 @@ export class WorkspaceContentService {
         { field: 'categoryId' },
       );
     }
+    const archived = filter.archived === undefined || filter.archived === null
+      ? undefined
+      : this.archiveFilter(filter.archived);
     return {
       ...(search ? { search } : {}),
       ...(filter.categoryId !== undefined
         ? { categoryId: filter.categoryId }
         : {}),
+      ...(archived ? { archived } : {}),
     };
+  }
+
+  private archiveFilter(value: string): WorkspaceArchiveFilter {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'active' || normalized === 'archived' || normalized === 'all') return normalized;
+    throw itemizeGraphqlError(
+      'archived must be one of active, archived, all',
+      'BAD_USER_INPUT',
+      { field: 'archived', reason: 'INVALID_ARCHIVE_FILTER' },
+    );
+  }
+
+  /** Archive or restore a card or frame; vaults wait until the vault module can. */
+  async setArchived(
+    userId: number,
+    input: SetWorkspaceContentArchivedInput,
+  ): Promise<WorkspaceArchiveResult> {
+    const type = input.type?.trim().toLowerCase() as CanvasPositionKind;
+    if (!CANVAS_POSITION_TYPES.has(type) || type === 'vault') {
+      throw itemizeGraphqlError(
+        'type must be one of list, note, whiteboard, wireframe, frame',
+        'BAD_USER_INPUT',
+        { field: 'type', reason: 'INVALID_ARCHIVE_TARGET' },
+      );
+    }
+    if (!Number.isSafeInteger(input.id) || input.id < 1) {
+      throw itemizeGraphqlError('id must be a positive integer', 'BAD_USER_INPUT', {
+        field: 'id',
+        reason: 'INVALID_ARCHIVE_TARGET',
+      });
+    }
+    this.mutationId(input.mutationId);
+    try {
+      const row = await this.content.setArchived(userId, type, input.id, input.archived);
+      if (!row) {
+        throw itemizeGraphqlError(`${this.canvasTypeLabel(type)} not found`, 'NOT_FOUND', {
+          reason: 'ARCHIVE_TARGET_NOT_FOUND',
+        });
+      }
+      return { type, id: row.id, archivedAt: row.archivedAt };
+    } catch (error) {
+      this.rethrow(error);
+    }
   }
 
   /** Maps rows with their hydrated references, one batched read per projection. */
@@ -1290,6 +1340,7 @@ export class WorkspaceContentService {
       sharedAt: row.shared_at ? new Date(row.shared_at) : null,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
+      archivedAt: row.archived_at ? new Date(row.archived_at) : null,
     };
   }
 
@@ -1318,6 +1369,7 @@ export class WorkspaceContentService {
       sharedAt: row.shared_at ? new Date(row.shared_at) : null,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
+      archivedAt: row.archived_at ? new Date(row.archived_at) : null,
     };
   }
 
@@ -1347,6 +1399,7 @@ export class WorkspaceContentService {
       sharedAt: row.shared_at ? new Date(row.shared_at) : null,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
+      archivedAt: row.archived_at ? new Date(row.archived_at) : null,
     };
   }
 
@@ -1379,6 +1432,7 @@ export class WorkspaceContentService {
       sharedAt: row.shared_at ? new Date(row.shared_at) : null,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
+      archivedAt: row.archived_at ? new Date(row.archived_at) : null,
     };
   }
 

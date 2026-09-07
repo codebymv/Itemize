@@ -38,6 +38,7 @@ import { useCanvasContextMenu } from "./canvas/hooks/useCanvasContextMenu";
 import { useCanvasSharing } from "./canvas/hooks/useCanvasSharing";
 import { useCanvasCRUD } from "./canvas/hooks/useCanvasCRUD";
 import { useCanvasFrames } from "./canvas/hooks/useCanvasFrames";
+import { useWorkspaceArchive } from "@/hooks/useWorkspaceArchive";
 import { createCanvasHeaderTools } from "./canvas/components/CanvasToolbar";
 import { MobileListView as CanvasMobileListView } from "./canvas/components/MobileListView";
 import { findOpenCanvasPosition, type CanvasPositionedItem } from "@/lib/canvasPosition";
@@ -116,6 +117,7 @@ const CanvasPage: React.FC = () => {
 
   const { toast } = useToast();
   const { enqueuePositionUpdate } = useCanvasPositionSync();
+  const { archive: archiveWorkspaceContent } = useWorkspaceArchive();
   const {
     createFrameAt,
     updateFrame,
@@ -976,6 +978,7 @@ const CanvasPage: React.FC = () => {
               onFrameMove={moveFrame}
               onFrameUpdate={updateFrame}
               onFrameDelete={deleteFrame}
+              onFrameArchive={(frameId) => { void archiveWorkspaceContent('frame', frameId); }}
               onOpenNewFrame={(position) => { void createFrameAt(position); }}
               editingFrameId={editingFrameId}
               onOpenNewWhiteboardModal={handleOpenNewWhiteboardModal}

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useWorkspaceCanvasActions } from '@/components/workspace/WorkspaceCanvasActions';
+import { useWorkspaceArchive } from '@/hooks/useWorkspaceArchive';
 import {
   ESTIMATE_PREFILL_STATE,
   estimatePrefillFromList,
@@ -29,13 +30,14 @@ export const useWorkspaceActions = (
 ): WorkspaceActionSurface => {
   const navigate = useNavigate();
   const canvas = useWorkspaceCanvasActions();
+  const { archive } = useWorkspaceArchive();
   const { source, card } = target;
 
   return useMemo(() => {
     const available: WorkspaceActionId[] = [];
     if (source === 'list') available.push('turn-into-estimate');
     if (canvas) available.push('new-list', 'new-note');
-    available.push('share', 'mention-client', 'reference-document');
+    available.push('share', 'archive', 'mention-client', 'reference-document');
     if (canvas) available.push('move-to-frame');
 
     const run = (id: WorkspaceActionId) => {
@@ -61,11 +63,14 @@ export const useWorkspaceActions = (
         case 'share':
           onShare();
           return;
+        case 'archive':
+          void archive(source, card.id);
+          return;
         default:
           return;
       }
     };
 
     return { available, run };
-  }, [canvas, card, navigate, onShare, source]);
+  }, [archive, canvas, card, navigate, onShare, source]);
 };

@@ -15,6 +15,7 @@ describe('workspaceActions', () => {
   it('lists the available actions in vocabulary order for an empty query', () => {
     expect(actionSuggestions(all, '').map((row) => row.action)).toEqual(all);
     expect(actionSuggestions(['share', 'new-list'], '').map((row) => row.action)).toEqual(['new-list', 'share']);
+    expect(actionSuggestions(all, 'arch').map((row) => row.action)).toEqual(['archive']);
     expect(actionSuggestions([], '')).toEqual([]);
   });
 

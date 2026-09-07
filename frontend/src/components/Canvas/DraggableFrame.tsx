@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Check, MoreVertical, Palette, Pencil, Trash2, X } from 'lucide-react';
+import { Archive, Check, MoreVertical, Palette, Pencil, Trash2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ColorPicker } from '@/components/ui/color-picker';
@@ -28,6 +28,8 @@ export interface DraggableFrameProps {
     updatedData: Partial<Pick<WorkspaceFrame, 'title' | 'color_value' | 'contact_id' | 'contact_name'>>,
   ) => Promise<unknown>;
   onDelete?: (frameId: number) => Promise<boolean>;
+  /** Archive the frame; its cards stay on the canvas. */
+  onArchive?: (frameId: number) => void;
   /** Open the title for editing on mount (a frame that was just created). */
   autoEditTitle?: boolean;
 }
@@ -43,6 +45,7 @@ export const DraggableFrame: React.FC<DraggableFrameProps> = ({
   onMove,
   onUpdate,
   onDelete,
+  onArchive,
   autoEditTitle = false,
 }) => {
   const frameRef = useRef<HTMLDivElement>(null);
@@ -278,6 +281,12 @@ export const DraggableFrame: React.FC<DraggableFrameProps> = ({
                 Color
               </DropdownMenuItem>
             </ColorPicker>
+            {onArchive && (
+              <DropdownMenuItem onClick={() => onArchive(frame.id)} className="font-raleway">
+                <Archive className="mr-2 h-4 w-4" aria-hidden="true" />
+                Archive frame
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={() => setShowDelete(true)} className="font-raleway text-destructive focus:text-destructive">
               <Trash2 className="mr-2 h-4 w-4" aria-hidden="true" />
               Delete frame

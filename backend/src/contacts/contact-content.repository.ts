@@ -57,7 +57,7 @@ export class ContactContentRepository {
       `SELECT id, title, ${table === 'workspace_frames' ? 'NULL::varchar AS category' : 'category'},
               created_at, COUNT(*) OVER()::int AS total
        FROM ${table}
-       WHERE contact_id = $1
+       WHERE contact_id = $1 AND archived_at IS NULL
        ORDER BY created_at DESC, id DESC
        LIMIT $2`,
       [contactId, limit],

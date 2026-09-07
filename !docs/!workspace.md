@@ -24,6 +24,10 @@ A frame is a named region on the canvas. Add one from the **Add** menu (or the c
 
 On Solo and Studio, a frame can be linked to a client from the chip in its header, the same way cards are. Linked frames appear on the client's page under Related Content, and opening one from there centres the canvas on the frame. Deleting a frame leaves its cards where they are.
 
+## Archive
+
+Finished with a card or a frame but not ready to delete it? Archive it from its menu (or type `/archive`). It leaves the canvas and Contents at once and waits under **Workspace › Archive**, where Restore puts it back exactly where it was — same spot, same client link. Archiving a frame leaves its cards on the canvas. Vaults can't be archived yet.
+
 ## Clients
 
 On Solo and Studio, any list, note, whiteboard, or wireframe can be linked to one client from the chip under its category. Linked items appear on the client's page under Related Content, and opening one from there brings you back to the canvas centered on that card.

@@ -16,6 +16,7 @@ export type WorkspaceFrameRow = {
   contact_name: string | null;
   created_at: Date;
   updated_at: Date;
+  archived_at: Date | null;
 };
 
 export type WorkspaceFrameValues = {
@@ -61,7 +62,7 @@ const frameSelection = `
     FROM contacts contact
     WHERE contact.id = workspace_frames.contact_id
   ) AS contact_name,
-  created_at, updated_at
+  created_at, updated_at, archived_at
 `;
 
 /**
@@ -77,16 +78,20 @@ export class WorkspaceFramesRepository {
     userId: number,
     pageSize: number,
     offset: number,
+    archived: 'active' | 'archived' | 'all' = 'active',
   ): Promise<{ rows: WorkspaceFrameRow[]; total: number }> {
+    const archiveClause = archived === 'active'
+      ? 'AND archived_at IS NULL'
+      : archived === 'archived' ? 'AND archived_at IS NOT NULL' : '';
     const [count, rows] = await Promise.all([
       this.pool.query<{ total: number }>(
-        'SELECT COUNT(*)::int AS total FROM workspace_frames WHERE user_id = $1',
+        `SELECT COUNT(*)::int AS total FROM workspace_frames WHERE user_id = $1 ${archiveClause}`,
         [userId],
       ),
       this.pool.query<WorkspaceFrameRow>(
         `SELECT ${frameSelection}
          FROM workspace_frames
-         WHERE user_id = $1
+         WHERE user_id = $1 ${archiveClause}
          ORDER BY created_at DESC, id DESC
          LIMIT $2 OFFSET $3`,
         [userId, pageSize, offset],

@@ -129,11 +129,13 @@ describe('AppSidebar first-run disclosure', () => {
     expect(getWorkspaceDestinations(true).map((item) => item.title)).toEqual([
       'Contents',
       'Shared',
+      'Archive',
     ]);
     expect(getWorkspaceDestinations(false).map((item) => item.title)).toEqual([
       'Canvas',
       'Contents',
       'Shared',
+      'Archive',
     ]);
   });
 

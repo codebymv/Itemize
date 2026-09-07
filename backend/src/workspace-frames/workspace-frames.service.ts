@@ -30,13 +30,18 @@ const MUTATION_ID_PATTERN =
 export class WorkspaceFramesService {
   constructor(private readonly repository: WorkspaceFramesRepository) {}
 
-  async frames(userId: number, page: PageInput = new PageInput()): Promise<WorkspaceFramePage> {
+  async frames(
+    userId: number,
+    page: PageInput = new PageInput(),
+    archived?: string | null,
+  ): Promise<WorkspaceFramePage> {
     const current = Number.isSafeInteger(page.page) && page.page > 0 ? page.page : 1;
     const pageSize = Number.isSafeInteger(page.pageSize) && page.pageSize > 0
       ? Math.min(page.pageSize, MAX_PAGE_SIZE)
       : 50;
+    const archiveFilter = archived === undefined || archived === null ? 'active' : this.archiveFilter(archived);
     try {
-      const result = await this.repository.findFrames(userId, pageSize, (current - 1) * pageSize);
+      const result = await this.repository.findFrames(userId, pageSize, (current - 1) * pageSize, archiveFilter);
       return {
         nodes: result.rows.map((row) => this.map(row)),
         pageInfo: pageInfo(current, pageSize, result.total),
@@ -173,7 +178,18 @@ export class WorkspaceFramesService {
       contactName: row.contact_name ?? null,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
+      archivedAt: row.archived_at ? new Date(row.archived_at) : null,
     };
+  }
+
+  private archiveFilter(value: string): 'active' | 'archived' | 'all' {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'active' || normalized === 'archived' || normalized === 'all') return normalized;
+    throw itemizeGraphqlError(
+      'archived must be one of active, archived, all',
+      'BAD_USER_INPUT',
+      { field: 'archived', reason: 'INVALID_ARCHIVE_FILTER' },
+    );
   }
 
   private title(value: string): string {

@@ -1,5 +1,6 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 import {
+  Archive,
   AtSign,
   DollarSign,
   FileText,
@@ -29,6 +30,7 @@ const ACTION_ICONS: Record<WorkspaceActionId, LucideIcon> = {
   'new-list': ListChecks,
   'new-note': StickyNote,
   share: Share2,
+  archive: Archive,
   'mention-client': AtSign,
   'reference-document': DollarSign,
   'move-to-frame': Frame,

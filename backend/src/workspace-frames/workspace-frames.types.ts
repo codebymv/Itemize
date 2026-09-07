@@ -52,6 +52,9 @@ export class WorkspaceFrame {
 
   @Field(() => GraphQLISODateTime)
   updatedAt: Date;
+
+  @Field(() => GraphQLISODateTime, { nullable: true })
+  archivedAt: Date | null;
 }
 
 @ObjectType()

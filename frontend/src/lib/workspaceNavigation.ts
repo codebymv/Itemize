@@ -7,11 +7,13 @@ const desktopDestinations: WorkspaceDestination[] = [
   { title: 'Canvas', path: '/canvas' },
   { title: 'Contents', path: '/contents' },
   { title: 'Shared', path: '/shared-items' },
+  { title: 'Archive', path: '/archive' },
 ];
 
 const mobileDestinations: WorkspaceDestination[] = [
   { title: 'Contents', path: '/contents' },
   { title: 'Shared', path: '/shared-items' },
+  { title: 'Archive', path: '/archive' },
 ];
 
 export const getWorkspaceDestinations = (isMobile: boolean): WorkspaceDestination[] =>

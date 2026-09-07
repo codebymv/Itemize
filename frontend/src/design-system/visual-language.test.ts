@@ -148,6 +148,7 @@ describe('visual language: shared page chrome', () => {
 
   const PROTECTED_ROUTE_COMPONENTS = [
     'AdminPage',
+    'ArchivePage',
     'AutomationsPage',
     'BookingsPage',
     'CalendarSettingsPage',

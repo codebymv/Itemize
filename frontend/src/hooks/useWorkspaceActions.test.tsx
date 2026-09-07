@@ -8,6 +8,9 @@ import {
   type WorkspaceCanvasActions,
 } from '@/components/workspace/WorkspaceCanvasActions';
 import { ESTIMATE_PREFILL_STATE } from '@/lib/workspaceActions';
+
+const archive = vi.hoisted(() => vi.fn());
+vi.mock('@/hooks/useWorkspaceArchive', () => ({ useWorkspaceArchive: () => ({ archive, restore: vi.fn() }) }));
 import type { List, Note } from '@/types';
 
 const list: List = {
@@ -61,14 +64,14 @@ describe('useWorkspaceActions', () => {
       { wrapper: wrapperWith(canvas) },
     );
     expect(onCanvas.result.current.available).toEqual([
-      'turn-into-estimate', 'new-list', 'new-note', 'share', 'mention-client', 'reference-document', 'move-to-frame',
+      'turn-into-estimate', 'new-list', 'new-note', 'share', 'archive', 'mention-client', 'reference-document', 'move-to-frame',
     ]);
 
     const noteOffCanvas = renderHook(
       () => useWorkspaceActions({ source: 'note', card: note }, { onShare: vi.fn() }),
       { wrapper: wrapperWith(null) },
     );
-    expect(noteOffCanvas.result.current.available).toEqual(['share', 'mention-client', 'reference-document']);
+    expect(noteOffCanvas.result.current.available).toEqual(['share', 'archive', 'mention-client', 'reference-document']);
   });
 
   it('hands the list to the estimate editor as an id in the URL and items in router state', () => {
@@ -109,6 +112,8 @@ describe('useWorkspaceActions', () => {
     expect(canvas.createNoteNear).toHaveBeenCalledWith(note);
     act(() => result.current.run('share'));
     expect(onShare).toHaveBeenCalledTimes(1);
+    act(() => result.current.run('archive'));
+    expect(archive).toHaveBeenCalledWith('note', 3);
     // Door actions are the adapter's job; the runner ignores them.
     act(() => result.current.run('mention-client'));
     expect(onShare).toHaveBeenCalledTimes(1);

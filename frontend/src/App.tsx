@@ -83,6 +83,7 @@ const PublicFormPage = React.lazy(() => import("./pages/forms/PublicFormPage"));
 const InboxPage = React.lazy(() => import("./pages/inbox/InboxPage"));
 const ContentsPage = React.lazy(() => import("./pages/workspace").then(m => ({ default: m.ContentsPage })));
 const SharedPage = React.lazy(() => import("./pages/workspace").then(m => ({ default: m.SharedPage })));
+const ArchivePage = React.lazy(() => import("./pages/workspace").then(m => ({ default: m.ArchivePage })));
 
 // New pages for expanded navigation
 const SegmentsPage = React.lazy(() => import("./pages/segments/SegmentsPage"));
@@ -420,6 +421,7 @@ const AppContent = () => {
         <Route path="/lists" element={<AuthenticatedLayout><UserHome /></AuthenticatedLayout>} />
         <Route path="/contents" element={<AuthenticatedLayout><ContentsPage /></AuthenticatedLayout>} />
         <Route path="/shared-items" element={<AuthenticatedLayout><SharedPage /></AuthenticatedLayout>} />
+        <Route path="/archive" element={<AuthenticatedLayout><ArchivePage /></AuthenticatedLayout>} />
         
         {/* Settings */}
         <Route path="/settings" element={<AuthenticatedLayout><SettingsPage /></AuthenticatedLayout>} />

@@ -57,6 +57,7 @@ interface CanvasContainerProps {
   onFrameMove?: (frameId: number, position: { x: number; y: number }, size?: { width: number; height: number }) => void;
   onFrameUpdate?: (frameId: number, updatedData: Partial<Pick<WorkspaceFrame, 'title' | 'color_value' | 'contact_id' | 'contact_name'>>) => Promise<unknown>;
   onFrameDelete?: (frameId: number) => Promise<boolean>;
+  onFrameArchive?: (frameId: number) => void;
   onOpenNewFrame?: (position: { x: number; y: number }) => void;
   /** The frame whose title should open for editing (just created). */
   editingFrameId?: number | null;
@@ -121,6 +122,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   onFrameMove,
   onFrameUpdate,
   onFrameDelete,
+  onFrameArchive,
   onOpenNewFrame,
   editingFrameId = null,
   addCategory,
@@ -806,6 +808,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
                 onMove={onFrameMove}
                 onUpdate={onFrameUpdate}
                 onDelete={onFrameDelete}
+                onArchive={onFrameArchive}
                 autoEditTitle={editingFrameId === frame.id}
               />
             ))}

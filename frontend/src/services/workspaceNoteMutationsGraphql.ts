@@ -29,7 +29,7 @@ const noteFields = `
   colorValue positionX positionY width height zIndex
   contactId contactName
   references { entityType entityId label status total currency sentAt viewedAt paidAt acceptedAt declinedAt }
-  shareToken isPublic sharedAt createdAt updatedAt
+  shareToken isPublic sharedAt createdAt updatedAt archivedAt
 `;
 
 const createNoteMutation = `
@@ -71,6 +71,7 @@ const mapNote = (note: GraphqlWorkspaceNote): LegacyWorkspaceNote => ({
   shared_at: note.sharedAt,
   created_at: note.createdAt,
   updated_at: note.updatedAt,
+  archived_at: note.archivedAt ?? null,
 });
 
 const mapInput = (input: CreateNotePayload | NotePayload) => ({

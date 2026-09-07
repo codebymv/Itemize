@@ -88,6 +88,7 @@ const ListCard: React.FC<ListCardProps> = ({
     onShare(list.id);
   }, [list.id, onShare]);
   const actions = useWorkspaceActions({ source: 'list', card: list }, { onShare: handleShareList });
+  const handleArchiveList = useCallback(() => actions.run('archive'), [actions]);
   const frames = useCardFrames({ source: 'list', card: list });
   const mention = useListMentionContext(list.contact_id, actions, frames);
 
@@ -197,6 +198,7 @@ const ListCard: React.FC<ListCardProps> = ({
           handleEditTitle={handleEditTitle}
           handleDeleteList={handleDeleteConfirmation}
           handleShareList={handleShareList}
+          handleArchiveList={handleArchiveList}
           titleEditRef={titleEditRef}
           onColorSave={handleSaveListColor} // New prop
           isSavingColor={isSavingColor}     // New prop

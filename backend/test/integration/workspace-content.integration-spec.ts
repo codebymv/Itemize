@@ -2231,4 +2231,87 @@ describe('Workspace content GraphQL PostgreSQL reads', () => {
     const gone = await pool.query('SELECT 1 FROM workspace_frames WHERE id = $1', [frameId]);
     expect(gone.rowCount).toBe(0);
   });
+  it('archives and restores cards and frames, hides them from default reads, and refuses vaults', async () => {
+    const created = await mutation(
+      memberToken,
+      `mutation Create($input: CreateWorkspaceListInput!) {
+        createWorkspaceList(input: $input) { id archivedAt updatedAt }
+      }`,
+      { input: { idempotencyKey: 'de0a5476-b1c9-4d32-84e5-9a0b1c2d3e45', title: 'Parked scope', contactId: memberContactId } },
+    ).expect(200);
+    expect(created.body.errors).toBeUndefined();
+    const listId = Number(created.body.data.createWorkspaceList.id);
+    expect(created.body.data.createWorkspaceList.archivedAt).toBeNull();
+    const revision = created.body.data.createWorkspaceList.updatedAt;
+
+    const archiveDocument = `mutation Archive($input: SetWorkspaceContentArchivedInput!) {
+      setWorkspaceContentArchived(input: $input) { type id archivedAt }
+    }`;
+    const archived = await mutation(memberToken, archiveDocument, {
+      input: { mutationId: 'ef1b6587-c2d0-4e43-95f6-0b1c2d3e4f56', type: 'list', id: listId, archived: true },
+    }).expect(200);
+    expect(archived.body.errors).toBeUndefined();
+    expect(archived.body.data.setWorkspaceContentArchived).toMatchObject({ type: 'list', id: listId });
+    expect(archived.body.data.setWorkspaceContentArchived.archivedAt).not.toBeNull();
+
+    // Default reads and the contact page no longer show it; the archived filter does.
+    const listsDocument = `query Lists($filter: WorkspaceContentFilterInput) {
+      workspaceLists(filter: $filter) { nodes { id archivedAt } pageInfo { total } }
+    }`;
+    const active = await query(memberToken, listsDocument, {}).expect(200);
+    expect(active.body.data.workspaceLists.nodes.map((row: { id: number }) => Number(row.id))).not.toContain(listId);
+    const parked = await query(memberToken, listsDocument, { filter: { archived: 'archived' } }).expect(200);
+    expect(parked.body.data.workspaceLists.nodes.map((row: { id: number }) => Number(row.id))).toContain(listId);
+    const all = await query(memberToken, listsDocument, { filter: { archived: 'all' } }).expect(200);
+    expect(all.body.data.workspaceLists.nodes.map((row: { id: number }) => Number(row.id))).toContain(listId);
+    const contactPage = await query(
+      memberToken,
+      `query Content($contactId: Int!) { contactContent(contactId: $contactId) { lists { nodes { id } } } }`,
+      { contactId: memberContactId },
+    ).expect(200);
+    expect(contactPage.body.data.contactContent.lists.nodes.map((row: { id: number }) => Number(row.id))).not.toContain(listId);
+    const badFilter = await query(memberToken, listsDocument, { filter: { archived: 'someday' } }).expect(200);
+    expect(badFilter.body.errors?.[0]?.extensions?.code).toBe('BAD_USER_INPUT');
+
+    // Restoring keeps the editor's revision valid: archiving never touched updated_at.
+    const restored = await mutation(memberToken, archiveDocument, {
+      input: { mutationId: 'f02c7698-d3e1-4f54-a607-1c2d3e4f5a67', type: 'list', id: listId, archived: false },
+    }).expect(200);
+    expect(restored.body.data.setWorkspaceContentArchived.archivedAt).toBeNull();
+    const renamed = await mutation(
+      memberToken,
+      `mutation Update($id: Int!, $input: UpdateWorkspaceListInput!) {
+        updateWorkspaceList(id: $id, input: $input) { id title }
+      }`,
+      { id: listId, input: { mutationId: '013d87a9-e4f2-4a65-b718-2d3e4f5a6b78', expectedUpdatedAt: revision, title: 'Back on the canvas' } },
+    ).expect(200);
+    expect(renamed.body.errors).toBeUndefined();
+    expect(renamed.body.data.updateWorkspaceList.title).toBe('Back on the canvas');
+
+    // Frames archive through the same door and leave the frames read.
+    const frame = await mutation(
+      memberToken,
+      `mutation Create($input: CreateWorkspaceFrameInput!) { createWorkspaceFrame(input: $input) { id } }`,
+      { input: { idempotencyKey: '124e98ba-f503-4b76-a829-3e4f5a6b7c89', title: 'Parked frame' } },
+    ).expect(200);
+    const frameId = Number(frame.body.data.createWorkspaceFrame.id);
+    const frameArchived = await mutation(memberToken, archiveDocument, {
+      input: { mutationId: '235fa9cb-0614-4c87-b93a-4f5a6b7c8d9a', type: 'frame', id: frameId, archived: true },
+    }).expect(200);
+    expect(frameArchived.body.errors).toBeUndefined();
+    const frames = await query(memberToken, `query { workspaceFrames { nodes { id } } }`).expect(200);
+    expect(frames.body.data.workspaceFrames.nodes.map((row: { id: number }) => Number(row.id))).not.toContain(frameId);
+    const archivedFrames = await query(memberToken, `query { workspaceFrames(archived: "archived") { nodes { id archivedAt } } }`).expect(200);
+    expect(archivedFrames.body.data.workspaceFrames.nodes.map((row: { id: number }) => Number(row.id))).toContain(frameId);
+
+    // Outsiders cannot archive what they cannot see; vaults are not archivable yet.
+    const foreign = await mutation(outsiderToken, archiveDocument, {
+      input: { mutationId: '3460badc-1725-4d98-8a4b-5a6b7c8d9eab', type: 'list', id: listId, archived: true },
+    }).expect(200);
+    expect(foreign.body.errors?.[0]?.extensions?.code).toBe('NOT_FOUND');
+    const vault = await mutation(memberToken, archiveDocument, {
+      input: { mutationId: '4571cbed-2836-4ea9-9b5c-6b7c8d9eafbc', type: 'vault', id: 1, archived: true },
+    }).expect(200);
+    expect(vault.body.errors?.[0]?.extensions?.code).toBe('BAD_USER_INPUT');
+  });
 });

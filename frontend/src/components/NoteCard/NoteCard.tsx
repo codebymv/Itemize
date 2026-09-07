@@ -6,7 +6,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ChevronDown, MoreVertical, Edit3, Trash2, X, Check, StickyNote, Share2 } from 'lucide-react';
+import { ChevronDown, MoreVertical, Edit3, Trash2, X, Check, StickyNote, Share2, Archive } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { ColorPicker } from '@/components/ui/color-picker';
 import { Spinner } from '@/components/ui/Spinner';
@@ -258,6 +258,10 @@ const NoteCard: React.FC<NoteCardProps> = ({
                       <DropdownMenuItem onClick={handleShareNote} className="group/menu" style={{ fontFamily: '"Raleway", sans-serif' }}>
                         <Share2 className="mr-2 h-4 w-4" />
                         Share
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => actions.run('archive')} className="group/menu font-raleway">
+                        <Archive className="mr-2 h-4 w-4" />
+                        Archive
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={handleDeleteConfirmation} className="text-destructive focus:text-destructive">
                         <Trash2 className="mr-2 h-4 w-4" />

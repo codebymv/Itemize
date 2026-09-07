@@ -43,6 +43,7 @@ export interface WorkspaceFrame {
   contact_name: string | null;
   created_at: string;
   updated_at: string;
+  archived_at: string | null;
 }
 
 export interface List {
@@ -64,6 +65,7 @@ export interface List {
   contact_id?: number | null;
   contact_name?: string | null;
   references?: WorkspaceReference[];
+  archived_at?: string | null;
 }
 
 // Category type for API responses
@@ -118,6 +120,7 @@ export interface Note {
   contact_id?: number | null;
   contact_name?: string | null;
   references?: WorkspaceReference[];
+  archived_at?: string | null;
 }
 
 export interface CanvasPath {
@@ -154,6 +157,7 @@ export interface Whiteboard {
   contact_id?: number | null;
   contact_name?: string | null;
   references?: WorkspaceReference[];
+  archived_at?: string | null;
 }
 
 // Props for NoteCard component
@@ -250,6 +254,7 @@ export interface Wireframe {
   contact_id?: number | null;
   contact_name?: string | null;
   references?: WorkspaceReference[];
+  archived_at?: string | null;
 }
 
 // Props for WireframeCard component

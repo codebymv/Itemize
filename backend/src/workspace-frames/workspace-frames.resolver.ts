@@ -24,8 +24,9 @@ export class WorkspaceFramesResolver {
   @Query(() => WorkspaceFramePage)
   workspaceFrames(
     @Args('page', { nullable: true }) page?: PageInput,
+    @Args('archived', { type: () => String, nullable: true }) archived?: string | null,
   ): Promise<WorkspaceFramePage> {
-    return this.frames.frames(this.userId(), page);
+    return this.frames.frames(this.userId(), page, archived);
   }
 
   @CsrfProtected()
