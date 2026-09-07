@@ -30,7 +30,7 @@ export function PreviewPlaceholder({
     >
       {Icon ? (
         <div className={cn(
-          'flex shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/70',
+          'flex shrink-0 items-center justify-center rounded-full bg-theme-tint dark:bg-theme-tint/70',
           compact ? 'mb-2 h-8 w-8' : 'mb-4 h-12 w-12',
         )}>
           <Icon

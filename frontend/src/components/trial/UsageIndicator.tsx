@@ -24,7 +24,7 @@ type UsageState =
   "normal" | "warning" | "critical" | "unlimited" | "unavailable";
 
 const fillClass: Record<UsageState, string> = {
-  normal: "bg-blue-600 dark:bg-blue-500",
+  normal: "bg-primary",
   warning: "bg-amber-500",
   critical: "bg-red-600 dark:bg-red-500",
   unlimited: "",

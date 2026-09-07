@@ -319,19 +319,19 @@ export function InboxPage() {
                 return {
                     label: 'Email',
                     color: 'text-icon-accent',
-                    bgColor: 'bg-blue-100 dark:bg-blue-900',
+                    bgColor: 'bg-theme-tint',
                 };
             case 'chat':
                 return {
                     label: 'Website chat',
                     color: 'text-icon-accent',
-                    bgColor: 'bg-blue-100 dark:bg-blue-950',
+                    bgColor: 'bg-theme-tint',
                 };
             case 'facebook':
                 return {
                     label: 'Messenger',
                     color: 'text-icon-accent',
-                    bgColor: 'bg-blue-100 dark:bg-blue-950',
+                    bgColor: 'bg-theme-tint',
                 };
             case 'instagram':
                 return {
@@ -666,7 +666,7 @@ export function InboxPage() {
                                                                 >
                                                                     <div
                                                                         className={`max-w-[70%] rounded-lg p-3 ${isOutbound
-                                                                            ? isSms ? 'bg-green-600 text-white' : 'bg-blue-600 text-white'
+                                                                            ? isSms ? 'bg-green-600 text-white' : 'bg-primary text-white'
                                                                             : 'bg-muted'
                                                                             }`}
                                                                     >
@@ -697,7 +697,7 @@ export function InboxPage() {
                                                                                 </a>
                                                                             )
                                                                         ) : null}
-                                                                        <div className={`flex items-center gap-2 mt-1 ${isOutbound ? (isSms ? 'text-green-100' : 'text-blue-100') : 'text-muted-foreground'}`}>
+                                                                        <div className={`flex items-center gap-2 mt-1 ${isOutbound ? (isSms ? 'text-green-100' : 'text-primary-foreground/90') : 'text-muted-foreground'}`}>
                                                                             <p className="text-xs">
                                                                                 {format(parseISO(msg.created_at), 'h:mm a')}
                                                                             </p>

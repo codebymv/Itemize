@@ -174,7 +174,7 @@ export function EmailTemplateBrowserDialog<T extends EmailTemplateBrowserItem>({
 
             <div className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4">
               {loading ? (
-                <div className="flex h-full min-h-48 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-blue-600" /></div>
+                <div className="flex h-full min-h-48 items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-icon-accent" /></div>
               ) : error ? (
                 <ErrorState
                   icon={FileText}
@@ -199,9 +199,9 @@ export function EmailTemplateBrowserDialog<T extends EmailTemplateBrowserItem>({
                   {filteredItems.map(item => {
                     const isSelected = selectedId === item.id;
                     return (
-                      <div key={item.id} className={cn('group flex min-w-0 items-center gap-2 interaction-row', isSelected && 'bg-blue-500/5')}>
+                      <div key={item.id} className={cn('group flex min-w-0 items-center gap-2 interaction-row', isSelected && 'bg-primary/5')}>
                         <button type="button" className="flex min-w-0 flex-1 items-center gap-3 px-3 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring" onClick={() => choose(item)}>
-                          <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-icon-accent', isSelected && 'bg-blue-600 text-white dark:text-white')}>
+                          <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/15 text-icon-accent', isSelected && 'bg-primary text-white dark:text-white')}>
                             {isSelected ? <Check className="h-4 w-4" /> : <Mail className="h-4 w-4" />}
                           </span>
                           <span className="min-w-0 flex-1">
@@ -214,7 +214,7 @@ export function EmailTemplateBrowserDialog<T extends EmailTemplateBrowserItem>({
                           </span>
                         </button>
                         <div className="flex shrink-0 items-center gap-1 pr-2">
-                          {renderPreview && <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:bg-blue-500/10 hover:text-blue-700 dark:text-blue-400 dark:hover:bg-blue-400/10 dark:hover:text-blue-300" onClick={() => setPreviewId(item.id)} aria-label={`Preview ${item.name}`}><Eye className="h-4 w-4" /></Button>}
+                          {renderPreview && <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-icon-accent hover:bg-primary/10 hover:text-primary dark:hover:text-icon-accent" onClick={() => setPreviewId(item.id)} aria-label={`Preview ${item.name}`}><Eye className="h-4 w-4" /></Button>}
                           {onEdit && <Button type="button" variant="ghost" size="sm" className="hidden h-8 sm:inline-flex" onClick={() => onEdit(item)}>Edit</Button>}
                         </div>
                       </div>

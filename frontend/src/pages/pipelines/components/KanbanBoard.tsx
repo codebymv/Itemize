@@ -362,7 +362,7 @@ export function KanbanBoard({
             <div
               key={stage.id}
               className={`flex-shrink-0 w-80 flex flex-col rounded-lg transition-colors ${
-                isDropTarget ? 'bg-blue-50 dark:bg-blue-950/20' : 'bg-muted/30'
+                isDropTarget ? 'bg-theme-tint dark:bg-theme-tint/20' : 'bg-muted/30'
               }`}
               onDragOver={(e) => handleDragOver(e, stage.id)}
               onDragLeave={handleDragLeave}
@@ -495,7 +495,7 @@ export function KanbanBoard({
                             </div>
                             <div className="h-1 bg-muted rounded-full overflow-hidden">
                               <div
-                                className="h-full bg-blue-500 rounded-full"
+                                className="h-full bg-primary rounded-full"
                                 style={{ width: `${deal.probability}%` }}
                               />
                             </div>

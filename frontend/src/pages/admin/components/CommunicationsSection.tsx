@@ -455,7 +455,7 @@ export default function CommunicationsSection({
                                     >
                                         <span className={`flex h-5 w-5 items-center justify-center rounded border-2 transition-colors ${
                                             selectedUsers.size >= users.length && users.length > 0 && !allFilteredSelected
-                                                ? 'border-blue-600 bg-blue-600'
+                                                ? 'border-primary bg-primary'
                                                 : 'border-slate-300 bg-white dark:border-slate-600 dark:bg-slate-800'
                                         }`}>
                                             {selectedUsers.size >= users.length && users.length > 0 && !allFilteredSelected && (
@@ -480,7 +480,7 @@ export default function CommunicationsSection({
                                 >
                                     <span className={`flex h-5 w-5 items-center justify-center rounded border-2 transition-colors ${
                                         allFilteredSelected
-                                            ? 'border-blue-600 bg-blue-600'
+                                            ? 'border-primary bg-primary'
                                             : 'border-slate-300 bg-white dark:border-slate-600 dark:bg-slate-800'
                                     }`}>
                                         {allFilteredSelected && <Check className="h-3 w-3 text-white" />}
@@ -542,7 +542,7 @@ export default function CommunicationsSection({
 
                         {usersLoading && page === 0 ? (
                                 <div className="flex items-center justify-center h-64">
-                                    <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                                    <Loader2 className="h-8 w-8 animate-spin text-icon-accent" />
                                 </div>
                             ) : usersLoadError ? (
                                 <ErrorState
@@ -569,14 +569,14 @@ export default function CommunicationsSection({
                                             aria-pressed={selectedUsers.has(user.id)}
                                             className={`interaction-row flex w-full items-center gap-3 rounded-lg border p-3 text-left ${
                                                 selectedUsers.has(user.id)
-                                                    ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+                                                    ? 'bg-theme-tint dark:bg-theme-tint/20 border-primary/30 dark:border-primary/40'
                                                     : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
                                             }`}
                                             onClick={() => handleSelectUser(user.id, !selectedUsers.has(user.id))}
                                         >
                                             <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
                                                 selectedUsers.has(user.id)
-                                                    ? 'bg-blue-600 border-blue-600'
+                                                    ? 'bg-primary border-primary'
                                                     : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800'
                                             }`}>
                                                 {selectedUsers.has(user.id) && (
@@ -584,7 +584,7 @@ export default function CommunicationsSection({
                                                 )}
                                             </div>
 
-                                            <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-medium">
+                                            <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-medium">
                                                 {(user.name || user.email)?.charAt(0)?.toUpperCase() || 'U'}
                                             </div>
 
@@ -616,13 +616,13 @@ export default function CommunicationsSection({
                                     {hasMore && (
                                         <div className="py-4 text-center">
                                             {loadingMore ? (
-                                                <Loader2 className="h-5 w-5 animate-spin mx-auto text-blue-600" />
+                                                <Loader2 className="h-5 w-5 animate-spin mx-auto text-icon-accent" />
                                             ) : (
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
                                                     onClick={handleLoadMore}
-                                                    className="border-blue-600 text-blue-600"
+                                                    className="border-primary text-icon-accent"
                                                 >
                                                     Load More
                                                 </Button>

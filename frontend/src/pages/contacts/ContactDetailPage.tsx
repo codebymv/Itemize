@@ -457,7 +457,7 @@ export function ContactDetailPage() {
                   <Mail className="h-4 w-4 text-icon-accent" />
                   <a
                     href={`mailto:${contact.email}`}
-                    className="touch-target-mobile inline-flex touch-manipulation items-center text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                    className="touch-target-mobile inline-flex touch-manipulation items-center text-icon-accent hover:underline dark:hover:text-icon-accent"
                   >
                     {contact.email}
                   </a>
@@ -468,7 +468,7 @@ export function ContactDetailPage() {
                   <Phone className="h-4 w-4 text-icon-accent" />
                   <a
                     href={`tel:${contact.phone}`}
-                    className="touch-target-mobile inline-flex touch-manipulation items-center text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                    className="touch-target-mobile inline-flex touch-manipulation items-center text-icon-accent hover:underline dark:hover:text-icon-accent"
                   >
                     {contact.phone}
                   </a>

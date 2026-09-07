@@ -117,7 +117,7 @@ export const PaymentLinkModal: React.FC<PaymentLinkModalProps> = ({
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2 font-raleway">
-                        <CreditCard className="h-5 w-5 text-blue-600" />
+                        <CreditCard className="h-5 w-5 text-icon-accent" />
                         Payment Link
                     </DialogTitle>
                     <DialogDescription className="font-raleway">

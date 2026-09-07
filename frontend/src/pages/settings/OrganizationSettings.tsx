@@ -810,7 +810,7 @@ export function OrganizationSettings({
               </Select>
             ) : (
               <Button type="button" variant="outline" className="justify-start" onClick={() => navigate('/payment-settings')}>
-                <Plus className="mr-2 h-4 w-4 text-blue-600" />
+                <Plus className="mr-2 h-4 w-4 text-icon-accent" />
                 {businessProfilesAvailable ? 'Add a business profile' : 'Unlock business profiles'}
               </Button>
             )}
@@ -888,7 +888,7 @@ export function OrganizationSettings({
               <div className="divide-y rounded-lg border">
                 {invitations.map((invitation) => (
                   <div key={invitation.id} className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600/10 text-blue-600">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-icon-accent">
                       <Send className="h-4 w-4" />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -945,7 +945,7 @@ export function OrganizationSettings({
                 return (
                   <div key={member.id} className="flex items-center gap-3 p-3">
                     <Avatar className="h-9 w-9 shrink-0">
-                      <AvatarFallback className="bg-blue-600 text-sm text-white">{initials(member)}</AvatarFallback>
+                      <AvatarFallback className="bg-primary text-sm text-white">{initials(member)}</AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium" title={member.user_name || member.email || 'Member'}>
@@ -1073,7 +1073,7 @@ export function OrganizationSettings({
                   const occurredAt = new Date(item.occurredAt);
                   return (
                     <div key={item.id} className="flex gap-3 p-3">
-                      <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600/10 text-blue-600">
+                      <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-icon-accent">
                         <History className="h-4 w-4" aria-hidden="true" />
                       </div>
                       <div className="min-w-0 flex-1">
@@ -1108,7 +1108,7 @@ export function OrganizationSettings({
               >
                 {activityExpanded ? 'Show recent only' : `View all activity (${activity.length})`}
                 <ChevronDown
-                  className={`ml-2 h-4 w-4 text-blue-600 transition-transform ${activityExpanded ? 'rotate-180' : ''}`}
+                  className={`ml-2 h-4 w-4 text-icon-accent transition-transform ${activityExpanded ? 'rotate-180' : ''}`}
                   aria-hidden="true"
                 />
               </Button>

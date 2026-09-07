@@ -142,7 +142,7 @@ const hasRecentItems = recentItems !== undefined;
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="text-blue-600 hover:text-blue-700 hover:bg-blue-50/50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-900/20"
+                    className="text-icon-accent hover:text-primary hover:bg-theme-tint/50 dark:hover:text-icon-accent dark:hover:bg-theme-tint/20"
                     onClick={action.onClick}
                     aria-label={action.label}
                     data-module-widget-action
@@ -247,7 +247,7 @@ const hasRecentItems = recentItems !== undefined;
               <Button
                 size="sm"
                 variant="ghost"
-                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50/50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-900/20"
+                className="text-icon-accent hover:text-primary hover:bg-theme-tint/50 dark:hover:text-icon-accent dark:hover:bg-theme-tint/20"
                 onClick={action.onClick}
                 aria-label={action.label}
                 data-module-widget-action

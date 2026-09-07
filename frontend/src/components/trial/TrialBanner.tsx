@@ -37,10 +37,10 @@ type UrgencyState = 'informational' | 'warning' | 'urgent';
 
 const urgencyStyles = {
   informational: {
-    container: 'bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800',
-    text: 'text-blue-800 dark:text-blue-300',
+    container: 'bg-theme-tint border-primary/30 dark:border-primary/40',
+    text: 'text-primary dark:text-icon-accent',
     icon: 'text-icon-accent',
-    button: 'border-blue-600 text-blue-700 hover:bg-blue-100 dark:border-blue-400 dark:text-blue-300 dark:hover:bg-blue-900',
+    button: 'border-primary text-primary hover:bg-theme-tint dark:text-icon-accent',
   },
   warning: {
     container: 'bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800',

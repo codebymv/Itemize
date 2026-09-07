@@ -24,7 +24,7 @@ const FrameNode: React.FC<NodeProps> = ({ id, data, selected }) => {
     <div
       className={`relative flex h-full w-full min-h-[140px] min-w-[160px] flex-col overflow-hidden border-2 bg-card ${
         isPhone ? 'rounded-[1.75rem]' : 'rounded-lg'
-      } ${selected ? 'ring-2 ring-blue-600 ring-offset-2' : ''}`}
+      } ${selected ? 'ring-2 ring-ring ring-offset-2' : ''}`}
       style={{ borderColor: 'hsl(var(--foreground) / 0.35)' }}
       onDoubleClick={() => setIsEditing(true)}
     >
@@ -32,8 +32,8 @@ const FrameNode: React.FC<NodeProps> = ({ id, data, selected }) => {
         minWidth={isPhone ? 140 : 200}
         minHeight={isPhone ? 240 : 140}
         isVisible={selected}
-        lineClassName="border-blue-500"
-        handleClassName="h-2 w-2 bg-blue-600 border-none"
+        lineClassName="border-primary"
+        handleClassName="h-2 w-2 bg-primary border-none"
       />
 
       {!isBoard && (

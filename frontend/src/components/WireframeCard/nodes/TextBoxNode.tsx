@@ -63,7 +63,7 @@ const TextBoxNode: React.FC<NodeProps> = ({ id, data, selected }) => {
       className={`
         relative px-3 py-2 rounded border h-full w-full min-h-[40px] min-w-[80px]
         transition-all duration-200
-        ${selected ? 'ring-2 ring-blue-600 ring-offset-1' : ''}
+        ${selected ? 'ring-2 ring-ring ring-offset-1' : ''}
       `}
       style={{
         backgroundColor: 'hsl(var(--muted))',
@@ -76,8 +76,8 @@ const TextBoxNode: React.FC<NodeProps> = ({ id, data, selected }) => {
         minWidth={80}
         minHeight={40}
         isVisible={selected}
-        lineClassName="border-blue-500"
-        handleClassName="h-2 w-2 bg-blue-600 border-none"
+        lineClassName="border-primary"
+        handleClassName="h-2 w-2 bg-primary border-none"
       />
       {/* No handles - this is just a label */}
       {isEditing ? (

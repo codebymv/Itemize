@@ -562,7 +562,7 @@ export function DashboardOverview({
                       trigger={(
                         <button
                           type="button"
-                          className="interaction-row flex min-h-12 items-center justify-center gap-2 rounded-md border border-dashed border-border bg-background/40 px-3 py-2 text-xs text-muted-foreground hover:border-blue-400 hover:bg-blue-50/50 hover:text-blue-700 dark:hover:border-blue-500 dark:hover:bg-blue-950/20 dark:hover:text-blue-300"
+                          className="interaction-row flex min-h-12 items-center justify-center gap-2 rounded-md border border-dashed border-border bg-background/40 px-3 py-2 text-xs text-muted-foreground hover:border-primary hover:bg-theme-tint/50 hover:text-primary dark:hover:bg-theme-tint/20 dark:hover:text-icon-accent"
                           aria-label={`Open overview slot ${slotNumber} of ${MAX_PINNED_DASHBOARD_SIGNALS}`}
                         >
                           <Plus aria-hidden="true" className="h-3.5 w-3.5" />

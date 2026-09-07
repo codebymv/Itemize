@@ -837,7 +837,7 @@ export function EstimateEditorPage() {
                                     type="button"
                                     variant="outline"
                                     size="sm"
-                                    className="h-7 border-blue-200/60 px-2 text-blue-600 hover:bg-blue-50 dark:border-blue-800/60 dark:text-blue-400 dark:hover:bg-blue-950/40"
+                                    className="h-7 border-primary/20 px-2 text-icon-accent hover:bg-theme-tint dark:border-primary/40 dark:hover:bg-theme-tint/40"
                                     onClick={() => setDiscountValue(0.01)}
                                 >
                                     <Plus className="mr-1 h-3 w-3" />

@@ -83,7 +83,7 @@ const shareConfig = {
     label: 'Vault',
     description: 'Create an encrypted share link.',
     icon: KeyRound,
-    iconClassName: 'text-blue-600',
+    iconClassName: 'text-icon-accent',
     shareHelp: 'Anyone with the full URL, including the #fragment, can read a snapshot of this vault. Itemize cannot recover a link copied without the fragment.',
     shareSuccessTitle: 'Vault shared successfully',
     shareSuccessDescription: 'Copy the full link. The fragment after # is the decryption key and is never sent to Itemize.',
@@ -100,7 +100,7 @@ const ShareLinkLabel = ({ help, itemLabel }: { help?: string; itemLabel: string 
           <TooltipTrigger asChild>
             <button
               type="button"
-              className="inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-blue-600 dark:hover:text-blue-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+              className="inline-flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-icon-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               aria-label={`About ${itemLabel.toLowerCase()} share links`}
             >
               <Info className="h-3.5 w-3.5" />
@@ -247,7 +247,7 @@ export const ShareModal = <TId extends string | number>({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 font-raleway">
-            <Share2 className="h-5 w-5 text-blue-600" />
+            <Share2 className="h-5 w-5 text-icon-accent" />
             {`Share ${config.label}`}
           </DialogTitle>
           <DialogDescription className="sr-only">

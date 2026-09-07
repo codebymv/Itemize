@@ -172,7 +172,7 @@ function GetStartedRow({
     <div
       className={cn(
         'flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left',
-        isCurrent && 'border border-blue-200 bg-blue-50/70 dark:border-blue-800 dark:bg-blue-950/30',
+        isCurrent && 'border border-primary/30 bg-theme-tint/70 dark:border-primary/40 dark:bg-theme-tint/30',
         !step.completed && !isCurrent && 'opacity-55',
         step.completed && 'opacity-70',
       )}

@@ -70,7 +70,7 @@ export function ClientProfile({
       <Card className="bg-muted/10">
         <CardContent className="p-6">
           <div className="flex items-start gap-4">
-            <div className="h-16 w-16 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-2xl font-medium text-blue-700 dark:text-blue-300 flex-shrink-0">
+            <div className="h-16 w-16 rounded-full bg-theme-tint flex items-center justify-center text-2xl font-medium text-primary dark:text-icon-accent flex-shrink-0">
               {initials.toUpperCase()}
             </div>
 
@@ -83,7 +83,7 @@ export function ClientProfile({
 
               <div className="flex flex-wrap gap-3 text-sm">
                 {client.contact.email && (
-                  <a href={`mailto:${client.contact.email}`} className="touch-target-mobile flex touch-manipulation items-center gap-1 text-blue-600 hover:underline">
+                  <a href={`mailto:${client.contact.email}`} className="touch-target-mobile flex touch-manipulation items-center gap-1 text-icon-accent hover:underline">
                     <Mail className="h-4 w-4" />
                     {client.contact.email}
                   </a>
@@ -194,7 +194,7 @@ export function ClientProfile({
           <Card className="bg-muted/10">
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-blue-600" />
+                <CheckCircle2 className="h-4 w-4 text-icon-accent" />
                 Tasks
               </CardTitle>
             </CardHeader>

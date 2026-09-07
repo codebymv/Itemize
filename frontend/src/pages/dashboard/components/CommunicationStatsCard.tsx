@@ -25,7 +25,7 @@ export function CommunicationStatsCard({ stats, isLoading }: { stats?: Communica
                 <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                         <div
-                            className="p-2 rounded-full bg-blue-100 dark:bg-blue-900"
+                            className="p-2 rounded-full bg-theme-tint"
                             data-dashboard-analytics-icon
                         >
                             <Mail className="h-5 w-5 text-icon-accent" />
@@ -58,7 +58,7 @@ export function CommunicationStatsCard({ stats, isLoading }: { stats?: Communica
                 <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                         <div
-                            className="p-2 rounded-full bg-blue-100 dark:bg-blue-900"
+                            className="p-2 rounded-full bg-theme-tint"
                             data-dashboard-analytics-icon
                         >
                             <Phone className="h-5 w-5 text-icon-accent" />

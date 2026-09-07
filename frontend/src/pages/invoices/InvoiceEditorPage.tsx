@@ -735,7 +735,7 @@ export function InvoiceEditorPage() {
                                                     />
                                                     <Link
                                                         to="/payment-settings"
-                                                        className="block text-xs text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                                                        className="block text-xs text-icon-accent hover:underline dark:hover:text-icon-accent"
                                                     >
                                                         Edit logo
                                                     </Link>
@@ -743,7 +743,7 @@ export function InvoiceEditorPage() {
                                             ) : (
                                                 <Link
                                                     to="/payment-settings"
-                                                    className="flex h-24 w-24 flex-col items-center justify-center rounded-lg border border-dashed text-muted-foreground transition-colors hover:border-blue-600 hover:bg-blue-50 hover:text-blue-600 dark:hover:border-blue-400 dark:hover:bg-blue-950/40 dark:hover:text-blue-400"
+                                                    className="flex h-24 w-24 flex-col items-center justify-center rounded-lg border border-dashed text-muted-foreground transition-colors hover:border-primary hover:bg-theme-tint hover:text-icon-accent dark:hover:bg-theme-tint/40"
                                                 >
                                                     <Building className="h-8 w-8 mb-1" />
                                                     <span className="text-xs text-center">Add logo</span>
@@ -828,7 +828,7 @@ export function InvoiceEditorPage() {
                                             )}
                                             <Link
                                                 to="/payment-settings"
-                                                className="mt-2 inline-block text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                                                className="mt-2 inline-block text-icon-accent hover:underline dark:hover:text-icon-accent"
                                             >
                                                 {businesses.length > 0 ? 'Manage businesses' : 'Add a business profile'}
                                             </Link>
@@ -1066,7 +1066,7 @@ export function InvoiceEditorPage() {
                                     type="button"
                                     variant="outline"
                                     size="sm"
-                                    className="h-7 border-blue-200/60 px-2 text-blue-600 hover:bg-blue-50 dark:border-blue-800/60 dark:text-blue-400 dark:hover:bg-blue-950/40"
+                                    className="h-7 border-primary/20 px-2 text-icon-accent hover:bg-theme-tint dark:border-primary/40 dark:hover:bg-theme-tint/40"
                                     onClick={() => {
                                         const rawRate = settings?.default_tax_rate;
                                         const parsedRate = typeof rawRate === 'string' 
@@ -1124,7 +1124,7 @@ export function InvoiceEditorPage() {
                                 type="button"
                                 variant="outline"
                                 size="sm"
-                                className="h-7 border-blue-200/60 px-2 text-blue-600 hover:bg-blue-50 dark:border-blue-800/60 dark:text-blue-400 dark:hover:bg-blue-950/40"
+                                className="h-7 border-primary/20 px-2 text-icon-accent hover:bg-theme-tint dark:border-primary/40 dark:hover:bg-theme-tint/40"
                                 onClick={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();

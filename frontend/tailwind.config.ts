@@ -31,16 +31,16 @@ export default {
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
-				ring: 'hsl(var(--ring))',
+				ring: 'hsl(var(--ring) / <alpha-value>)',
 				/* Theme colour tokens: chrome ink and soft wash (lib/themeColor.ts). */
-				'icon-accent': 'hsl(var(--icon-accent))',
-				'theme-tint': 'hsl(var(--theme-tint))',
+				'icon-accent': 'hsl(var(--icon-accent) / <alpha-value>)',
+				'theme-tint': 'hsl(var(--theme-tint) / <alpha-value>)',
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
 				primary: {
-					DEFAULT: 'hsl(var(--primary))',
-					foreground: 'hsl(var(--primary-foreground))',
-					hover: 'hsl(var(--primary-hover))'
+					DEFAULT: 'hsl(var(--primary) / <alpha-value>)',
+					foreground: 'hsl(var(--primary-foreground) / <alpha-value>)',
+					hover: 'hsl(var(--primary-hover) / <alpha-value>)'
 				},
 				secondary: {
 					DEFAULT: 'hsl(var(--secondary))',

@@ -70,7 +70,7 @@ export function UsageMeter({
     if (unlimited) return 'bg-green-500';
     if (isExceeded) return 'bg-red-500';
     if (isApproaching) return 'bg-yellow-500';
-    return 'bg-blue-500';
+    return 'bg-primary';
   };
 
   const getTextColorClass = () => {

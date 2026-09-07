@@ -42,8 +42,8 @@ const SERIES_OPTIONS: Array<{
   {
     id: 'bookedSales',
     label: 'Booked sales',
-    markerClassName: 'h-2 w-3 rounded-[2px] bg-blue-600 dark:bg-blue-400',
-    activeClassName: 'data-[state=on]:border-blue-500 data-[state=on]:bg-blue-500/20 data-[state=on]:text-blue-700 data-[state=on]:ring-1 data-[state=on]:ring-blue-500/30 dark:data-[state=on]:border-blue-400 dark:data-[state=on]:bg-blue-400/20 dark:data-[state=on]:text-blue-200',
+    markerClassName: 'h-2 w-3 rounded-[2px] bg-primary',
+    activeClassName: 'data-[state=on]:border-primary data-[state=on]:bg-primary/20 data-[state=on]:text-primary data-[state=on]:ring-1 data-[state=on]:ring-ring/30 dark:data-[state=on]:text-icon-accent',
   },
   {
     id: 'netReceived',
@@ -117,7 +117,7 @@ function MethodBreakdown({ trend }: { trend: RevenueFlowCurrency }) {
               </div>
               <div className="h-1.5 overflow-hidden rounded-full bg-muted">
                 <div
-                  className="h-full rounded-full bg-blue-600 dark:bg-blue-400"
+                  className="h-full rounded-full bg-primary"
                   style={{ width: `${maximum > 0 ? Math.max(3, (method.grossReceived / maximum) * 100) : 0}%` }}
                 />
               </div>

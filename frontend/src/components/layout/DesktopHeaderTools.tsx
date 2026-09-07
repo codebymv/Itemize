@@ -408,7 +408,7 @@ export function HeaderSearch({
 function CountBadge({ count }: { count: number }) {
   if (count < 1) return null;
   return (
-    <span data-badge className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-semibold leading-none text-white">
+    <span data-badge className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-none text-white">
       {count}
     </span>
   );

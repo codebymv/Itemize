@@ -106,7 +106,7 @@ const Index = () => {
   const getTypeColor = (type: string) => {
     // Generate a consistent color based on the type string
     const colors = [
-      'bg-blue-500', 'bg-green-500', 'bg-purple-500', 
+      'bg-primary', 'bg-green-500', 'bg-purple-500', 
       'bg-orange-500', 'bg-red-500', 'bg-teal-500', 
       'bg-pink-500', 'bg-indigo-500', 'bg-yellow-500'
     ];

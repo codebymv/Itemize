@@ -465,7 +465,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
                 <button
                   type="button"
                   onClick={returnToSourceChoice}
-                  className="-ml-1 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-blue-600 transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 dark:hover:bg-blue-950/40"
+                  className="-ml-1 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-icon-accent transition-colors hover:bg-theme-tint focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:bg-theme-tint/40"
                   aria-label={`Back to ${config.label.toLowerCase()} creation choices`}
                 >
                   <ArrowLeft className="h-4 w-4" aria-hidden="true" />
@@ -517,7 +517,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
                 </Button>
               </div>
               {recoveryCopied && (
-                <p className="text-xs text-blue-600">Recovery key copied.</p>
+                <p className="text-xs text-icon-accent">Recovery key copied.</p>
               )}
             </div>
 
@@ -560,16 +560,16 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
             <button
               type="button"
               onClick={openBlankDetails}
-              className="interaction-card group flex w-full items-center gap-3 rounded-lg border border-border bg-background p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+              className="interaction-card group flex w-full items-center gap-3 rounded-lg border border-border bg-background p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
-              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600 dark:bg-blue-950/50">
+              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-theme-tint text-icon-accent dark:bg-theme-tint/50">
                 <Plus className="h-5 w-5" aria-hidden="true" />
               </span>
               <span className="min-w-0 flex-1 font-medium">
                 Start from scratch
               </span>
               <ChevronRight
-                className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-blue-600 group-focus-visible:text-blue-600 dark:group-hover:text-blue-400 dark:group-focus-visible:text-blue-400"
+                className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-icon-accent group-focus-visible:text-icon-accent"
                 aria-hidden="true"
               />
             </button>
@@ -577,7 +577,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
             <section aria-labelledby={`${itemType}PresetHeading`}>
               <div className="mb-3 flex items-center gap-2">
                 <Footprints
-                  className="h-4 w-4 text-blue-600"
+                  className="h-4 w-4 text-icon-accent"
                   aria-hidden="true"
                 />
                 <h3 id={`${itemType}PresetHeading`} className="font-medium">
@@ -592,9 +592,9 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
                       key={preset.id}
                       type="button"
                       onClick={() => openPresetDetails(preset)}
-                      className="interaction-card group flex min-h-16 items-center gap-3 rounded-lg border border-border bg-card p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                      className="interaction-card group flex min-h-16 items-center gap-3 rounded-lg border border-border bg-card p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                     >
-                      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-600 dark:bg-blue-950/50">
+                      <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-theme-tint text-icon-accent dark:bg-theme-tint/50">
                         <PresetIcon
                           className="h-4 w-4"
                           aria-hidden="true"
@@ -649,7 +649,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
                           <TooltipTrigger asChild>
                             <button
                               type="button"
-                              className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-blue-600 dark:hover:text-blue-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                              className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-icon-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                               aria-label="About categories"
                             >
                               <Info
@@ -744,7 +744,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
                         })}
                         <SelectItem
                           value="__add_new__"
-                          className="text-blue-600"
+                          className="text-icon-accent"
                         >
                           + Add new category
                         </SelectItem>
@@ -901,7 +901,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
                         <TooltipTrigger asChild>
                           <button
                             type="button"
-                            className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-blue-600 dark:hover:text-blue-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                            className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-icon-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                             aria-label="About vault password recovery"
                           >
                             <Info className="h-3.5 w-3.5" aria-hidden="true" />

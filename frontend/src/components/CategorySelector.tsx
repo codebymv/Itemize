@@ -117,7 +117,7 @@ export const CategorySelector: React.FC<CategorySelectorProps> = ({
                         </div>
                       </SelectItem>
                     ))}
-                  <SelectItem value="__custom__" className="text-blue-600 font-raleway">
+                  <SelectItem value="__custom__" className="text-icon-accent font-raleway">
                     + Add new category
                   </SelectItem>
                 </SelectContent>

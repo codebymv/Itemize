@@ -163,7 +163,7 @@ export function ImportContactsModal({ organizationId, onClose, onImported }: Imp
             <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col" aria-busy={importPending ? 'true' : undefined}>
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <FileSpreadsheet className="h-5 w-5 text-blue-600" />
+                        <FileSpreadsheet className="h-5 w-5 text-icon-accent" />
                         Import Contacts from CSV
                     </DialogTitle>
                     <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>

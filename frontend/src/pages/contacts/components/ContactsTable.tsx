@@ -109,7 +109,7 @@ export function ContactsTable({
             </TableCell>
             <TableCell>
               <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-sm font-medium text-blue-700 dark:text-blue-300">
+                <div className="h-9 w-9 rounded-full bg-theme-tint flex items-center justify-center text-sm font-medium text-primary dark:text-icon-accent">
                   {getInitials(contact)}
                 </div>
                 <div>
@@ -128,7 +128,7 @@ export function ContactsTable({
                 <a
                   href={`mailto:${contact.email}`}
                   onClick={(e) => e.stopPropagation()}
-                  className="touch-target-mobile flex touch-manipulation items-center gap-1 text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                  className="touch-target-mobile flex touch-manipulation items-center gap-1 text-icon-accent hover:underline dark:hover:text-icon-accent"
                 >
                   <Mail className="h-3 w-3" />
                   {contact.email}
@@ -142,7 +142,7 @@ export function ContactsTable({
                 <a
                   href={`tel:${contact.phone}`}
                   onClick={(e) => e.stopPropagation()}
-                  className="touch-target-mobile flex touch-manipulation items-center gap-1 text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
+                  className="touch-target-mobile flex touch-manipulation items-center gap-1 text-icon-accent hover:underline dark:hover:text-icon-accent"
                 >
                   <Phone className="h-3 w-3" />
                   {contact.phone}

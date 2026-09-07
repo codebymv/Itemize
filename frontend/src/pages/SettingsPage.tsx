@@ -126,7 +126,7 @@ export function SettingsNav() {
           >
             <item.icon
               className={cn(
-                "mr-2 h-4 w-4 transition-colors group-hover/item:text-blue-600 dark:group-hover/item:text-blue-400",
+                "mr-2 h-4 w-4 transition-colors group-hover/item:text-icon-accent",
                 isActive ? 'text-icon-accent' : 'text-muted-foreground'
               )}
             />
@@ -173,7 +173,7 @@ export function SettingsShellNavigation() {
                   className={cn(
                     'h-4 w-4 shrink-0',
                     item.path === activeItem.path
-                      ? 'text-blue-600'
+                      ? 'text-icon-accent'
                       : 'text-muted-foreground',
                   )}
                 />
@@ -267,7 +267,7 @@ function AccountInfo({
         </CardHeader>
         <CardContent surface="inset" className="space-y-6">
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
-            <div className="h-16 w-16 rounded-full bg-blue-600 flex items-center justify-center text-white text-xl font-medium flex-shrink-0">
+            <div className="h-16 w-16 rounded-full bg-primary flex items-center justify-center text-white text-xl font-medium flex-shrink-0">
               {currentUser?.name?.[0]?.toUpperCase() || 'U'}
             </div>
             <div className="text-center sm:text-left min-w-0 flex-1">
@@ -364,7 +364,7 @@ function AccountInfo({
                   Compare plans
                   <ChevronDown
                     className={cn(
-                      'ml-2 h-4 w-4 text-blue-600 transition-transform',
+                      'ml-2 h-4 w-4 text-icon-accent transition-transform',
                       plansOpen && 'rotate-180',
                     )}
                     aria-hidden="true"

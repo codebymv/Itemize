@@ -66,7 +66,7 @@ export const WORKFLOW_TEMPLATES: WorkflowTemplate[] = [
     description: 'Tag the contact and create a post-signature task.',
     category: 'sales',
     icon: 'TrendingUp',
-    color: 'bg-blue-100 text-blue-600',
+    color: 'bg-theme-tint text-icon-accent',
     triggers: [
       {
         id: 'contract-signed',

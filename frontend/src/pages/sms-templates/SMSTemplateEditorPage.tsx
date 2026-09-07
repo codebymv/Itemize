@@ -522,7 +522,7 @@ export function SMSTemplateEditorPage() {
               <div className="mb-6 text-center text-xs text-muted-foreground">
                 Itemize message
               </div>
-              <div className="ml-auto max-w-[90%] rounded-2xl rounded-br-sm bg-blue-600 px-4 py-3 text-sm text-white">
+              <div className="ml-auto max-w-[90%] rounded-2xl rounded-br-sm bg-primary px-4 py-3 text-sm text-white">
                 {state.message || "Your message preview will appear here."}
               </div>
             </div>

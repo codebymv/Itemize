@@ -432,7 +432,7 @@ export function ChatWidgetPage() {
                     <div className="flex items-center justify-between gap-4 rounded-lg border px-3 py-2">
                       <div className="flex items-center gap-2">
                         <BellRing
-                          className="h-4 w-4 text-blue-600"
+                          className="h-4 w-4 text-icon-accent"
                           aria-hidden="true"
                         />
                         <Label htmlFor="chat-widget-sound">

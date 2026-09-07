@@ -17,7 +17,7 @@ const StepNode: React.FC<NodeProps> = ({ id, data, selected }) => {
 
   return (
     <div
-      className={`flex flex-col items-center gap-1 ${selected ? 'ring-2 ring-blue-600 ring-offset-2 rounded-full' : ''}`}
+      className={`flex flex-col items-center gap-1 ${selected ? 'ring-2 ring-ring ring-offset-2 rounded-full' : ''}`}
       onDoubleClick={() => setIsEditing(true)}
     >
       <div

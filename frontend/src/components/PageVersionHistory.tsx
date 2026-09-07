@@ -189,7 +189,7 @@ export function PageVersionHistory({ pageId, pageName, open, onOpenChange, onPre
                 <DialogHeader className="border-b px-6 py-4 pr-12">
                     <div className="flex items-center justify-between">
                         <DialogTitle className="flex items-center gap-2">
-                            <HistoryIcon className="h-5 w-5 text-blue-600" />
+                            <HistoryIcon className="h-5 w-5 text-icon-accent" />
                             Version History - {pageName}
                         </DialogTitle>
                         <DialogDescription className="sr-only">

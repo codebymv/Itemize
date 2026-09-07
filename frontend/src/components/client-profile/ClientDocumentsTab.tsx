@@ -25,7 +25,7 @@ export function ClientDocumentsTab({
       case 'draft':
         return { label: 'Draft', color: 'text-gray-600 border-gray-300' }
       case 'sent':
-        return { label: 'Sent', color: 'text-blue-600 border-blue-300' }
+        return { label: 'Sent', color: 'text-icon-accent border-primary/30' }
       case 'viewed':
         return { label: 'Viewed', color: 'text-purple-600 border-purple-300' }
       case 'paid':
@@ -44,7 +44,7 @@ export function ClientDocumentsTab({
       case 'draft':
         return { label: 'Draft', color: 'text-gray-600 border-gray-300' }
       case 'sent':
-        return { label: 'Awaiting', color: 'text-blue-600 border-blue-300' }
+        return { label: 'Awaiting', color: 'text-icon-accent border-primary/30' }
       case 'viewed':
         return { label: 'Viewed', color: 'text-purple-600 border-purple-300' }
       case 'signed':

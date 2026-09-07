@@ -134,7 +134,7 @@ export function CheckoutSuccessModal({
 
         {confirmationState === "checking" && (
           <div className="flex flex-col items-center gap-3 py-6 text-center">
-            <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+            <Loader2 className="h-6 w-6 animate-spin text-icon-accent" />
             <p className="text-sm text-muted-foreground">
               Stripe is securely confirming your subscription.
             </p>
@@ -160,9 +160,9 @@ export function CheckoutSuccessModal({
         {confirmationState === "confirmed" && (
           <div className="space-y-4 pt-2">
             {isTrialing && trialEndDate && (
-              <div className="flex items-start gap-2 justify-center rounded-lg bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 px-4 py-2.5">
-                <Clock className="h-4 w-4 text-blue-700 dark:text-blue-300 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-blue-700 dark:text-blue-300">
+              <div className="flex items-start gap-2 justify-center rounded-lg bg-theme-tint border border-primary/30 dark:border-primary/40 px-4 py-2.5">
+                <Clock className="h-4 w-4 text-primary dark:text-icon-accent flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-primary dark:text-icon-accent">
                   <p>Your 14-day free trial is active.</p>
                   <p>Trial ends {trialEndDate}.</p>
                 </div>
@@ -176,7 +176,7 @@ export function CheckoutSuccessModal({
               <ul className="space-y-2">
                 {highlights.map((item) => (
                   <li key={item} className="flex items-center gap-2 text-sm">
-                    <CheckCircle className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                    <CheckCircle className="h-4 w-4 text-icon-accent flex-shrink-0" />
                     <span>{item}</span>
                   </li>
                 ))}

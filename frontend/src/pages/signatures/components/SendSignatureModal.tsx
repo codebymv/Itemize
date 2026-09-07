@@ -100,7 +100,7 @@ export function SendSignatureModal({
       <DialogContent className={showPreview ? 'sm:max-w-[1200px]' : 'sm:max-w-[600px]'}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Send className="h-5 w-5 text-blue-600" />
+            <Send className="h-5 w-5 text-icon-accent" />
             Send Signature Request
           </DialogTitle>
           <DialogDescription>
@@ -199,7 +199,7 @@ export function SendSignatureModal({
             variant="outline"
             size="sm"
             onClick={() => setShowPreview(!showPreview)}
-            className="text-blue-600 border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+            className="text-icon-accent border-primary hover:bg-theme-tint dark:hover:bg-theme-tint/20"
           >
             {showPreview ? (
               <>

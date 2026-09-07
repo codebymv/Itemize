@@ -23,7 +23,7 @@ export function ReputationPlatformMark({
     <span
       aria-hidden="true"
       className={cn(
-        'inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-100 text-[10px] font-semibold text-blue-700 dark:bg-blue-900 dark:text-blue-300',
+        'inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-theme-tint text-[10px] font-semibold text-primary dark:text-icon-accent',
         className,
       )}
     >

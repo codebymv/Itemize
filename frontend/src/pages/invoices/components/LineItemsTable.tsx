@@ -199,7 +199,7 @@ export function LineItemsTable({
         {/* Add Item Button */}
         <Button
           variant="outline"
-          className="mt-4 border-blue-200/60 text-blue-600 hover:bg-blue-50 hover:text-blue-700 dark:border-blue-800/60 dark:text-blue-400 dark:hover:bg-blue-950/40 dark:hover:text-blue-300"
+          className="mt-4 border-primary/20 text-icon-accent hover:bg-theme-tint hover:text-primary dark:border-primary/40 dark:hover:bg-theme-tint/40 dark:hover:text-icon-accent"
           onClick={onAddLineItem}
         >
           <Plus className="h-4 w-4 mr-2" />

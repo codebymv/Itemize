@@ -104,7 +104,7 @@ export function BulkTagModal({
             <DialogContent className="max-w-md">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <Tag className="h-5 w-5 text-blue-600" />
+                        <Tag className="h-5 w-5 text-icon-accent" />
                         Manage Tags
                     </DialogTitle>
                     <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>

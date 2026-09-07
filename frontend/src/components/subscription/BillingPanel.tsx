@@ -148,7 +148,7 @@ export function BillingPanel() {
                     </Card>
                 </div>
                 <div className="flex items-center justify-center h-64">
-                    <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                    <Loader2 className="h-8 w-8 animate-spin text-icon-accent" />
                 </div>
             </div>
         );
@@ -271,7 +271,7 @@ export function BillingPanel() {
                         {hasActiveSubscription && status.stripe_customer_id && (
                             <Button
                                 variant="outline"
-                                className="w-full text-blue-600 border-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:border-blue-400 dark:hover:bg-blue-950"
+                                className="w-full text-icon-accent border-primary hover:bg-theme-tint"
                                 onClick={handlePortal}
                                 disabled={processing}
                             >
@@ -422,7 +422,7 @@ function UsageRow({ icon: Icon, label, used, limit }: UsageRowProps) {
                             ? 'bg-red-500' 
                             : isApproaching 
                                 ? 'bg-amber-500' 
-                                : 'bg-gradient-to-r from-blue-500 to-indigo-600'
+                                : 'bg-gradient-to-r from-primary to-indigo-600'
                     }
                 />
             )}

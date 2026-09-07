@@ -55,7 +55,7 @@ const RectangleNode: React.FC<NodeProps> = ({ id, data, selected }) => {
         relative h-full w-full px-4 py-3 rounded-md border-2 min-w-[100px] min-h-[40px]
         flex items-center justify-center text-center
         transition-all duration-200
-        ${selected ? 'ring-2 ring-blue-600 ring-offset-2' : ''}
+        ${selected ? 'ring-2 ring-ring ring-offset-2' : ''}
       `}
       style={{
         backgroundColor: 'hsl(var(--card))',
@@ -67,8 +67,8 @@ const RectangleNode: React.FC<NodeProps> = ({ id, data, selected }) => {
         minWidth={100}
         minHeight={40}
         isVisible={selected}
-        lineClassName="border-blue-500"
-        handleClassName="h-2 w-2 bg-blue-600 border-none"
+        lineClassName="border-primary"
+        handleClassName="h-2 w-2 bg-primary border-none"
       />
       {/* Label */}
       {isEditing ? (

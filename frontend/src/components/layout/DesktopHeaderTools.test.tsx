@@ -321,7 +321,7 @@ describe('HeaderFilters', () => {
 
     expect(screen.getByText('Full filter row')).toBeInTheDocument();
     expect(screen.queryByText('Compact filter grid')).not.toBeInTheDocument();
-    expect(container.querySelector('[data-badge]')).toHaveClass('bg-blue-600');
+    expect(container.querySelector('[data-badge]')).toHaveClass('bg-primary');
 
     fireEvent.click(screen.getByRole('button', { name: 'Filter users' }));
 

@@ -57,9 +57,9 @@ export const PLAN_METADATA: Record<Plan, {
         tagline: 'For freelancers needing signature, invoicing, and organization tools',
         description: 'Contacts, invoices, signatures, and the full workspace.',
         icon: 'zap',
-        color: 'text-blue-600',
-        bgColor: 'bg-blue-50',
-        borderColor: 'border-blue-300'
+        color: 'text-icon-accent',
+        bgColor: 'bg-theme-tint',
+        borderColor: 'border-primary/30'
     },
     unlimited: {
         name: 'Studio',
@@ -78,9 +78,9 @@ export const PLAN_METADATA: Record<Plan, {
         tagline: 'Legacy agency tier — not sold on the public page',
         description: 'Kept for existing subscribers. Not offered to new buyers.',
         icon: 'building',
-        color: 'text-blue-700',
-        bgColor: 'bg-blue-50',
-        borderColor: 'border-blue-400'
+        color: 'text-primary',
+        bgColor: 'bg-theme-tint',
+        borderColor: 'border-primary'
     }
 };
 

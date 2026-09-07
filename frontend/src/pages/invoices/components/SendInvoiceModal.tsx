@@ -136,7 +136,7 @@ export function SendInvoiceModal({
             <DialogContent className={showPreview ? "sm:max-w-[1200px]" : "sm:max-w-[550px]"}>
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <Send className="h-5 w-5 text-blue-600" />
+                        <Send className="h-5 w-5 text-icon-accent" />
                         Send Invoice
                     </DialogTitle>
                     <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>
@@ -225,7 +225,7 @@ export function SendInvoiceModal({
                                 checked={includePaymentLink}
                                 onCheckedChange={(checked) => setIncludePaymentLink(checked as boolean)}
                                 disabled={checkingPaymentLinks || paymentLinkCheckFailed || !paymentLinksAvailable}
-                                className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
+                                className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                             />
                             <div className="flex-1">
                                 <Label
@@ -244,7 +244,7 @@ export function SendInvoiceModal({
                                         'Add a "Pay Now" button to the email for easy online payment'
                                     ) : (
                                         <>
-                                            <Link to="/payment-settings" className="text-blue-600 hover:underline">
+                                            <Link to="/payment-settings" className="text-icon-accent hover:underline">
                                                 Connect Stripe in Payments
                                             </Link>{' '}
                                             to add a "Pay Now" button.
@@ -331,7 +331,7 @@ export function SendInvoiceModal({
                         variant="outline"
                         size="sm"
                         onClick={() => setShowPreview(!showPreview)}
-                        className="text-blue-600 border-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                        className="text-icon-accent border-primary hover:bg-theme-tint dark:hover:bg-theme-tint/20"
                     >
                         {showPreview ? (
                             <>

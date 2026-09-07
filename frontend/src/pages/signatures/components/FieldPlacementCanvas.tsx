@@ -272,7 +272,7 @@ export default function FieldPlacementCanvas<TField extends FieldPlacementField>
                       .map((field) => (
                         <div
                           key={field.id}
-                          className={`absolute border text-[10px] px-1 ${selectedFieldId === field.id ? 'border-blue-600 bg-blue-200/60 text-blue-800' : 'border-blue-500 bg-blue-100/50 text-blue-700'}`}
+                          className={`absolute border text-[10px] px-1 ${selectedFieldId === field.id ? 'border-primary bg-theme-tint/60 text-primary' : 'border-primary bg-theme-tint/50 text-primary'}`}
                           style={{
                             left: `${field.x_position}%`,
                             top: `${field.y_position}%`,

@@ -89,7 +89,7 @@ const ArrowNode: React.FC<NodeProps> = ({ id, data, selected }) => {
   const arrowLength = Math.sqrt(endOffset.x * endOffset.x + endOffset.y * endOffset.y);
   
   const arrowColor = 'hsl(var(--foreground) / 0.65)';
-  const handleColor = '#3b82f6';
+  const handleColor = 'var(--card-accent, hsl(var(--card-accent-default)))';
   
   // Handle pointer down on endpoint handles - PRIMARY BUTTON ONLY
   const handlePointerDown = useCallback((e: React.PointerEvent, handle: 'start' | 'end') => {
@@ -453,7 +453,7 @@ const ArrowNode: React.FC<NodeProps> = ({ id, data, selected }) => {
             top: Math.min(startY, endY) - 6,
             width: Math.abs(endX - startX) + 12,
             height: Math.abs(endY - startY) + 12,
-            border: '2px dashed #3b82f6',
+            border: '2px dashed var(--card-accent, hsl(var(--card-accent-default)))',
             borderRadius: 4,
           }}
         />

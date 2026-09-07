@@ -205,7 +205,7 @@ export function ReputationPage() {
                         <time dateTime={review.review_date || review.created_at}>{new Date(review.review_date || review.created_at).toLocaleDateString()}</time>
                       </div>
                       {review.review_text ? <p className="mt-3 text-sm text-muted-foreground">{review.review_text}</p> : null}
-                      {review.response_text ? <div className="mt-3 border-l-2 border-blue-600 pl-3"><p className="text-xs font-medium text-foreground">Your response</p><p className="mt-1 text-sm text-muted-foreground">{review.response_text}</p></div> : null}
+                      {review.response_text ? <div className="mt-3 border-l-2 border-primary pl-3"><p className="text-xs font-medium text-foreground">Your response</p><p className="mt-1 text-sm text-muted-foreground">{review.response_text}</p></div> : null}
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" aria-label={`More actions for ${review.reviewer_name || 'review'}`}><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>

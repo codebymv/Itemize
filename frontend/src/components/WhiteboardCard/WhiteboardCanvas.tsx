@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import { accentFill, useCardAccent } from '@/lib/cardAccent';
 import { ReactSketchCanvas, ReactSketchCanvasRef } from 'react-sketch-canvas';
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -70,6 +71,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
 
   // Drawing tool state
   const [currentTool, setCurrentTool] = useState<'pen' | 'eraser'>('pen');
+  const accent = useCardAccent();
   const [strokeColor, setStrokeColor] = useState('#2563eb'); // Default to theme blue
   const [strokeWidth, setStrokeWidth] = useState(isMobile ? 3 : 2); // Slightly thicker for mobile
   const [isDrawing, setIsDrawing] = useState(false);
@@ -630,7 +632,8 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                   onClick={() => handleToolChange('pen')}
                   aria-label="Pen"
                   title="Pen (B)"
-                  className={cn("h-8 w-8 p-0 text-foreground", currentTool === 'pen' ? 'bg-primary interaction-button--primary text-primary-foreground' : '')}
+                  className={cn("h-8 w-8 p-0 text-foreground", currentTool === 'pen' && 'interaction-button--primary')}
+                  style={currentTool === 'pen' ? accentFill(accent) : undefined}
                 >
                   <Brush className="h-4 w-4" />
                 </Button>
@@ -640,7 +643,8 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                   onClick={() => handleToolChange('eraser')}
                   aria-label="Eraser"
                   title="Eraser (E)"
-                  className={cn("h-8 w-8 p-0 text-foreground", currentTool === 'eraser' ? 'bg-primary interaction-button--primary text-primary-foreground' : '')}
+                  className={cn("h-8 w-8 p-0 text-foreground", currentTool === 'eraser' && 'interaction-button--primary')}
+                  style={currentTool === 'eraser' ? accentFill(accent) : undefined}
                 >
                   <Eraser className="h-4 w-4" />
                 </Button>
@@ -654,7 +658,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                   max={20}
                   min={1}
                   step={1}
-                  className="w-12 sm:w-24 [&>*]:bg-muted [&>*>*]:bg-blue-600 [&>*:last-child]:border-blue-600 [&>*:last-child]:bg-card"
+                  className="w-12 sm:w-24 [&>*]:bg-muted [&>*>*]:bg-[var(--card-accent)] [&>*:last-child]:border-[var(--card-accent)] [&>*:last-child]:bg-card"
                 />
               </div>
             </div>

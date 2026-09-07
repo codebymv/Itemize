@@ -54,7 +54,7 @@ const DocsPage: React.FC = () => {
   const mutedTextColor = 'text-muted-foreground';
   const borderColor = 'border-border';
   const hoverBg = 'hover:bg-accent';
-  const activeBg = 'bg-blue-200 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
+  const activeBg = 'bg-theme-tint text-primary dark:text-icon-accent';
 
   const filterDocStructure = (items: DocStructure[], query: string): DocStructure[] => {
     if (!query.trim()) return items;
@@ -243,7 +243,7 @@ const DocsPage: React.FC = () => {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search help... (Press /)"
-          className={`w-full pl-10 pr-4 py-2 rounded-lg border ${borderColor} bg-background text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition-colors`}
+          className={`w-full pl-10 pr-4 py-2 rounded-lg border ${borderColor} bg-background text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-colors`}
         />
         {searchQuery && (
           <button
@@ -310,9 +310,9 @@ const DocsPage: React.FC = () => {
         prose-h2:text-2xl prose-h2:mt-8 prose-h2:mb-4
         prose-h3:text-xl prose-h3:mt-6 prose-h3:mb-3
         prose-p:text-muted-foreground prose-p:leading-relaxed prose-p:my-4
-        prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline
+        prose-a:text-icon-accent prose-a:no-underline hover:prose-a:underline
         prose-strong:text-foreground prose-strong:font-semibold
-        prose-code:text-blue-600 prose-code:bg-secondary prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none
+        prose-code:text-icon-accent prose-code:bg-secondary prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none
         prose-pre:bg-secondary prose-pre:border prose-pre:border-border prose-pre:text-foreground
         prose-blockquote:border-l-blue-600 prose-blockquote:border-l-4 prose-blockquote:text-muted-foreground prose-blockquote:italic
         prose-ul:text-muted-foreground prose-ul:my-4

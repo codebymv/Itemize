@@ -891,7 +891,7 @@ export function PaymentsPage() {
                                                                         <Button
                                                                             variant="ghost"
                                                                             size="sm"
-                                                                            className="h-auto p-0 text-sm font-mono text-blue-600"
+                                                                            className="h-auto p-0 text-sm font-mono text-icon-accent"
                                                                             onClick={(e) => {
                                                                                 e.stopPropagation();
                                                                                 handleCopyToClipboard(payment.stripe_payment_intent_id!, 'Transaction ID');
@@ -919,7 +919,7 @@ export function PaymentsPage() {
                                                                         <Button
                                                                             variant="link"
                                                                             size="sm"
-                                                                            className="text-sm font-medium text-blue-600 h-auto p-0"
+                                                                            className="text-sm font-medium text-icon-accent h-auto p-0"
                                                                             onClick={(e) => {
                                                                                 e.stopPropagation();
                                                                                 navigate(`/invoices/${payment.invoice_id}`);

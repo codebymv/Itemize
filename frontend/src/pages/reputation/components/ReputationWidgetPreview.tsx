@@ -96,7 +96,7 @@ export function ReputationWidgetPreview({ config, reviews = [] }: { config: Prev
             ) : config.widget_type === 'floating' ? (
               <div className="flex min-h-80 items-end justify-end"><div className="w-full max-w-sm"><ReviewCard review={previewReviews[0]} config={config} /></div></div>
             ) : config.widget_type === 'carousel' ? (
-              <div className="mx-auto max-w-lg"><ReviewCard review={previewReviews[0]} config={config} /><div className="mt-4 flex justify-center gap-2">{previewReviews.slice(0, 3).map((review, index) => <span key={review.id} className={cn('h-2 w-2 rounded-full', index === 0 ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-700')} />)}</div></div>
+              <div className="mx-auto max-w-lg"><ReviewCard review={previewReviews[0]} config={config} /><div className="mt-4 flex justify-center gap-2">{previewReviews.slice(0, 3).map((review, index) => <span key={review.id} className={cn('h-2 w-2 rounded-full', index === 0 ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-700')} />)}</div></div>
             ) : (
               <div className={cn(config.widget_type === 'grid' && device === 'desktop' ? 'grid grid-cols-2 gap-4' : 'space-y-4')}>
                 {previewReviews.map(review => <ReviewCard key={review.id} review={review} config={config} />)}

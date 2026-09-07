@@ -79,7 +79,7 @@ export function ContactCard({
                     </div>
 
                     {/* Avatar */}
-                    <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-sm font-medium text-blue-700 dark:text-blue-300 flex-shrink-0">
+                    <div className="h-12 w-12 rounded-full bg-theme-tint flex items-center justify-center text-sm font-medium text-primary dark:text-icon-accent flex-shrink-0">
                         {getInitials()}
                     </div>
 

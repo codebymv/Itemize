@@ -24,7 +24,7 @@ export function IntegrationProviderMark({ provider, className }: IntegrationProv
   }
 
   if (provider === 'webhooks') {
-    return <Link2 aria-hidden="true" className={cn(markClassName, 'text-blue-600')} />;
+    return <Link2 aria-hidden="true" className={cn(markClassName, 'text-icon-accent')} />;
   }
 
   if (provider === 'facebook') {

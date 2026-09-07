@@ -34,9 +34,9 @@ export function TrialEndedBillingActiveModal({ open, onClose, billing }: TrialEn
         </DialogHeader>
 
         <div className="space-y-4 pt-2">
-          <div className="flex items-start gap-2 justify-center rounded-lg bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 px-4 py-2.5">
-            <CheckCircle className="h-4 w-4 text-blue-700 dark:text-blue-300 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-blue-700 dark:text-blue-300">
+          <div className="flex items-start gap-2 justify-center rounded-lg bg-theme-tint border border-primary/30 dark:border-primary/40 px-4 py-2.5">
+            <CheckCircle className="h-4 w-4 text-primary dark:text-icon-accent flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-primary dark:text-icon-accent">
               <p>Your trial period has ended and your {planMeta.displayName} subscription is now active.</p>
               <p>Billing will continue according to your plan.</p>
             </div>

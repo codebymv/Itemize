@@ -20,8 +20,7 @@ describe('tab interaction contracts', () => {
     const activeTab = screen.getByRole('tab', { name: 'All' });
     expect(activeTab).toHaveClass(
       'data-[state=active]:bg-background',
-      'data-[state=active]:text-blue-600',
-      'dark:data-[state=active]:text-blue-400',
+      'data-[state=active]:text-icon-accent',
     );
   });
 
@@ -43,8 +42,7 @@ describe('tab interaction contracts', () => {
     );
     expect(activityTab).not.toHaveClass('hover:bg-accent', 'hover:text-accent-foreground');
     expect(activityTab).not.toHaveClass(
-      'data-[state=active]:text-blue-600',
-      'dark:data-[state=active]:text-blue-400',
+      'data-[state=active]:text-icon-accent',
     );
   });
 });

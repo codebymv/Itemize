@@ -55,7 +55,7 @@ interface QuickAction {
 }
 
 const DASHBOARD_PERIODS: PeriodOption[] = ['7days', '30days', '90days'];
-const DASHBOARD_CARD_ACTION_CLASS = ['shrink-0 whitespace-nowrap text-xs font-light', 'text-blue-600 hover:bg-blue-50/50 hover:text-blue-700', 'dark:text-blue-400 dark:hover:bg-blue-900/20 dark:hover:text-blue-300'].join(' ');
+const DASHBOARD_CARD_ACTION_CLASS = ['shrink-0 whitespace-nowrap text-xs font-light', 'text-icon-accent hover:bg-theme-tint/50 hover:text-primary', ' dark:hover:bg-theme-tint/20 dark:hover:text-icon-accent'].join(' ');
 
 export function DashboardPage() {
     const { currentUser } = useAuthState();
@@ -516,14 +516,14 @@ export function DashboardPage() {
                                 <CardHeader className="pb-3">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
-                                            <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900">
+                                            <div className="p-2 rounded-lg bg-theme-tint">
                                                 <action.icon className="h-4 w-4 text-icon-accent" />
                                             </div>
                                             <div>
                                                 <CardTitle className="text-sm">{action.title}</CardTitle>
                                             </div>
                                         </div>
-                                        <ArrowRight className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-blue-600 group-focus-within:text-blue-600 dark:group-hover:text-blue-400 dark:group-focus-within:text-blue-400" />
+                                        <ArrowRight className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-icon-accent group-focus-within:text-icon-accent" />
                                     </div>
                                 </CardHeader>
                             </button>
@@ -534,7 +534,7 @@ export function DashboardPage() {
 
             {/* Getting Started Tip */}
             {!proTipDismissed && (
-                <Card className="bg-gradient-to-r from-blue-50 to-blue-100/50 dark:from-blue-950/30 dark:to-blue-900/20 border-blue-100 dark:border-blue-900">
+                <Card className="bg-gradient-to-r from-theme-tint to-theme-tint/50 dark:from-theme-tint/30 dark:to-theme-tint/20 border-primary/30 dark:border-primary/40">
                     <CardHeader>
                         <div className="flex items-start gap-3">
                             <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
@@ -544,7 +544,7 @@ export function DashboardPage() {
                                 </div>
                                 <p className="min-w-0 basis-[max-content] grow text-sm text-muted-foreground">
                                     Automate emails, tasks, and contact updates in{' '}
-                                    <button type="button" onClick={() => navigate('/automations')} className="text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300">
+                                    <button type="button" onClick={() => navigate('/automations')} className="text-icon-accent hover:underline dark:hover:text-icon-accent">
                                         Automations
                                     </button>
                                     .

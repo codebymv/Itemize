@@ -262,7 +262,7 @@ export function CreateCalendarModal({
                                     <button
                                         key={color}
                                         type="button"
-                                        className={`h-8 w-8 rounded-full transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${formData.color === color ? 'scale-110 ring-2 ring-blue-500 ring-offset-2' : ''
+                                        className={`h-8 w-8 rounded-full transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${formData.color === color ? 'scale-110 ring-2 ring-ring ring-offset-2' : ''
                                             }`}
                                         style={{ backgroundColor: color }}
                                         aria-label={`Use ${color} calendar color`}

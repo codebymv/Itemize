@@ -1018,11 +1018,11 @@
     color: hsl(var(--icon-accent));
   }
 
-  /* Filled brand badges use the lighter dark-mode accent, never primary buttons. */
+  /* Filled count badges use the lighter dark-mode accent, never primary buttons. */
   .dark [data-badge].bg-blue-600,
   .dark [data-badge].bg-primary {
     background-color: hsl(var(--icon-accent));
-    color: #172554;
+    color: hsl(var(--background));
   }
 
   .font-raleway {

@@ -20,7 +20,7 @@ const UiBlockNode: React.FC<NodeProps> = ({ id, data, selected, type }) => {
   const { isEditing, setIsEditing, label, setLabel, handleBlur, handleKeyDown } =
     useWireframeNodeLabel(id, nodeData.label || fallback, variant === 'card');
 
-  const shellClass = selected ? 'ring-2 ring-blue-600 ring-offset-2' : '';
+  const shellClass = selected ? 'ring-2 ring-ring ring-offset-2' : '';
 
   const editor = isEditing ? (
     <input
@@ -41,8 +41,8 @@ const UiBlockNode: React.FC<NodeProps> = ({ id, data, selected, type }) => {
         minWidth={variant === 'button' ? 72 : 120}
         minHeight={variant === 'navbar' ? 36 : 32}
         isVisible={selected}
-        lineClassName="border-blue-500"
-        handleClassName="h-2 w-2 bg-blue-600 border-none"
+        lineClassName="border-primary"
+        handleClassName="h-2 w-2 bg-primary border-none"
       />
 
       {variant === 'button' && (

@@ -92,7 +92,7 @@ export function UpgradeCTA({
 
     // Style variants - using blue/indigo to match itemize.cloud theme
     const variantStyles: Record<string, string> = {
-        default: 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white',
+        default: 'bg-gradient-to-r from-primary to-indigo-600 hover:from-primary-hover hover:to-indigo-700 text-white',
         outline: cn('border-2 bg-transparent hover:bg-opacity-10', planMeta.borderColor, planMeta.color),
         ghost: cn('hover:bg-opacity-10', planMeta.color),
         subtle: cn(planMeta.bgColor, planMeta.color, 'hover:opacity-80'),

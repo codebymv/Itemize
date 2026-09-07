@@ -1527,7 +1527,7 @@ export function CampaignDetailPage() {
                 {
                   label: "Sent",
                   value: campaign.total_sent,
-                  color: "bg-blue-600",
+                  color: "bg-primary",
                 },
                 {
                   label: "Delivered",

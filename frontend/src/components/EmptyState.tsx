@@ -45,7 +45,7 @@ export const EmptyState = memo(({
     >
       {Icon ? (
         <div className={cn(
-          'flex shrink-0 items-center justify-center rounded-full border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/40',
+          'flex shrink-0 items-center justify-center rounded-full border border-primary/30 bg-theme-tint dark:border-primary/40 dark:bg-theme-tint/40',
           compact ? 'mb-2 h-8 w-8' : 'mb-4 h-12 w-12',
         )}>
           <Icon

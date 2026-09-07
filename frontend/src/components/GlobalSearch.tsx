@@ -487,7 +487,7 @@ export function GlobalSearch({ open, onClose, hasPaidAccess }: GlobalSearchProps
                         selectedIndex === `quick-${index}` && "bg-muted"
                       )}
                     >
-                      <div className="flex h-8 w-8 items-center justify-center rounded-md bg-blue-50 text-blue-600 transition-colors group-hover:bg-blue-100 group-focus-visible:bg-blue-100 dark:bg-blue-950 dark:text-blue-400 dark:group-hover:bg-blue-900 dark:group-focus-visible:bg-blue-900">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-md bg-theme-tint text-icon-accent transition-colors group-hover:bg-theme-tint group-focus-visible:bg-theme-tint">
                         {page.icon && <page.icon className="h-4 w-4" />}
                       </div>
                       <span className="font-medium">{page.title}</span>
@@ -542,7 +542,7 @@ export function GlobalSearch({ open, onClose, hasPaidAccess }: GlobalSearchProps
                   )}
                 >
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 dark:bg-slate-700 dark:text-slate-300 ${
-                    result.type === 'list' ? 'bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-400' :
+                    result.type === 'list' ? 'bg-theme-tint text-icon-accent' :
                     result.type === 'note' ? 'bg-purple-100 text-purple-600 dark:bg-purple-950 dark:text-purple-400' :
                     result.type === 'contact' ? 'bg-green-100 text-green-600 dark:bg-green-950 dark:text-green-400' :
                     result.type === 'whiteboard' ? 'bg-orange-100 text-orange-600 dark:bg-orange-950 dark:text-orange-400' :
@@ -567,7 +567,7 @@ export function GlobalSearch({ open, onClose, hasPaidAccess }: GlobalSearchProps
                       </p>
                     )}
                   </div>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-blue-600 group-focus-visible:text-blue-600 dark:group-hover:text-blue-400 dark:group-focus-visible:text-blue-400" />
+                  <ChevronRight className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-icon-accent group-focus-visible:text-icon-accent" />
                 </button>
               ))}
             </div>

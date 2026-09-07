@@ -395,7 +395,7 @@ export function ContactsPage() {
           </FramedSection>
           {/* Bulk actions */}
           {selectedContacts.length > 0 && (
-            <Card className="mb-4 border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/20">
+            <Card className="mb-4 border-primary/30 bg-theme-tint dark:border-primary/40 dark:bg-theme-tint/20">
               <CardContent className="py-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">

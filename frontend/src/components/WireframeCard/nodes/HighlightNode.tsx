@@ -17,7 +17,7 @@ const HighlightNode: React.FC<NodeProps> = ({ id, data, selected }) => {
   return (
     <div
       className={`relative h-full w-full min-h-[64px] min-w-[96px] rounded-md border-2 border-dashed ${
-        selected ? 'ring-2 ring-blue-600 ring-offset-2' : ''
+        selected ? 'ring-2 ring-ring ring-offset-2' : ''
       }`}
       style={{
         backgroundColor: 'hsl(var(--primary) / 0.12)',
@@ -29,8 +29,8 @@ const HighlightNode: React.FC<NodeProps> = ({ id, data, selected }) => {
         minWidth={96}
         minHeight={64}
         isVisible={selected}
-        lineClassName="border-blue-500"
-        handleClassName="h-2 w-2 bg-blue-600 border-none"
+        lineClassName="border-primary"
+        handleClassName="h-2 w-2 bg-primary border-none"
       />
       {(isEditing || label) && (
         <div className="absolute left-1 top-1 rounded px-1.5 py-0.5 text-[10px] font-medium text-primary-foreground"

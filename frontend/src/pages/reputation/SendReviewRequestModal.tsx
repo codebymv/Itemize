@@ -299,7 +299,7 @@ export function SendReviewRequestModal({
       <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:max-w-[600px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Send className="h-5 w-5 text-blue-600" />
+            <Send className="h-5 w-5 text-icon-accent" />
             Send Review Request
           </DialogTitle>
           <DialogDescription>
@@ -380,7 +380,7 @@ export function SendReviewRequestModal({
                             aria-pressed={selectedContact?.id === contact.id}
                             className={`interaction-row flex w-full items-center justify-between rounded p-2 text-left ${
                               selectedContact?.id === contact.id 
-                                ? 'bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800' 
+                                ? 'bg-theme-tint border border-primary/30 dark:border-primary/40' 
                                 : ''
                             }`}
                           >
@@ -558,7 +558,7 @@ export function SendReviewRequestModal({
                             tabIndex={0}
                             className={`interaction-row flex cursor-pointer items-center gap-3 rounded p-2 ${
                               isSelected 
-                                ? 'bg-blue-50 dark:bg-blue-950' 
+                                ? 'bg-theme-tint' 
                                 : ''
                             }`}
                           >

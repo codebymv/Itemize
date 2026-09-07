@@ -98,9 +98,9 @@ function NotificationIcon({ notification }: { notification: AppNotification }) {
         />
       );
     case 'viewed':
-      return <Eye className="h-4 w-4 text-blue-600" aria-hidden="true" />;
+      return <Eye className="h-4 w-4 text-icon-accent" aria-hidden="true" />;
     case 'subscription':
-      return <CreditCard className="h-4 w-4 text-blue-600" aria-hidden="true" />;
+      return <CreditCard className="h-4 w-4 text-icon-accent" aria-hidden="true" />;
     case 'paid':
       return <CircleDollarSign className="h-4 w-4 text-emerald-600" aria-hidden="true" />;
     case 'refunded':
@@ -112,23 +112,23 @@ function NotificationIcon({ notification }: { notification: AppNotification }) {
     case 'signed':
       return <FileSignature className="h-4 w-4 text-emerald-600" aria-hidden="true" />;
     case 'signature':
-      return <FileSignature className="h-4 w-4 text-blue-600" aria-hidden="true" />;
+      return <FileSignature className="h-4 w-4 text-icon-accent" aria-hidden="true" />;
     case 'ownership-transfer':
-      return <ArrowRightLeft className="h-4 w-4 text-blue-600" aria-hidden="true" />;
+      return <ArrowRightLeft className="h-4 w-4 text-icon-accent" aria-hidden="true" />;
     case 'organization-people':
-      return <UsersRound className="h-4 w-4 text-blue-600" aria-hidden="true" />;
+      return <UsersRound className="h-4 w-4 text-icon-accent" aria-hidden="true" />;
     case 'organization':
-      return <Building2 className="h-4 w-4 text-blue-600" aria-hidden="true" />;
+      return <Building2 className="h-4 w-4 text-icon-accent" aria-hidden="true" />;
     case 'estimate':
-      return <FileCheck2 className="h-4 w-4 text-blue-600" aria-hidden="true" />;
+      return <FileCheck2 className="h-4 w-4 text-icon-accent" aria-hidden="true" />;
     case 'billing':
-      return <ReceiptText className="h-4 w-4 text-blue-600" aria-hidden="true" />;
+      return <ReceiptText className="h-4 w-4 text-icon-accent" aria-hidden="true" />;
     case 'communication':
       return <MessageSquareText className="h-4 w-4 text-icon-accent" aria-hidden="true" />;
     case 'communication-failed':
       return <MessageSquareWarning className="h-4 w-4 text-destructive" aria-hidden="true" />;
     default:
-      return <Bell className="h-4 w-4 text-blue-600" aria-hidden="true" />;
+      return <Bell className="h-4 w-4 text-icon-accent" aria-hidden="true" />;
   }
 }
 
@@ -192,7 +192,7 @@ function NotificationPanel({
         <div className="min-w-0 shrink-0">
           <ResponsivePageHeading
             title="NOTIFICATIONS"
-            icon={<Bell className="h-4 w-4 text-blue-600" aria-hidden="true" />}
+            icon={<Bell className="h-4 w-4 text-icon-accent" aria-hidden="true" />}
             className="w-auto md:ml-0"
           />
         </div>
@@ -267,8 +267,8 @@ function NotificationPanel({
                     type="button"
                     onClick={() => onRead(notification)}
                     className={cn(
-                      'interaction-row group flex w-full gap-3 border-b px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600',
-                      !notification.readAt && 'bg-blue-600/[0.06]',
+                      'interaction-row group flex w-full gap-3 border-b px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
+                      !notification.readAt && 'bg-primary/[0.06]',
                     )}
                   >
                     <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
@@ -288,7 +288,7 @@ function NotificationPanel({
                       </span>
                       <span className="flex min-h-full flex-col items-end justify-between gap-2">
                         {!notification.readAt && (
-                          <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-600" aria-label="Unread" />
+                          <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" aria-label="Unread" />
                         )}
                         <span className="whitespace-nowrap text-right text-[11px] leading-4 text-muted-foreground">
                           {formatNotificationAge(notification.createdAt)}
@@ -456,7 +456,7 @@ export function NotificationCenter() {
     >
       <Bell className="h-4 w-4" />
       {unseenCount > 0 && (
-        <span data-badge className="absolute -right-1 -top-1 min-w-4 rounded-full bg-blue-600 px-1 text-center text-[10px] font-semibold leading-4 text-white">
+        <span data-badge className="absolute -right-1 -top-1 min-w-4 rounded-full bg-primary px-1 text-center text-[10px] font-semibold leading-4 text-white">
           {unseenCount > 99 ? '99+' : unseenCount}
         </span>
       )}

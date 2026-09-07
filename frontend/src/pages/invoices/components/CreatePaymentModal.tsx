@@ -85,7 +85,7 @@ export function CreatePaymentModal({
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <DollarSign className="h-5 w-5 text-blue-600" />
+                        <DollarSign className="h-5 w-5 text-icon-accent" />
                         Record Payment
                     </DialogTitle>
                     <DialogDescription>

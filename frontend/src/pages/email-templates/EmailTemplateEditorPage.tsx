@@ -604,7 +604,7 @@ export function EmailTemplateEditorPage() {
             type="button"
             variant="outline"
             size="sm"
-            className="h-8 px-2 text-blue-600 hover:bg-blue-500/10 hover:text-blue-700 dark:text-blue-400 dark:hover:bg-blue-400/10 dark:hover:text-blue-300 sm:px-3"
+            className="h-8 px-2 text-icon-accent hover:bg-primary/10 hover:text-primary dark:hover:text-icon-accent sm:px-3"
             onClick={() => setTemplateBrowserOpen(true)}
           >
             <FileText className="h-4 w-4" />
@@ -640,7 +640,7 @@ export function EmailTemplateEditorPage() {
             type="button"
             variant="outline"
             size="sm"
-            className="h-8 px-2 text-blue-600 hover:bg-blue-500/10 hover:text-blue-700 dark:text-blue-400 dark:hover:bg-blue-400/10 dark:hover:text-blue-300 sm:px-3"
+            className="h-8 px-2 text-icon-accent hover:bg-primary/10 hover:text-primary dark:hover:text-icon-accent sm:px-3"
             onClick={() => setTemplateDetailsOpen(true)}
           >
             <Settings2 className="h-4 w-4" />

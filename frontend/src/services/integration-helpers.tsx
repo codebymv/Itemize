@@ -129,7 +129,7 @@ export const DASHBOARD_WIDGETS = {
         id: inv.id,
         title: inv.number,
         subtitle: `$${inv.amount?.toLocaleString() || 0}`,
-        status: { label: inv.status, color: inv.status === 'paid' ? 'text-green-600' : inv.status === 'overdue' ? 'text-red-600' : 'text-blue-600' }
+        status: { label: inv.status, color: inv.status === 'paid' ? 'text-green-600' : inv.status === 'overdue' ? 'text-red-600' : 'text-icon-accent' }
       }))}
       action={{ label: 'View Invoices', onClick: () => window.location.href = '/invoices' }}
     />
@@ -138,7 +138,7 @@ export const DASHBOARD_WIDGETS = {
   renderSignaturesWidget: (data?: DashboardWidgetData) => (
     <SignaturesWidget
       primaryStat={data?.signatureMetrics?.awaiting || 0}
-      primaryStatColor="text-blue-600"
+      primaryStatColor="text-icon-accent"
       secondaryStats={[
         { label: 'Signed This Week', value: data?.signatureMetrics?.signedThisWeek || 0, color: 'text-green-600' },
         { label: 'Total Documents', value: data?.signatureMetrics?.total || 0, color: 'text-gray-600' },
@@ -146,7 +146,7 @@ export const DASHBOARD_WIDGETS = {
       recentItems={(data?.signatureMetrics?.recentDocuments || []).map((sig) => ({
         id: sig.id,
         title: sig.title,
-        status: { label: sig.status, color: sig.status === 'signed' ? 'text-green-600' : 'text-blue-600' }
+        status: { label: sig.status, color: sig.status === 'signed' ? 'text-green-600' : 'text-icon-accent' }
       }))}
       action={{ label: 'View Documents', onClick: () => window.location.href = '/documents' }}
     />

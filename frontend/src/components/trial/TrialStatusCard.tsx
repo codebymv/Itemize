@@ -114,9 +114,9 @@ export function TrialStatusCard({ className }: TrialStatusCardProps) {
   return (
     <div
       className={cn(
-        'rounded-lg border bg-gradient-to-br from-blue-50 to-indigo-50',
-        'dark:from-blue-950 dark:to-indigo-950',
-        'border-blue-200 dark:border-blue-800',
+        'rounded-lg border bg-gradient-to-br from-theme-tint to-indigo-50',
+        'dark:from-theme-tint dark:to-indigo-950',
+        'border-primary/30 dark:border-primary/40',
         'p-6 space-y-4',
         className
       )}
@@ -173,8 +173,8 @@ export function TrialStatusCard({ className }: TrialStatusCardProps) {
           disabled={isRedirecting}
           className={cn(
             'w-full sm:w-auto px-6 py-3 rounded-lg font-semibold text-white',
-            'bg-primary interaction-button--primary dark:bg-blue-500 dark:hover:bg-blue-600',
-            'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+            'bg-primary interaction-button--primary dark:hover:bg-primary',
+            'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
             'transition-colors duration-200',
             'disabled:opacity-50 disabled:cursor-not-allowed',
             'flex items-center justify-center gap-2'

@@ -970,7 +970,7 @@ export function RecurringInvoicesPage() {
                                                                                 <Button
                                                                                     variant="link"
                                                                                     size="sm"
-                                                                                    className="text-sm font-medium text-blue-600 h-auto p-0"
+                                                                                    className="text-sm font-medium text-icon-accent h-auto p-0"
                                                                                     onClick={(e) => {
                                                                                         e.stopPropagation();
                                                                                         navigate(`/invoices`);

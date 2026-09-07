@@ -119,8 +119,8 @@ const StepNode = ({ data, selected }: { data: Record<string, any>; selected: boo
   return (
     <div 
       className={cn(
-        'min-w-[180px] rounded-lg border-2 border-blue-300 bg-blue-50 px-4 py-3 dark:border-blue-800 dark:bg-blue-950/50',
-        selected && 'ring-2 ring-blue-600 dark:ring-blue-400',
+        'min-w-[180px] rounded-lg border-2 border-primary/30 bg-theme-tint px-4 py-3 dark:border-primary/40 dark:bg-theme-tint/50',
+        selected && 'ring-2 ring-ring',
       )}
     >
       <Handle type="target" position={Position.Top} className="w-3 h-3 bg-slate-400" />
@@ -142,8 +142,8 @@ const TriggerNode = ({ data, selected }: { data: Record<string, any>; selected: 
   return (
     <div 
       className={cn(
-        'min-w-[180px] rounded-lg border-2 border-blue-300 bg-blue-100 px-4 py-3 dark:border-blue-700 dark:bg-blue-900/70',
-        selected && 'ring-2 ring-blue-600 dark:ring-blue-400',
+        'min-w-[180px] rounded-lg border-2 border-primary/30 bg-theme-tint px-4 py-3 dark:border-primary dark:bg-theme-tint/70',
+        selected && 'ring-2 ring-ring',
       )}
     >
       <div className="flex items-center gap-2">
@@ -739,7 +739,7 @@ export function WorkflowBuilderPage() {
             className="group/menu-button interaction-navigation flex h-11 w-full items-center gap-2 overflow-hidden rounded-md px-2 text-left text-sm font-raleway text-sidebar-foreground outline-none ring-sidebar-ring focus-visible:ring-2 active:bg-sidebar-accent lg:h-9"
             onClick={() => handleAddStep(step.value)}
           >
-            <step.icon className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover/menu-button:text-blue-600 dark:group-hover/menu-button:text-blue-400" />
+            <step.icon className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover/menu-button:text-icon-accent" />
             <span className="truncate">{step.label}</span>
           </button>
         </li>

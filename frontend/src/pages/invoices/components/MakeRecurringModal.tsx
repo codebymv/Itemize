@@ -101,7 +101,7 @@ export function MakeRecurringModal({
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <Repeat className="h-5 w-5 text-blue-600" />
+                        <Repeat className="h-5 w-5 text-icon-accent" />
                         Create recurring schedule
                     </DialogTitle>
                     <DialogDescription>
@@ -111,9 +111,9 @@ export function MakeRecurringModal({
 
                 <div className="space-y-4 py-4">
                     {/* Info Alert */}
-                    <Alert variant="default" className="border-blue-200 bg-blue-50 dark:bg-blue-950/20">
-                        <Info className="h-4 w-4 text-blue-600" />
-                        <AlertDescription className="text-blue-800 dark:text-blue-200">
+                    <Alert variant="default" className="border-primary/30 bg-theme-tint dark:bg-theme-tint/20">
+                        <Info className="h-4 w-4 text-icon-accent" />
+                        <AlertDescription className="text-primary dark:text-icon-accent">
                             The original invoice stays unchanged. Future invoices copy its current details.
                         </AlertDescription>
                     </Alert>

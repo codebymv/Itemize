@@ -432,7 +432,7 @@ export function PageEditorPage() {
                                     {page.sections.map((section, index) => (
                                         <div
                                             key={section.id}
-                                            className={`flex items-center gap-2 p-3 rounded-lg border bg-card interaction-row cursor-pointer ${selectedSection?.id === section.id ? 'ring-2 ring-blue-600' : ''}`}
+                                            className={`flex items-center gap-2 p-3 rounded-lg border bg-card interaction-row cursor-pointer ${selectedSection?.id === section.id ? 'ring-2 ring-ring' : ''}`}
                                             onClick={() => setSelectedSection(section)}
                                         >
                                             <GripVertical className="h-4 w-4 text-muted-foreground" />
@@ -573,7 +573,7 @@ export function PageEditorPage() {
                 <DialogContent className="max-w-2xl">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
-                            <Plus className="h-5 w-5 text-blue-600" />
+                            <Plus className="h-5 w-5 text-icon-accent" />
                             Add section
                         </DialogTitle>
                         <DialogDescription>
@@ -588,7 +588,7 @@ export function PageEditorPage() {
                                     className="interaction-card flex flex-col items-center gap-2 rounded-lg border p-4 text-left"
                                     onClick={() => handleAddSection(type)}
                                 >
-                                    <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                                    <div className="w-10 h-10 rounded-lg bg-theme-tint dark:bg-theme-tint/30 flex items-center justify-center">
                                         {SECTION_ICONS[type]}
                                     </div>
                                     <span className="text-sm font-medium">{template.name}</span>

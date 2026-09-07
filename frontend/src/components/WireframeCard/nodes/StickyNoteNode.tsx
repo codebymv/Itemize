@@ -57,7 +57,7 @@ const StickyNoteNode: React.FC<NodeProps> = ({ id, data, selected }) => {
       className={`
         relative p-3 rounded-sm min-w-[100px] min-h-[70px] h-full w-full
         shadow-md transition-all duration-200
-        ${selected ? 'ring-2 ring-blue-600 ring-offset-2' : ''}
+        ${selected ? 'ring-2 ring-ring ring-offset-2' : ''}
       `}
       style={{
         backgroundColor: bgColor,
@@ -69,8 +69,8 @@ const StickyNoteNode: React.FC<NodeProps> = ({ id, data, selected }) => {
         minWidth={100}
         minHeight={70}
         isVisible={selected}
-        lineClassName="border-blue-500"
-        handleClassName="h-2 w-2 bg-blue-600 border-none"
+        lineClassName="border-primary"
+        handleClassName="h-2 w-2 bg-primary border-none"
       />
       {/* Content */}
       {isEditing ? (

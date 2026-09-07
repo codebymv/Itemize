@@ -21,7 +21,7 @@ const sizeMap = {
 
 const variantMap = {
   primary: 'border-primary border-t-transparent',
-  brand: 'border-blue-600 border-t-transparent',
+  brand: 'border-primary border-t-transparent',
   muted: 'border-muted-foreground border-t-transparent',
   current: 'border-current border-t-transparent',
 };

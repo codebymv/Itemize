@@ -49,7 +49,7 @@ export function ActivityTimeline({ activities }: ActivityTimelineProps) {
   const getActivityColor = (type: string) => {
     switch (type) {
       case 'note':
-        return 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300';
+        return 'bg-theme-tint text-primary dark:text-icon-accent';
       case 'email':
         return 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300';
       case 'call':

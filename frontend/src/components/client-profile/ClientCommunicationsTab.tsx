@@ -36,7 +36,7 @@ export function ClientCommunicationsTab({
   const getCommunicationBg = (type: ClientCommunication['type']) => {
     switch (type) {
       case 'email':
-        return 'bg-blue-100 dark:bg-blue-900/30'
+        return 'bg-theme-tint dark:bg-theme-tint/30'
       case 'sms':
         return 'bg-purple-100 dark:bg-purple-900/30'
       case 'note':

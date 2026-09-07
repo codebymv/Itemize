@@ -177,13 +177,13 @@ export function EmailComposeDialog({
                     ))}
                     {recipients.length > 20 && <span className="inline-flex items-center rounded-full bg-muted px-2 py-1 text-xs text-muted-foreground">+{recipients.length - 20} more</span>}
                     {additionalRecipients.map(recipient => (
-                        <span key={recipient.id} className="inline-flex items-center rounded-full bg-blue-100 px-2 py-1 text-xs text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                        <span key={recipient.id} className="inline-flex items-center rounded-full bg-theme-tint px-2 py-1 text-xs text-primary dark:bg-theme-tint/30 dark:text-icon-accent">
                             {recipient.email}
                             <button
                                 type="button"
                                 aria-label={`Remove ${recipient.email}`}
                                 onClick={() => setAdditionalRecipients(current => current.filter(item => item.id !== recipient.id))}
-                                className="ml-1 rounded-full p-0.5 hover:bg-blue-200 dark:hover:bg-blue-800"
+                                className="ml-1 rounded-full p-0.5 hover:bg-theme-tint dark:hover:bg-primary-hover"
                                 disabled={sending}
                             >
                                 <X className="h-3 w-3" />

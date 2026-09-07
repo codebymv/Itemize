@@ -239,7 +239,7 @@ export function RichTextEditor({
             onClick={onClick}
             className={cn(
                 'p-2 rounded transition-colors',
-                isActive ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800'
+                isActive ? 'bg-theme-tint text-primary dark:bg-theme-tint/50 dark:text-icon-accent' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800'
             )}
             title={title}
             type="button"
@@ -294,7 +294,7 @@ export function RichTextEditor({
                                 onClick={() => applyHeading(1)}
                                 className={cn(
                                     'p-2 w-full text-left text-lg font-bold hover:bg-slate-100 dark:hover:bg-slate-800',
-                                    editor?.isActive('heading', { level: 1 }) && 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                    editor?.isActive('heading', { level: 1 }) && 'bg-theme-tint text-primary dark:bg-theme-tint/30 dark:text-icon-accent'
                                 )}
                             >
                                 Heading 1
@@ -303,7 +303,7 @@ export function RichTextEditor({
                                 onClick={() => applyHeading(2)}
                                 className={cn(
                                     'p-2 w-full text-left text-base font-semibold hover:bg-slate-100 dark:hover:bg-slate-800',
-                                    editor?.isActive('heading', { level: 2 }) && 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                    editor?.isActive('heading', { level: 2 }) && 'bg-theme-tint text-primary dark:bg-theme-tint/30 dark:text-icon-accent'
                                 )}
                             >
                                 Heading 2
@@ -312,7 +312,7 @@ export function RichTextEditor({
                                 onClick={() => applyHeading(3)}
                                 className={cn(
                                     'p-2 w-full text-left text-sm font-medium hover:bg-slate-100 dark:hover:bg-slate-800',
-                                    editor?.isActive('heading', { level: 3 }) && 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                    editor?.isActive('heading', { level: 3 }) && 'bg-theme-tint text-primary dark:bg-theme-tint/30 dark:text-icon-accent'
                                 )}
                             >
                                 Heading 3
@@ -321,7 +321,7 @@ export function RichTextEditor({
                                 onClick={clearHeading}
                                 className={cn(
                                     'p-2 w-full text-left border-t border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800',
-                                    !editor?.isActive('heading') && 'bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                    !editor?.isActive('heading') && 'bg-theme-tint text-primary dark:bg-theme-tint/30 dark:text-icon-accent'
                                 )}
                             >
                                 Paragraph
@@ -468,7 +468,7 @@ export function RichTextEditor({
                                 onClick={() => insertCallout('info')}
                                 className="p-2 w-full text-left text-sm hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
                             >
-                                <span className="w-3 h-3 rounded bg-blue-500"></span>
+                                <span className="w-3 h-3 rounded bg-primary"></span>
                                 Info (Blue)
                             </button>
                             <button
@@ -569,20 +569,20 @@ export function RichTextEditor({
                     '[&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-2',
                     '[&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-2',
                     // Links
-                    '[&_a]:text-blue-600 [&_a]:underline [&_a:hover]:text-blue-700',
+                    '[&_a]:text-icon-accent [&_a]:underline [&_a:hover]:text-primary',
                     // Blockquotes
                     '[&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-slate-500',
                     // Horizontal rule
                     '[&_hr]:border-t [&_hr]:border-slate-300 [&_hr]:my-4',
                     // Callout boxes (editor preview styles)
-                    '[&_.callout-info]:bg-blue-50 [&_.callout-info]:border [&_.callout-info]:border-blue-200 [&_.callout-info]:rounded-lg [&_.callout-info]:p-4 [&_.callout-info]:my-3',
+                    '[&_.callout-info]:bg-theme-tint [&_.callout-info]:border [&_.callout-info]:border-primary/30 [&_.callout-info]:rounded-lg [&_.callout-info]:p-4 [&_.callout-info]:my-3',
                     '[&_.callout-warning]:bg-amber-50 [&_.callout-warning]:border [&_.callout-warning]:border-amber-200 [&_.callout-warning]:rounded-lg [&_.callout-warning]:p-4 [&_.callout-warning]:my-3',
                     '[&_.callout-success]:bg-green-50 [&_.callout-success]:border [&_.callout-success]:border-green-200 [&_.callout-success]:rounded-lg [&_.callout-success]:p-4 [&_.callout-success]:my-3',
                     '[&_.callout-slate]:bg-slate-100 [&_.callout-slate]:border [&_.callout-slate]:border-slate-300 [&_.callout-slate]:rounded-lg [&_.callout-slate]:p-4 [&_.callout-slate]:my-3',
                     // Buttons (editor preview styles)
-                    '[&_.button-primary]:inline-block [&_.button-primary]:bg-blue-600 [&_.button-primary]:text-white [&_.button-primary]:px-6 [&_.button-primary]:py-3 [&_.button-primary]:rounded-lg [&_.button-primary]:font-semibold [&_.button-primary]:no-underline [&_.button-primary]:cursor-pointer [&_.button-primary]:hover:bg-blue-700 [&_.button-primary]:hover:text-white',
+                    '[&_.button-primary]:inline-block [&_.button-primary]:bg-primary [&_.button-primary]:text-white [&_.button-primary]:px-6 [&_.button-primary]:py-3 [&_.button-primary]:rounded-lg [&_.button-primary]:font-semibold [&_.button-primary]:no-underline [&_.button-primary]:cursor-pointer [&_.button-primary]:hover:bg-primary-hover [&_.button-primary]:hover:text-white',
                     // Badges (editor preview styles)
-                    '[&_.badge-blue]:inline [&_.badge-blue]:bg-blue-100 [&_.badge-blue]:text-blue-700 [&_.badge-blue]:text-xs [&_.badge-blue]:font-semibold [&_.badge-blue]:px-2 [&_.badge-blue]:py-1 [&_.badge-blue]:rounded [&_.badge-blue]:uppercase [&_.badge-blue]:tracking-wide',
+                    '[&_.badge-blue]:inline [&_.badge-blue]:bg-theme-tint [&_.badge-blue]:text-primary [&_.badge-blue]:text-xs [&_.badge-blue]:font-semibold [&_.badge-blue]:px-2 [&_.badge-blue]:py-1 [&_.badge-blue]:rounded [&_.badge-blue]:uppercase [&_.badge-blue]:tracking-wide',
                     '[&_.badge-amber]:inline [&_.badge-amber]:bg-amber-100 [&_.badge-amber]:text-amber-700 [&_.badge-amber]:text-xs [&_.badge-amber]:font-semibold [&_.badge-amber]:px-2 [&_.badge-amber]:py-1 [&_.badge-amber]:rounded [&_.badge-amber]:uppercase [&_.badge-amber]:tracking-wide',
                     '[&_.badge-red]:inline [&_.badge-red]:bg-red-100 [&_.badge-red]:text-red-700 [&_.badge-red]:text-xs [&_.badge-red]:font-semibold [&_.badge-red]:px-2 [&_.badge-red]:py-1 [&_.badge-red]:rounded [&_.badge-red]:uppercase [&_.badge-red]:tracking-wide',
                     '[&_.badge-slate]:inline [&_.badge-slate]:bg-slate-100 [&_.badge-slate]:text-slate-700 [&_.badge-slate]:text-xs [&_.badge-slate]:font-semibold [&_.badge-slate]:px-2 [&_.badge-slate]:py-1 [&_.badge-slate]:rounded [&_.badge-slate]:uppercase [&_.badge-slate]:tracking-wide',

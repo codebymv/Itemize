@@ -198,7 +198,7 @@ export function CreateSMSTemplateModal({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5 text-blue-600" />
+            <MessageSquare className="h-5 w-5 text-icon-accent" />
             {isEditing ? 'Edit SMS Template' : 'Create SMS Template'}
           </DialogTitle>
           <DialogDescription style={{ fontFamily: '"Raleway", sans-serif' }}>

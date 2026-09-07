@@ -716,7 +716,7 @@ const WireframeCanvasInner: React.FC<WireframeCanvasProps> = ({
                       onClick={() => setShowGrid(!showGrid)}
                       className={cn(
                         "h-8 w-8 p-0",
-                        showGrid ? 'bg-blue-100 dark:bg-blue-900' : ''
+                        showGrid ? 'bg-theme-tint' : ''
                       )}
                       style={{ backgroundColor: showGrid ? undefined : 'transparent', color: textColor }}
                     >

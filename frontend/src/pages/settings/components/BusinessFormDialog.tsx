@@ -64,7 +64,7 @@ export const BusinessFormDialog: React.FC<BusinessFormDialogProps> = ({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Building className="h-5 w-5 text-blue-600" />
+            <Building className="h-5 w-5 text-icon-accent" />
             {editingBusiness ? 'Edit Business' : 'Add Business'}
           </DialogTitle>
           <DialogDescription>
