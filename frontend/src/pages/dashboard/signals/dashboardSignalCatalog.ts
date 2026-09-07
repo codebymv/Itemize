@@ -74,7 +74,8 @@ export const DEFAULT_DASHBOARD_SIGNAL_IDS: DashboardSignalId[] = [
   'signatures-awaiting',
 ];
 
-export const MAX_PINNED_DASHBOARD_SIGNALS = 8;
+/** Three rows of three at the widest layout, so the last row is never ragged. */
+export const MAX_PINNED_DASHBOARD_SIGNALS = 9;
 export const MIN_PINNED_DASHBOARD_SIGNALS = 1;
 
 export const DASHBOARD_SIGNAL_GROUPS = [

@@ -76,9 +76,9 @@ describe('DashboardOverview', () => {
     expect(screen.getByRole('button', { name: /^Needs attention: Overdue tasks\./ })).toHaveClass('h-10');
     expect(addSignals.closest('[data-framed-section]')?.firstElementChild).toHaveClass('items-center');
     expect(screen.queryByText('Pinned')).not.toBeInTheDocument();
-    expect(screen.queryByText('1 of 8')).not.toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: /^Open overview slot/ })).toHaveLength(7);
-    expect(screen.getByRole('button', { name: 'Open overview slot 2 of 8' })).toHaveTextContent(/Open slot\s*2\/8/);
+    expect(screen.queryByText('1 of 9')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /^Open overview slot/ })).toHaveLength(8);
+    expect(screen.getByRole('button', { name: 'Open overview slot 2 of 9' })).toHaveTextContent(/Open slot\s*2\/9/);
   });
 
   it('supplements pins with attention without duplicating a pinned warning', () => {
@@ -171,9 +171,9 @@ describe('DashboardOverview', () => {
     );
 
     const slots = screen.getAllByRole('button', { name: /^Open overview slot/ });
-    expect(slots).toHaveLength(6);
-    expect(slots[0]).toHaveAccessibleName('Open overview slot 3 of 8');
-    expect(slots[5]).toHaveAccessibleName('Open overview slot 8 of 8');
+    expect(slots).toHaveLength(7);
+    expect(slots[0]).toHaveAccessibleName('Open overview slot 3 of 9');
+    expect(slots[6]).toHaveAccessibleName('Open overview slot 9 of 9');
 
     fireEvent.click(slots[0]);
     expect(screen.getByRole('dialog', { name: 'Add overview signals' })).toBeInTheDocument();
