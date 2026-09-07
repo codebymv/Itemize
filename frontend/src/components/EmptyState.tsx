@@ -50,7 +50,7 @@ export const EmptyState = memo(({
         )}>
           <Icon
             aria-hidden="true"
-            className={cn('text-blue-600 dark:text-blue-400', compact ? 'h-4 w-4' : 'h-6 w-6')}
+            className={cn('text-icon-accent', compact ? 'h-4 w-4' : 'h-6 w-6')}
           />
         </div>
       ) : null}
@@ -71,7 +71,7 @@ export const EmptyState = memo(({
           onClick={onAction}
           className={cn(
             'mt-4 h-11',
-            !isResultsState && 'bg-blue-600 text-white interaction-button--primary',
+            !isResultsState && 'bg-primary text-primary-foreground interaction-button--primary',
             compact && 'mt-3',
           )}
         >

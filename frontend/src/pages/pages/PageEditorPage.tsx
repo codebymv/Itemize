@@ -307,7 +307,7 @@ export function PageEditorPage() {
         return (
             <PageLayout
                 title="PAGE"
-                icon={<Layout className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
+                icon={<Layout className="h-5 w-5 shrink-0 text-icon-accent" />}
                 leading={backButton}
             >
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -328,7 +328,7 @@ export function PageEditorPage() {
         return (
             <PageLayout
                 title="PAGE EDITOR"
-                icon={<Layout className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
+                icon={<Layout className="h-5 w-5 shrink-0 text-icon-accent" />}
                 leading={backButton}
             >
                 {organizationError ? (
@@ -389,7 +389,7 @@ export function PageEditorPage() {
     return (
         <PageLayout
             title="PAGE"
-            icon={<Layout className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
+            icon={<Layout className="h-5 w-5 shrink-0 text-icon-accent" />}
             leading={backButton}
             headerTools={{
                 status: <Badge className={cn('pointer-events-none whitespace-nowrap', statusVisual.badgeClass)}>{statusVisual.label}</Badge>,
@@ -412,7 +412,7 @@ export function PageEditorPage() {
                         <CardHeader className="pb-3">
                             <div className="flex items-center justify-between">
                                 <SectionCardTitle icon={Layout}>Page sections</SectionCardTitle>
-                                <Button size="sm" className="bg-blue-600 text-white interaction-button--primary" onClick={() => setShowAddSection(true)}>
+                                <Button size="sm" className="bg-primary text-primary-foreground interaction-button--primary" onClick={() => setShowAddSection(true)}>
                                     <Plus className="mr-2 h-4 w-4" />
                                     Add section
                                 </Button>
@@ -832,7 +832,7 @@ function SectionEditor({ section, onUpdate }: { section: PageSection; onUpdate: 
         <div className="space-y-4">
             {renderFields()}
             {hasChanges && (
-                <Button onClick={handleSave} className="w-full bg-blue-600 interaction-button--primary text-white">
+                <Button onClick={handleSave} className="w-full bg-primary interaction-button--primary text-primary-foreground">
                     <Save className="h-4 w-4 mr-2" />
                     Save Section
                 </Button>

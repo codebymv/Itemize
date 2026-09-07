@@ -280,7 +280,7 @@ export function LandingPagesPage() {
         return (
             <PageLayout
                 title="LANDING PAGES"
-                icon={<Layout className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />}
+                icon={<Layout className="h-5 w-5 text-icon-accent flex-shrink-0" />}
             >
                 <OrganizationErrorState title="Unable to load pages" icon={Layout} />
             </PageLayout>
@@ -290,7 +290,7 @@ export function LandingPagesPage() {
     return (
         <PageLayout
             title="PAGES"
-            icon={<Layout className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
+            icon={<Layout className="h-5 w-5 shrink-0 text-icon-accent" />}
             headerTools={{
                 search: <HeaderSearch label="Search pages" placeholder="Search pages..." value={searchQuery} onChange={setSearchQuery} width="wide" />,
                 filters: <HeaderFilters label="Filter pages by status" activeCount={Number(statusFilter !== 'all')} compactChildren={statusSelect(true)} preferExpanded="when-roomy">{statusSelect()}</HeaderFilters>,
@@ -413,17 +413,17 @@ export function LandingPagesPage() {
                                                 <Button variant="outline" size="sm" onClick={() => navigate(`/pages/${page.id}`)}>
                                                     <Pencil className="h-4 w-4" /><ExpandedRowActionLabel full="Edit page" compact="Edit" />
                                                 </Button>
-                                                <Button size="sm" className="bg-blue-600 text-white interaction-button--primary" disabled={!previewData} onClick={() => previewData && setPreviewPage(previewData)}>
+                                                <Button size="sm" className="bg-primary text-primary-foreground interaction-button--primary" disabled={!previewData} onClick={() => previewData && setPreviewPage(previewData)}>
                                                     <Maximize2 className="h-4 w-4" /><ExpandedRowActionLabel full="Full preview" compact="Preview" />
                                                 </Button>
-                                                <Button size="sm" className="bg-blue-600 text-white interaction-button--primary" disabled={rowPending} onClick={() => handleToggleStatus(page, page.status === 'published' ? 'draft' : 'published')}>
+                                                <Button size="sm" className="bg-primary text-primary-foreground interaction-button--primary" disabled={rowPending} onClick={() => handleToggleStatus(page, page.status === 'published' ? 'draft' : 'published')}>
                                                     {page.status === 'published' ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                                     <ExpandedRowActionLabel full={page.status === 'published' ? 'Unpublish page' : 'Publish page'} compact={page.status === 'published' ? 'Unpublish' : 'Publish'} />
                                                 </Button>
-                                                {page.status === 'published' && <Button size="sm" className="bg-blue-600 text-white interaction-button--primary" onClick={() => copyPageLink(page.slug)}>
+                                                {page.status === 'published' && <Button size="sm" className="bg-primary text-primary-foreground interaction-button--primary" onClick={() => copyPageLink(page.slug)}>
                                                     <Copy className="h-4 w-4" /><ExpandedRowActionLabel full="Copy public link" compact="Copy" />
                                                 </Button>}
-                                                <Button size="sm" className="bg-blue-600 text-white interaction-button--primary" disabled={rowPending} onClick={() => handleDuplicate(page.id)}>
+                                                <Button size="sm" className="bg-primary text-primary-foreground interaction-button--primary" disabled={rowPending} onClick={() => handleDuplicate(page.id)}>
                                                     <Copy className="h-4 w-4" /><ExpandedRowActionLabel full="Duplicate page" compact="Duplicate" />
                                                 </Button>
                                                 <Button size="sm" variant="outline" className="border-destructive/30 text-destructive interaction-button--destructive-ghost" onClick={() => setPageToDelete(page)}>

@@ -90,7 +90,7 @@ export function MobileListView({
                     setSelectedFilter(filter);
                   }
                 }}
-                className={`capitalize font-light whitespace-nowrap flex-shrink-0 ${isActive ? 'bg-blue-600 interaction-button--primary text-white' : ''}`}
+                className={`capitalize font-light whitespace-nowrap flex-shrink-0 ${isActive ? 'bg-primary interaction-button--primary text-primary-foreground' : ''}`}
               >
                 {filter} ({count})
               </Button>
@@ -108,7 +108,7 @@ export function MobileListView({
               title="No canvas content yet"
               action={(
                 <div className="flex flex-wrap justify-center gap-2">
-                  <Button type="button" onClick={onAddList} className="h-11 bg-blue-600 text-white interaction-button--primary"><Plus className="mr-2 h-4 w-4" />Add list</Button>
+                  <Button type="button" onClick={onAddList} className="h-11 bg-primary text-primary-foreground interaction-button--primary"><Plus className="mr-2 h-4 w-4" />Add list</Button>
                   <Button type="button" variant="outline" className="h-11" onClick={onAddNote}>Add note</Button>
                   <Button type="button" variant="outline" className="h-11" onClick={onAddWhiteboard}>Add whiteboard</Button>
                 </div>

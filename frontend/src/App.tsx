@@ -244,7 +244,7 @@ const EntitledRoute = ({ requiredPlan = 'starter' }: { requiredPlan?: Plan }) =>
   if (error && !subscription) {
     return (
       <AuthenticatedLayout>
-        <PageLayout title="ACCOUNT ACCESS" icon={<Crown className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />} frame="flush">
+        <PageLayout title="ACCOUNT ACCESS" icon={<Crown className="h-5 w-5 shrink-0 text-icon-accent" />} frame="flush">
           <ErrorState
             kind="page"
             className="min-h-[calc(100dvh-8rem)]"
@@ -260,7 +260,7 @@ const EntitledRoute = ({ requiredPlan = 'starter' }: { requiredPlan?: Plan }) =>
   if (!subscription || !hasPlanAccess(isSubscribed, tierLevel, requiredPlan)) {
     return (
       <AuthenticatedLayout>
-        <PageLayout title="UPGRADE" icon={<Crown className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />} frame="flush">
+        <PageLayout title="UPGRADE" icon={<Crown className="h-5 w-5 shrink-0 text-icon-accent" />} frame="flush">
           <div className="mx-auto flex min-h-full w-full max-w-3xl items-center px-4 py-12 sm:px-6">
             <UpgradePromptCard
               requiredPlan={requiredPlan}

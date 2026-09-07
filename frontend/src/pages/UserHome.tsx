@@ -238,7 +238,7 @@ const UserHome = () => {
   return (
     <PageLayout
       title="LISTS"
-      icon={<CheckSquare className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />}
+      icon={<CheckSquare className="h-5 w-5 text-icon-accent flex-shrink-0" />}
       headerTools={{
         search: <HeaderSearch value={searchQuery} onChange={setSearchQuery} label="Search lists" placeholder="Search lists..." />,
         primaryAction: <HeaderAction label="New list" icon={<Plus className="h-4 w-4" />} onClick={() => setShowCreateModal(true)} />,
@@ -253,7 +253,7 @@ const UserHome = () => {
                 variant={selectedFilter === filter ? "default" : "outline"}
                 size="sm"
                 onClick={() => setSelectedFilter(filter)}
-                className={`capitalize ${selectedFilter === filter ? 'bg-blue-600 interaction-button--primary' : ''}`}
+                className={`capitalize ${selectedFilter === filter ? 'bg-primary interaction-button--primary' : ''}`}
               >
                 {filter} ({count})
               </Button>

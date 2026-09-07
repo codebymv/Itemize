@@ -456,7 +456,7 @@ export function PaymentsPage() {
         return (
             <PageLayout
                 title="PAYMENTS"
-                icon={<DollarSign className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+                icon={<DollarSign className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
             >
                 <OrganizationErrorState title="Unable to load payments" icon={DollarSign} />
             </PageLayout>
@@ -466,7 +466,7 @@ export function PaymentsPage() {
     return (
         <PageLayout
             title="PAYMENTS"
-            icon={<DollarSign className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+            icon={<DollarSign className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
             headerTools={{
                 search: (
                     <HeaderSearch
@@ -586,7 +586,7 @@ export function PaymentsPage() {
                 <Card className="revenue-flow-card">
                     <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0 pb-2">
                         <CardTitle className="flex items-center gap-2 text-base">
-                            <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                            <TrendingUp className="h-4 w-4 text-icon-accent" />
                             Revenue flow
                         </CardTitle>
                         <RevenueFlowSeriesControls

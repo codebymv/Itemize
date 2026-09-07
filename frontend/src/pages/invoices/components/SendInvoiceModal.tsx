@@ -359,7 +359,7 @@ export function SendInvoiceModal({
                         <Button
                             onClick={handleSend}
                             disabled={sending || !customerEmail}
-                            className="bg-blue-600 interaction-button--primary text-white"
+                            className="bg-primary interaction-button--primary text-primary-foreground"
                             style={{ fontFamily: '"Raleway", sans-serif' }}
                         >
                             <Send className="h-4 w-4 mr-2" />

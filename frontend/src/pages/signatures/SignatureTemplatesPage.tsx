@@ -167,7 +167,7 @@ export default function SignatureTemplatesPage() {
     return (
       <PageLayout
         title="TEMPLATES"
-        icon={<FileSignature className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+        icon={<FileSignature className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
       >
         <OrganizationErrorState title="Unable to load templates" icon={FileSignature} />
       </PageLayout>
@@ -177,7 +177,7 @@ export default function SignatureTemplatesPage() {
   return (
     <PageLayout
       title="TEMPLATES"
-      icon={<FileSignature className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+      icon={<FileSignature className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
       headerTools={{
         search: (
           <HeaderSearch
@@ -373,7 +373,7 @@ export default function SignatureTemplatesPage() {
                               </Button>
                               <Button
                                 size="sm"
-                                className="bg-blue-600 interaction-button--primary text-white text-xs sm:text-sm"
+                                className="bg-primary interaction-button--primary text-primary-foreground text-xs sm:text-sm"
                                 disabled={creating}
                                 aria-busy={creating || undefined}
                                 onClick={(e) => {

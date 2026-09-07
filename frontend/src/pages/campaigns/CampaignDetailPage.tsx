@@ -827,7 +827,7 @@ export function CampaignDetailPage() {
       <PageLayout
         title="CAMPAIGN"
         icon={
-          <Megaphone className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          <Megaphone className="h-5 w-5 text-icon-accent" />
         }
         leading={
           <ShellBackButton
@@ -849,7 +849,7 @@ export function CampaignDetailPage() {
       <PageLayout
         title="CAMPAIGN"
         icon={
-          <Megaphone className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          <Megaphone className="h-5 w-5 text-icon-accent" />
         }
         leading={
           <ShellBackButton
@@ -868,7 +868,7 @@ export function CampaignDetailPage() {
       <PageLayout
         title="CAMPAIGN"
         icon={
-          <Megaphone className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          <Megaphone className="h-5 w-5 text-icon-accent" />
         }
         leading={
           <ShellBackButton
@@ -1014,7 +1014,7 @@ export function CampaignDetailPage() {
     <PageLayout
       title={isNew ? "NEW CAMPAIGN" : "CAMPAIGN"}
       icon={
-        <Megaphone className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
+        <Megaphone className="h-5 w-5 shrink-0 text-icon-accent" />
       }
       leading={<ShellBackButton label="Back to campaigns" onClick={goBack} />}
       headerTools={{
@@ -1346,7 +1346,7 @@ export function CampaignDetailPage() {
                       Based on the saved setup
                     </p>
                   </div>
-                  <span className="text-2xl font-semibold text-blue-600 dark:text-blue-400">
+                  <span className="text-2xl font-semibold text-icon-accent">
                     {audiencePreview?.recipientCount ?? "—"}
                   </span>
                 </div>

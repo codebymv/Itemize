@@ -198,7 +198,7 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
         return (
             <PageLayout
                 title="INTEGRATIONS"
-                icon={<Plug className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />}
+                icon={<Plug className="h-5 w-5 text-icon-accent flex-shrink-0" />}
             >
                 {planGate}
             </PageLayout>
@@ -217,7 +217,7 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
         return (
             <PageLayout
                 title="INTEGRATIONS"
-                icon={<Plug className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />}
+                icon={<Plug className="h-5 w-5 text-icon-accent flex-shrink-0" />}
             >
                 {errorState}
             </PageLayout>
@@ -347,7 +347,7 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
     return (
         <PageLayout
             title="INTEGRATIONS"
-            icon={<Plug className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />}
+            icon={<Plug className="h-5 w-5 text-icon-accent flex-shrink-0" />}
             surfaceClassName="space-y-6"
         >
             {content}

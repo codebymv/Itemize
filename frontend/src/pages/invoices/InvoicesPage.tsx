@@ -685,7 +685,7 @@ export function InvoicesPage() {
         return (
             <PageLayout
                 title="INVOICES"
-                icon={<Receipt className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+                icon={<Receipt className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
             >
                 <OrganizationErrorState title="Unable to load invoices" icon={Receipt} />
             </PageLayout>
@@ -695,7 +695,7 @@ export function InvoicesPage() {
     return (
         <PageLayout
             title="INVOICES"
-            icon={<Receipt className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+            icon={<Receipt className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
             headerTools={{
                 search: (
                     <HeaderSearch
@@ -1052,7 +1052,7 @@ export function InvoicesPage() {
                                                     {invoice.status === 'draft' && (
                                                         <Button
                                                             size="sm"
-                                                            className="bg-blue-600 interaction-button--primary text-white text-xs sm:text-sm"
+                                                            className="bg-primary interaction-button--primary text-primary-foreground text-xs sm:text-sm"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 handleOpenSendModal(invoice, false);
@@ -1065,7 +1065,7 @@ export function InvoicesPage() {
                                                     {['sent', 'viewed', 'partial', 'overdue'].includes(invoice.status) && (
                                                         <Button
                                                             size="sm"
-                                                            className="bg-blue-600 interaction-button--primary text-white text-xs sm:text-sm"
+                                                            className="bg-primary interaction-button--primary text-primary-foreground text-xs sm:text-sm"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 handleOpenSendModal(invoice, true);
@@ -1079,7 +1079,7 @@ export function InvoicesPage() {
                                                         size="sm"
                                                         onClick={(e) => handleDownloadPdf(invoice, e)}
                                                         disabled={downloadingInvoiceId !== null}
-                                                        className="bg-blue-600 interaction-button--primary text-white text-xs sm:text-sm"
+                                                        className="bg-primary interaction-button--primary text-primary-foreground text-xs sm:text-sm"
                                                     >
                                                         {downloadingInvoiceId === invoice.id
                                                             ? <Loader2 className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2 animate-spin" />
@@ -1091,7 +1091,7 @@ export function InvoicesPage() {
                                                             <Button
                                                                 size="sm"
                                                                 onClick={(e) => handleOpenPaymentModal(invoice, e)}
-                                                                className="bg-blue-600 interaction-button--primary text-white text-xs sm:text-sm"
+                                                                className="bg-primary interaction-button--primary text-primary-foreground text-xs sm:text-sm"
                                                             >
                                                                 <Wallet className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2" />
                                                                 <ExpandedRowActionLabel full="Record Payment" compact="Record" />
@@ -1099,7 +1099,7 @@ export function InvoicesPage() {
                                                             <Button
                                                                 size="sm"
                                                                 onClick={(e) => handleCreatePaymentLink(invoice, e)}
-                                                                className="bg-blue-600 interaction-button--primary text-white text-xs sm:text-sm"
+                                                                className="bg-primary interaction-button--primary text-primary-foreground text-xs sm:text-sm"
                                                             >
                                                                 <CreditCard className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2" />
                                                                 <ExpandedRowActionLabel full="Payment Link" compact="Link" />
@@ -1112,7 +1112,7 @@ export function InvoicesPage() {
                                                         <Button
                                                             size="sm"
                                                             onClick={(e) => handleOpenRecurringModal(invoice, e)}
-                                                            className="bg-blue-600 interaction-button--primary text-white text-xs sm:text-sm"
+                                                            className="bg-primary interaction-button--primary text-primary-foreground text-xs sm:text-sm"
                                                         >
                                                             <Repeat className="h-3.5 w-3.5 md:h-4 md:w-4 mr-1.5 md:mr-2" />
                                                             <ExpandedRowActionLabel full="Make Recurring" compact="Recur" />

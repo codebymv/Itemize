@@ -444,7 +444,7 @@ export function CalendarSettingsPage() {
       <PageLayout
         title="CALENDAR"
         icon={
-          <CalendarDays className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
+          <CalendarDays className="h-5 w-5 shrink-0 text-icon-accent" />
         }
         leading={backButton}
       >
@@ -461,7 +461,7 @@ export function CalendarSettingsPage() {
       <PageLayout
         title="CALENDAR"
         icon={
-          <CalendarDays className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
+          <CalendarDays className="h-5 w-5 shrink-0 text-icon-accent" />
         }
         leading={backButton}
       >
@@ -488,7 +488,7 @@ export function CalendarSettingsPage() {
     <PageLayout
       title="CALENDAR"
       icon={
-        <CalendarDays className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
+        <CalendarDays className="h-5 w-5 shrink-0 text-icon-accent" />
       }
       leading={backButton}
       headerTools={{

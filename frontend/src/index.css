@@ -64,11 +64,7 @@
 }
 
 .interaction-navigation:focus-visible > .navigation-row-icon {
-  color: rgb(37 99 235);
-}
-
-.dark .interaction-navigation:focus-visible > .navigation-row-icon {
-  color: rgb(96 165 250);
+  color: hsl(var(--icon-accent));
 }
 
 .toast-action--default {
@@ -76,11 +72,7 @@
 }
 
 .dropdown-menu-item:focus:not([data-variant='destructive']) > svg {
-  color: rgb(37 99 235);
-}
-
-.dark .dropdown-menu-item:focus:not([data-variant='destructive']) > svg {
-  color: rgb(96 165 250);
+  color: hsl(var(--icon-accent));
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -96,11 +88,7 @@
   }
 
   .interaction-navigation:hover > .navigation-row-icon {
-    color: rgb(37 99 235);
-  }
-
-  .dark .interaction-navigation:hover > .navigation-row-icon {
-    color: rgb(96 165 250);
+    color: hsl(var(--icon-accent));
   }
 
   .interaction-field:hover {
@@ -123,11 +111,7 @@
   }
 
   .dropdown-menu-item:hover:not([data-variant='destructive']) > svg {
-    color: rgb(37 99 235);
-  }
-
-  .dark .dropdown-menu-item:hover:not([data-variant='destructive']) > svg {
-    color: rgb(96 165 250);
+    color: hsl(var(--icon-accent));
   }
 
   .toast-action--default:hover {
@@ -241,7 +225,7 @@
 
 /* A card's @ and $ pills wear the card's accent; brand blue is only the fallback. */
 .mention-accent {
-  background-color: var(--card-accent, #3b82f6);
+  background-color: var(--card-accent, hsl(var(--card-accent-default)));
   color: var(--card-accent-contrast, #ffffff);
 }
 
@@ -904,6 +888,9 @@
     --input: 214.3 31.8% 91.4%;
     --ring: 221.2 83.2% 53.3%;
     --icon-accent: 221.2 83.2% 53.3%;
+    /* Soft theme wash (blue-100) and what a new card starts with (blue-500). */
+    --theme-tint: 214.3 94.6% 92.7%;
+    --card-accent-default: 217.2 91.2% 59.8%;
 
     --radius: 0.5rem;
 
@@ -959,6 +946,8 @@
     --input: 217 20% 37%;
     --ring: 221.2 83.2% 53.3%;
     --icon-accent: 213.1 93.9% 67.8%;
+    --theme-tint: 224.4 64.3% 32.9%;
+    --card-accent-default: 217.2 91.2% 59.8%;
     --sidebar-background: 217 28% 22.5%;
     --sidebar-foreground: 215 13% 85%;
     --sidebar-primary: 224.3 76.3% 48%;
@@ -971,6 +960,44 @@
     color-scheme: dark;
   }
 
+  /*
+   * Theme colour is a user preference (lib/themeColor.ts). Blue is the base
+   * above; these blocks override only the product-accent tokens, per hue and
+   * per mode. Brand surfaces never read them, and status colours never join
+   * this palette.
+   */
+  [data-theme-color="purple"] {
+    --primary: 271.5 81.3% 55.9%;
+    --primary-hover: 272.9 71.7% 47.1%;
+    --ring: 271.5 81.3% 55.9%;
+    --icon-accent: 271.5 81.3% 55.9%;
+    --theme-tint: 268.7 100% 95.5%;
+    --card-accent-default: 270.7 91% 65.1%;
+    --sidebar-ring: 270.7 91% 65.1%;
+  }
+
+  .dark[data-theme-color="purple"] {
+    --icon-accent: 270 95.2% 75.3%;
+    --theme-tint: 273.6 65.6% 32%;
+    --sidebar-primary: 272.9 71.7% 47.1%;
+  }
+
+  [data-theme-color="pink"] {
+    --primary: 333.3 71.4% 50.6%;
+    --primary-hover: 335.1 77.6% 42%;
+    --ring: 333.3 71.4% 50.6%;
+    --icon-accent: 333.3 71.4% 50.6%;
+    --theme-tint: 325.7 77.8% 94.7%;
+    --card-accent-default: 330.4 81.2% 60.4%;
+    --sidebar-ring: 330.4 81.2% 60.4%;
+  }
+
+  .dark[data-theme-color="pink"] {
+    --icon-accent: 328.6 85.5% 70.2%;
+    --theme-tint: 335.9 69.4% 30.4%;
+    --sidebar-primary: 335.1 77.6% 42%;
+  }
+
   body {
     font-family: "Raleway", sans-serif;
   }
@@ -978,9 +1005,10 @@
 
 @layer utilities {
   /*
-   * Informational icon accents use blue-600 on light surfaces and blue-400
-   * on dark surfaces. The SVG-only compatibility selectors standardize older
-   * call sites without changing adjacent heading, card, tab, or plan text.
+   * Informational icon accents read the theme's 600 on light surfaces and its
+   * 400 on dark surfaces (`text-icon-accent` is the Tailwind form). The
+   * SVG-only compatibility selectors standardize older call sites without
+   * changing adjacent heading, card, tab, or plan text.
    */
   .icon-accent,
   svg.text-blue-600,

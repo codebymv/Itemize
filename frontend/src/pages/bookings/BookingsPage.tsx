@@ -189,7 +189,7 @@ export function BookingsPage() {
 
     if (initError) {
         return (
-            <PageLayout title="BOOKINGS" icon={<CalendarCheck2 className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}>
+            <PageLayout title="BOOKINGS" icon={<CalendarCheck2 className="h-5 w-5 shrink-0 text-icon-accent" />}>
                 <OrganizationErrorState title="Unable to load bookings" icon={CalendarCheck2} />
             </PageLayout>
         );
@@ -198,7 +198,7 @@ export function BookingsPage() {
     return (
         <PageLayout
             title="BOOKINGS"
-            icon={<CalendarCheck2 className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
+            icon={<CalendarCheck2 className="h-5 w-5 shrink-0 text-icon-accent" />}
             headerTools={{
                 search: <HeaderSearch label="Search bookings" placeholder="Search bookings..." value={searchQuery} onChange={changeSearch} width="wide" />,
                 filters: (

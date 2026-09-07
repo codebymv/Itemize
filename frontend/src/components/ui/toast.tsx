@@ -60,7 +60,7 @@ const toastActionVariants = cva(
     variants: {
       variant: {
         default: "toast-action--default border bg-transparent group-[.destructive]:border-muted/40 group-[.destructive]:focus:ring-destructive",
-        primary: "interaction-button--primary border-blue-600 bg-blue-600 text-white group-[.destructive]:border-destructive group-[.destructive]:bg-destructive",
+        primary: "interaction-button--primary border-blue-600 bg-primary text-primary-foreground group-[.destructive]:border-destructive group-[.destructive]:bg-destructive",
       },
     },
     defaultVariants: {

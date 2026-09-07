@@ -56,9 +56,13 @@ Reach for `lib/badge-utils` only when all you have is a raw status string and no
 declared registry. Status color is deliberately **not** a `Badge` variant.
 
 Primary actions use the default `Button` variant; non-Button primitives use
-`bg-blue-600 interaction-button--primary text-white`. The app accent --
-page icons, active icon tabs, section card titles -- is `--icon-accent`
-(`blue-600` light, `blue-400` dark).
+`bg-primary text-primary-foreground interaction-button--primary`. The app accent --
+page icons, active icon tabs, section card titles, links -- is `text-icon-accent`
+(the theme's 600 in light, its 400 in dark). Both follow the user's theme colour
+(`lib/themeColor.ts`; blue is only the default), so never restate a raw
+`blue-600`/`blue-400` on an application surface. Brand surfaces
+(`design-system/brand-surfaces.ts`) are the one exception and stay blue for
+everyone; `visual-language.test.ts` ratchets the remaining raw blues down.
 
 ### Spacing
 
@@ -168,7 +172,7 @@ Use `AppHeaderIconButton` for unlabeled icon actions in the authenticated top ba
 | Control role | Geometry | Hover / selected behavior |
 | --- | --- | --- |
 | Authenticated app chrome | 44px square | `accent` hover; use `AppHeaderIconButton` |
-| Labeled icon navigation | Content-sized | `sidebar-accent` row with blue-600 icon on hover and selection; use `IconTabsTrigger` |
+| Labeled icon navigation | Content-sized | `sidebar-accent` row with theme-accent icon on hover and selection; use `IconTabsTrigger` |
 | Route navigation row | 44px tall | `sidebar-accent` hover/selection with `aria-current`; use `NavigationRow` |
 | Primary icon action | 36px or larger | Blue-600 surface, blue-700 hover |
 | Compact row action | 32px square | Neutral ghost hover; keep inside its row or card |
@@ -391,7 +395,7 @@ and page header agree.
 
 ```tsx
 // Page icon, every family
-<Users className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
+<Users className="h-5 w-5 shrink-0 text-icon-accent" />
 
 // Section card title -- icon takes the accent via the shared primitive
 <SectionCardTitle icon={Settings2}>Template settings</SectionCardTitle>
@@ -440,7 +444,7 @@ function MyPage() {
   return (
     <PageLayout
       title="CONTACTS"
-      icon={<Users className="h-5 w-5 text-blue-600 flex-shrink-0" />}
+      icon={<Users className="h-5 w-5 text-icon-accent flex-shrink-0" />}
       pageActions={<>{/* wrapping desktop controls inside the page */}</>}
       mobileActions={<>{/* mobile controls inside a page-level card */}</>}
     >
@@ -473,7 +477,7 @@ The shell header identifies the current section or task. It is not a toolbar.
 - Never use a contact name, organization name, form name, workflow name, or other user-provided value as the shell title. Put that identity in the page surface.
 - The complete title must remain visible. Do not add `truncate`, line clamping, clipping, or horizontal scrolling to the shell heading.
 - A decorative module icon is optional. When supplied, it remains visible directly before the title at every viewport width and is hidden from assistive technology.
-- `leading` is reserved for one `ShellBackButton`. It uses an arrow-only blue-600 treatment, an accessible destination label, a tooltip, and a fixed 44 by 44 pixel target; do not add a visible `Back` label beside the arrow.
+- `leading` is reserved for one `ShellBackButton`. It uses an arrow-only theme-accent treatment, an accessible destination label, a tooltip, and a fixed 44 by 44 pixel target; do not add a visible `Back` label beside the arrow.
 - The Back control, optional section icon, and complete responsive section heading must remain on one aligned row with the spacing owned by `ResponsivePageHeading`.
 - Editor Back controls must preserve their unsaved-change guard and navigate to their explicit parent route. History-oriented utility pages may use `useSafeShellBack`, but must supply a deterministic fallback route for direct visits and new tabs.
 - Raw tabs, result counts, destructive commands, and arbitrary multi-button clusters are forbidden in the shell. A persistent editor mode may use the typed `modeNavigation` slot, which preserves labels whenever they fit and compacts before status or commit actions yield space. `modeNavigation` must never repeat sibling destinations already represented in the sidebar or a section-navigation column.
@@ -876,7 +880,7 @@ All text uses Raleway (primary) display font:
 </p>
 
 // Link
-<a className="text-blue-600 hover:underline dark:text-blue-400">
+<a className="text-icon-accent hover:underline">
   Link text
 </a>
 ```

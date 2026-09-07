@@ -225,7 +225,7 @@ const StatusPage: React.FC = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
-                  <Icon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  <Icon className="w-5 h-5 text-icon-accent" />
                 </div>
                 <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
               </div>
@@ -255,7 +255,7 @@ const StatusPage: React.FC = () => {
     return (
       <PageLayout
         title="STATUS"
-        icon={<Server className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />}
+        icon={<Server className="h-5 w-5 text-icon-accent flex-shrink-0" />}
         leading={backButton}
         headerTools={{ secondaryAction: renderHeaderRefreshAction() }}
         className={cn('flex-1', !currentUser && PUBLIC_SHELL_WIDTH)}
@@ -277,7 +277,7 @@ const StatusPage: React.FC = () => {
   return (
     <PageLayout
       title="STATUS"
-      icon={<Server className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />}
+      icon={<Server className="h-5 w-5 text-icon-accent flex-shrink-0" />}
       leading={backButton}
       headerTools={{ secondaryAction: renderHeaderRefreshAction() }}
       className={cn('flex-1', !currentUser && PUBLIC_SHELL_WIDTH)}

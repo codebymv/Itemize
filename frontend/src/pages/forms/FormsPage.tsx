@@ -288,7 +288,7 @@ export function FormsPage() {
         return (
             <PageLayout
                 title="FORMS"
-                icon={<FileText className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />}
+                icon={<FileText className="h-5 w-5 text-icon-accent flex-shrink-0" />}
             >
                 <OrganizationErrorState title="Unable to load forms" icon={FileText} />
             </PageLayout>
@@ -298,7 +298,7 @@ export function FormsPage() {
     return (
         <PageLayout
             title="FORMS"
-            icon={<FileText className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
+            icon={<FileText className="h-5 w-5 shrink-0 text-icon-accent" />}
             headerTools={{
                 search: <HeaderSearch label="Search forms" placeholder="Search forms..." value={searchQuery} onChange={setSearchQuery} width="wide" />,
                 filters: <HeaderFilters label="Filter forms by status" activeCount={Number(statusFilter !== 'all')} compactChildren={statusSelect(true)} preferExpanded="when-roomy">{statusSelect()}</HeaderFilters>,
@@ -415,17 +415,17 @@ export function FormsPage() {
                                                     <Button variant="outline" size="sm" onClick={() => navigate(`/forms/${form.id}`)}>
                                                         <Pencil className="h-4 w-4" /><ExpandedRowActionLabel full="Edit form" compact="Edit" />
                                                     </Button>
-                                                    <Button size="sm" className="bg-blue-600 text-white interaction-button--primary" disabled={!previewData} onClick={() => previewData && setPreviewForm(previewData)}>
+                                                    <Button size="sm" className="bg-primary text-primary-foreground interaction-button--primary" disabled={!previewData} onClick={() => previewData && setPreviewForm(previewData)}>
                                                         <Maximize2 className="h-4 w-4" /><ExpandedRowActionLabel full="Full preview" compact="Preview" />
                                                     </Button>
-                                                    <Button size="sm" className="bg-blue-600 text-white interaction-button--primary" disabled={rowPending} onClick={() => handleToggleStatus(form, form.status === 'published' ? 'draft' : 'published')}>
+                                                    <Button size="sm" className="bg-primary text-primary-foreground interaction-button--primary" disabled={rowPending} onClick={() => handleToggleStatus(form, form.status === 'published' ? 'draft' : 'published')}>
                                                         {form.status === 'published' ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                                         <ExpandedRowActionLabel full={form.status === 'published' ? 'Unpublish form' : 'Publish form'} compact={form.status === 'published' ? 'Unpublish' : 'Publish'} />
                                                     </Button>
-                                                    {form.status === 'published' && <Button size="sm" className="bg-blue-600 text-white interaction-button--primary" onClick={() => copyFormLink(form.public_id || form.slug)}>
+                                                    {form.status === 'published' && <Button size="sm" className="bg-primary text-primary-foreground interaction-button--primary" onClick={() => copyFormLink(form.public_id || form.slug)}>
                                                         <Copy className="h-4 w-4" /><ExpandedRowActionLabel full="Copy public link" compact="Copy" />
                                                     </Button>}
-                                                    <Button size="sm" className="bg-blue-600 text-white interaction-button--primary" disabled={rowPending} onClick={() => handleDuplicate(form.id)}>
+                                                    <Button size="sm" className="bg-primary text-primary-foreground interaction-button--primary" disabled={rowPending} onClick={() => handleDuplicate(form.id)}>
                                                         <Copy className="h-4 w-4" /><ExpandedRowActionLabel full="Duplicate form" compact="Duplicate" />
                                                     </Button>
                                                     <Button size="sm" variant="outline" className="border-destructive/30 text-destructive interaction-button--destructive-ghost" onClick={() => setFormToDelete(form)}>

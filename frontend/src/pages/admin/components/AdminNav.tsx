@@ -60,7 +60,7 @@ export function AdminShellNavigation() {
                     <span className="flex min-w-0 items-center gap-2 whitespace-nowrap">
                         <ActiveIcon
                             aria-hidden="true"
-                            className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400"
+                            className="h-5 w-5 shrink-0 text-icon-accent"
                             data-admin-section-icon={activeItem.title}
                         />
                         <span className="text-lg font-semibold italic text-foreground">
@@ -77,7 +77,7 @@ export function AdminShellNavigation() {
                                     className={cn(
                                         'h-4 w-4 shrink-0',
                                         item.path === activeItem.path
-                                            ? 'text-blue-600 dark:text-blue-400'
+                                            ? 'text-icon-accent'
                                             : 'text-muted-foreground',
                                     )}
                                 />

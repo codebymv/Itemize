@@ -46,6 +46,7 @@ import {
 } from "./ui/select";
 import { ColorPicker } from "./ui/color-picker";
 import { UI_COLORS, UI_LABELS } from "@/constants/ui";
+import { DEFAULT_CARD_ACCENT } from "@/lib/cardAccent";
 import {
   Form,
   FormField,
@@ -110,7 +111,7 @@ const itemConfig = {
     label: "Note",
     icon: StickyNote,
     titlePlaceholder: "Enter note title",
-    defaultColor: UI_COLORS.brandBlue,
+    defaultColor: DEFAULT_CARD_ACCENT,
     requireResult: false,
     showValidationError: false,
   },
@@ -118,7 +119,7 @@ const itemConfig = {
     label: "List",
     icon: CheckSquare,
     titlePlaceholder: "Enter list title",
-    defaultColor: UI_COLORS.brandBlue,
+    defaultColor: DEFAULT_CARD_ACCENT,
     requireResult: true,
     showValidationError: true,
   },
@@ -126,7 +127,7 @@ const itemConfig = {
     label: "Whiteboard",
     icon: Palette,
     titlePlaceholder: "Enter whiteboard title",
-    defaultColor: UI_COLORS.brandBlue,
+    defaultColor: DEFAULT_CARD_ACCENT,
     requireResult: false,
     showValidationError: false,
   },
@@ -134,7 +135,7 @@ const itemConfig = {
     label: "Wireframe",
     icon: GitBranch,
     titlePlaceholder: "Enter wireframe title",
-    defaultColor: UI_COLORS.brandBlue,
+    defaultColor: DEFAULT_CARD_ACCENT,
     requireResult: false,
     showValidationError: false,
   },
@@ -142,7 +143,7 @@ const itemConfig = {
     label: "Vault",
     icon: KeyRound,
     titlePlaceholder: "Enter vault title",
-    defaultColor: UI_COLORS.brandBlue,
+    defaultColor: DEFAULT_CARD_ACCENT,
     requireResult: true,
     showValidationError: false,
   },
@@ -548,7 +549,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
                 type="button"
                 disabled={!recoverySaved || isLoading}
                 onClick={() => void finishVaultCreation()}
-                className="bg-blue-600 text-white interaction-button--primary"
+                className="bg-primary text-primary-foreground interaction-button--primary"
                 aria-busy={isLoading || undefined}
               >
                 {isLoading ? "Creating Vault..." : "Create Vault"}
@@ -1038,7 +1039,7 @@ export const CreateItemModal: React.FC<CreateItemModalProps> = ({
                 <Button
                   type="submit"
                   disabled={!title.trim() || isLoading}
-                  className="bg-blue-600 interaction-button--primary text-white font-raleway"
+                  className="bg-primary interaction-button--primary text-primary-foreground font-raleway"
                   aria-busy={isLoading || undefined}
                 >
                   {isLoading

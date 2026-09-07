@@ -78,7 +78,7 @@ function ChangeTierSection() {
                                 <Button
                                     key={plan.id}
                                     variant={isSelected ? 'default' : 'outline'}
-                                    className={`h-auto py-4 flex items-center justify-center gap-2 ${isSelected ? 'bg-blue-600 interaction-button--primary text-white' : ''}`}
+                                    className={`h-auto py-4 flex items-center justify-center gap-2 ${isSelected ? 'bg-primary interaction-button--primary text-primary-foreground' : ''}`}
                                     onClick={() => handleChangePlan(plan.id)}
                                     disabled={pending}
                                     aria-busy={isLoading ? 'true' : undefined}

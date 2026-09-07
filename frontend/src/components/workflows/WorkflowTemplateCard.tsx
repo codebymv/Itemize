@@ -98,7 +98,7 @@ export function WorkflowTemplateCard({
             )
           ) : (
             onActivate && (
-              <Button size="sm" className="flex-1 bg-blue-600 interaction-button--primary" onClick={onActivate}>
+              <Button size="sm" className="flex-1 bg-primary interaction-button--primary" onClick={onActivate}>
                 <Play className="h-4 w-4 mr-1" />
                 Activate
               </Button>

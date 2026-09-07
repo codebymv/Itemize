@@ -7,7 +7,7 @@ describe('recurring status visuals', () => {
 
     expect(active.label).toBe('Active');
     expect(active.theme).toBe('blue');
-    expect(active.iconClass).toContain('text-blue-600');
+    expect(active.iconClass).toContain('text-icon-accent');
   });
 
   it('keeps paused schedules in the orange attention family', () => {

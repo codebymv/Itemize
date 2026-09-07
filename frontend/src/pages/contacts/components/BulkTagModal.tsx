@@ -181,7 +181,7 @@ export function BulkTagModal({
                         onClick={handleSubmit}
                         disabled={tags.length === 0 || isSubmitting}
                         aria-busy={isSubmitting || undefined}
-                        className="bg-blue-600 interaction-button--primary text-white"
+                        className="bg-primary interaction-button--primary text-primary-foreground"
                         style={{ fontFamily: '"Raleway", sans-serif' }}
                         aria-label={isSubmitting ? 'Updating tags...' : `${mode === 'add' ? 'Add' : 'Remove'} tags`}
                     >

@@ -106,7 +106,7 @@ export function SocialPage() {
     return (
         <PageLayout
             title="CONNECTED ACCOUNTS"
-            icon={<Share2 className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
+            icon={<Share2 className="h-5 w-5 shrink-0 text-icon-accent" />}
             headerTools={{
                 search: (
                     <HeaderSearch
@@ -165,7 +165,7 @@ export function SocialPage() {
                                 actionLabel={searchQuery ? 'Clear search' : undefined}
                                 onAction={searchQuery ? () => setSearchQuery('') : undefined}
                                 action={!searchQuery ? (
-                                    <Button onClick={() => void handleConnectFacebook()} disabled={connectPending} aria-busy={connectPending ? 'true' : undefined} className="bg-blue-600 text-white interaction-button--primary">
+                                    <Button onClick={() => void handleConnectFacebook()} disabled={connectPending} aria-busy={connectPending ? 'true' : undefined} className="bg-primary text-primary-foreground interaction-button--primary">
                                         <IntegrationProviderMark provider="facebook" className="mr-2 h-4 w-4" />
                                         Connect Facebook
                                     </Button>

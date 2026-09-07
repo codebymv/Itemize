@@ -312,7 +312,7 @@ export function HeaderModeNavigation({
             <TooltipTrigger asChild>
               <PopoverTrigger asChild>
                 <AppHeaderIconButton aria-label={`${label}: ${activeItem.label}`}>
-                  <ActiveIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <ActiveIcon className="h-4 w-4 text-icon-accent" />
                 </AppHeaderIconButton>
               </PopoverTrigger>
             </TooltipTrigger>

@@ -179,7 +179,7 @@ export function DashboardPage() {
 
     if (organizationError) {
         return (
-            <PageLayout title="DASHBOARD" icon={<LayoutDashboard className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}>
+            <PageLayout title="DASHBOARD" icon={<LayoutDashboard className="h-5 w-5 shrink-0 text-icon-accent" />}>
                 <OrganizationErrorState title="Unable to load dashboard" icon={LayoutDashboard} />
             </PageLayout>
         );
@@ -187,7 +187,7 @@ export function DashboardPage() {
 
     if (analyticsError && !analytics) {
         return (
-            <PageLayout title="DASHBOARD" icon={<LayoutDashboard className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}>
+            <PageLayout title="DASHBOARD" icon={<LayoutDashboard className="h-5 w-5 shrink-0 text-icon-accent" />}>
                 <ErrorState
                     kind="page"
                     title="Unable to load dashboard"
@@ -202,7 +202,7 @@ export function DashboardPage() {
     return (
         <PageLayout
             title="DASHBOARD"
-            icon={<LayoutDashboard className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />}
+            icon={<LayoutDashboard className="h-5 w-5 text-icon-accent flex-shrink-0" />}
             headerTools={{
                 filters: (
                     <HeaderFilters
@@ -247,7 +247,7 @@ export function DashboardPage() {
             <Card className="revenue-flow-card mb-8">
                 <CardHeader className="revenue-flow-card-header flex flex-row items-center justify-between gap-3 space-y-0">
                     <CardTitle className="text-base flex items-center gap-2">
-                        <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <TrendingUp className="h-4 w-4 text-icon-accent" />
                         Revenue flow
                     </CardTitle>
                     <RevenueFlowSeriesControls
@@ -297,7 +297,7 @@ export function DashboardPage() {
             <Card className="mb-8" data-dashboard-section="performance">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
-                        <Dumbbell className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <Dumbbell className="h-4 w-4 text-icon-accent" />
                         Performance
                     </CardTitle>
                 </CardHeader>
@@ -308,7 +308,7 @@ export function DashboardPage() {
                             <div className="flex items-center justify-between">
                                 <div className="min-w-0">
                                     <CardTitle className="flex items-center gap-2 text-base">
-                                        <Workflow className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                        <Workflow className="h-4 w-4 text-icon-accent" />
                                         Pipeline info
                                     </CardTitle>
                                     <p className="ml-6 mt-1 text-xs text-muted-foreground">Default pipeline</p>
@@ -333,7 +333,7 @@ export function DashboardPage() {
                             <div className="flex items-center justify-between">
                                 <div className="min-w-0">
                                     <CardTitle className="flex items-center gap-2 text-base">
-                                        <BarChart3 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                        <BarChart3 className="h-4 w-4 text-icon-accent" />
                                         Open Deal Age
                                     </CardTitle>
                                     <p className="ml-6 mt-1 text-xs text-muted-foreground">Default pipeline</p>
@@ -368,7 +368,7 @@ export function DashboardPage() {
                 <CardHeader>
                     <div className="flex items-center justify-between gap-3">
                         <CardTitle className="flex shrink-0 items-center gap-2 text-base">
-                            <Activity className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                            <Activity className="h-4 w-4 text-icon-accent" />
                             Recent Activity
                         </CardTitle>
                         <div className="ml-auto flex min-w-0 flex-1 items-center justify-end gap-3">
@@ -406,7 +406,7 @@ export function DashboardPage() {
                     <CardHeader>
                         <div className="flex items-center justify-between">
                             <CardTitle className="text-base flex items-center gap-2">
-                                <Target className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                <Target className="h-4 w-4 text-icon-accent" />
                                 <span className="min-[1048px]:hidden">Rates</span>
                                 <span className="hidden min-[1048px]:inline">Conversion Rates</span>
                             </CardTitle>
@@ -439,7 +439,7 @@ export function DashboardPage() {
                                     numerator={conversionData?.formToContact?.converted ?? 0}
                                     denominator={conversionData?.formToContact?.submissions ?? 0}
                                     icon={CheckSquare}
-                                    color="text-blue-600 dark:text-blue-400"
+                                    color="text-icon-accent"
                                     isLoading={conversionLoading}
                                 />
                             </div>
@@ -447,7 +447,7 @@ export function DashboardPage() {
                                 <CardContent className="pt-6 h-full flex flex-col justify-between">
                                     <div className="flex items-center justify-between mb-3">
                                         <div className="flex items-center gap-2">
-                                            <div className="p-2 rounded-full bg-muted text-blue-600 dark:text-blue-400" data-dashboard-analytics-icon>
+                                            <div className="p-2 rounded-full bg-muted text-icon-accent" data-dashboard-analytics-icon>
                                                 <DollarSign className="h-5 w-5" />
                                             </div>
                                             <span className="font-medium">Closed Deal Value</span>
@@ -468,7 +468,7 @@ export function DashboardPage() {
                                             <div className="text-xs text-muted-foreground">Lost</div>
                                         </div>
                                         <div>
-                                            <div className="text-lg font-bold text-blue-600 dark:text-blue-400">{conversionData?.dealWinRate?.totalClosed ?? 0}</div>
+                                            <div className="text-lg font-bold text-icon-accent">{conversionData?.dealWinRate?.totalClosed ?? 0}</div>
                                             <div className="text-xs text-muted-foreground">Closed</div>
                                         </div>
                                     </div>
@@ -484,7 +484,7 @@ export function DashboardPage() {
                     <CardHeader>
                         <div className="flex items-center justify-between">
                             <CardTitle className="text-base flex items-center gap-2">
-                                <Mail className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                <Mail className="h-4 w-4 text-icon-accent" />
                                 <span className="min-[1048px]:hidden">Comms</span>
                                 <span className="hidden min-[1048px]:inline">Communication</span>
                             </CardTitle>
@@ -517,7 +517,7 @@ export function DashboardPage() {
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
                                             <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900">
-                                                <action.icon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                                <action.icon className="h-4 w-4 text-icon-accent" />
                                             </div>
                                             <div>
                                                 <CardTitle className="text-sm">{action.title}</CardTitle>
@@ -539,7 +539,7 @@ export function DashboardPage() {
                         <div className="flex items-start gap-3">
                             <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1">
                                 <div className="flex shrink-0 items-center gap-2">
-                                    <Sparkles className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                    <Sparkles className="h-5 w-5 text-icon-accent" />
                                     <CardTitle className="text-base">Pro Tip: Automation</CardTitle>
                                 </div>
                                 <p className="min-w-0 basis-[max-content] grow text-sm text-muted-foreground">

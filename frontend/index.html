@@ -58,6 +58,9 @@
           if (theme === 'dark') root.classList.add('dark');
           else root.classList.remove('dark');
           root.style.colorScheme = theme;
+          /* Theme colour mirror (lib/themeColor.ts); blue is the base and needs no attribute. */
+          var color = localStorage.getItem('itemize:theme-color');
+          if (color === 'purple' || color === 'pink') root.setAttribute('data-theme-color', color);
         } catch (e) {}
       })();
     </script>

@@ -20,6 +20,7 @@ import { Calendar as CalendarType } from '@/types';
 import { createCalendar, CalendarCreateData } from '@/services/calendarsApi';
 import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 import { useStableMutationKey } from '@/hooks/useStableMutationKey';
+import { DEFAULT_CARD_ACCENT } from '@/lib/cardAccent';
 
 const getApiErrorMessage = (error: unknown, fallback: string): string => {
     const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
@@ -86,7 +87,7 @@ export function CreateCalendarModal({
         buffer_after_minutes: 0,
         min_notice_hours: 24,
         max_future_days: 60,
-        color: '#3B82F6',
+        color: DEFAULT_CARD_ACCENT,
         organization_id: organizationId,
     });
 
@@ -280,7 +281,7 @@ export function CreateCalendarModal({
                         <Button
                             type="submit"
                             disabled={loading}
-                            className="bg-blue-600 interaction-button--primary text-white"
+                            className="bg-primary interaction-button--primary text-primary-foreground"
                             aria-label={loading ? 'Creating calendar...' : 'Create calendar'}
                             aria-busy={loading || undefined}
                         >

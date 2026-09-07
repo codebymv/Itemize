@@ -257,7 +257,7 @@ export function EmailComposeDialog({
                         onClick={handleSend}
                         disabled={sending || !subject.trim() || !body.trim() || allRecipients.length === 0}
                         aria-busy={sending}
-                        className="bg-blue-600 text-white interaction-button--primary"
+                        className="bg-primary text-primary-foreground interaction-button--primary"
                     >
                         {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                         <span className="hidden sm:inline">Send to {allRecipients.length}</span>

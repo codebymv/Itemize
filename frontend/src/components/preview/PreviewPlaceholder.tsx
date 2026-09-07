@@ -35,7 +35,7 @@ export function PreviewPlaceholder({
         )}>
           <Icon
             aria-hidden="true"
-            className={cn('text-blue-600 dark:text-blue-400', compact ? 'h-4 w-4' : 'h-6 w-6')}
+            className={cn('text-icon-accent', compact ? 'h-4 w-4' : 'h-6 w-6')}
           />
         </div>
       ) : null}

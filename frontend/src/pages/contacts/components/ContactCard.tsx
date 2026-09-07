@@ -163,7 +163,7 @@ export function ContactCard({
                                     href={`mailto:${contact.email}`}
                                     className="touch-target-mobile flex touch-manipulation items-center gap-1.5 text-muted-foreground hover:underline max-w-full"
                                 >
-                                    <Mail className="h-4 w-4 flex-shrink-0 text-blue-600 dark:text-blue-400" />
+                                    <Mail className="h-4 w-4 flex-shrink-0 text-icon-accent" />
                                     <span className="truncate max-w-[180px]">{contact.email}</span>
                                 </a>
                             )}
@@ -172,7 +172,7 @@ export function ContactCard({
                                     href={`tel:${contact.phone}`}
                                     className="touch-target-mobile flex touch-manipulation items-center gap-1.5 text-muted-foreground hover:underline max-w-full"
                                 >
-                                    <Phone className="h-4 w-4 flex-shrink-0 text-blue-600 dark:text-blue-400" />
+                                    <Phone className="h-4 w-4 flex-shrink-0 text-icon-accent" />
                                     <span className="truncate max-w-[150px]">{contact.phone}</span>
                                 </a>
                             )}
@@ -194,7 +194,7 @@ export function ContactCard({
                                         <ExpandedRowActionLabel full="Edit contact" compact="Edit" />
                                     </Button>
                                     {contact.email && (
-                                        <Button size="sm" className="bg-blue-600 interaction-button--primary text-white text-xs sm:text-sm" asChild>
+                                        <Button size="sm" className="bg-primary interaction-button--primary text-primary-foreground text-xs sm:text-sm" asChild>
                                             <a href={`mailto:${contact.email}`} onClick={(e) => e.stopPropagation()}>
                                                 <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
                                                 <ExpandedRowActionLabel full="Email contact" compact="Email" />

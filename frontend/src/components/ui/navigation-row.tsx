@@ -29,7 +29,7 @@ const NavigationRow = React.forwardRef<HTMLButtonElement, NavigationRowProps>(
         className={cn(
           'navigation-row-icon h-4 w-4 shrink-0',
           active
-            ? 'text-blue-600 dark:text-blue-400'
+            ? 'text-icon-accent'
             : 'text-gray-600 dark:text-gray-400',
         )}
       />

@@ -47,24 +47,24 @@ const itemTypeIcons: Record<string, React.ComponentType<{ className?: string }>>
 }
 
 const activityTypeColors: Record<ActivityType, string> = {
-  created: 'text-blue-600 dark:text-blue-400',
-  updated: 'text-blue-600 dark:text-blue-400',
+  created: 'text-icon-accent',
+  updated: 'text-icon-accent',
   deleted: 'text-red-600 dark:text-red-400',
-  sent: 'text-blue-600 dark:text-blue-400',
-  received: 'text-blue-600 dark:text-blue-400',
+  sent: 'text-icon-accent',
+  received: 'text-icon-accent',
   signed: 'text-green-600 dark:text-green-400',
   paid: 'text-green-600 dark:text-green-400',
   viewed: 'text-gray-600 dark:text-gray-400',
-  commented: 'text-blue-600 dark:text-blue-400',
-  mentioned: 'text-blue-600 dark:text-blue-400',
+  commented: 'text-icon-accent',
+  mentioned: 'text-icon-accent',
   status_changed: 'text-orange-600 dark:text-orange-400',
   workflow_triggered: 'text-orange-600 dark:text-orange-400',
-  scheduled: 'text-blue-600 dark:text-blue-400',
+  scheduled: 'text-icon-accent',
   completed: 'text-green-600 dark:text-green-400',
-  published: 'text-blue-600 dark:text-blue-400',
+  published: 'text-icon-accent',
   archived: 'text-gray-600 dark:text-gray-400',
   restored: 'text-green-600 dark:text-green-400',
-  assigned: 'text-blue-600 dark:text-blue-400',
+  assigned: 'text-icon-accent',
   tagged: 'text-orange-600 dark:text-orange-400',
 }
 
@@ -76,7 +76,7 @@ function ActivityItem({
   onSelect?: (activity: Activity) => void
 }) {
   const ItemIcon = itemTypeIcons[activity.itemType] || Users
-  const typeColor = activityTypeColors[activity.type] || 'text-blue-600 dark:text-blue-400'
+  const typeColor = activityTypeColors[activity.type] || 'text-icon-accent'
   const timeAgo = formatDistanceToNow(new Date(activity.timestamp), { addSuffix: true })
 
   return (
@@ -111,7 +111,7 @@ function ActivityItem({
                   </span>
                   <a
                     href={activity.target.url}
-                    className='text-sm hover:underline text-blue-600 dark:text-blue-400'
+                    className='text-sm hover:underline text-icon-accent'
                     onClick={(e) => e.stopPropagation()}
                   >
                     {activity.target.name}

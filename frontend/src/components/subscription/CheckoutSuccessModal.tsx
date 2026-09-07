@@ -188,7 +188,7 @@ export function CheckoutSuccessModal({
                 onClose();
                 navigate("/dashboard");
               }}
-              className="w-full bg-blue-600 interaction-button--primary text-white"
+              className="w-full bg-primary interaction-button--primary text-primary-foreground"
             >
               Go to Dashboard
               <ArrowRight className="h-4 w-4 ml-2" />

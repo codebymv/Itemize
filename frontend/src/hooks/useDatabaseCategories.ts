@@ -3,6 +3,7 @@ import { getCategories, createCategory, updateCategory, deleteCategory, Category
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from './use-toast';
 import { useStableMutationKey } from './useStableMutationKey';
+import { DEFAULT_CARD_ACCENT } from '@/lib/cardAccent';
 
 // Global category refresh event
 const CATEGORY_REFRESH_EVENT = 'categoriesUpdated';
@@ -83,7 +84,7 @@ export const useDatabaseCategories = () => {
     if (!token) return null;
     const signature = JSON.stringify({
       name: categoryData.name.trim(),
-      colorValue: (categoryData.color_value ?? '#3B82F6').trim().toUpperCase(),
+      colorValue: (categoryData.color_value ?? DEFAULT_CARD_ACCENT).trim().toUpperCase(),
     });
     const idempotencyKey = beginCategoryCreate(signature);
     if (!idempotencyKey) return null;

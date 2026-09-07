@@ -282,7 +282,7 @@ export function SMSTemplateEditorPage() {
       <PageLayout
         title="SMS TEMPLATE"
         icon={
-          <MessageSquare className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          <MessageSquare className="h-5 w-5 text-icon-accent" />
         }
         leading={leading}
       >
@@ -308,7 +308,7 @@ export function SMSTemplateEditorPage() {
       <PageLayout
         title="SMS TEMPLATE"
         icon={
-          <MessageSquare className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          <MessageSquare className="h-5 w-5 text-icon-accent" />
         }
         leading={leading}
       >
@@ -320,7 +320,7 @@ export function SMSTemplateEditorPage() {
     <PageLayout
       title={isNew ? "NEW SMS TEMPLATE" : "SMS TEMPLATE"}
       icon={
-        <MessageSquare className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
+        <MessageSquare className="h-5 w-5 shrink-0 text-icon-accent" />
       }
       leading={leading}
       headerTools={{

@@ -422,7 +422,7 @@ export function AppSidebar() {
                                     }
                                 }}
                             >
-                                <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600 group-focus-visible/item:text-blue-600 dark:group-hover/item:text-blue-400 dark:group-focus-visible/item:text-blue-400")} />
+                                <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-icon-accent" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600 group-focus-visible/item:text-blue-600 dark:group-hover/item:text-blue-400 dark:group-focus-visible/item:text-blue-400")} />
                                 <span className="min-w-0 flex-1 truncate whitespace-nowrap">{item.title}</span>
                                 <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 text-gray-600 dark:text-gray-400" />
                             </SidebarMenuButton>
@@ -461,7 +461,7 @@ export function AppSidebar() {
                         isActive ? 'text-gray-900 dark:text-white font-medium' : '',
                     )}
                 >
-                    <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600 group-focus-visible/item:text-blue-600 dark:group-hover/item:text-blue-400 dark:group-focus-visible/item:text-blue-400")} />
+                    <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-icon-accent" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600 group-focus-visible/item:text-blue-600 dark:group-hover/item:text-blue-400 dark:group-focus-visible/item:text-blue-400")} />
                     <span className="min-w-0 flex-1 truncate whitespace-nowrap">{item.title}</span>
                     {item.disabled && (
                         <span className="ml-auto text-xs text-muted-foreground">Soon</span>
@@ -615,7 +615,7 @@ export function AppSidebar() {
                                                     }
                                                 }}
                                             >
-                                                <Ellipsis className={cn("h-4 w-4 transition-colors", isMoreToolsRouteActive ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600 group-focus-visible/item:text-blue-600 dark:group-hover/item:text-blue-400 dark:group-focus-visible/item:text-blue-400")} />
+                                                <Ellipsis className={cn("h-4 w-4 transition-colors", isMoreToolsRouteActive ? "text-icon-accent" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600 group-focus-visible/item:text-blue-600 dark:group-hover/item:text-blue-400 dark:group-focus-visible/item:text-blue-400")} />
                                                 <span className="min-w-0 flex-1 truncate whitespace-nowrap">More tools</span>
                                                 <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/more-tools:rotate-90 text-gray-600 dark:text-gray-400" />
                                             </SidebarMenuButton>
@@ -671,7 +671,7 @@ export function AppSidebar() {
                                                                 // When expanded, CollapsibleTrigger handles toggle via onOpenChange
                                                             }}
                                                         >
-                                                            <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600 group-focus-visible/item:text-blue-600 dark:group-hover/item:text-blue-400 dark:group-focus-visible/item:text-blue-400")} />
+                                                            <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-icon-accent" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600 group-focus-visible/item:text-blue-600 dark:group-hover/item:text-blue-400 dark:group-focus-visible/item:text-blue-400")} />
                                                             <span className="min-w-0 flex-1 truncate whitespace-nowrap">{item.title}</span>
                                                             <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 text-gray-600 dark:text-gray-400" />
                                                         </SidebarMenuButton>
@@ -709,7 +709,7 @@ export function AppSidebar() {
                                                     isActive ? 'text-gray-900 dark:text-white font-medium' : ''
                                                 )}
                                             >
-                                                <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600 group-focus-visible/item:text-blue-600 dark:group-hover/item:text-blue-400 dark:group-focus-visible/item:text-blue-400")} />
+                                                <item.icon className={cn("h-4 w-4 transition-colors", isActive ? "text-icon-accent" : "text-gray-600 dark:text-gray-400 group-hover/item:text-blue-600 group-focus-visible/item:text-blue-600 dark:group-hover/item:text-blue-400 dark:group-focus-visible/item:text-blue-400")} />
                                                 <span className="min-w-0 flex-1 truncate whitespace-nowrap">{item.title}</span>
                                             </SidebarMenuButton>
                                         </SidebarMenuItem>

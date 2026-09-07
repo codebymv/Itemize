@@ -53,14 +53,14 @@ export function CommunicationChannelMark({ channel, className }: CommunicationCh
   if (channel === 'email') {
     return (
       <Mail
-        className={cn('shrink-0 text-blue-600 dark:text-blue-400', className)}
+        className={cn('shrink-0 text-icon-accent', className)}
         aria-hidden="true"
       />
     );
   }
 
   if (channel === 'chat') {
-    return <WebsiteChatMark className={cn('text-blue-600 dark:text-blue-400', className)} />;
+    return <WebsiteChatMark className={cn('text-icon-accent', className)} />;
   }
 
   return (

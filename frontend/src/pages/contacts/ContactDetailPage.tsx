@@ -348,7 +348,7 @@ export function ContactDetailPage() {
 
   if (organizationError) {
     return (
-      <PageLayout title="CONTACT" icon={<Users className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />} leading={backButton}>
+      <PageLayout title="CONTACT" icon={<Users className="h-5 w-5 shrink-0 text-icon-accent" />} leading={backButton}>
         <OrganizationErrorState title="Unable to load contact" icon={Users} />
       </PageLayout>
     );
@@ -358,7 +358,7 @@ export function ContactDetailPage() {
     return (
       <PageLayout
         title="CONTACT"
-        icon={<Users className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+        icon={<Users className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
         leading={backButton}
       >
         <div className="flex items-center gap-4 mb-6">
@@ -381,7 +381,7 @@ export function ContactDetailPage() {
 
   if (loadError || !contact) {
     return (
-      <PageLayout title="CONTACT" icon={<Users className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />} leading={backButton}>
+      <PageLayout title="CONTACT" icon={<Users className="h-5 w-5 shrink-0 text-icon-accent" />} leading={backButton}>
         <ErrorState
           kind="page"
           title="Contact unavailable"
@@ -398,7 +398,7 @@ export function ContactDetailPage() {
   return (
     <PageLayout
       title="CONTACT"
-      icon={<Users className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+      icon={<Users className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
       leading={backButton}
       headerTools={{
         status: (
@@ -447,14 +447,14 @@ export function ContactDetailPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <ContactRound className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+                <ContactRound className="h-4 w-4 text-icon-accent" aria-hidden="true" />
                 Contact Information
               </CardTitle>
             </CardHeader>
             <CardContent surface="inset" className="space-y-4">
               {contact.email && (
                 <div className="flex items-center gap-3">
-                  <Mail className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <Mail className="h-4 w-4 text-icon-accent" />
                   <a
                     href={`mailto:${contact.email}`}
                     className="touch-target-mobile inline-flex touch-manipulation items-center text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
@@ -465,7 +465,7 @@ export function ContactDetailPage() {
               )}
               {contact.phone && (
                 <div className="flex items-center gap-3">
-                  <Phone className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <Phone className="h-4 w-4 text-icon-accent" />
                   <a
                     href={`tel:${contact.phone}`}
                     className="touch-target-mobile inline-flex touch-manipulation items-center text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
@@ -503,7 +503,7 @@ export function ContactDetailPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <Footprints className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+                <Footprints className="h-4 w-4 text-icon-accent" aria-hidden="true" />
                 Quick Actions
               </CardTitle>
             </CardHeader>
@@ -630,7 +630,7 @@ export function ContactDetailPage() {
             <CardHeader className="pb-3">
             <div className="flex items-center justify-between gap-3">
               <CardTitle className="flex items-center gap-2 text-base">
-                <MessageSquare className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <MessageSquare className="h-4 w-4 text-icon-accent" />
                 Activity
               </CardTitle>
               <Badge variant="secondary">{activities.length}</Badge>
@@ -669,7 +669,7 @@ export function ContactDetailPage() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between gap-3">
               <CardTitle className="flex items-center gap-2 text-base">
-                <Network className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+                <Network className="h-4 w-4 text-icon-accent" aria-hidden="true" />
                 Related Content
               </CardTitle>
               <Badge variant="secondary">

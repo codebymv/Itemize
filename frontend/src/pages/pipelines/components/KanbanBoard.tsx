@@ -321,7 +321,7 @@ export function KanbanBoard({
             variant="outline"
             size="sm"
             className={`hidden h-9 gap-2 font-light md:inline-flex ${
-              zoomSetting === 'fit' ? 'bg-muted text-blue-600 dark:text-blue-400' : ''
+              zoomSetting === 'fit' ? 'bg-muted text-icon-accent' : ''
             }`}
             onClick={() => setZoomSetting('fit')}
             aria-label={`Fit ${pipeline.name} board`}

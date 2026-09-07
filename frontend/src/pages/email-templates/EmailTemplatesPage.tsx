@@ -150,11 +150,11 @@ export function EmailTemplatesPage() {
   const hasQuery = Boolean(searchQuery.trim()) || categoryFilter !== 'all' || statusFilter !== 'all';
   const clearQuery = () => { setSearchQuery(''); setCategoryFilter('all'); setStatusFilter('all'); };
 
-  if (initError) return <PageLayout title="EMAIL TEMPLATES" icon={<FileText className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}><OrganizationErrorState title="Unable to load email templates" icon={FileText} /></PageLayout>;
+  if (initError) return <PageLayout title="EMAIL TEMPLATES" icon={<FileText className="h-5 w-5 shrink-0 text-icon-accent" />}><OrganizationErrorState title="Unable to load email templates" icon={FileText} /></PageLayout>;
 
   return <PageLayout
     title="EMAIL TEMPLATES"
-    icon={<FileText className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
+    icon={<FileText className="h-5 w-5 shrink-0 text-icon-accent" />}
     headerTools={{
       search: <HeaderSearch label="Search email templates" placeholder="Search email templates..." value={searchQuery} onChange={setSearchQuery} width="wide" />,
       filters: <HeaderFilters label="Filter email templates" activeCount={Number(categoryFilter !== 'all') + Number(statusFilter !== 'all')} compactChildren={filters(true)} preferExpanded="wide-lane">{filters()}</HeaderFilters>,

@@ -551,7 +551,7 @@ export function RecurringInvoicesPage() {
     return (
         <PageLayout
             title="INVOICES"
-            icon={<Receipt className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+            icon={<Receipt className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
             headerTools={{
                 search: (
                     <HeaderSearch
@@ -827,7 +827,7 @@ export function RecurringInvoicesPage() {
                                                     {recurring.status !== 'completed' && (
                                                         <Button
                                                             size="sm"
-                                                            className="bg-blue-600 interaction-button--primary text-white"
+                                                            className="bg-primary interaction-button--primary text-primary-foreground"
                                                             onClick={(e) => handleGenerateNow(recurring.id, e)}
                                                             disabled={generatingInvoice === recurring.id}
                                                         >
@@ -854,7 +854,7 @@ export function RecurringInvoicesPage() {
                                                     {recurring.status === 'paused' && (
                                                         <Button
                                                             size="sm"
-                                                            className="bg-blue-600 interaction-button--primary text-white"
+                                                            className="bg-primary interaction-button--primary text-primary-foreground"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 handleResume(recurring.id);
@@ -1171,7 +1171,7 @@ export function RecurringInvoicesPage() {
                         <Button
                             onClick={handleSaveRecurring}
                             disabled={saving || !templateName || lineItems.filter(i => i.name).length === 0}
-                            className="bg-blue-600 interaction-button--primary text-white"
+                            className="bg-primary interaction-button--primary text-primary-foreground"
                             aria-busy={saving || undefined}
                         >
                             {saving ? 'Creating...' : 'Create schedule'}

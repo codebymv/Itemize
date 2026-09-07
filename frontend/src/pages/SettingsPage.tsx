@@ -126,7 +126,7 @@ export function SettingsNav() {
             <item.icon
               className={cn(
                 "mr-2 h-4 w-4 transition-colors group-hover/item:text-blue-600 dark:group-hover/item:text-blue-400",
-                isActive ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground'
+                isActive ? 'text-icon-accent' : 'text-muted-foreground'
               )}
             />
             {item.title}
@@ -155,7 +155,7 @@ export function SettingsShellNavigation() {
           <span className="flex min-w-0 items-center gap-2 whitespace-nowrap">
             <ActiveIcon
               aria-hidden="true"
-              className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400"
+              className="h-5 w-5 shrink-0 text-icon-accent"
               data-settings-section-icon={activeItem.title}
             />
             <span className="text-lg font-semibold italic text-foreground">
@@ -451,7 +451,7 @@ function PreferencesSettings() {
           <div className="grid grid-cols-3 gap-2 sm:gap-4">
             <Button
               variant={theme === 'light' ? 'default' : 'outline'}
-              className={theme === 'light' ? 'bg-blue-600 text-white interaction-button--primary' : ''}
+              className={theme === 'light' ? 'bg-primary text-primary-foreground interaction-button--primary' : ''}
               onClick={() => setTheme('light')}
             >
               <Sun className="mr-2 h-4 w-4" />
@@ -459,7 +459,7 @@ function PreferencesSettings() {
             </Button>
             <Button
               variant={theme === 'dark' ? 'default' : 'outline'}
-              className={`flex-1 ${theme === 'dark' ? 'bg-blue-600 interaction-button--primary text-white' : ''}`}
+              className={`flex-1 ${theme === 'dark' ? 'bg-primary interaction-button--primary text-primary-foreground' : ''}`}
               onClick={() => setTheme('dark')}
             >
               <Moon className="mr-2 h-4 w-4" />
@@ -467,7 +467,7 @@ function PreferencesSettings() {
             </Button>
             <Button
               variant={theme === 'system' ? 'default' : 'outline'}
-              className={theme === 'system' ? 'bg-blue-600 text-white interaction-button--primary' : ''}
+              className={theme === 'system' ? 'bg-primary text-primary-foreground interaction-button--primary' : ''}
               onClick={() => setTheme('system')}
             >
               <Monitor className="mr-2 h-4 w-4" />
@@ -777,7 +777,7 @@ export function SettingsPage() {
   return (
     <PageLayout
       title={activeNavItem.title.toUpperCase()}
-      icon={<ActivePageIcon className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />}
+      icon={<ActivePageIcon className="h-5 w-5 text-icon-accent flex-shrink-0" />}
       headerTools={saveButton ? { primaryAction: saveButton } : undefined}
       compactNavigation={<SettingsShellNavigation />}
       nav={<SettingsNav />}

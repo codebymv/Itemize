@@ -295,7 +295,7 @@ export function ComposeEmailModal({
                             (mode === 'template' && !selectedTemplateId) ||
                             (mode === 'custom' && (!subject.trim() || !body.trim()))
                         }
-                        className="gap-2 bg-blue-600 interaction-button--primary text-white"
+                        className="gap-2 bg-primary interaction-button--primary text-primary-foreground"
                         style={{ fontFamily: '"Raleway", sans-serif' }}
                         aria-label={isSending ? 'Sending email...' : 'Send email'}
                         aria-busy={isSending}

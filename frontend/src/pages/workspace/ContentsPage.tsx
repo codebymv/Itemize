@@ -1202,7 +1202,7 @@ export function ContentsPage() {
             <DropdownMenuTrigger asChild>
               <Button
                 size="icon"
-                className="h-9 w-9 bg-blue-600 p-0 text-white interaction-button--primary"
+                className="h-9 w-9 bg-primary p-0 text-primary-foreground interaction-button--primary"
                 aria-label="Add content"
               >
                 <Plus className="h-4 w-4" />
@@ -1216,7 +1216,7 @@ export function ContentsPage() {
           <TooltipTrigger asChild>
             <DropdownMenuTrigger asChild>
               <Button
-                className="h-11 min-w-11 gap-2 bg-blue-600 px-3 font-light text-white interaction-button--primary"
+                className="h-11 min-w-11 gap-2 bg-primary px-3 font-light text-primary-foreground interaction-button--primary"
                 aria-label="Add content"
               >
                 <Plus className="h-4 w-4" />
@@ -1230,7 +1230,7 @@ export function ContentsPage() {
         <DropdownMenuTrigger asChild>
           <Button
             size="sm"
-            className="h-9 bg-blue-600 px-3 font-light text-white interaction-button--primary"
+            className="h-9 bg-primary px-3 font-light text-primary-foreground interaction-button--primary"
           >
             <Plus className="h-4 w-4" />
             <span>Add Content</span>
@@ -1328,7 +1328,7 @@ export function ContentsPage() {
   return (
     <PageLayout
       title="CONTENTS"
-      icon={<LayoutGrid className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+      icon={<LayoutGrid className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
       headerTools={{
         search: (
           <HeaderSearch
@@ -1424,7 +1424,7 @@ export function ContentsPage() {
                 ) : (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button className="bg-blue-600 interaction-button--primary text-white">
+                      <Button className="bg-primary interaction-button--primary text-primary-foreground">
                         <Plus className="h-4 w-4 mr-2" />
                         Add Content
                       </Button>

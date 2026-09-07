@@ -26,7 +26,7 @@ describe('AdminNav', () => {
             'dark:text-gray-400',
         );
         expect(operations).toHaveAttribute('aria-current', 'page');
-        expect(operations.querySelector('svg')).toHaveClass('text-blue-600');
+        expect(operations.querySelector('svg')).toHaveClass('text-icon-accent');
         expect(operations.querySelector('svg')).toHaveClass('navigation-row-icon');
     });
 

@@ -67,7 +67,7 @@ export function CustomerInfoSection({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <UserRound className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+          <UserRound className="h-4 w-4 text-icon-accent" aria-hidden="true" />
           Customer Information
         </CardTitle>
       </CardHeader>

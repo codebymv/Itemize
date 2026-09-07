@@ -233,7 +233,7 @@ export function EditContactModal({
             <Button 
               type="submit" 
               disabled={loading}
-              className="bg-blue-600 interaction-button--primary text-white"
+              className="bg-primary interaction-button--primary text-primary-foreground"
               style={{ fontFamily: '"Raleway", sans-serif' }}
               aria-busy={loading || undefined}
             >

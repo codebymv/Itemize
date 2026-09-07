@@ -238,7 +238,7 @@ export function AutomationsPage() {
     return (
       <PageLayout
         title="AUTOMATIONS"
-        icon={<Zap className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+        icon={<Zap className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
       >
         <OrganizationErrorState title="Unable to load automations" icon={Zap} />
       </PageLayout>
@@ -290,7 +290,7 @@ export function AutomationsPage() {
   return (
     <PageLayout
       title="AUTOMATIONS"
-      icon={<Zap className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+      icon={<Zap className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
       headerTools={{
         search: (
           <HeaderSearch

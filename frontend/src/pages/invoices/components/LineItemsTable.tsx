@@ -63,7 +63,7 @@ export function LineItemsTable({
       <CardHeader>
         <div className="flex items-center justify-between gap-3">
           <CardTitle className="flex items-center gap-2 text-base">
-            <ListChecks className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+            <ListChecks className="h-4 w-4 text-icon-accent" aria-hidden="true" />
             Line Items
           </CardTitle>
           <Badge variant="secondary">{lineItems.length}</Badge>

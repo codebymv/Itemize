@@ -543,7 +543,7 @@ export function InvoiceEditorPage() {
 
     if (organizationError) {
         return (
-            <PageLayout title="INVOICE" icon={<Receipt className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}>
+            <PageLayout title="INVOICE" icon={<Receipt className="h-5 w-5 flex-shrink-0 text-icon-accent" />}>
                 <OrganizationErrorState title="Unable to load invoice" icon={Receipt} />
             </PageLayout>
         );
@@ -553,7 +553,7 @@ export function InvoiceEditorPage() {
         return (
             <PageLayout
                 title={(isNew ? 'New Invoice' : 'Invoice').toUpperCase()}
-                icon={<Receipt className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+                icon={<Receipt className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
                 leading={
                     <ShellBackButton label="Back to invoices" onClick={() => {
                         if (confirmLeave()) navigate('/invoices');
@@ -573,7 +573,7 @@ export function InvoiceEditorPage() {
         return (
             <PageLayout
                 title="INVOICE"
-                icon={<Receipt className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+                icon={<Receipt className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
                 leading={
                     <ShellBackButton label="Back to invoices" onClick={() => navigate('/invoices')} />
                 }
@@ -661,7 +661,7 @@ export function InvoiceEditorPage() {
     return (
         <PageLayout
             title={(isNew ? 'New Invoice' : 'Invoice').toUpperCase()}
-            icon={<Receipt className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+            icon={<Receipt className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
             leading={
                 <ShellBackButton label="Back to invoices" onClick={() => {
                     if (confirmLeave()) navigate('/invoices');
@@ -708,7 +708,7 @@ export function InvoiceEditorPage() {
                             <CardHeader className="cursor-pointer rounded-t-lg interaction-row">
                                 <CardTitle className="flex items-center justify-between gap-3 text-base">
                                     <span className="flex items-center gap-2">
-                                        <Building2 className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+                                        <Building2 className="h-4 w-4 text-icon-accent" aria-hidden="true" />
                                         Business Details
                                     </span>
                                     {businessSectionOpen ? (
@@ -861,7 +861,7 @@ export function InvoiceEditorPage() {
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-base">
-                                <CalendarDays className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+                                <CalendarDays className="h-4 w-4 text-icon-accent" aria-hidden="true" />
                                 Invoice Details
                             </CardTitle>
                         </CardHeader>
@@ -1001,7 +1001,7 @@ export function InvoiceEditorPage() {
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-base">
-                                <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+                                <FileText className="h-4 w-4 text-icon-accent" aria-hidden="true" />
                                 Notes &amp; Terms
                             </CardTitle>
                         </CardHeader>
@@ -1024,7 +1024,7 @@ export function InvoiceEditorPage() {
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-base">
-                                <WalletCards className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+                                <WalletCards className="h-4 w-4 text-icon-accent" aria-hidden="true" />
                                 Totals
                             </CardTitle>
                         </CardHeader>
@@ -1180,7 +1180,7 @@ export function InvoiceEditorPage() {
                             <CardHeader className="cursor-pointer rounded-t-lg interaction-row">
                                 <CardTitle className="flex items-center justify-between gap-3 text-base">
                                     <span className="flex items-center gap-2">
-                                        <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+                                        <FileText className="h-4 w-4 text-icon-accent" aria-hidden="true" />
                                         Footer
                                     </span>
                                     {footerOpen ? (
@@ -1244,7 +1244,7 @@ export function InvoiceEditorPage() {
                     <Button
                         onClick={handleSave}
                         disabled={!canSave}
-                        className="bg-blue-600 interaction-button--primary text-white"
+                        className="bg-primary interaction-button--primary text-primary-foreground"
                     >
                         <Save className="h-4 w-4 mr-2" />
                         {primaryActionLabel}

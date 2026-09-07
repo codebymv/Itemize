@@ -26,7 +26,7 @@ export interface StatusVisual extends StatusThemeClasses {
 export const STATUS_THEME_CLASSES: Record<StatTheme, StatusThemeClasses> = {
   blue: {
     iconBackgroundClass: 'bg-blue-100 dark:bg-blue-900',
-    iconClass: 'text-blue-600 dark:text-blue-400',
+    iconClass: 'text-icon-accent',
     badgeClass: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
   },
   orange: {

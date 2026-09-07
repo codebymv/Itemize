@@ -338,7 +338,7 @@ export const ShareModal = <TId extends string | number>({
 <Button
                   type="button"
                   onClick={() => handleOpenChange(false)}
-                  className="interaction-button--primary bg-blue-600 font-raleway text-white"
+                  className="interaction-button--primary bg-primary font-raleway text-primary-foreground"
                 >
                   Done
                 </Button>
@@ -371,7 +371,7 @@ export const ShareModal = <TId extends string | number>({
                   onClick={handleShare}
                   disabled={isLoading}
                   aria-busy={isLoading || undefined}
-                  className="interaction-button--primary bg-blue-600 font-raleway text-white"
+                  className="interaction-button--primary bg-primary font-raleway text-primary-foreground"
                 >
                   I understand, Share
                 </Button>
@@ -424,7 +424,7 @@ export const ShareModal = <TId extends string | number>({
                 onClick={handleShare}
                 disabled={isLoading}
                 aria-busy={isLoading || undefined}
-                  className="interaction-button--primary bg-blue-600 font-raleway text-white"
+                  className="interaction-button--primary bg-primary font-raleway text-primary-foreground"
               >
                 Share
               </Button>

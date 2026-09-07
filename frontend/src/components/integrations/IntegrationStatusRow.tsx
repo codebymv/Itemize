@@ -120,7 +120,7 @@ export function IntegrationStatusRow({
           <Button
             size="sm"
             variant={primaryVariant ?? (primaryIsConnection ? 'default' : 'outline')}
-            className={cn(primaryIsConnection && 'bg-blue-600 text-white interaction-button--primary')}
+            className={cn(primaryIsConnection && 'bg-primary text-primary-foreground interaction-button--primary')}
             onClick={onPrimary}
             disabled={status === 'soon' || busy || !onPrimary}
             aria-busy={busy || undefined}

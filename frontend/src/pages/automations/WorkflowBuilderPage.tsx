@@ -125,7 +125,7 @@ const StepNode = ({ data, selected }: { data: Record<string, any>; selected: boo
     >
       <Handle type="target" position={Position.Top} className="w-3 h-3 bg-slate-400" />
       <div className="flex items-center gap-2">
-        <span className="text-blue-600 dark:text-blue-400">{iconMap[data.step_type] || <Zap className="h-4 w-4" />}</span>
+        <span className="text-icon-accent">{iconMap[data.step_type] || <Zap className="h-4 w-4" />}</span>
         <span className="font-medium text-sm">{data.label}</span>
       </div>
       {data.description && (
@@ -147,7 +147,7 @@ const TriggerNode = ({ data, selected }: { data: Record<string, any>; selected: 
       )}
     >
       <div className="flex items-center gap-2">
-        <Zap className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+        <Zap className="h-4 w-4 text-icon-accent" />
         <span className="font-medium text-sm">Trigger</span>
       </div>
       <p className="text-xs text-muted-foreground mt-1">{data.label}</p>
@@ -759,7 +759,7 @@ export function WorkflowBuilderPage() {
     return (
       <PageLayout
         title={isNewWorkflow ? 'NEW AUTOMATION' : 'AUTOMATION'}
-        icon={<Zap className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+        icon={<Zap className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
         leading={
           <ShellBackButton
             label="Back to automations"
@@ -777,7 +777,7 @@ export function WorkflowBuilderPage() {
     return (
       <PageLayout
         title={isNewWorkflow ? 'NEW AUTOMATION' : 'AUTOMATION'}
-        icon={<Zap className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+        icon={<Zap className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
         leading={(
           <ShellBackButton label="Back to automations" onClick={() => navigate('/automations')} />
         )}
@@ -795,7 +795,7 @@ export function WorkflowBuilderPage() {
   return (
     <PageLayout
       title={isNewWorkflow ? 'NEW AUTOMATION' : 'AUTOMATION'}
-      icon={<Zap className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+      icon={<Zap className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
       leading={
         <ShellBackButton
           label="Back to automations"

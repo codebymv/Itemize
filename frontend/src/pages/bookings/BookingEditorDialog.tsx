@@ -132,7 +132,7 @@ export function BookingEditorDialog({
     }}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><CalendarCheck2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />{booking ? 'Reschedule booking' : 'New booking'}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2"><CalendarCheck2 className="h-5 w-5 text-icon-accent" />{booking ? 'Reschedule booking' : 'New booking'}</DialogTitle>
           <DialogDescription>{booking ? 'Choose a new date and time.' : 'Schedule an appointment for a customer.'}</DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-5">
@@ -165,7 +165,7 @@ export function BookingEditorDialog({
               bookingCreation.reset();
               onOpenChange(false);
             })} disabled={saving}>Cancel</Button>
-            <Button type="submit" disabled={saving || !selectedCalendar} aria-busy={saving || undefined} className="bg-blue-600 text-white interaction-button--primary">{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{booking ? 'Reschedule' : 'Create booking'}</Button>
+            <Button type="submit" disabled={saving || !selectedCalendar} aria-busy={saving || undefined} className="bg-primary text-primary-foreground interaction-button--primary">{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{booking ? 'Reschedule' : 'Create booking'}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

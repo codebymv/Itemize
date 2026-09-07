@@ -317,7 +317,7 @@ export function CampaignsPage() {
 
   if (initError) {
     return (
-      <PageLayout title="CAMPAIGNS" icon={<Megaphone className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}>
+      <PageLayout title="CAMPAIGNS" icon={<Megaphone className="h-5 w-5 shrink-0 text-icon-accent" />}>
         <OrganizationErrorState title="Unable to load campaigns" icon={Megaphone} />
       </PageLayout>
     );
@@ -326,7 +326,7 @@ export function CampaignsPage() {
   return (
     <PageLayout
       title="CAMPAIGNS"
-      icon={<Megaphone className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
+      icon={<Megaphone className="h-5 w-5 shrink-0 text-icon-accent" />}
       headerTools={{
         search: (
           <HeaderSearch label="Search campaigns" placeholder="Search campaigns..." value={searchQuery} onChange={setSearchQuery} width="wide" />

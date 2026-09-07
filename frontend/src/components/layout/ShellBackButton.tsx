@@ -24,7 +24,7 @@ export function ShellBackButton({ label, className, type = 'button', ...props }:
           size="icon"
           aria-label={label}
           className={cn(
-            'h-11 w-11 shrink-0 text-blue-600 dark:text-blue-400',
+            'h-11 w-11 shrink-0 text-icon-accent',
             className,
           )}
         >

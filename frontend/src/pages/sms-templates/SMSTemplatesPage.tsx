@@ -156,11 +156,11 @@ export function SMSTemplatesPage() {
   const hasQuery = Boolean(searchQuery.trim()) || categoryFilter !== 'all' || statusFilter !== 'all';
   const clearQuery = () => { setSearchQuery(''); setCategoryFilter('all'); setStatusFilter('all'); };
 
-  if (initError) return <PageLayout title="SMS TEMPLATES" icon={<MessageSquare className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}><OrganizationErrorState title="Unable to load SMS templates" icon={MessageSquare} /></PageLayout>;
+  if (initError) return <PageLayout title="SMS TEMPLATES" icon={<MessageSquare className="h-5 w-5 shrink-0 text-icon-accent" />}><OrganizationErrorState title="Unable to load SMS templates" icon={MessageSquare} /></PageLayout>;
 
   return <PageLayout
     title="SMS TEMPLATES"
-    icon={<MessageSquare className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
+    icon={<MessageSquare className="h-5 w-5 shrink-0 text-icon-accent" />}
     headerTools={{
       search: <HeaderSearch label="Search SMS templates" placeholder="Search SMS templates..." value={searchQuery} onChange={setSearchQuery} width="wide" />,
       filters: <HeaderFilters label="Filter SMS templates" activeCount={Number(categoryFilter !== 'all') + Number(statusFilter !== 'all')} compactChildren={filters(true)} preferExpanded="wide-lane">{filters()}</HeaderFilters>,
@@ -196,7 +196,7 @@ export function SMSTemplatesPage() {
       </div>
     </div>}
     {onboarding.featureKey && ONBOARDING_CONTENT[onboarding.featureKey] && <OnboardingModal isOpen={onboarding.showModal} onClose={onboarding.handleClose} onComplete={onboarding.handleComplete} onDismiss={onboarding.handleDismiss} content={ONBOARDING_CONTENT[onboarding.featureKey]} />}
-    <Dialog open={Boolean(testTemplate)} onOpenChange={open => { if (!open && (!testTemplate || !isTemplatePending(testTemplate.id))) { setTestTemplate(null); setTestPhone(''); } }}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>Send a test SMS</DialogTitle><DialogDescription>Send {testTemplate?.name} to a phone number before using it in a campaign.</DialogDescription></DialogHeader><div className="space-y-2"><Label htmlFor="test-sms-phone">Destination phone number</Label><Input id="test-sms-phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="+1 555 555 0100" value={testPhone} onChange={event => setTestPhone(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') void handleSendTest(); }} /></div><DialogFooter><Button variant="outline" onClick={() => { if (!testTemplate || !isTemplatePending(testTemplate.id)) { setTestTemplate(null); setTestPhone(''); } }} disabled={testTemplate ? isTemplatePending(testTemplate.id) : false}>Cancel</Button><Button className="bg-blue-600 text-white interaction-button--primary" onClick={() => void handleSendTest()} disabled={!testPhone.trim() || (testTemplate ? isTemplatePending(testTemplate.id) : false)}><Send className="mr-2 h-4 w-4" />Send test</Button></DialogFooter></DialogContent></Dialog>
+    <Dialog open={Boolean(testTemplate)} onOpenChange={open => { if (!open && (!testTemplate || !isTemplatePending(testTemplate.id))) { setTestTemplate(null); setTestPhone(''); } }}><DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>Send a test SMS</DialogTitle><DialogDescription>Send {testTemplate?.name} to a phone number before using it in a campaign.</DialogDescription></DialogHeader><div className="space-y-2"><Label htmlFor="test-sms-phone">Destination phone number</Label><Input id="test-sms-phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="+1 555 555 0100" value={testPhone} onChange={event => setTestPhone(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') void handleSendTest(); }} /></div><DialogFooter><Button variant="outline" onClick={() => { if (!testTemplate || !isTemplatePending(testTemplate.id)) { setTestTemplate(null); setTestPhone(''); } }} disabled={testTemplate ? isTemplatePending(testTemplate.id) : false}>Cancel</Button><Button className="bg-primary text-primary-foreground interaction-button--primary" onClick={() => void handleSendTest()} disabled={!testPhone.trim() || (testTemplate ? isTemplatePending(testTemplate.id) : false)}><Send className="mr-2 h-4 w-4" />Send test</Button></DialogFooter></DialogContent></Dialog>
     <DeleteDialog open={Boolean(templateToDelete)} onOpenChange={open => !open && setTemplateToDelete(null)} onConfirm={handleDelete} itemType="sms-template" itemTitle={templateToDelete?.name} />
   </PageLayout>;
 }

@@ -56,7 +56,7 @@ function PlanFilterControls({
                 variant={planFilter === null ? 'default' : 'outline'}
                 onClick={() => onChange(null)}
                 className={`${compact ? 'col-span-2 w-full justify-start' : ''} ${planFilter === null
-                    ? 'h-11 bg-blue-600 interaction-button--primary'
+                    ? 'h-11 bg-primary interaction-button--primary'
                     : 'h-11'}`}
             >
                 <Globe2 className={`mr-1 h-4 w-4 ${planFilter === null ? 'text-white' : 'icon-accent'}`} />
@@ -70,7 +70,7 @@ function PlanFilterControls({
                         variant={planFilter === planId ? 'default' : 'outline'}
                         onClick={() => onChange(planFilter === planId ? null : planId)}
                         className={`${compact ? 'w-full justify-start' : ''} ${planFilter === planId
-                            ? 'h-11 bg-blue-600 interaction-button--primary'
+                            ? 'h-11 bg-primary interaction-button--primary'
                             : 'h-11'}`}
                     >
                         <PlanIcon className={`mr-1 h-4 w-4 ${planFilter === planId ? 'text-white' : 'icon-accent'}`} />
@@ -523,7 +523,7 @@ export default function CommunicationsSection({
                                 <Button
                                     onClick={handleOpenCompose}
                                     disabled={loadingRecipients}
-                                    className="h-11 bg-blue-600 interaction-button--primary"
+                                    className="h-11 bg-primary interaction-button--primary"
                                 >
                                     {loadingRecipients ? (
                                         <>

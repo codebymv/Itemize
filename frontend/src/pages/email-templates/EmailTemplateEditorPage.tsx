@@ -443,7 +443,7 @@ export function EmailTemplateEditorPage() {
     return (
       <PageLayout
         title="EMAIL TEMPLATE"
-        icon={<Mail className="h-5 w-5 text-blue-600 dark:text-blue-400" />}
+        icon={<Mail className="h-5 w-5 text-icon-accent" />}
         leading={leading}
       >
         {orgError ? (
@@ -467,11 +467,11 @@ export function EmailTemplateEditorPage() {
     return (
       <PageLayout
         title="EMAIL TEMPLATE"
-        icon={<Mail className="h-5 w-5 text-blue-600 dark:text-blue-400" />}
+        icon={<Mail className="h-5 w-5 text-icon-accent" />}
         leading={leading}
       >
         <div className="flex min-h-[420px] items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-blue-600 dark:text-blue-400" />
+          <Loader2 className="h-6 w-6 animate-spin text-icon-accent" />
         </div>
       </PageLayout>
     );
@@ -497,7 +497,7 @@ export function EmailTemplateEditorPage() {
     <PageLayout
       title={isNew ? "NEW EMAIL TEMPLATE" : "EMAIL TEMPLATE"}
       icon={
-        <Mail className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
+        <Mail className="h-5 w-5 shrink-0 text-icon-accent" />
       }
       leading={leading}
       headerTools={{
@@ -737,7 +737,7 @@ export function EmailTemplateEditorPage() {
           <DialogFooter>
             <Button
               type="button"
-              className="bg-blue-600 text-white interaction-button--primary"
+              className="bg-primary text-primary-foreground interaction-button--primary"
               onClick={() => setTemplateDetailsOpen(false)}
             >
               Done

@@ -121,7 +121,7 @@ export function ClientProfile({
           {/* Quick Actions */}
           <div className="flex gap-2 mt-4 flex-wrap">
             {onCreateInvoice && (
-              <Button size="sm" className="bg-blue-600 interaction-button--primary text-white">
+              <Button size="sm" className="bg-primary interaction-button--primary text-primary-foreground">
                 <FileText className="h-4 w-4 mr-2" />
                 Send Invoice
               </Button>

@@ -728,7 +728,7 @@ export default function SignatureEditorPage() {
     <PageLayout
       title={isExisting ? "DOCUMENT" : "NEW DOCUMENT"}
       icon={
-        <FileSignature className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
+        <FileSignature className="h-5 w-5 shrink-0 text-icon-accent" />
       }
       leading={<ShellBackButton label="Back to documents" onClick={goBack} />}
       headerTools={{
@@ -1130,7 +1130,7 @@ function DraftDocumentEditor({
               </Button>
               {file || document?.file_name ? (
                 <div className="flex items-center gap-3 rounded-lg border p-3">
-                  <FileText className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
+                  <FileText className="h-5 w-5 shrink-0 text-icon-accent" />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium">
                       {file?.name || document?.file_name}

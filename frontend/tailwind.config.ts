@@ -32,6 +32,9 @@ export default {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',
+				/* Theme colour tokens: chrome ink and soft wash (lib/themeColor.ts). */
+				'icon-accent': 'hsl(var(--icon-accent))',
+				'theme-tint': 'hsl(var(--theme-tint))',
 				background: 'hsl(var(--background))',
 				foreground: 'hsl(var(--foreground))',
 				primary: {

@@ -220,7 +220,7 @@ export function PageVersionHistory({ pageId, pageName, open, onOpenChange, onPre
                             icon={HistoryIcon}
                             kind="inline"
                             title="No versions yet"
-                            action={<Button type="button" className="h-11 bg-blue-600 text-white interaction-button--primary" onClick={handleCreateVersion} disabled={!organizationId}>Create version</Button>}
+                            action={<Button type="button" className="h-11 bg-primary text-primary-foreground interaction-button--primary" onClick={handleCreateVersion} disabled={!organizationId}>Create version</Button>}
                             className="min-h-40"
                         />
                     ) : (

@@ -139,7 +139,7 @@ export function ReputationRequestsPage() {
 
   if (initError) {
     return (
-      <PageLayout title="REQUESTS" icon={<Send className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}>
+      <PageLayout title="REQUESTS" icon={<Send className="h-5 w-5 shrink-0 text-icon-accent" />}>
         <OrganizationErrorState title="Unable to load review requests" icon={Send} />
       </PageLayout>
     );
@@ -148,7 +148,7 @@ export function ReputationRequestsPage() {
   return (
     <PageLayout
       title="REQUESTS"
-      icon={<Send className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
+      icon={<Send className="h-5 w-5 shrink-0 text-icon-accent" />}
       headerTools={{
         search: <HeaderSearch value={searchQuery} onChange={setSearchQuery} label="Search review requests" placeholder="Search requests..." />,
         filters: <HeaderFilters label="Request filters" activeCount={statusFilter === 'all' ? 0 : 1} preferExpanded>{statusSelect()}</HeaderFilters>,

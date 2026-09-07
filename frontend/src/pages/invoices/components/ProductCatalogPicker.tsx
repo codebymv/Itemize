@@ -93,7 +93,7 @@ export function ProductCatalogPicker({
           <CommandList className="max-h-72">
             <CommandGroup>
               <CommandItem value="custom" onSelect={() => choose(null)} className="min-h-11">
-                <Plus className="mr-2 h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+                <Plus className="mr-2 h-4 w-4 text-icon-accent" aria-hidden="true" />
                 <span>Custom item</span>
                 {!selectedProductId && <Check className="ml-auto h-4 w-4" aria-hidden="true" />}
               </CommandItem>
@@ -117,7 +117,7 @@ export function ProductCatalogPicker({
                     onSelect={() => choose(product)}
                     className="min-h-11"
                   >
-                    <Package className="mr-2 h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+                    <Package className="mr-2 h-4 w-4 text-icon-accent" aria-hidden="true" />
                     <span className="min-w-0 flex-1 truncate">{product.name}</span>
                     {product.sku && <span className="ml-2 shrink-0 text-xs text-muted-foreground">{product.sku}</span>}
                     <Check className={cn('ml-2 h-4 w-4', selectedProductId === product.id ? 'opacity-100' : 'opacity-0')} aria-hidden="true" />

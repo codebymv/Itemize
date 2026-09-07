@@ -313,7 +313,7 @@ export function SegmentEditorPage() {
     return (
       <PageLayout
         title="SEGMENT"
-        icon={<Filter className="h-5 w-5 text-blue-600 dark:text-blue-400" />}
+        icon={<Filter className="h-5 w-5 text-icon-accent" />}
         leading={leading}
       >
         {orgError ? (
@@ -336,7 +336,7 @@ export function SegmentEditorPage() {
     return (
       <PageLayout
         title="SEGMENT"
-        icon={<Filter className="h-5 w-5 text-blue-600 dark:text-blue-400" />}
+        icon={<Filter className="h-5 w-5 text-icon-accent" />}
         leading={leading}
       >
         <PageLoading message="Loading segment..." />
@@ -347,7 +347,7 @@ export function SegmentEditorPage() {
     <PageLayout
       title={isNew ? "NEW SEGMENT" : "SEGMENT"}
       icon={
-        <Filter className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
+        <Filter className="h-5 w-5 shrink-0 text-icon-accent" />
       }
       leading={leading}
       headerTools={{
@@ -574,13 +574,13 @@ export function SegmentEditorPage() {
             <CardContent surface="inset">
               {previewing ? (
                 <div className="flex min-h-28 items-center justify-center">
-                  <Loader2 className="h-6 w-6 animate-spin text-blue-600 dark:text-blue-400" />
+                  <Loader2 className="h-6 w-6 animate-spin text-icon-accent" />
                 </div>
               ) : (
                 <>
                   <div className="flex items-end justify-between gap-3">
                     <div>
-                      <p className="text-3xl font-semibold text-blue-600 dark:text-blue-400">
+                      <p className="text-3xl font-semibold text-icon-accent">
                         {preview?.count ??
                           (isStatic ? (segment?.contact_count ?? 0) : "—")}
                       </p>

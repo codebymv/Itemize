@@ -66,7 +66,7 @@ function ModalHeader({
         <div className="min-w-0">
           <DialogTitle className="flex min-w-0 items-center gap-2 text-base">
             {leading}
-            {Icon ? <Icon className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" /> : null}
+            {Icon ? <Icon className="h-5 w-5 shrink-0 text-icon-accent" /> : null}
             <span className="truncate">{title}</span>
           </DialogTitle>
           <DialogDescription

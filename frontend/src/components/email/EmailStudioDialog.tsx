@@ -48,7 +48,7 @@ export function EmailStudioDialog({
           <DialogHeader className="shrink-0 border-b px-4 py-3 sm:px-5">
             <div className="flex min-w-0 items-center gap-2 sm:gap-3">
               <div className="flex min-w-0 items-center gap-2">
-                <Mail className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
+                <Mail className="h-5 w-5 shrink-0 text-icon-accent" />
                 <div className="min-w-0">
                   <div className="flex min-w-0 items-center gap-2">
                     <DialogTitle className="truncate text-base sm:text-lg">{title}</DialogTitle>

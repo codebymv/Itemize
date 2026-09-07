@@ -517,7 +517,7 @@ export function EstimateEditorPage() {
 
     if (organizationError) {
         return (
-            <PageLayout title="ESTIMATE" icon={<FileText className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}>
+            <PageLayout title="ESTIMATE" icon={<FileText className="h-5 w-5 flex-shrink-0 text-icon-accent" />}>
                 <OrganizationErrorState title="Unable to load estimate" icon={FileText} />
             </PageLayout>
         );
@@ -527,7 +527,7 @@ export function EstimateEditorPage() {
         return (
             <PageLayout
                 title={(isNew ? 'New Estimate' : 'Estimate').toUpperCase()}
-                icon={<FileText className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+                icon={<FileText className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
                 leading={
                     <ShellBackButton label="Back to estimates" onClick={() => {
                         if (confirmLeave()) navigate('/estimates');
@@ -547,7 +547,7 @@ export function EstimateEditorPage() {
         return (
             <PageLayout
                 title="ESTIMATE"
-                icon={<FileText className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+                icon={<FileText className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
                 leading={
                     <ShellBackButton label="Back to estimates" onClick={() => navigate('/estimates')} />
                 }
@@ -627,7 +627,7 @@ export function EstimateEditorPage() {
     return (
         <PageLayout
             title={(isNew ? 'New Estimate' : 'Estimate').toUpperCase()}
-            icon={<FileText className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+            icon={<FileText className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
             leading={
                 <ShellBackButton label="Back to estimates" onClick={() => {
                     if (confirmLeave()) navigate('/estimates');
@@ -712,7 +712,7 @@ export function EstimateEditorPage() {
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-base">
-                                <CalendarDays className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+                                <CalendarDays className="h-4 w-4 text-icon-accent" aria-hidden="true" />
                                 Estimate Details
                             </CardTitle>
                         </CardHeader>
@@ -765,7 +765,7 @@ export function EstimateEditorPage() {
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-base">
-                                <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+                                <FileText className="h-4 w-4 text-icon-accent" aria-hidden="true" />
                                 Notes &amp; Terms
                             </CardTitle>
                         </CardHeader>
@@ -783,7 +783,7 @@ export function EstimateEditorPage() {
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-base">
-                                <WalletCards className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+                                <WalletCards className="h-4 w-4 text-icon-accent" aria-hidden="true" />
                                 Totals
                             </CardTitle>
                         </CardHeader>
@@ -864,7 +864,7 @@ export function EstimateEditorPage() {
                             <CardHeader className="cursor-pointer rounded-t-lg interaction-row">
                                 <CardTitle className="flex items-center justify-between gap-3 text-base">
                                     <span className="flex items-center gap-2">
-                                        <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+                                        <FileText className="h-4 w-4 text-icon-accent" aria-hidden="true" />
                                         Footer
                                     </span>
                                     {footerOpen ? (
@@ -922,7 +922,7 @@ export function EstimateEditorPage() {
                     <Button
                         onClick={handleSave}
                         disabled={!canSave}
-                        className="bg-blue-600 text-white interaction-button--primary"
+                        className="bg-primary text-primary-foreground interaction-button--primary"
                         aria-busy={saving || undefined}
                     >
                         <Save className="mr-2 h-4 w-4" />

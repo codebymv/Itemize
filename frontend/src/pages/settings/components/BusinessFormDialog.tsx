@@ -213,7 +213,7 @@ export const BusinessFormDialog: React.FC<BusinessFormDialogProps> = ({
             onClick={onSave}
             disabled={saving || uploadingLogo}
             aria-busy={saving || uploadingLogo || undefined}
-            className="bg-blue-600 interaction-button--primary text-white"
+            className="bg-primary interaction-button--primary text-primary-foreground"
           >
             {saving ? (
               <>

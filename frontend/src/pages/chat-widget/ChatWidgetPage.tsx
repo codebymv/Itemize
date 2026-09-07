@@ -258,7 +258,7 @@ export function ChatWidgetPage() {
     return (
       <PageLayout
         title="CHAT WIDGET"
-        icon={<MessageCircle className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+        icon={<MessageCircle className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
       >
         <OrganizationErrorState
           title="Unable to load chat widget"
@@ -272,7 +272,7 @@ export function ChatWidgetPage() {
     return (
       <PageLayout
         title="CHAT WIDGET"
-        icon={<MessageCircle className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+        icon={<MessageCircle className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
         className="mx-auto max-w-7xl"
       >
         <ErrorState
@@ -290,7 +290,7 @@ export function ChatWidgetPage() {
     return (
       <PageLayout
         title="CHAT WIDGET"
-        icon={<MessageCircle className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+        icon={<MessageCircle className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
         className="mx-auto max-w-7xl"
       >
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.8fr)]">
@@ -306,7 +306,7 @@ export function ChatWidgetPage() {
   return (
     <PageLayout
       title="CHAT WIDGET"
-      icon={<MessageCircle className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
+      icon={<MessageCircle className="h-5 w-5 shrink-0 text-icon-accent" />}
       className="mx-auto max-w-7xl"
       headerTools={{
         modeNavigation: (
@@ -718,7 +718,7 @@ export function ChatWidgetPage() {
                         <Button
                           type="button"
                           onClick={() => void handleSave()}
-                          className="h-11 bg-blue-600 text-white interaction-button--primary"
+                          className="h-11 bg-primary text-primary-foreground interaction-button--primary"
                         >
                           Save widget
                         </Button>

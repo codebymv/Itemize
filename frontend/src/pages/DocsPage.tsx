@@ -114,7 +114,7 @@ const DocsPage: React.FC = () => {
               ) : (
                 <ChevronRight className="h-4 w-4 mr-2 flex-shrink-0 text-muted-foreground" />
               )}
-              <Folder className="h-4 w-4 mr-2 flex-shrink-0 text-blue-600 dark:text-blue-400" />
+              <Folder className="h-4 w-4 mr-2 flex-shrink-0 text-icon-accent" />
               <span className="truncate font-medium text-left">{formatDocName(item.name)}</span>
             </button>
             {isExpanded && item.children && (
@@ -134,7 +134,7 @@ const DocsPage: React.FC = () => {
             style={{ paddingLeft: `${level * 16 + 12}px`, fontFamily: '"Raleway", sans-serif' }}
             onClick={() => setIsSidebarOpen(false)}
           >
-            <FileText className="h-4 w-4 mr-2 flex-shrink-0 text-blue-600 dark:text-blue-400" />
+            <FileText className="h-4 w-4 mr-2 flex-shrink-0 text-icon-accent" />
             <span className="truncate font-medium">{formatDocName(item.name)}</span>
           </Link>
         </div>
@@ -347,7 +347,7 @@ const DocsPage: React.FC = () => {
 
       <PageLayout
         title="HELP"
-        icon={<HelpCircle className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />}
+        icon={<HelpCircle className="h-5 w-5 text-icon-accent flex-shrink-0" />}
         leading={backButton}
         frame="split"
         nav={docsNav}

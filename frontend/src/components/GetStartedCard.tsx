@@ -178,7 +178,7 @@ function GetStartedRow({
       )}
     >
       {step.completed ? (
-        <CheckCircle2 className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
+        <CheckCircle2 className="h-5 w-5 shrink-0 text-icon-accent" />
       ) : (
         <Circle className="h-5 w-5 shrink-0 text-muted-foreground" />
       )}

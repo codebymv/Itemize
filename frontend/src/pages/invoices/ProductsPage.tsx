@@ -367,7 +367,7 @@ export function ProductsPage() {
     return (
         <PageLayout
             title="PRODUCTS"
-            icon={<Package className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+            icon={<Package className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
             headerTools={{
                 search: (
                     <HeaderSearch
@@ -725,7 +725,7 @@ export function ProductsPage() {
                         <Button
                             onClick={handleSave}
                             disabled={saving || !formData.name}
-                            className="bg-blue-600 interaction-button--primary text-white"
+                            className="bg-primary interaction-button--primary text-primary-foreground"
                             aria-busy={saving || undefined}
                         >
                             {saving ? 'Saving...' : editingProduct ? 'Save Changes' : 'Create Product'}

@@ -304,7 +304,7 @@ export function EstimatesPage() {
     return (
         <PageLayout
             title="ESTIMATES"
-            icon={<FileText className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+            icon={<FileText className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
             headerTools={{
                 search: (
                     <HeaderSearch

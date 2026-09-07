@@ -260,7 +260,7 @@ export function SignaturesPage() {
     return (
       <PageLayout
         title="DOCUMENTS"
-        icon={<FileSignature className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+        icon={<FileSignature className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
       >
         <OrganizationErrorState title="Unable to load documents" icon={FileSignature} />
       </PageLayout>
@@ -270,7 +270,7 @@ export function SignaturesPage() {
   return (
     <PageLayout
       title="DOCUMENTS"
-      icon={<FileSignature className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+      icon={<FileSignature className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
       headerTools={{
         search: (
           <HeaderSearch
@@ -545,7 +545,7 @@ export function SignaturesPage() {
                                 <Button
                                   size="sm"
                                   disabled={working}
-                                  className="bg-blue-600 interaction-button--primary text-white text-xs sm:text-sm"
+                                  className="bg-primary interaction-button--primary text-primary-foreground text-xs sm:text-sm"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleSend(doc.id);
@@ -559,7 +559,7 @@ export function SignaturesPage() {
                                 <Button
                                   size="sm"
                                   disabled={working}
-                                  className="bg-blue-600 interaction-button--primary text-white text-xs sm:text-sm"
+                                  className="bg-primary interaction-button--primary text-primary-foreground text-xs sm:text-sm"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleRetry(doc.id);
@@ -573,7 +573,7 @@ export function SignaturesPage() {
                                 <Button
                                   size="sm"
                                   disabled={working}
-                                  className="bg-blue-600 interaction-button--primary text-white text-xs sm:text-sm"
+                                  className="bg-primary interaction-button--primary text-primary-foreground text-xs sm:text-sm"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleResend(doc.id);
@@ -601,7 +601,7 @@ export function SignaturesPage() {
                               {doc.status === 'completed' && (
                                 <Button
                                   size="sm"
-                                  className="bg-blue-600 interaction-button--primary text-white text-xs sm:text-sm"
+                                  className="bg-primary interaction-button--primary text-primary-foreground text-xs sm:text-sm"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleDownload(doc.id);

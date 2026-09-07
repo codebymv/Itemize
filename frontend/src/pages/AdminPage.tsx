@@ -39,7 +39,7 @@ export function AdminPage() {
         return (
             <PageLayout
                 title={activeNavItem.title.toUpperCase()}
-                icon={<ActiveIcon className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
+                icon={<ActiveIcon className="h-5 w-5 shrink-0 text-icon-accent" />}
                 compactNavigation={<AdminShellNavigation />}
                 nav={<AdminNav />}
                 navigationBreakpoint="wide"
@@ -56,7 +56,7 @@ export function AdminPage() {
     return (
         <PageLayout
             title={activeNavItem.title.toUpperCase()}
-            icon={<ActiveIcon className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
+            icon={<ActiveIcon className="h-5 w-5 shrink-0 text-icon-accent" />}
             compactNavigation={<AdminShellNavigation />}
             headerTools={desktopTools}
             nav={<AdminNav />}

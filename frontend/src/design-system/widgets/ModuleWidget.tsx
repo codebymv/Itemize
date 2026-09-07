@@ -112,7 +112,7 @@ const hasRecentItems = recentItems !== undefined;
                   className="rounded-lg bg-muted p-2 min-[1280px]:max-[1399px]:hidden"
                   data-module-widget-icon
                 >
-                  <Icon className={cn("h-5 w-5", iconColor || "text-blue-600 dark:text-blue-400")} />
+                  <Icon className={cn("h-5 w-5", iconColor || "text-icon-accent")} />
                 </div>
                 <div>
                   <CardTitle className="text-base">{title}</CardTitle>
@@ -235,7 +235,7 @@ const hasRecentItems = recentItems !== undefined;
               className="rounded-lg bg-muted p-2 min-[1280px]:max-[1399px]:hidden"
               data-module-widget-icon
             >
-              <Icon className={cn("h-5 w-5", iconColor || "text-blue-600 dark:text-blue-400")} />
+              <Icon className={cn("h-5 w-5", iconColor || "text-icon-accent")} />
             </div>
             <div>
               <CardTitle className="text-base">{title}</CardTitle>

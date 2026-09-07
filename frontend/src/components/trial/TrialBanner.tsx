@@ -39,7 +39,7 @@ const urgencyStyles = {
   informational: {
     container: 'bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800',
     text: 'text-blue-800 dark:text-blue-300',
-    icon: 'text-blue-600 dark:text-blue-400',
+    icon: 'text-icon-accent',
     button: 'border-blue-600 text-blue-700 hover:bg-blue-100 dark:border-blue-400 dark:text-blue-300 dark:hover:bg-blue-900',
   },
   warning: {

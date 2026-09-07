@@ -91,7 +91,7 @@ export function ReputationWidgetsPage() {
 
   if (initError) {
     return (
-      <PageLayout title="WIDGETS" icon={<LayoutGrid className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}>
+      <PageLayout title="WIDGETS" icon={<LayoutGrid className="h-5 w-5 shrink-0 text-icon-accent" />}>
         <OrganizationErrorState title="Unable to load review widgets" icon={LayoutGrid} />
       </PageLayout>
     );
@@ -102,7 +102,7 @@ export function ReputationWidgetsPage() {
   return (
     <PageLayout
       title="WIDGETS"
-      icon={<LayoutGrid className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
+      icon={<LayoutGrid className="h-5 w-5 shrink-0 text-icon-accent" />}
       headerTools={{
         search: <HeaderSearch value={searchQuery} onChange={setSearchQuery} label="Search review widgets" placeholder="Search widgets..." />,
         filters: <HeaderFilters label="Widget filters" activeCount={typeFilter === 'all' ? 0 : 1} preferExpanded>{typeSelect()}</HeaderFilters>,

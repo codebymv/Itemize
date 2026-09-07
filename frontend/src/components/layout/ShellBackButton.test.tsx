@@ -4,7 +4,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { ShellBackButton } from './ShellBackButton';
 
 describe('ShellBackButton', () => {
-  it('provides one 44px blue Back control with an accessible destination label', () => {
+  it('provides one 44px theme-accent Back control with an accessible destination label', () => {
     const onClick = vi.fn();
     render(
       <TooltipProvider>
@@ -17,9 +17,8 @@ describe('ShellBackButton', () => {
     expect(button).toHaveClass(
       'h-11',
       'w-11',
-      'text-blue-600',
-      'dark:text-blue-400',
-      'interaction-button--neutral',
+      'text-icon-accent',
+            'interaction-button--neutral',
     );
     expect(button).not.toHaveClass('hover:bg-blue-50', 'dark:hover:bg-blue-950/40');
     expect(button).not.toHaveTextContent('Back to contacts');

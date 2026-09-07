@@ -269,7 +269,7 @@ export function CreateContactModal({
               <Button
                 type="submit"
                 disabled={loading}
-                className="bg-blue-600 interaction-button--primary text-white"
+                className="bg-primary interaction-button--primary text-primary-foreground"
                 style={{ fontFamily: '"Raleway", sans-serif' }}
                 aria-label={loading ? 'Creating contact' : 'Create contact'}
                 aria-busy={loading || undefined}

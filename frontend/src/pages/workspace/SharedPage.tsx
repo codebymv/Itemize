@@ -72,6 +72,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useStableMutationKey } from '@/hooks/useStableMutationKey';
 import { getWorkspaceLanding } from '@/lib/workspaceNavigation';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { DEFAULT_CARD_ACCENT } from '@/lib/cardAccent';
 
 // Content type definitions
 type ContentType = 'all' | 'list' | 'note' | 'whiteboard' | 'wireframe' | 'vault';
@@ -431,7 +432,7 @@ export function SharedPage() {
   return (
     <PageLayout
       title="SHARED"
-      icon={<Share2 className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+      icon={<Share2 className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
       headerTools={{
         search: (
           <HeaderSearch
@@ -520,7 +521,7 @@ export function SharedPage() {
               action={headerQueryCount === 0 ?
                 <Button
                   onClick={() => navigate(workspaceLanding.path)}
-                  className="bg-blue-600 interaction-button--primary text-white"
+                  className="bg-primary interaction-button--primary text-primary-foreground"
                 >
                   <WorkspaceLandingIcon className="mr-2 h-4 w-4" />
                   Go to {workspaceLanding.title}
@@ -552,7 +553,7 @@ export function SharedPage() {
                             <div className="flex items-center gap-2">
                               <Icon
                                 className="h-5 w-5"
-                                style={{ color: content.color_value || '#3B82F6' }}
+                                style={{ color: content.color_value || DEFAULT_CARD_ACCENT }}
                               />
                               <span className="text-xs text-muted-foreground hidden sm:inline">
                                 {getTypeLabel(content.type)}

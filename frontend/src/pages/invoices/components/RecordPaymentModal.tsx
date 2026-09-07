@@ -222,7 +222,7 @@ export function RecordPaymentModal({
                     <Button
                         onClick={handleSubmit}
                         disabled={!isValid || recording}
-                        className="bg-blue-600 interaction-button--primary text-white"
+                        className="bg-primary interaction-button--primary text-primary-foreground"
                     >
                         {recording ? 'Recording...' : `Record ${formatCurrency(parsedAmount)}`}
                     </Button>

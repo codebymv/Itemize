@@ -499,7 +499,7 @@ export function PipelinesPage() {
     return (
       <PageLayout
         title="PIPELINES"
-        icon={<Kanban className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+        icon={<Kanban className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
       >
         <OrganizationErrorState title="Unable to load pipelines" icon={Kanban} />
       </PageLayout>
@@ -509,7 +509,7 @@ export function PipelinesPage() {
   return (
     <PageLayout
       title="PIPELINES"
-      icon={<Kanban className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+      icon={<Kanban className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
       contentClassName="p-0 sm:p-0"
       headerTools={hasPipelines ? {
         search: (

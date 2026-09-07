@@ -60,7 +60,7 @@ export const BusinessProfileCard: React.FC<BusinessProfileCardProps> = ({
           <Button
             size="sm"
             onClick={onAddBusiness}
-            className="bg-blue-600 interaction-button--primary text-white"
+            className="bg-primary interaction-button--primary text-primary-foreground"
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Business

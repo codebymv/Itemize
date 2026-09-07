@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { isBrandSurface } from './brand-surfaces';
 
 /**
  * Guards the rules in ./index.md. These are the invariants that let a status
@@ -219,7 +220,7 @@ describe('visual language: shared page chrome', () => {
     const app = read('App.tsx');
     const entitlementGate = app.slice(app.indexOf('const EntitledRoute'), app.indexOf('const AppOrPublicLayout'));
     expect(entitlementGate).toContain('<PageLayout title="UPGRADE"');
-    expect(entitlementGate).toContain('text-blue-600 dark:text-blue-400');
+    expect(entitlementGate).toContain('text-icon-accent');
   });
 
   it.each(DETAIL_PAGES)('%s uses the shared identity block', path => {
@@ -367,23 +368,23 @@ describe('visual language: shared page chrome', () => {
     expect(read('hooks/usePageHeader.tsx')).toContain('<ResponsiveHeaderTools {...headerTools} />');
   });
 
-  it('keeps dynamic app-shell icons on the shared blue accent', () => {
+  it('keeps dynamic app-shell icons on the theme accent', () => {
     const admin = read('pages/AdminPage.tsx');
-    expect(admin).toContain('text-blue-600 dark:text-blue-400');
+    expect(admin).toContain('text-icon-accent');
     expect(admin).not.toContain('shrink-0 text-primary');
   });
 
-  it('keeps page-shell icons legible in both themes', () => {
+  it('keeps page-shell icons on the theme accent, which already carries both modes', () => {
     [...INDEX_PAGES, ...DETAIL_PAGES, ...SPECIAL_APP_PAGES].forEach(path => {
       const pageLayoutIcons = [...read(path).matchAll(
         /<PageLayout[\s\S]{0,600}?icon=\{\s*<[^>]+className="([^"]+)"\s*\/>\s*\}/g,
       )];
       expect(pageLayoutIcons.length, `${path} must expose a concrete PageLayout icon`).toBeGreaterThan(0);
       pageLayoutIcons.forEach(match => {
-        expect(match[1], `${path} PageLayout icon must use the shared light-theme accent`)
-          .toContain('text-blue-600');
-        expect(match[1], `${path} PageLayout icon must use the shared dark-theme accent`)
-          .toContain('dark:text-blue-400');
+        expect(match[1], `${path} PageLayout icon must read the theme accent token`)
+          .toContain('text-icon-accent');
+        expect(match[1], `${path} PageLayout icon must not restate a raw blue`)
+          .not.toMatch(/text-blue-\d+/);
       });
     });
   });
@@ -486,5 +487,60 @@ describe('visual language: shared page chrome', () => {
     expect(read('pages/pages/PublicLandingPage.tsx')).toContain('buildLandingPageDocument');
     expect(read('pages/pages/PublicLandingPage.tsx')).toContain('<iframe');
     expect(read('pages/forms/PublicFormPage.tsx')).toContain('form.theme?.primaryColor');
+  });
+});
+
+describe('visual language: theme colour', () => {
+  /**
+   * Product accents follow the user's theme colour (lib/themeColor.ts) by
+   * reading tokens: bg-primary, text-icon-accent, ring-ring, bg-theme-tint.
+   * Raw blue classes on application surfaces bypass that and stay blue on a
+   * purple account. This baseline only moves down: lower it in the same
+   * commit that removes a raw blue, and never raise it.
+   */
+  const RAW_BLUE_BASELINE = 520;
+  const RAW_BLUE = /(?<![\w-])(?:[\w[\]=/.-]+:)*(?:bg|text|border|ring|from|to|via|fill|stroke|outline|decoration|divide|shadow|caret|accent|placeholder)-blue-\d{2,3}(?:\/\d{1,3})?(?![\w-])/g;
+
+  const rawBlueByFile = ALL_SOURCES
+    .filter(file => !isBrandSurface(file.path))
+    .map(file => ({ path: file.path, count: (file.body.match(RAW_BLUE) ?? []).length }))
+    .filter(file => file.count > 0)
+    .sort((a, b) => b.count - a.count);
+  const rawBlueCount = rawBlueByFile.reduce((sum, file) => sum + file.count, 0);
+
+  it('ratchets raw blue classes on application surfaces down to the baseline', () => {
+    const worst = rawBlueByFile.slice(0, 8).map(file => `${file.count}\t${file.path}`).join('\n');
+    expect(rawBlueCount, `raw blue classes rose above the baseline; use theme tokens instead. Worst files:\n${worst}`)
+      .toBeLessThanOrEqual(RAW_BLUE_BASELINE);
+    expect(rawBlueCount, `raw blue classes fell to ${rawBlueCount}; lower RAW_BLUE_BASELINE to match so the ratchet holds`)
+      .toBe(RAW_BLUE_BASELINE);
+  });
+
+  it('declares every theme hue as a token block per mode', () => {
+    for (const hue of ['purple', 'pink']) {
+      const light = INDEX_CSS.match(new RegExp(`\\[data-theme-color="${hue}"\\] \\{([^}]*)\\}`))?.[1] ?? '';
+      const dark = INDEX_CSS.match(new RegExp(`\\.dark\\[data-theme-color="${hue}"\\] \\{([^}]*)\\}`))?.[1] ?? '';
+      for (const token of ['--primary:', '--primary-hover:', '--ring:', '--icon-accent:', '--theme-tint:', '--card-accent-default:']) {
+        expect(light, `${hue} light block declares ${token}`).toContain(token);
+      }
+      for (const token of ['--icon-accent:', '--theme-tint:']) {
+        expect(dark, `${hue} dark block declares ${token}`).toContain(token);
+      }
+    }
+    expect(INDEX_CSS).not.toMatch(/\[data-theme-color="(green|red|amber|orange|yellow|gray)"\]/);
+  });
+
+  it('exposes the theme tokens to Tailwind and stamps the theme before first paint', () => {
+    const tailwind = readFileSync(join(process.cwd(), 'tailwind.config.ts'), 'utf8');
+    expect(tailwind).toContain("'icon-accent': 'hsl(var(--icon-accent))'");
+    expect(tailwind).toContain("'theme-tint': 'hsl(var(--theme-tint))'");
+    const html = readFileSync(join(process.cwd(), 'index.html'), 'utf8');
+    expect(html).toContain("localStorage.getItem('itemize:theme-color')");
+    expect(html).toContain("root.setAttribute('data-theme-color', color)");
+  });
+
+  it('never hard-codes the two blue inks in the interaction layer', () => {
+    expect(INDEX_CSS).not.toContain('rgb(37 99 235)');
+    expect(INDEX_CSS).not.toContain('rgb(96 165 250)');
   });
 });

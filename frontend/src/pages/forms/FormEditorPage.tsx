@@ -489,7 +489,7 @@ export default function FormEditorPage() {
         return (
             <PageLayout
                 title="FORM"
-                icon={<FileText className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
+                icon={<FileText className="h-5 w-5 shrink-0 text-icon-accent" />}
                 leading={backButton}
             >
                 <div className="space-y-4">
@@ -505,7 +505,7 @@ export default function FormEditorPage() {
         return (
             <PageLayout
                 title="FORM"
-                icon={<FileText className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
+                icon={<FileText className="h-5 w-5 shrink-0 text-icon-accent" />}
                 leading={backButton}
             >
                 {organizationError ? (
@@ -570,7 +570,7 @@ export default function FormEditorPage() {
     return (
         <PageLayout
             title="FORM"
-            icon={<FileText className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
+            icon={<FileText className="h-5 w-5 shrink-0 text-icon-accent" />}
             leading={backButton}
             headerTools={{
                 status: <Badge className={cn('pointer-events-none whitespace-nowrap', statusVisual.badgeClass)}>{statusVisual.label}</Badge>,
@@ -750,7 +750,7 @@ export default function FormEditorPage() {
                                 <Card>
                                     <CardHeader className="flex flex-row items-center justify-between space-y-0">
                                         <SectionCardTitle icon={ListPlus}>Form fields</SectionCardTitle>
-                                        <Button size="sm" className="bg-blue-600 text-white interaction-button--primary" onClick={addField}>
+                                        <Button size="sm" className="bg-primary text-primary-foreground interaction-button--primary" onClick={addField}>
                                             <Plus className="mr-2 h-4 w-4" />
                                             Add field
                                         </Button>

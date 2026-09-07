@@ -630,7 +630,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                   onClick={() => handleToolChange('pen')}
                   aria-label="Pen"
                   title="Pen (B)"
-                  className={cn("h-8 w-8 p-0 text-foreground", currentTool === 'pen' ? 'bg-blue-600 interaction-button--primary text-white' : '')}
+                  className={cn("h-8 w-8 p-0 text-foreground", currentTool === 'pen' ? 'bg-primary interaction-button--primary text-primary-foreground' : '')}
                 >
                   <Brush className="h-4 w-4" />
                 </Button>
@@ -640,7 +640,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
                   onClick={() => handleToolChange('eraser')}
                   aria-label="Eraser"
                   title="Eraser (E)"
-                  className={cn("h-8 w-8 p-0 text-foreground", currentTool === 'eraser' ? 'bg-blue-600 interaction-button--primary text-white' : '')}
+                  className={cn("h-8 w-8 p-0 text-foreground", currentTool === 'eraser' ? 'bg-primary interaction-button--primary text-primary-foreground' : '')}
                 >
                   <Eraser className="h-4 w-4" />
                 </Button>

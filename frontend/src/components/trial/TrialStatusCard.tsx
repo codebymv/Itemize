@@ -65,7 +65,7 @@ export function TrialStatusCard({ className }: TrialStatusCardProps) {
     : 'informational';
 
   const urgencyStyles = {
-    informational: 'text-blue-600 dark:text-blue-400',
+    informational: 'text-icon-accent',
     warning: 'text-amber-600 dark:text-amber-400',
     urgent: 'text-red-600 dark:text-red-400',
   };
@@ -173,7 +173,7 @@ export function TrialStatusCard({ className }: TrialStatusCardProps) {
           disabled={isRedirecting}
           className={cn(
             'w-full sm:w-auto px-6 py-3 rounded-lg font-semibold text-white',
-            'bg-blue-600 interaction-button--primary dark:bg-blue-500 dark:hover:bg-blue-600',
+            'bg-primary interaction-button--primary dark:bg-blue-500 dark:hover:bg-blue-600',
             'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
             'transition-colors duration-200',
             'disabled:opacity-50 disabled:cursor-not-allowed',

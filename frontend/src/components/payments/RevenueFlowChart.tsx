@@ -355,7 +355,7 @@ function CurrencyRevenueFlow({
                         <div className="min-w-44 rounded-lg border bg-popover p-3 text-popover-foreground shadow-lg">
                           <p className="mb-2 text-xs text-muted-foreground">{point.label}</p>
                           <div className="space-y-1 text-xs">
-                            {visibleSeries.includes('bookedSales') ? <p className="flex justify-between gap-4 text-blue-600 dark:text-blue-400">
+                            {visibleSeries.includes('bookedSales') ? <p className="flex justify-between gap-4 text-icon-accent">
                               <span>Booked sales</span><strong>{formatCurrency(point.bookedSales, trend.currency)}</strong>
                             </p> : null}
                             {visibleSeries.includes('netReceived') ? <p className="flex justify-between gap-4 text-green-600 dark:text-green-400">

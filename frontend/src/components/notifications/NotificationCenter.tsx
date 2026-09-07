@@ -124,7 +124,7 @@ function NotificationIcon({ notification }: { notification: AppNotification }) {
     case 'billing':
       return <ReceiptText className="h-4 w-4 text-blue-600" aria-hidden="true" />;
     case 'communication':
-      return <MessageSquareText className="h-4 w-4 text-blue-600 dark:text-blue-400" aria-hidden="true" />;
+      return <MessageSquareText className="h-4 w-4 text-icon-accent" aria-hidden="true" />;
     case 'communication-failed':
       return <MessageSquareWarning className="h-4 w-4 text-destructive" aria-hidden="true" />;
     default:

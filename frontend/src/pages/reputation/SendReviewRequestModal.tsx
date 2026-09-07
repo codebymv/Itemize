@@ -656,7 +656,7 @@ export function SendReviewRequestModal({
                 type="submit"
                 disabled={loading}
                 aria-busy={loading}
-                className="bg-blue-600 interaction-button--primary text-white"
+                className="bg-primary interaction-button--primary text-primary-foreground"
               >
                 {loading ? 'Sending...' : mode === 'single' ? 'Send Request' : `Send ${bulkForm.selectedContactIds.length} Request${bulkForm.selectedContactIds.length !== 1 ? 's' : ''}`}
               </Button>

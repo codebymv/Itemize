@@ -296,7 +296,7 @@ export function ContactsPage() {
     return (
       <PageLayout
         title="CONTACTS"
-        icon={<Users className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+        icon={<Users className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
       >
         <OrganizationErrorState title="Unable to load contacts" icon={Users} />
       </PageLayout>
@@ -306,7 +306,7 @@ export function ContactsPage() {
   return (
     <PageLayout
       title="CONTACTS"
-      icon={<Users className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+      icon={<Users className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
       headerTools={{
         search: (
           <HeaderSearch

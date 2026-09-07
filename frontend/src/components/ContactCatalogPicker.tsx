@@ -134,7 +134,7 @@ export function ContactCatalogPicker({
                     onSelect={() => choose(contact)}
                     className="min-h-11 gap-3"
                   >
-                    <UserRound className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" aria-hidden="true" />
+                    <UserRound className="h-4 w-4 shrink-0 text-icon-accent" aria-hidden="true" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate">{contactCatalogLabel(contact)}</span>
                       <span className="block truncate text-xs text-muted-foreground">

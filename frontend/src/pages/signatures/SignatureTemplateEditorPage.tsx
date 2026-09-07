@@ -197,7 +197,7 @@ export default function SignatureTemplateEditorPage() {
   return (
     <PageLayout
       title="TEMPLATE"
-      icon={<FileSignature className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+      icon={<FileSignature className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
       leading={
         <ShellBackButton label="Back to templates" onClick={() => {
           if (confirmLeave()) navigate('/templates');

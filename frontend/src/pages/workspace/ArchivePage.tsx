@@ -22,6 +22,7 @@ import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
 import { compactAge } from '@/lib/referenceStatus';
 import { getArchivedWorkspaceContentViaGraphql, type ArchivableKind } from '@/services/workspaceArchiveGraphql';
 import { flattenArchived } from '@/lib/archivedContent';
+import { DEFAULT_CARD_ACCENT } from '@/lib/cardAccent';
 
 const TYPE_META: Record<ArchivableKind, { label: string; icon: LucideIcon }> = {
   list: { label: 'List', icon: CheckSquare },
@@ -51,7 +52,7 @@ export function ArchivePage() {
   return (
     <PageLayout
       title="ARCHIVE"
-      icon={<Archive className="h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />}
+      icon={<Archive className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
     >
       <Card>
         <CardContent className="p-0">
@@ -95,7 +96,7 @@ export function ArchivePage() {
                       <tr key={`${row.type}-${row.id}`} className="border-b">
                         <td className="p-3">
                           <div className="flex items-center gap-2">
-                            <Icon className="h-5 w-5" style={{ color: row.color || '#3B82F6' }} aria-hidden="true" />
+                            <Icon className="h-5 w-5" style={{ color: row.color || DEFAULT_CARD_ACCENT }} aria-hidden="true" />
                             <span className="text-xs text-muted-foreground hidden sm:inline">{meta.label}</span>
                           </div>
                         </td>

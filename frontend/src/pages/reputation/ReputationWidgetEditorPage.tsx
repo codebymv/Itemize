@@ -304,7 +304,7 @@ export function ReputationWidgetEditorPage() {
       <PageLayout
         title="REVIEW WIDGET"
         icon={
-          <LayoutGrid className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
+          <LayoutGrid className="h-5 w-5 shrink-0 text-icon-accent" />
         }
         leading={backButton}
       >
@@ -330,7 +330,7 @@ export function ReputationWidgetEditorPage() {
       <PageLayout
         title="REVIEW WIDGET"
         icon={
-          <LayoutGrid className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
+          <LayoutGrid className="h-5 w-5 shrink-0 text-icon-accent" />
         }
         leading={backButton}
         className="max-w-7xl"
@@ -347,7 +347,7 @@ export function ReputationWidgetEditorPage() {
     <PageLayout
       title="REVIEW WIDGET"
       icon={
-        <LayoutGrid className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
+        <LayoutGrid className="h-5 w-5 shrink-0 text-icon-accent" />
       }
       leading={backButton}
       className="max-w-7xl"
@@ -747,7 +747,7 @@ export function ReputationWidgetEditorPage() {
                         <Button
                           type="button"
                           onClick={() => void save()}
-                          className="h-11 bg-blue-600 text-white interaction-button--primary"
+                          className="h-11 bg-primary text-primary-foreground interaction-button--primary"
                         >
                           Save widget
                         </Button>

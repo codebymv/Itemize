@@ -8,7 +8,7 @@ import { UI_COLORS } from '@/constants/ui';
  * A frame sets the accent for its header, and pushes its colour onto the
  * cards inside it; each card then owns its own accent again.
  */
-export const DEFAULT_CARD_ACCENT = UI_COLORS.brandBlue;
+export const DEFAULT_CARD_ACCENT = UI_COLORS.defaultCardAccent;
 
 export interface CardAccent {
   /** The card's colour, always a #RRGGBB string. */

@@ -221,7 +221,7 @@ export function SendSignatureModal({
             <Button
               onClick={handleSend}
               disabled={!canSend}
-              className="bg-blue-600 interaction-button--primary text-white"
+              className="bg-primary interaction-button--primary text-primary-foreground"
             >
               <Send className="h-4 w-4 mr-2" />
               {sending ? 'Sending...' : 'Send Request'}

@@ -138,7 +138,7 @@ export function CalendarsPage() {
 
     if (initError) {
         return (
-            <PageLayout title="CALENDARS" icon={<CalendarDays className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}>
+            <PageLayout title="CALENDARS" icon={<CalendarDays className="h-5 w-5 shrink-0 text-icon-accent" />}>
                 <OrganizationErrorState title="Unable to load calendars" icon={CalendarDays} />
             </PageLayout>
         );
@@ -147,7 +147,7 @@ export function CalendarsPage() {
     return (
         <PageLayout
             title="CALENDARS"
-            icon={<CalendarDays className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
+            icon={<CalendarDays className="h-5 w-5 shrink-0 text-icon-accent" />}
             headerTools={{
                 search: <HeaderSearch label="Search calendars" placeholder="Search calendars..." value={searchQuery} onChange={setSearchQuery} width="wide" />,
                 primaryAction: <HeaderAction label="New calendar" icon={<Plus className="h-4 w-4" />} onClick={() => setShowCreateModal(true)} />,

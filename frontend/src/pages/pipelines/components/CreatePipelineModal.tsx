@@ -32,6 +32,7 @@ import {
 } from '@/lib/formSchemas';
 import { useSingleFlightAction } from '@/hooks/useSingleFlightAction';
 import { useStableMutationKey } from '@/hooks/useStableMutationKey';
+import { DEFAULT_CARD_ACCENT } from '@/lib/cardAccent';
 
 const getApiErrorMessage = (error: unknown, fallback: string): string => {
   const responseData = (error as { response?: { data?: { error?: string; message?: string } } })?.response?.data;
@@ -74,7 +75,7 @@ export function CreatePipelineModal({
       {
         id: crypto.randomUUID(),
         name: 'New stage',
-        color: '#3B82F6',
+        color: DEFAULT_CARD_ACCENT,
         order: form.getValues('stages').length,
       },
     ], { shouldDirty: true, shouldValidate: true });
@@ -306,7 +307,7 @@ export function CreatePipelineModal({
             <Button 
               type="submit" 
               disabled={loading}
-              className="bg-blue-600 interaction-button--primary text-white"
+              className="bg-primary interaction-button--primary text-primary-foreground"
               style={{ fontFamily: '"Raleway", sans-serif' }}
               aria-label={loading
                 ? `${isEditing ? 'Saving' : 'Creating'} pipeline...`

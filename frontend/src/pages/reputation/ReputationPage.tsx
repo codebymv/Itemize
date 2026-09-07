@@ -115,7 +115,7 @@ export function ReputationPage() {
 
   if (initError) {
     return (
-      <PageLayout title="REVIEWS" icon={<Star className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}>
+      <PageLayout title="REVIEWS" icon={<Star className="h-5 w-5 shrink-0 text-icon-accent" />}>
         <OrganizationErrorState title="Unable to load reviews" icon={Star} />
       </PageLayout>
     );
@@ -129,7 +129,7 @@ export function ReputationPage() {
   return (
     <PageLayout
       title="REVIEWS"
-      icon={<Star className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
+      icon={<Star className="h-5 w-5 shrink-0 text-icon-accent" />}
       headerTools={{
         search: <HeaderSearch value={searchQuery} onChange={setSearchQuery} label="Search reviews" placeholder="Search reviews..." />,
         filters: <HeaderFilters label="Review filters" activeCount={ratingFilter === 'all' ? 0 : 1} preferExpanded>{ratingSelect()}</HeaderFilters>,

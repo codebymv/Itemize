@@ -131,7 +131,7 @@ export function EmailTemplateBrowserDialog<T extends EmailTemplateBrowserItem>({
       )}>
         <DialogHeader className="shrink-0 border-b px-4 py-3 sm:px-5">
           <div className="flex min-w-0 items-center gap-3">
-            <FileText className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
+            <FileText className="h-5 w-5 shrink-0 text-icon-accent" />
             <div className="min-w-0">
               <DialogTitle className="truncate text-base sm:text-lg">{title}</DialogTitle>
               <DialogDescription className="truncate text-left text-xs sm:text-sm">{description}</DialogDescription>
@@ -201,7 +201,7 @@ export function EmailTemplateBrowserDialog<T extends EmailTemplateBrowserItem>({
                     return (
                       <div key={item.id} className={cn('group flex min-w-0 items-center gap-2 interaction-row', isSelected && 'bg-blue-500/5')}>
                         <button type="button" className="flex min-w-0 flex-1 items-center gap-3 px-3 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring" onClick={() => choose(item)}>
-                          <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400', isSelected && 'bg-blue-600 text-white dark:text-white')}>
+                          <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-500/15 text-icon-accent', isSelected && 'bg-blue-600 text-white dark:text-white')}>
                             {isSelected ? <Check className="h-4 w-4" /> : <Mail className="h-4 w-4" />}
                           </span>
                           <span className="min-w-0 flex-1">
@@ -240,7 +240,7 @@ export function EmailTemplateBrowserDialog<T extends EmailTemplateBrowserItem>({
                   <p className="truncate text-sm font-medium">{previewItem.name}</p>
                   <p className="truncate text-xs text-muted-foreground">{previewItem.subject}</p>
                 </div>
-                <Button type="button" size="sm" className="bg-blue-600 text-white interaction-button--primary" onClick={() => choose(previewItem)}>Use template</Button>
+                <Button type="button" size="sm" className="bg-primary text-primary-foreground interaction-button--primary" onClick={() => choose(previewItem)}>Use template</Button>
               </div>
               <div className="min-h-0 flex-1 overflow-hidden p-3 sm:p-4">{renderPreview(previewItem)}</div>
             </section>

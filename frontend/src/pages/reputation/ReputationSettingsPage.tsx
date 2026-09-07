@@ -163,7 +163,7 @@ export function ReputationSettingsPage() {
 
   if (initError || loadError) {
     return (
-      <PageLayout title="CONFIGURATION" icon={<Settings2 className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}>
+      <PageLayout title="CONFIGURATION" icon={<Settings2 className="h-5 w-5 shrink-0 text-icon-accent" />}>
         {initError ? (
           <OrganizationErrorState title="Unable to load reputation settings" icon={Settings2} />
         ) : (
@@ -174,13 +174,13 @@ export function ReputationSettingsPage() {
   }
 
   if (loading || !settings) {
-    return <PageLayout title="CONFIGURATION" icon={<Settings2 className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}><Skeleton className="h-[34rem]" /></PageLayout>;
+    return <PageLayout title="CONFIGURATION" icon={<Settings2 className="h-5 w-5 shrink-0 text-icon-accent" />}><Skeleton className="h-[34rem]" /></PageLayout>;
   }
 
   return (
     <PageLayout
       title="CONFIGURATION"
-      icon={<Settings2 className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
+      icon={<Settings2 className="h-5 w-5 shrink-0 text-icon-accent" />}
       className={mode === 'platforms' && platforms.length === 0 ? undefined : 'max-w-5xl'}
       headerTools={{
         modeNavigation: <HeaderModeNavigation label="Reputation settings mode" value={mode} onValueChange={value => setMode(value as SettingsMode)} items={[...MODES]} />,

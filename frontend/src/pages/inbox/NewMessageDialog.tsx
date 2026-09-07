@@ -134,7 +134,7 @@ export function NewMessageDialog({
       <DialogContent className="flex max-h-[90dvh] w-[calc(100vw-2rem)] max-w-xl flex-col overflow-hidden p-0">
         <DialogHeader className="border-b px-6 py-5 pr-12">
           <DialogTitle className="flex items-center gap-2">
-            <MessageSquareText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <MessageSquareText className="h-5 w-5 text-icon-accent" />
             New message
           </DialogTitle>
           <DialogDescription className="sr-only">
@@ -200,7 +200,7 @@ export function NewMessageDialog({
 
         <DialogFooter className="border-t px-6 py-4">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={sending}>Cancel</Button>
-          <Button type="button" onClick={() => void handleSend()} disabled={!canSend || sending} aria-busy={sending} className="bg-blue-600 text-white interaction-button--primary">
+          <Button type="button" onClick={() => void handleSend()} disabled={!canSend || sending} aria-busy={sending} className="bg-primary text-primary-foreground interaction-button--primary">
             {sending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
             Send
           </Button>

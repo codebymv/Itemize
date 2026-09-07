@@ -123,12 +123,12 @@ export function SegmentsPage() {
   const hasQuery = Boolean(searchQuery.trim()) || statusFilter !== 'all';
   const clearQuery = () => { setSearchQuery(''); setStatusFilter('all'); };
 
-  if (initError) return <PageLayout title="SEGMENTS" icon={<Filter className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}><OrganizationErrorState title="Unable to load segments" icon={Filter} /></PageLayout>;
+  if (initError) return <PageLayout title="SEGMENTS" icon={<Filter className="h-5 w-5 shrink-0 text-icon-accent" />}><OrganizationErrorState title="Unable to load segments" icon={Filter} /></PageLayout>;
 
   return (
     <PageLayout
       title="SEGMENTS"
-      icon={<Filter className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
+      icon={<Filter className="h-5 w-5 shrink-0 text-icon-accent" />}
       headerTools={{
         search: <HeaderSearch label="Search segments" placeholder="Search segments..." value={searchQuery} onChange={setSearchQuery} width="wide" />,
         filters: <HeaderFilters label="Filter segments by status" activeCount={Number(statusFilter !== 'all')} compactChildren={statusSelect(true)} preferExpanded="when-roomy">{statusSelect()}</HeaderFilters>,

@@ -257,7 +257,7 @@ export function CreateDealModal({
               <Button
                 type="submit"
                 disabled={loading}
-                className="bg-blue-600 interaction-button--primary text-white"
+                className="bg-primary interaction-button--primary text-primary-foreground"
                 style={{ fontFamily: '"Raleway", sans-serif' }}
                 aria-label={loading ? 'Creating deal...' : 'Create deal'}
                 aria-busy={loading || undefined}

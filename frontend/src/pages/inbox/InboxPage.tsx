@@ -318,19 +318,19 @@ export function InboxPage() {
             case 'email':
                 return {
                     label: 'Email',
-                    color: 'text-blue-600 dark:text-blue-400',
+                    color: 'text-icon-accent',
                     bgColor: 'bg-blue-100 dark:bg-blue-900',
                 };
             case 'chat':
                 return {
                     label: 'Website chat',
-                    color: 'text-blue-600 dark:text-blue-400',
+                    color: 'text-icon-accent',
                     bgColor: 'bg-blue-100 dark:bg-blue-950',
                 };
             case 'facebook':
                 return {
                     label: 'Messenger',
-                    color: 'text-blue-600 dark:text-blue-400',
+                    color: 'text-icon-accent',
                     bgColor: 'bg-blue-100 dark:bg-blue-950',
                 };
             case 'instagram':
@@ -404,7 +404,7 @@ export function InboxPage() {
     return (
         <PageLayout
             title="INBOX"
-            icon={<MessageSquare className="h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />}
+            icon={<MessageSquare className="h-5 w-5 shrink-0 text-icon-accent" />}
             frame="split"
             className="h-[calc(100dvh-12.25rem)] md:h-[calc(100dvh-57px)]"
             headerTools={{
@@ -755,7 +755,7 @@ export function InboxPage() {
                                             onClick={handleSendMessage}
                                             disabled={sendingMessage || !newMessage.trim()}
                                             aria-busy={sendingMessage}
-                                            className="bg-blue-600 interaction-button--primary"
+                                            className="bg-primary interaction-button--primary"
                                         >
                                             Send
                                         </Button>

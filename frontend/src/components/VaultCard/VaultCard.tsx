@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { CardAccentProvider, contrastTextFor } from '@/lib/cardAccent';
+import { CardAccentProvider, contrastTextFor, DEFAULT_CARD_ACCENT } from '@/lib/cardAccent';
 import { CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Collapsible,
@@ -107,14 +107,14 @@ export const VaultCard: React.FC<VaultCardProps> = ({
   const categoryColor = existingCategories.find(
     (c) => c.name === vault.category,
   )?.color_value;
-  const vaultDisplayColor = vault.color_value || categoryColor || "#3B82F6"; // Default to blue
+  const vaultDisplayColor = vault.color_value || categoryColor || DEFAULT_CARD_ACCENT; // Default to blue
 
   // State for delete confirmation modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // Color preview state
   const [currentColorPreview, setCurrentColorPreview] = useState(
-    vault.color_value || "#3B82F6",
+    vault.color_value || DEFAULT_CARD_ACCENT,
   );
 
   // Get theme for styling
@@ -122,7 +122,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
 
   // Sync color preview when vault color changes
   useEffect(() => {
-    setCurrentColorPreview(vault.color_value || "#3B82F6");
+    setCurrentColorPreview(vault.color_value || DEFAULT_CARD_ACCENT);
   }, [vault.color_value]);
 
   const {
@@ -656,7 +656,7 @@ export const VaultCard: React.FC<VaultCardProps> = ({
                     <Button
                       size="sm"
                       onClick={handleAddItem}
-                      className="bg-blue-600 interaction-button--primary text-white"
+                      className="bg-primary interaction-button--primary text-primary-foreground"
                       disabled={bulkImportPending}
                     >
                       Add
