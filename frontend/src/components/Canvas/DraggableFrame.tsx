@@ -32,6 +32,8 @@ export interface DraggableFrameProps {
   onArchive?: (frameId: number) => void;
   /** Open the title for editing on mount (a frame that was just created). */
   autoEditTitle?: boolean;
+  /** The DOM nodes of the cards inside this frame, so a drag moves them live. */
+  resolveContained?: (frame: WorkspaceFrame) => HTMLElement[];
 }
 
 /**
@@ -47,6 +49,7 @@ export const DraggableFrame: React.FC<DraggableFrameProps> = ({
   onDelete,
   onArchive,
   autoEditTitle = false,
+  resolveContained,
 }) => {
   const frameRef = useRef<HTMLDivElement>(null);
   const transformRef = useRef(canvasTransform);
@@ -55,6 +58,9 @@ export const DraggableFrame: React.FC<DraggableFrameProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  // Cards inside the frame at drag start, with where they were; they follow the frame's delta.
+  const carriedRef = useRef<Array<{ element: HTMLElement; left: number; top: number }>>([]);
+  const dragOriginRef = useRef({ x: 0, y: 0 });
   const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [isEditingTitle, setIsEditingTitle] = useState(autoEditTitle);
   const [titleDraft, setTitleDraft] = useState(frame.title);
@@ -105,10 +111,15 @@ export const DraggableFrame: React.FC<DraggableFrameProps> = ({
     if (!point || !element) return;
     event.preventDefault();
     event.stopPropagation();
-    setDragOffset({
-      x: point.x - (parseFloat(element.style.left) || 0),
-      y: point.y - (parseFloat(element.style.top) || 0),
-    });
+    const left = parseFloat(element.style.left) || 0;
+    const top = parseFloat(element.style.top) || 0;
+    setDragOffset({ x: point.x - left, y: point.y - top });
+    dragOriginRef.current = { x: left, y: top };
+    carriedRef.current = (resolveContained?.(frame) ?? []).map((node) => ({
+      element: node,
+      left: parseFloat(node.style.left) || 0,
+      top: parseFloat(node.style.top) || 0,
+    }));
     setIsDragging(true);
   };
 
@@ -135,8 +146,16 @@ export const DraggableFrame: React.FC<DraggableFrameProps> = ({
       if (isDragging) {
         const point = canvasPoint(event);
         if (!point) return;
-        element.style.left = `${point.x - dragOffset.x}px`;
-        element.style.top = `${point.y - dragOffset.y}px`;
+        const nextLeft = point.x - dragOffset.x;
+        const nextTop = point.y - dragOffset.y;
+        element.style.left = `${nextLeft}px`;
+        element.style.top = `${nextTop}px`;
+        const dx = nextLeft - dragOriginRef.current.x;
+        const dy = nextTop - dragOriginRef.current.y;
+        for (const carried of carriedRef.current) {
+          carried.element.style.left = `${carried.left + dx}px`;
+          carried.element.style.top = `${carried.top + dy}px`;
+        }
       } else if (isResizing) {
         const scale = transformRef.current.scale;
         const width = Math.min(MAX_FRAME_SIZE, Math.max(MIN_FRAME_SIZE, resizeStart.width + (event.clientX - resizeStart.x) / scale));
@@ -153,6 +172,7 @@ export const DraggableFrame: React.FC<DraggableFrameProps> = ({
       };
       if (isDragging) {
         setIsDragging(false);
+        carriedRef.current = [];
         if (position.x !== frame.position_x || position.y !== frame.position_y) {
           onMove?.(frame.id, position);
         }
@@ -175,7 +195,7 @@ export const DraggableFrame: React.FC<DraggableFrameProps> = ({
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, isResizing, dragOffset, resizeStart, frame, onMove]);
+  }, [isDragging, isResizing, dragOffset, resizeStart, frame, onMove, resolveContained]);
 
   const commitTitle = async () => {
     const next = titleDraft.trim();

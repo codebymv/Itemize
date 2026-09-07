@@ -123,6 +123,7 @@ const CanvasPage: React.FC = () => {
     updateFrame,
     deleteFrame,
     moveFrame,
+    inheritFrameContact,
     editingFrameId,
   } = useCanvasFrames({
     frames,
@@ -130,7 +131,35 @@ const CanvasPage: React.FC = () => {
     cards: { lists, notes, whiteboards, wireframes, vaults },
     setters: { setLists, setNotes, setWhiteboards, setWireframes, setVaults },
     enqueuePositionUpdate,
+    contactUpdaters: {
+      list: (list, binding) => updateList({ ...list, ...binding }),
+      note: (noteId, binding) => handleUpdateNote(noteId, binding),
+      whiteboard: (whiteboardId, binding) => handleUpdateWhiteboard(whiteboardId, binding),
+      wireframe: (wireframeId, binding) => handleUpdateWireframe(wireframeId, binding),
+    },
   });
+
+  // A card dropped into a bound frame takes the frame's client if it has none.
+  const listPositionWithInheritance: typeof handleListPositionUpdate = (listId, position, size) => {
+    handleListPositionUpdate(listId, position, size);
+    const list = lists.find((entry) => entry.id === listId);
+    if (list) inheritFrameContact('list', list, position);
+  };
+  const notePositionWithInheritance: typeof handleNotePositionUpdate = (noteId, position, size) => {
+    handleNotePositionUpdate(noteId, position, size);
+    const note = notes.find((entry) => entry.id === noteId);
+    if (note) inheritFrameContact('note', note, position);
+  };
+  const whiteboardPositionWithInheritance: typeof handleWhiteboardPositionUpdate = (whiteboardId, position) => {
+    handleWhiteboardPositionUpdate(whiteboardId, position);
+    const whiteboard = whiteboards.find((entry) => entry.id === whiteboardId);
+    if (whiteboard) inheritFrameContact('whiteboard', whiteboard, position);
+  };
+  const wireframePositionWithInheritance: typeof handleWireframePositionChange = (wireframeId, position) => {
+    handleWireframePositionChange(wireframeId, position);
+    const wireframe = wireframes.find((entry) => entry.id === wireframeId);
+    if (wireframe) inheritFrameContact('wireframe', wireframe, position);
+  };
   const updateWireframe = useCallback(
     (updated: Wireframe) => {
       setWireframes((prev) =>
@@ -663,16 +692,16 @@ const CanvasPage: React.FC = () => {
     const { position } = placed;
     switch (card.type) {
       case "list":
-        handleListPositionUpdate(Number(card.id), position);
+        listPositionWithInheritance(Number(card.id), position);
         break;
       case "note":
-        handleNotePositionUpdate(Number(card.id), position);
+        notePositionWithInheritance(Number(card.id), position);
         break;
       case "whiteboard":
-        handleWhiteboardPositionUpdate(Number(card.id), position);
+        whiteboardPositionWithInheritance(Number(card.id), position);
         break;
       case "wireframe":
-        handleWireframePositionChange(Number(card.id), position);
+        wireframePositionWithInheritance(Number(card.id), position);
         break;
       case "vault":
         handleVaultPositionChange(Number(card.id), position);
@@ -915,15 +944,15 @@ const CanvasPage: React.FC = () => {
               vaults={filteredData.filteredVaults}
               existingCategories={dbCategories}
               onListUpdate={updateList}
-              onListPositionUpdate={handleListPositionUpdate}
+              onListPositionUpdate={listPositionWithInheritance}
               onListDelete={deleteList}
               onListShare={handleShareList}
               onNoteUpdate={handleUpdateNote}
-              onNotePositionUpdate={handleNotePositionUpdate}
+              onNotePositionUpdate={notePositionWithInheritance}
               onNoteDelete={handleDeleteNote}
               onNoteShare={handleShareNote}
               onWhiteboardUpdate={handleUpdateWhiteboard}
-              onWhiteboardPositionUpdate={handleWhiteboardPositionUpdate}
+              onWhiteboardPositionUpdate={whiteboardPositionWithInheritance}
               onWhiteboardDelete={handleDeleteWhiteboard}
               onWhiteboardShare={handleShareWhiteboard}
               onWireframeUpdate={handleUpdateWireframe}
@@ -946,7 +975,7 @@ const CanvasPage: React.FC = () => {
                   setShowShareModal(true);
                 }
               }}
-              onWireframePositionUpdate={handleWireframePositionChange}
+              onWireframePositionUpdate={wireframePositionWithInheritance}
               onVaultUpdate={handleUpdateVault}
               onVaultDelete={handleDeleteVault}
               onVaultShare={(vaultId) => {

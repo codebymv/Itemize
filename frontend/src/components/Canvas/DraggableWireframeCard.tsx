@@ -233,6 +233,7 @@ export const DraggableWireframeCard: React.FC<DraggableWireframeCardProps> = ({
     <div 
       ref={wireframeRef}
       onMouseDown={handleMouseDown}
+      data-canvas-card={`wireframe:${wireframe.id}`}
       className="draggable-wireframe-card shadow-lg rounded-lg flex flex-col overflow-hidden border relative"
       style={{
         position: 'absolute',

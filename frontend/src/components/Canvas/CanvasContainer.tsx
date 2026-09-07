@@ -5,6 +5,7 @@ import { ContextMenu } from './ContextMenu';
 import { useSidebar } from '../ui/sidebar';
 import { List, Note, Whiteboard, Wireframe, Vault, Category, WorkspaceFrame } from '../../types';
 import { DraggableFrame } from './DraggableFrame';
+import { cardsInFrame } from '@/lib/frameContainment';
 import { useAuthState } from '../../contexts/AuthContext';
 import { storage } from '../../lib/storage';
 import { stripMentionTokens } from '@/lib/mentionTokens';
@@ -588,6 +589,22 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
     }
   };
 
+  // The cards a frame carries while it is dragged: geometry decides, the DOM tag finds them.
+  const resolveContainedCards = (frame: WorkspaceFrame): HTMLElement[] => {
+    const tagged = [
+      ...lists.map((item) => ({ ...item, tag: `list:${item.id}` })),
+      ...notes.map((item) => ({ ...item, tag: `note:${item.id}` })),
+      ...whiteboards.map((item) => ({ ...item, tag: `whiteboard:${item.id}` })),
+      ...wireframes.map((item) => ({ ...item, tag: `wireframe:${item.id}` })),
+      ...vaults.map((item) => ({ ...item, tag: `vault:${item.id}` })),
+    ];
+    const root = canvasContentRef.current;
+    if (!root) return [];
+    return cardsInFrame(frame, tagged)
+      .map((item) => root.querySelector<HTMLElement>(`[data-canvas-card="${item.tag}"]`))
+      .filter((node): node is HTMLElement => node !== null);
+  };
+
   const handleAddFrame = () => {
     setShowContextMenu(false);
     onOpenNewFrame?.(menuPosition);
@@ -809,6 +826,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
                 onUpdate={onFrameUpdate}
                 onDelete={onFrameDelete}
                 onArchive={onFrameArchive}
+                resolveContained={resolveContainedCards}
                 autoEditTitle={editingFrameId === frame.id}
               />
             ))}

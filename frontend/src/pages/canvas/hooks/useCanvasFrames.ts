@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { cardsInFrame, shiftedPosition } from '@/lib/frameContainment';
+import { cardsInFrame, frameForCard, shiftedPosition } from '@/lib/frameContainment';
 import logger from '@/lib/logger';
 import type { CanvasPositionUpdate } from '@/services/api';
 import {
@@ -29,12 +29,26 @@ interface CanvasCardSetters {
   setVaults: Dispatch<SetStateAction<Vault[]>>;
 }
 
+export interface FrameContactBinding {
+  contact_id: number | null;
+  contact_name: string | null;
+}
+
+/** How the page writes a client binding onto each card type (vaults have none). */
+export interface CardContactUpdaters {
+  list: (list: List, binding: FrameContactBinding) => unknown;
+  note: (noteId: number, binding: FrameContactBinding) => unknown;
+  whiteboard: (whiteboardId: number, binding: FrameContactBinding) => unknown;
+  wireframe: (wireframeId: number, binding: FrameContactBinding) => unknown;
+}
+
 interface UseCanvasFramesOptions {
   frames: WorkspaceFrame[];
   setFrames: Dispatch<SetStateAction<WorkspaceFrame[]>>;
   cards: CanvasCards;
   setters: CanvasCardSetters;
   enqueuePositionUpdate: (update: CanvasPositionUpdate) => void;
+  contactUpdaters?: CardContactUpdaters;
 }
 
 const DEFAULT_FRAME_SIZE = { width: 1400, height: 900 };
@@ -50,6 +64,7 @@ export function useCanvasFrames({
   cards,
   setters,
   enqueuePositionUpdate,
+  contactUpdaters,
 }: UseCanvasFramesOptions) {
   const { toast } = useToast();
   // The frame that was just created opens with its title editable, once.
@@ -82,6 +97,53 @@ export function useCanvasFrames({
     }
   }, [setFrames, toast]);
 
+  /**
+   * A frame's client is the client of everything inside it: binding writes the
+   * badge onto every contained card; unlinking clears only the cards that
+   * carried that same client, so a card's own different binding survives.
+   */
+  const propagateContact = useCallback((frame: WorkspaceFrame, binding: FrameContactBinding) => {
+    if (!contactUpdaters) return;
+    const shouldChange = (card: { contact_id?: number | null }) =>
+      binding.contact_id !== null
+        ? card.contact_id !== binding.contact_id
+        : card.contact_id !== null && card.contact_id !== undefined && card.contact_id === frame.contact_id;
+    for (const list of cardsInFrame(frame, cards.lists)) {
+      if (shouldChange(list)) void contactUpdaters.list(list, binding);
+    }
+    for (const note of cardsInFrame(frame, cards.notes)) {
+      if (shouldChange(note)) void contactUpdaters.note(note.id, binding);
+    }
+    for (const whiteboard of cardsInFrame(frame, cards.whiteboards)) {
+      if (shouldChange(whiteboard)) void contactUpdaters.whiteboard(whiteboard.id, binding);
+    }
+    for (const wireframe of cardsInFrame(frame, cards.wireframes)) {
+      if (shouldChange(wireframe)) void contactUpdaters.wireframe(wireframe.id, binding);
+    }
+  }, [cards, contactUpdaters]);
+
+  /**
+   * A card that lands in a bound frame without a client of its own takes the
+   * frame's. Called with the card's new position after a drop or a `#` move.
+   */
+  const inheritFrameContact = useCallback((
+    type: 'list' | 'note' | 'whiteboard' | 'wireframe',
+    card: { id: number; contact_id?: number | null; width?: number | null; height?: number | null; canvas_width?: number | null; canvas_height?: number | null },
+    position: { x: number; y: number },
+  ) => {
+    if (!contactUpdaters) return;
+    if (card.contact_id !== null && card.contact_id !== undefined) return;
+    const frame = frameForCard(frames, { ...card, position_x: position.x, position_y: position.y });
+    if (!frame || frame.contact_id === null) return;
+    const binding = { contact_id: frame.contact_id, contact_name: frame.contact_name };
+    if (type === 'list') {
+      const list = cards.lists.find((entry) => entry.id === card.id);
+      if (list) void contactUpdaters.list(list, binding);
+      return;
+    }
+    void contactUpdaters[type](card.id, binding);
+  }, [cards.lists, contactUpdaters, frames]);
+
   const updateFrame = useCallback(async (
     frameId: number,
     updatedData: Partial<Pick<WorkspaceFrame, 'title' | 'color_value' | 'contact_id' | 'contact_name'>>,
@@ -98,6 +160,9 @@ export function useCanvasFrames({
       };
       const saved = await updateWorkspaceFrameViaGraphql(frameId, payload);
       setFrames((current) => current.map((frame) => (frame.id === frameId ? saved : frame)));
+      if (updatedData.contact_id !== undefined && previous) {
+        propagateContact(previous, { contact_id: saved.contact_id, contact_name: saved.contact_name });
+      }
       return saved;
     } catch (error) {
       logger.error('Failed to update frame:', error);
@@ -109,7 +174,7 @@ export function useCanvasFrames({
       });
       throw error;
     }
-  }, [editingFrameId, frames, setFrames, toast]);
+  }, [editingFrameId, frames, propagateContact, setFrames, toast]);
 
   const deleteFrame = useCallback(async (frameId: number) => {
     try {
@@ -173,5 +238,5 @@ export function useCanvasFrames({
     move('vault', cards.vaults, setters.setVaults);
   }, [cards, enqueuePositionUpdate, frames, setFrames, setters]);
 
-  return { createFrameAt, updateFrame, deleteFrame, moveFrame, editingFrameId };
+  return { createFrameAt, updateFrame, deleteFrame, moveFrame, inheritFrameContact, editingFrameId };
 }

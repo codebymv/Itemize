@@ -12,7 +12,7 @@ A frame is a named rectangle on the canvas. Cards inside it belong to it; drag t
 | Nesting | None. Frames never contain frames. | One level keeps "which frame am I in" unambiguous. |
 | Moving a frame | Moves the frame and every contained card in **one** `batchCanvasPositions` call (type `frame` joins the batch). | One replay boundary, one round trip. |
 | Frame binding | `contact_id` on `workspace_frames`, validated against `organization_members` inside the write, same concealment as cards (`CONTACT_NOT_FOUND`). | Same contract as slice 1. |
-| Cards inherit the binding? | No. A bound frame shows the client; cards keep their own `contact_id`. | Inheritance would silently write bindings the user never made. |
+| Cards inherit the binding? | **Yes.** Binding a frame writes the client onto every card inside it; unlinking clears only the cards that carried that same client; a card that enters a bound frame (drop or `#`) with no client takes the frame's. Each write goes through the card's own mutation, so the membership check still runs per card. | The frame is the engagement; a card inside it is that client's work. Decided 2026-09-06 after the first hand-drag. |
 | Sharing | Not in this slice. | A frame share must snapshot ZK vaults per vault (`crypto_version >= 2`) — designed separately. |
 | Realtime | None. | Frames have no shared projection yet; positions hydrate on read. |
 | Mobile / Contents | Canvas only. | Contents has no geometry; frames are geometry. |
@@ -34,7 +34,7 @@ A frame is a named rectangle on the canvas. Cards inside it belong to it; drag t
 
 ## Canvas
 
-- `DraggableFrame`: absolute region **behind** the cards (frame `z_index` 0; cards start at 1) with a header strip — title (click to rename), client chip, colour, menu (Rename, Colour, Delete). Drag by the header moves frame + contained cards; resize from the corner. The body is pan-through (`data-canvas-pan`), so dragging empty frame space still pans the canvas.
+- `DraggableFrame`: absolute region **behind** the cards (frame `z_index` 0; cards start at 1) with a header strip — title (click to rename), client chip, colour, menu (Rename, Colour, Archive, Delete). Drag by the header moves frame + contained cards **live** (each card root carries `data-canvas-card="type:id"`; the frame resolves the contained nodes at drag start and shifts them by its delta on every mouse move; the drop commits one position batch); resize from the corner. The body is pan-through (`data-canvas-pan`), so dragging empty frame space still pans the canvas.
 - Containment is computed on the client from geometry (`lib/frameContainment.ts`), never stored.
 - `#` (next slice): move the current card into a frame's first open slot.
 

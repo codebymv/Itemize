@@ -203,6 +203,7 @@ export const DraggableVaultCard: React.FC<DraggableVaultCardProps> = ({
     <div 
       ref={cardRef}
       onMouseDown={handleMouseDown}
+      data-canvas-card={`vault:${vault.id}`}
       className="draggable-vault-card shadow-lg rounded-lg flex flex-col overflow-hidden border relative"
       style={{
         position: 'absolute',

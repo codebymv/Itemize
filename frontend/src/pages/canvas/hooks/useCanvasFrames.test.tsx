@@ -41,7 +41,7 @@ const note: Note = {
   created_at: '2026-09-06T00:00:00.000Z', updated_at: '2026-09-06T00:00:00.000Z',
 };
 
-const setup = () => {
+const setup = (overrides: { frames?: WorkspaceFrame[]; lists?: List[]; notes?: Note[] } = {}) => {
   const setFrames = vi.fn();
   const setters = {
     setLists: vi.fn(),
@@ -51,14 +51,22 @@ const setup = () => {
     setVaults: vi.fn(),
   };
   const enqueuePositionUpdate = vi.fn();
+  const contactUpdaters = { list: vi.fn(), note: vi.fn(), whiteboard: vi.fn(), wireframe: vi.fn() };
   const hook = renderHook(() => useCanvasFrames({
-    frames: [frame],
+    frames: overrides.frames ?? [frame],
     setFrames,
-    cards: { lists: [inside, outside], notes: [note], whiteboards: [], wireframes: [], vaults: [] },
+    cards: {
+      lists: overrides.lists ?? [inside, outside],
+      notes: overrides.notes ?? [note],
+      whiteboards: [],
+      wireframes: [],
+      vaults: [],
+    },
     setters,
     enqueuePositionUpdate,
+    contactUpdaters,
   }));
-  return { hook, setFrames, setters, enqueuePositionUpdate };
+  return { hook, setFrames, setters, enqueuePositionUpdate, contactUpdaters };
 };
 
 describe('useCanvasFrames', () => {
@@ -150,5 +158,45 @@ describe('useCanvasFrames', () => {
     const next = (setFrames.mock.calls[0][0] as (frames: WorkspaceFrame[]) => WorkspaceFrame[])([frame]);
     expect(next).toEqual([]);
     expect(setters.setLists).not.toHaveBeenCalled();
+  });
+  it('binding a frame writes the client onto every card inside it', async () => {
+    const saved = { ...frame, contact_id: 3, contact_name: 'Casey Sanchez', updated_at: '2026-09-06T00:01:00.000Z' };
+    framesApi.updateWorkspaceFrameViaGraphql.mockResolvedValue(saved);
+    const { hook, contactUpdaters } = setup();
+    await act(async () => {
+      await hook.result.current.updateFrame(1, { contact_id: 3, contact_name: 'Casey Sanchez' });
+    });
+    const binding = { contact_id: 3, contact_name: 'Casey Sanchez' };
+    expect(contactUpdaters.list).toHaveBeenCalledTimes(1);
+    expect(contactUpdaters.list).toHaveBeenCalledWith(inside, binding);
+    expect(contactUpdaters.note).toHaveBeenCalledWith(9, binding);
+    expect(contactUpdaters.list).not.toHaveBeenCalledWith(outside, expect.anything());
+  });
+
+  it('unlinking a frame clears only the cards that shared its client', async () => {
+    const bound = { ...frame, contact_id: 3, contact_name: 'Casey Sanchez' };
+    const saved = { ...bound, contact_id: null, contact_name: null, updated_at: '2026-09-06T00:02:00.000Z' };
+    framesApi.updateWorkspaceFrameViaGraphql.mockResolvedValue(saved);
+    const shared: List = { ...inside, id: 51, contact_id: 3 };
+    const own: List = { ...inside, id: 52, position_x: 1500, contact_id: 8 };
+    const { hook, contactUpdaters } = setup({ frames: [bound], lists: [shared, own], notes: [] });
+    await act(async () => {
+      await hook.result.current.updateFrame(1, { contact_id: null, contact_name: null });
+    });
+    expect(contactUpdaters.list).toHaveBeenCalledTimes(1);
+    expect(contactUpdaters.list).toHaveBeenCalledWith(shared, { contact_id: null, contact_name: null });
+  });
+
+  it('a card entering a bound frame without a client takes the frame\'s; bound cards keep theirs', () => {
+    const bound = { ...frame, contact_id: 3, contact_name: 'Casey Sanchez' };
+    const { hook, contactUpdaters } = setup({ frames: [bound] });
+    hook.result.current.inheritFrameContact('list', outside, { x: 1100, y: 1200 });
+    expect(contactUpdaters.list).toHaveBeenCalledWith(outside, { contact_id: 3, contact_name: 'Casey Sanchez' });
+
+    hook.result.current.inheritFrameContact('note', { ...note, contact_id: 8 }, { x: 1100, y: 1200 });
+    expect(contactUpdaters.note).not.toHaveBeenCalled();
+
+    hook.result.current.inheritFrameContact('note', note, { x: 5000, y: 5000 });
+    expect(contactUpdaters.note).not.toHaveBeenCalled();
   });
 });

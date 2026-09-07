@@ -190,6 +190,7 @@ export const DraggableListCard: React.FC<DraggableListCardProps> = ({
     <div 
       ref={listRef}
       onMouseDown={handleMouseDown}
+      data-canvas-card={`list:${list.id}`}
       className="draggable-list-card shadow-lg rounded-lg flex flex-col overflow-hidden border relative"
       style={{
         position: 'absolute',
