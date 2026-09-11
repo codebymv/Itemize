@@ -22,6 +22,7 @@ const MIME = {
   '.html': 'text/html; charset=utf-8',
   '.ico': 'image/x-icon',
   '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
   '.json': 'application/json',
   '.map': 'application/json',
   '.png': 'image/png',

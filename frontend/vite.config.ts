@@ -46,6 +46,8 @@ export default defineConfig(({ mode }) => ({
   ].filter(Boolean),
 
   resolve: {
+    // React-PDF and its worker must use our same pinned pdfjs-dist version.
+    dedupe: ['pdfjs-dist'],
     alias: {
       '@': path.resolve(__dirname, './src')
     }
