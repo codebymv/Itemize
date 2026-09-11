@@ -68,7 +68,7 @@
     "@tiptap/starter-kit": "^2.23.0",
     "@tiptap/suggestion": "^2.23.0",
     "@types/dompurify": "^3.0.5",
-    "@types/lodash": "^4.17.19",
+    "@types/lodash": "^4.17.25",
     "@types/markdown-it": "^14.1.2",
     "@xyflow/react": "^12.10.0",
     "axios": "^1.10.0",
