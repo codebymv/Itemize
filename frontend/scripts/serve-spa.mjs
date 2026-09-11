@@ -4,16 +4,18 @@
  * `npx serve -s` was serving HTML for stale Vite chunks (MIME text/html).
  */
 import { createReadStream } from 'node:fs';
-import { stat } from 'node:fs/promises';
+import { stat, readFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { createBrotliCompress, createGzip } from 'node:zlib';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { securityHeaders } from './security-headers.mjs';
 
 const dist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../dist');
 const port = Number(process.env.PORT) || 3000;
 const HTML_CACHE = 'no-cache, no-store, must-revalidate';
 const ASSET_CACHE = 'public, max-age=31536000, immutable';
+const responseSecurityHeaders = securityHeaders(await readFile(path.join(dist, 'index.html'), 'utf8'));
 
 const MIME = {
   '.css': 'text/css; charset=utf-8',
@@ -66,9 +68,16 @@ async function sendFile(req, res, filePath, cacheControl) {
 }
 
 const server = createServer(async (req, res) => {
+  for (const [name, value] of Object.entries(responseSecurityHeaders)) res.setHeader(name, value);
   const urlPath = req.url || '/';
   const pathname = urlPath === '/' ? '/index.html' : urlPath.split('?')[0];
-  const filePath = resolveSafe(pathname);
+  let filePath;
+  try {
+    filePath = resolveSafe(pathname);
+  } catch {
+    send(res, 400, { 'Content-Type': 'text/plain; charset=utf-8' }, 'Bad request');
+    return;
+  }
 
   if (!filePath) {
     send(res, 403, { 'Content-Type': 'text/plain; charset=utf-8' }, 'Forbidden');

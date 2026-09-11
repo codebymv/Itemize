@@ -1,4 +1,4 @@
-import { Injectable, OnApplicationBootstrap } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 
 const BOOLEAN_KEYS = [
   'DATABASE_SSL',
@@ -97,6 +97,9 @@ export function validateRuntimeEnvironment(
     if (frontendUrl.protocol !== 'https:') {
       throw new Error('FRONTEND_URL must use HTTPS in production');
     }
+    for (const key of ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_S3_BUCKET', 'AWS_REGION']) {
+      if (!present(environment[key])) throw new Error(`${key} is required for shared file storage in production`);
+    }
   }
 
   for (const [nestjsFlag, legacyFlag] of CONFLICTING_OWNERS) {
@@ -122,7 +125,22 @@ export function validateRuntimeEnvironment(
 
 @Injectable()
 export class RuntimeConfigValidationService implements OnApplicationBootstrap {
+  private readonly logger = new Logger(RuntimeConfigValidationService.name);
+
   onApplicationBootstrap(): void {
     validateRuntimeEnvironment();
+    const workers = BOOLEAN_KEYS.filter((key) =>
+      key !== 'DATABASE_SSL' && !CONFLICTING_OWNERS.some(([, legacy]) => legacy === key));
+    const enabled = workers.filter((key) => booleanEnvironmentValue(process.env, key));
+    const disabled = workers.filter((key) => !booleanEnvironmentValue(process.env, key));
+    this.logger.log(`Enabled runtime workers: ${enabled.join(', ') || '(none)'}`);
+    this.logger.log('Account deletion worker: always enabled; one-shot jobs require an external schedule');
+    if (disabled.length) this.logger.warn(`Disabled runtime workers: ${disabled.join(', ')}`);
+    if (process.env.NODE_ENV === 'production' && process.env.ITEMIZE_SUBSCRIPTION_BILLING_ENABLED !== 'true') {
+      this.logger.warn('Subscription checkout is disabled by ITEMIZE_SUBSCRIPTION_BILLING_ENABLED');
+    }
+    if (process.env.NODE_ENV === 'production' && !present(process.env.SENTRY_DSN)) {
+      this.logger.warn('Backend error reporting is disabled: SENTRY_DSN is missing');
+    }
   }
 }

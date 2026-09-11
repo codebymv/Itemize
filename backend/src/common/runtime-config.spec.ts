@@ -5,6 +5,18 @@ import {
 } from './runtime-config';
 
 describe('runtime configuration', () => {
+  it('fails at boot when production shared storage is incomplete', () => {
+    const environment = {
+      NODE_ENV: 'production', DATABASE_URL: 'postgresql://example/itemize',
+      JWT_SECRET: 'x'.repeat(32), FRONTEND_URL: 'https://itemize.cloud',
+      AWS_ACCESS_KEY_ID: 'test', AWS_SECRET_ACCESS_KEY: 'test',
+      AWS_S3_BUCKET: 'test', AWS_REGION: 'us-west-2',
+    };
+    expect(() => validateRuntimeEnvironment(environment)).not.toThrow();
+    for (const key of ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_S3_BUCKET', 'AWS_REGION']) {
+      expect(() => validateRuntimeEnvironment({ ...environment, [key]: '' })).toThrow(key);
+    }
+  });
   it('parses explicit booleans and bounded integers', () => {
     expect(
       booleanEnvironmentValue(

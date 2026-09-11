@@ -8,6 +8,8 @@
       "/db/**",
       "/package.json",
       "/package-lock.json",
+      "/frontend/package.json",
+      "/.dockerignore",
       "/railway.json"
     ]
   },

@@ -1,5 +1,15 @@
 # Production Postgres restore drill
 
+## 2026-09-11 status
+
+The live Railway Backups page reports that backups and point-in-time recovery
+require the Pro plan. No snapshot or restore was available through this account's
+current dashboard. The user explicitly deferred backup setup and the production
+restore drill from the launch-hardening task. No production restore was attempted.
+The historical procedure below has not been revalidated and must not be treated
+as an executable current runbook: schema authority now lives in db/, and the
+production pre-deploy command is npm --prefix /app/db run migrate.
+
 Perform this drill against a **copy** of production, never against the live primary, unless you are executing a real incident restore.
 
 ## Last drill: 18 Aug 2026

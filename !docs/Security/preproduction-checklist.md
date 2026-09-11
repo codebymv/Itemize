@@ -2,6 +2,14 @@
 
 ## Current status
 
+2026-09-11 launch-hardening verification is recorded in
+[launch-hardening-2026-09-11.md](../launch-hardening-2026-09-11.md).
+API headers, frontend CSP, GraphQL resource limits, and locked API image builds
+are implemented locally; production rollout is a separate check. The local
+production-dependency audit has no high/critical findings after compatible fixes;
+TipTap remains a moderate advisory requiring a coordinated major upgrade.
+Backup setup and a production restore drill were explicitly deferred by the user.
+
 Living checklist. Checked items are backed by the current NestJS production
 runtime or release gate; unchecked items remain explicit release or
 post-launch hardening work.

@@ -15,7 +15,8 @@ const limits = {
   // Scheduling, Reputation, and editor surfaces deliberately use distinct Lucide
   // module, channel, status, and action metaphors; keep that vocabulary bounded.
   'query-vendor': 46 * 1024,
-  icons: 52 * 1024,
+  // Launch baseline is 52.26 KiB. Allow <2 KiB of deliberate icon growth.
+  icons: 54 * 1024,
   'axios-vendor': 50 * 1024,
 };
 

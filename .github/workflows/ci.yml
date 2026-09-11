@@ -28,7 +28,8 @@ jobs:
       - run: npm run docs:check
       - run: npm run lint:frontend
       - run: npm run test
+      - run: npm run release:integration
       - run: npm run build:graphql
       - run: npm run build:frontend
       - run: npm run build:check --workspace itemize-frontend
-      - run: npm audit --omit=dev --audit-level=critical
+      - run: npm audit --omit=dev --audit-level=high

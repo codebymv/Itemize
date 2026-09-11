@@ -507,9 +507,11 @@ const App = () => {
     initializeUserPreferences();
   }, []);
 
-  // Enforce HTTPS in production
+  // Enforce HTTPS on hosted production origins; allow the built app to be
+  // verified with the local HTTP preview server.
   useEffect(() => {
-    if (import.meta.env.PROD) {
+    const loopback = ['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname);
+    if (import.meta.env.PROD && !loopback) {
       if (window.location.protocol !== 'https:') {
         window.location.href = window.location.href.replace('http:', 'https:');
       }

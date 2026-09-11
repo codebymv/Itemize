@@ -1,53 +1,53 @@
 # Runtime and worker ownership
 
-**Updated:** 2026-08-23
+Updated: 2026-09-11.
 
-Itemize currently uses a deliberate two-runtime architecture. The retained Express service is the public ingress, migration authority, rollback boundary, and owner of HTTP protocols that have not been retired. It proxies `/graphql` to the NestJS service. NestJS owns the GraphQL schema, migrated domain implementations, selected retained HTTP controllers, and durable workers explicitly enabled in its deployment.
+The Express application was retired on 2026-08-24. Railway runs the NestJS API at api.itemize.cloud, the frontend static server at itemize.cloud, PostgreSQL, and the signature malware scanner. The Nest adapter still uses Express internally; there is no separate legacy ingress.
 
-Both runtimes use the same PostgreSQL database. The database contract and single-worker ownership rules are therefore release-critical; the directory names do not represent independent applications or databases.
+## Deployment
 
-## Request ownership
+The API service uses the repository root and backend/Dockerfile.railway. The image installs the backend and database workspaces from the root package-lock.json with npm ci. The frontend is built separately from frontend/ and its own lockfile. Both lockfiles must be updated when a shared frontend dependency changes.
 
-| Boundary | Public entry | Implementation owner | Release rule |
-| --- | --- | --- | --- |
-| Browser GraphQL | Express `POST /graphql` | NestJS `/graphql` over the internal upstream | Express keeps same-origin cookies, rate limiting, and rollback routing until ingress retirement. |
-| Authenticated application operations | GraphQL | NestJS modules | Retire an Express consumer only after its semantic and browser gates pass. |
-| Webhooks, OAuth callbacks, uploads, downloads, health | Express or an explicitly proxied Nest HTTP controller | Per cutover contract | Preserve exact bytes, redirects, capabilities, and provider URLs. |
-| Socket.IO | Current public API origin | Exactly one realtime host | Enable Nest webhook workers that emit events only with the Nest realtime host. |
-| Schema migration | Numbered runner in `backend/scripts/migrations` | Express deployment tooling | Apply and verify migrations before dependent code or workers are enabled. |
+The API pre-deploy command is npm --prefix /app/db run migrate. Schema authority lives in db/. The healthcheck is /health. Railway production was verified to have one API replica, no API cron schedule, and serverless disabled.
 
-## Scheduled-worker ownership
+## Worker ownership
 
-These are code defaults, not a claim about current host-dashboard values. Verify deployed values before every transfer.
+Flags remain default-off intentionally. Enabling a worker can deliver messages, modify provider state, or process old work. Inspect its queue and provider configuration before enabling it. The startup summary lists enabled and disabled runtime workers. The account-deletion worker runs automatically. Historical conflict flags remain accepted for configuration compatibility; they do not launch a legacy runtime.
 
-| Work | Legacy control and default | NestJS control and default | Transfer invariant |
-| --- | --- | --- | --- |
-| Daily invoice state and recurring generation | `LEGACY_INVOICE_JOBS_ENABLED`, enabled unless `false` | `INVOICE_NEST_JOBS_ENABLED`, off | Disable legacy, deploy, verify its startup log, then enable Nest. |
-| Trial-ending reminders | `TRIAL_REMINDER_CRON_ENABLED`, enabled unless `false` | `TRIAL_REMINDER_NEST_JOBS_ENABLED`, off | Migration `063_trial_reminder_deliveries` must exist. Disable legacy before enabling Nest. |
-| Signature completion and delivery | `LEGACY_SIGNATURE_REMINDER_JOBS_ENABLED`, enabled unless `false` | `SIGNATURE_JOBS_SCHEDULER_ENABLED`, off | Inspect queues, disable legacy, then enable Nest. |
-| Signature file cleanup | `SIGNATURE_FILE_CLEANUP_ENABLED`, off | `SIGNATURE_FILE_CLEANUP_NEST_ENABLED`, off | Choose one scheduler; both use leased and fenced jobs. |
-| Estimate email delivery | No competing continuous Express owner | `ESTIMATE_EMAIL_DELIVERY_SCHEDULER_ENABLED`, off | Apply its queue migration and enable only in the intended runtime. |
-| Review-request delivery | No competing continuous Express owner | `REPUTATION_REQUEST_DELIVERY_SCHEDULER_ENABLED`, off | Enable only after backlog and provider preflight. |
-| Admin and direct-message delivery | No competing continuous Express owner | `ADMIN_EMAIL_DELIVERY_SCHEDULER_ENABLED` and `MESSAGE_DELIVERY_SCHEDULER_ENABLED`, off | Enable independently after queue inspection. |
-| Subscription webhook jobs | `SUBSCRIPTION_WEBHOOK_JOBS_ENABLED`, enabled unless `false` | `SUBSCRIPTION_WEBHOOK_NEST_JOBS_ENABLED`, off | Disable legacy before enabling Nest. |
-| Email webhook reconciliation | `EMAIL_WEBHOOK_JOBS_ENABLED`, enabled unless `false` | `EMAIL_WEBHOOK_NEST_JOBS_ENABLED`, off | Disable legacy before enabling Nest. |
-| Social webhook jobs | `SOCIAL_WEBHOOK_JOBS_ENABLED`, enabled unless `false` | `SOCIAL_WEBHOOK_NEST_JOBS_ENABLED`, off | Disable legacy; enable Nest only beside `REALTIME_HOST_NESTJS_ENABLED=true`. |
-| Workflow jobs | Split legacy flags; see workflow contract | `WORKFLOW_NEST_SCHEDULER_ENABLED`, off | Transfer each queue as an ordered change with drain/reconciliation evidence. |
-| Calendar sync (push/pull) | `CALENDAR_SYNC_JOBS_ENABLED`, off | `CALENDAR_SYNC_NEST_JOBS_ENABLED`, off | Choose one scheduler; claims are leased and fenced by worker id and attempt count. Google credentials must exist in the owning runtime. |
+The Railway Variables page was inspected on 2026-09-11. The following values were read as true:
 
-## Deployment sequence
+- INVOICE_NEST_JOBS_ENABLED
+- TRIAL_REMINDER_NEST_JOBS_ENABLED
+- SIGNATURE_JOBS_SCHEDULER_ENABLED
+- SIGNATURE_FILE_CLEANUP_NEST_ENABLED
+- ESTIMATE_EMAIL_DELIVERY_SCHEDULER_ENABLED
+- REPUTATION_REQUEST_DELIVERY_SCHEDULER_ENABLED
+- EMAIL_WEBHOOK_NEST_JOBS_ENABLED
+- SUBSCRIPTION_WEBHOOK_NEST_JOBS_ENABLED
+- SOCIAL_WEBHOOK_NEST_JOBS_ENABLED
+- WORKFLOW_NEST_SCHEDULER_ENABLED
+- REALTIME_HOST_NESTJS_ENABLED
 
-1. Deploy code and required numbered migrations with every new Nest worker flag off.
-2. Confirm both readiness endpoints and inspect the queue's processing, retry, dead-letter, and lease-age state.
-3. Disable the legacy owner and deploy that runtime first.
-4. Verify its startup log records the disabled owner and no new claims appear there.
-5. Enable the Nest owner, deploy it, and verify its ownership log plus a bounded canary.
-6. Observe provider acceptance, durable completion, retry counts, and duplicate suppression.
+ADMIN_EMAIL_DELIVERY_SCHEDULER_ENABLED was also verified true through the running service. An authenticated S3 HeadBucket request from that service succeeded.
 
-Rollback reverses steps 5 and 3: stop the Nest owner first, then restore the legacy owner. Shared durable rows must not require repair.
+CALENDAR_SYNC_NEST_JOBS_ENABLED, MESSAGE_DELIVERY_SCHEDULER_ENABLED, and SOCIAL_MESSAGE_DELIVERY_SCHEDULER_ENABLED were absent from the service variable inventory. No separate worker services were present in this Railway project.
 
-## Enforced configuration contract
+The campaign delivery, campaign test-email recovery, invoice email recovery, and invoice logo cleanup commands exist as one-shot entrypoints. Their modules do not register continuous schedulers. The invoice daily worker handles invoice state/recurrence and is not an invoice-email retry scheduler. Establish an explicit cadence for these commands before relying on retry recovery or scheduled campaign delivery.
 
-`backend-v2/.env.example` inventories every direct `process.env` read under the NestJS runtime. `npm run config:check --workspace itemize-graphql-api` fails when a new variable is used without documentation. The Nest startup validator rejects malformed booleans and numeric core settings, insecure production core configuration, incompatible social/realtime ownership, and explicit dual-owner combinations in one runtime.
+Read-only SQL on 2026-09-11 found zero rows in calendar_sync_jobs, message_delivery_jobs, campaign_delivery_jobs, and social_message_delivery_jobs. invoice_email_deliveries contained four sent rows. This is a point-in-time queue observation, not provider-delivery verification.
 
-The validator cannot inspect another Railway service's environment. Host-level review and the ordered deployment sequence remain mandatory for cross-service ownership.
+## Runtime requirements
+
+Production requires HTTPS FRONTEND_URL, DATABASE_URL, a JWT_SECRET of at least 32 characters, and AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_BUCKET, AWS_REGION. Missing shared storage now prevents startup. The storage providers also reject production writes to local disk.
+
+ITEMIZE_SUBSCRIPTION_BILLING_ENABLED was verified true. Preserve this deliberate billing control. AWS variable names and both Sentry DSN variable names were present; their values were not exposed or copied.
+
+The environment contract remains backend/.env.example; run npm run config:check --workspace itemize-graphql-api. Before scaling, replace the in-memory auth/API rate-limit stores and review every scheduler's lease/idempotency behavior, including overlap during deployment.
+
+## Rollout checks
+
+1. Confirm migration gate and current environment requirements.
+2. Run release:check and release:integration locally.
+3. Deploy the tested code and inspect worker startup summaries.
+4. Verify headers on both public origins, normal GraphQL operations, Google sign-in, public widgets, PDF downloads, and provider reconciliation.
+5. Keep a rollback image available. Do not assume restoring old application code reverses migrations or external deliveries.

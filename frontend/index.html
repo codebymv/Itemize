@@ -21,8 +21,8 @@
     <link
       href="https://fonts.googleapis.com/css2?family=Raleway:wght@400;600;700&family=Plus+Jakarta+Sans:wght@600;700&display=optional"
       rel="stylesheet"
+      id="app-fonts"
       media="print"
-      onload="this.media='all'"
     />
     <noscript>
       <link
@@ -51,6 +51,11 @@
     </style>
     <script>
       (function () {
+        var fonts = document.getElementById('app-fonts');
+        if (fonts) {
+          if (fonts.sheet) fonts.media = 'all';
+          else fonts.addEventListener('load', function () { fonts.media = 'all'; }, { once: true });
+        }
         try {
           var stored = localStorage.getItem('theme');
           var theme = stored === 'dark' || stored === 'light' ? stored : 'light';

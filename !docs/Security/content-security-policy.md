@@ -1,63 +1,25 @@
-# Itemize.cloud Content Security Policy (CSP)
+# Content security policy and response headers
 
-## Overview
+Updated: 2026-09-11. These are the implementation rules in the launch-hardening change; deployment must be verified separately.
 
-Content Security Policy (CSP) is a security standard that helps prevent Cross-Site Scripting (XSS) and other code injection attacks by specifying which content sources the browser should trust and load. Itemize.cloud leverages `helmet` in the backend to apply default CSP headers.
+## Frontend
 
-## Implementation Details
+frontend/scripts/security-headers.mjs builds the CSP for the static app server. The policy is an HTTP response header on HTML, assets, and error responses. Hashes authorize the exact inline boot script from the built index.html. Inline event handlers and eval are not allowed. The font stylesheet's load handler is registered by the hashed boot script.
 
-### Backend (Node.js/Express with Helmet)
+The policy permits the application API and WebSocket origin, Google sign-in, Google Fonts, Stripe, and regional Sentry ingestion. User images/media can use HTTPS and blob URLs; editor previews can frame HTTPS content and PDF blobs. Inline styles remain allowed because the editor and UI use them. The app shell cannot itself be framed, and object embedding is disabled.
 
-The backend uses the `helmet` middleware, which includes a default CSP. This default CSP is quite restrictive and can be customized to allow specific sources.
+Changing integration origins requires reviewing security-headers.mjs and verifying the corresponding browser flow. A hash generated from the built shell avoids maintaining a stale handwritten hash.
 
-```javascript
-const helmet = require('helmet');
-app.use(helmet());
-```
+The static server also adds nosniff, DENY framing, strict-origin-when-cross-origin referrer policy, and same-origin-allow-popups opener policy. HSTS applies only in production and does not preload or include all subdomains.
 
-By default, Helmet's CSP will set the following directives (among others):
+## API
 
-*   `default-src 'self'`
-*   `script-src 'self'`
-*   `style-src 'self'`
+backend/src/configure-app.ts installs Helmet before parsers, CORS, and routes. Cross-origin resource policy permits the existing public widgets and downloads; CORS still determines which callers can read authenticated responses. Opener policy preserves popup integrations.
 
-This means that by default, the application will only load resources (scripts, styles, images, etc.) from its own origin.
+There is no blanket API CSP: HTML and PDF controllers own their content policies, including restrictive sandbox policies on PDFs. API headers cannot enforce policy on the separately hosted frontend.
 
-### Frontend (Vite/React)
+## Verification
 
-The frontend does not explicitly define a CSP via meta tags in `index.html` or through Vite configuration. The CSP is primarily enforced by the backend's Helmet middleware.
+Run npm run test:frontend (including scripts/security-headers.test.mjs) and the backend foundation tests. Verify the production build, hashed boot script, fonts, sign-in, API requests, public embeds, and PDF previews in a browser.
 
-## Customization (Future)
-
-To allow content from specific external sources (e.g., Google Fonts, analytics scripts, or external image hosts), the CSP directives in the backend's Helmet configuration would need to be explicitly defined. For example:
-
-```javascript
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "https://www.googletagmanager.com"], // Example for Google Analytics
-      styleSrc: ["'self'", "https://fonts.googleapis.com", "'unsafe-inline'"], // Example for Google Fonts and inline styles
-      imgSrc: ["'self'", "data:", "https://example.com"], // Example for external images
-      connectSrc: ["'self'", "https://api.example.com"], // Example for external APIs
-    },
-  },
-}));
-```
-
-## Security Benefits
-
-- **XSS Prevention**: By restricting the sources from which scripts can be loaded.
-- **Data Exfiltration Prevention**: By controlling where data can be sent.
-- **Clickjacking Protection**: (Provided by other Helmet headers like `X-Frame-Options`).
-
-## Monitoring and Troubleshooting
-
-- **Browser Developer Tools**: Check the Console for CSP violation reports.
-- **Report-Only Mode**: In a production environment, CSP can be deployed in `Report-Only` mode first to identify violations without blocking content.
-
-## Best Practices
-
-- **Be Specific**: Define directives as narrowly as possible.
-- **Avoid `unsafe-inline` and `unsafe-eval`**: Use these sparingly and only when absolutely necessary, as they can weaken CSP protection.
-- **Regularly Review**: Update CSP as the application evolves and integrates new third-party services.
+Use curl -I on the homepage, an asset, an error path, and /health. Confirm CSP is on the frontend and that intended public widget CORS behavior remains intact. Distinguish code-level checks from deployed response checks.

@@ -41,6 +41,7 @@
     "express-rate-limit": "^7.5.1"
   },
   "overrides": {
+    "multer": "2.3.0",
     "@apollo/server-plugin-landing-page-graphql-playground": {
       "@apollo/server": "$@apollo/server"
     },

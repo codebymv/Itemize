@@ -22,6 +22,7 @@ import { CampaignDeliveryModule } from './campaign-delivery/campaign-delivery.mo
 import { CategoriesModule } from './categories/categories.module';
 import { CalendarsModule } from './calendars/calendars.module';
 import { formatItemizeGraphqlError } from './common/graphql-error';
+import { graphqlParseOptions, graphqlValidationRules, graphqlRequestLimitsPlugin } from './common/graphql-request-limits';
 import { RuntimeConfigModule } from './common/runtime-config.module';
 import { ContactTransfersModule } from './contact-transfers/contact-transfers.module';
 import { ContactsModule } from './contacts/contacts.module';
@@ -97,8 +98,9 @@ import { SalesDocumentEditorModule } from './sales-document-editor/sales-documen
 
 // Apollo's conditional exports expose distinct ESM/CJS private HeaderMap types to
 // ts-jest even though the plugin is runtime-compatible with Nest's Apollo driver.
-const observabilityPlugins = [
+const apolloPlugins = [
   createGraphqlObservabilityPlugin(),
+  graphqlRequestLimitsPlugin,
 ] as unknown as NonNullable<ApolloDriverConfig['plugins']>;
 
 @Module({
@@ -194,7 +196,9 @@ const observabilityPlugins = [
       graphiql: process.env.NODE_ENV !== 'production',
       context: ({ req, res }: { req: Request; res: Response }) => ({ req, res }),
       formatError: formatItemizeGraphqlError,
-      plugins: observabilityPlugins,
+      parseOptions: graphqlParseOptions,
+      validationRules: graphqlValidationRules,
+      plugins: apolloPlugins,
     }),
   ],
   providers: [

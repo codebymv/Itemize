@@ -2,14 +2,17 @@
 
 FROM node:22-slim AS builder
 
-WORKDIR /app/backend
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+WORKDIR /app
+ENV PUPPETEER_SKIP_DOWNLOAD=true
 
-COPY backend/package*.json ./
-RUN npm install --include=dev --legacy-peer-deps
+COPY package.json package-lock.json ./
+COPY backend/package.json ./backend/package.json
+COPY db/package.json ./db/package.json
+COPY frontend/package.json ./frontend/package.json
+RUN npm ci --workspace itemize-graphql-api --workspace itemize-db --include-workspace-root --include=dev
 
-COPY backend/ ./
-RUN npm run build
+COPY backend/ ./backend/
+RUN npm run build --workspace itemize-graphql-api
 
 FROM node:22-slim AS production
 
@@ -49,13 +52,17 @@ RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearm
 
 RUN groupadd -r nodejs && useradd -r -g nodejs nodejs
 
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_SKIP_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 
-WORKDIR /app/backend
-COPY backend/package*.json ./
-RUN npm install --omit=dev --legacy-peer-deps && npm cache clean --force
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY backend/package.json ./backend/package.json
+COPY db/package.json ./db/package.json
+COPY frontend/package.json ./frontend/package.json
+RUN npm ci --workspace itemize-graphql-api --workspace itemize-db --include-workspace-root --omit=dev && npm cache clean --force
 
+WORKDIR /app/backend
 COPY --from=builder /app/backend/dist ./dist
 COPY backend/docs ./docs
 COPY backend/pdf-service ./pdf-service
@@ -63,8 +70,6 @@ COPY backend/pdf-service ./pdf-service
 # The pre-deploy container uses the same image. Include the canonical tracked
 # migration stream and its runtime dependencies so schema readiness gates app rollout.
 WORKDIR /app/db
-COPY db/package*.json ./
-RUN npm install --omit=dev && npm cache clean --force
 COPY db/src ./src
 COPY db/scripts/run-production-migrations.js ./scripts/run-production-migrations.js
 COPY workflow-registry.json /app/workflow-registry.json

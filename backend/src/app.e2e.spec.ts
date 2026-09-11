@@ -43,6 +43,10 @@ describe('GraphQL foundation', () => {
       .send({ query: '{ readiness }' })
       .expect(200);
     expect(response.body).toEqual({ data: { readiness: 'ready' } });
+    expect(response.headers['x-content-type-options']).toBe('nosniff');
+    expect(response.headers['x-frame-options']).toBe('SAMEORIGIN');
+    expect(response.headers['referrer-policy']).toBe('strict-origin-when-cross-origin');
+    expect(response.headers['x-powered-by']).toBeUndefined();
     expect(query).not.toHaveBeenCalled();
   });
 
