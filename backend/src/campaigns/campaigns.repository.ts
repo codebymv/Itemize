@@ -87,10 +87,35 @@ const campaignColumns = (alias = 'c') => `
   ${alias}.created_by, ${alias}.sent_by, ${alias}.started_at, ${alias}.completed_at,
   ${alias}.created_at, ${alias}.updated_at`;
 
-const campaignReadColumns = (alias = 'c') => campaignColumns(alias).replace(
-  `${alias}.template_id`,
-  `CASE WHEN et.id IS NULL THEN NULL ELSE ${alias}.template_id END AS template_id`,
-);
+const campaignReadColumns = (alias = 'c') => {
+  let columns = campaignColumns(alias).replace(
+    `${alias}.template_id`,
+    `CASE WHEN et.id IS NULL THEN NULL ELSE ${alias}.template_id END AS template_id`,
+  );
+  for (const metric of ['delivered', 'opened', 'clicked', 'bounced', 'unsubscribed', 'complained']) {
+    columns = columns.replace(`${alias}.total_${metric}`, `metrics.total_${metric}`);
+  }
+  for (const [rate, metric] of [['open', 'opened'], ['click', 'clicked'], ['bounce', 'bounced']]) {
+    columns = columns.replace(`${alias}.${rate}_rate`,
+      `COALESCE(100.0 * metrics.total_${metric} / NULLIF(${alias}.total_sent, 0), 0) AS ${rate}_rate`);
+  }
+  return columns;
+};
+
+// Provider events update recipient timestamps, not the legacy campaign counters.
+// Read unique-recipient totals from that evidence so retries and later status
+// changes cannot lose or double-count delivery/engagement history.
+const campaignMetricsJoin = `LEFT JOIN LATERAL (
+  SELECT
+    COUNT(*) FILTER (WHERE delivered_at IS NOT NULL)::int AS total_delivered,
+    COUNT(*) FILTER (WHERE opened_at IS NOT NULL)::int AS total_opened,
+    COUNT(*) FILTER (WHERE clicked_at IS NOT NULL)::int AS total_clicked,
+    COUNT(*) FILTER (WHERE bounced_at IS NOT NULL)::int AS total_bounced,
+    COUNT(*) FILTER (WHERE unsubscribed_at IS NOT NULL OR status = 'unsubscribed')::int AS total_unsubscribed,
+    COUNT(*) FILTER (WHERE bounce_type = 'complained' OR status = 'complained')::int AS total_complained
+  FROM campaign_recipients
+  WHERE campaign_id = c.id AND organization_id = c.organization_id
+) metrics ON TRUE`;
 
 @Injectable()
 export class CampaignsRepository {
@@ -129,6 +154,7 @@ export class CampaignsRepository {
     const rows = await this.pool.query<CampaignRow>(
       `SELECT ${campaignReadColumns()}, et.name AS template_name, u.name AS created_by_name
        FROM email_campaigns c
+       ${campaignMetricsJoin}
        LEFT JOIN email_templates et ON et.id = c.template_id AND et.organization_id = c.organization_id
        LEFT JOIN users u ON u.id = c.created_by
        WHERE ${where}
@@ -148,6 +174,7 @@ export class CampaignsRepository {
       `SELECT ${campaignReadColumns()}, et.name AS template_name, et.body_html AS template_html,
          u.name AS created_by_name, su.name AS sent_by_name
        FROM email_campaigns c
+       ${campaignMetricsJoin}
        LEFT JOIN email_templates et ON et.id = c.template_id AND et.organization_id = c.organization_id
        LEFT JOIN users u ON u.id = c.created_by
        LEFT JOIN users su ON su.id = c.sent_by

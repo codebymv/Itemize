@@ -6,6 +6,7 @@ import { Webhook } from 'svix';
 import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
+import { CampaignsRepository } from '../../src/campaigns/campaigns.repository';
 
 const signingSecret = `whsec_${Buffer.from(
   'itemize-email-webhook-parity-secret',
@@ -130,6 +131,44 @@ describe('Resend webhook receiver (legacy behavior pinned)', () => {
       await cleanup.teardown();
     }
   }, 60000);
+
+  it('reads campaign totals from unique recipient event history despite stale counters and repeated events', async () => {
+    const externalId = `campaign-metrics-${Date.now()}`;
+    const { contact } = await seedContactAndLog(externalId);
+    const campaign = (await pool.query<{ id: number }>(
+      `INSERT INTO email_campaigns (organization_id, name, subject, status, total_recipients, total_sent)
+       VALUES ($1, 'Webhook metrics QA', 'QA', 'sent', 1, 1) RETURNING id`,
+      [organizationId],
+    )).rows[0];
+    await pool.query(
+      `INSERT INTO campaign_recipients
+       (campaign_id, organization_id, contact_id, email, status, external_message_id)
+       VALUES ($1, $2, $3, 'recipient@example.test', 'sent', $4)`,
+      [campaign.id, organizationId, contact.id, externalId],
+    );
+    for (const [index, type] of ['email.delivered', 'email.delivered', 'email.opened', 'email.opened', 'email.clicked', 'email.bounced', 'email.complained'].entries()) {
+      const event = emailEvent(type, externalId, `2026-08-20T12:00:0${index}.000Z`,
+        type === 'email.bounced' ? { bounce: { type: 'Permanent' } } : {});
+      const response = await signedRequest(app.getHttpServer(), `${externalId}-${index}`, event);
+      expect(response.status).toBe(200);
+      expect(response.body.matched).toBe(true);
+    }
+    const repository = new CampaignsRepository(pool);
+    const expected = {
+      total_delivered: 1, total_opened: 1, total_clicked: 1, total_bounced: 1,
+      total_unsubscribed: 1, total_complained: 1,
+    };
+    const detail = await repository.findById(organizationId, campaign.id);
+    expect(detail?.row).toMatchObject(expected);
+    expect(Number(detail?.row.open_rate)).toBe(100);
+    expect(Number(detail?.row.click_rate)).toBe(100);
+    expect(Number(detail?.row.bounce_rate)).toBe(100);
+    const page = await repository.findPage({ organizationId, pageSize: 100, offset: 0 });
+    expect(page.rows.find(row => row.id === campaign.id)).toMatchObject(expected);
+    expect(await repository.findById(-1, campaign.id)).toBeNull();
+    const stored = await pool.query('SELECT total_delivered FROM email_campaigns WHERE id=$1', [campaign.id]);
+    expect(stored.rows[0].total_delivered).toBe(0);
+  });
 
   it.each([
     ['nest', () => app.getHttpServer()],
