@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
+import { brandedTransactionalEmail, transactionalEmailAssetOrigin } from '../common/branded-transactional-email';
 import { PublicFormField } from './public-form-contract';
 
 export type PublicFormProjection = {
@@ -273,11 +274,16 @@ export class PublicFormsRepository {
           JSON.stringify({
             to: email,
             subject: `New form submission: ${form.name}`,
-            bodyHtml: [
+            bodyHtml: brandedTransactionalEmail({
+              assetOrigin: transactionalEmailAssetOrigin(),
+              heading: 'New form submission',
+              previewText: `A new submission was received for ${form.name}.`,
+              bodyHtml: [
               '<p>A new submission was received for ',
               `<strong>${escapeHtml(form.name)}</strong>.</p>`,
               '<p>Sign in to Itemize to review it.</p>',
-            ].join(''),
+              ].join(''),
+            }),
             bodyText: `A new submission was received for ${form.name}. Sign in to Itemize to review it.`,
             contactId: submission.contact_id || null,
             formId: form.id,

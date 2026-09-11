@@ -436,6 +436,9 @@ describe('Public bookings protocol (legacy behavior pinned)', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].payload).toMatchObject({ to: 'qa@example.com', bookingEvent: 'confirmed', bookingId });
     expect(rows[0].payload.bodyHtml).toContain('QA &lt;booking&gt; &amp; notification');
+    for (const marker of ['<!doctype html>', 'https://itemize.cloud/cover.png', '#2563eb', '#f1f5f9', "font-family:'Raleway'", 'Sent securely with Itemize.']) {
+      expect(rows[0].payload.bodyHtml).toContain(marker);
+    }
     expect(rows[0].payload.bodyText).toContain('Timezone: America/Phoenix');
     expect(rows[0].payload.bodyText).toContain(new Intl.DateTimeFormat('en-US', {
       timeZone: 'America/Phoenix', dateStyle: 'full', timeStyle: 'short',

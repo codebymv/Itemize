@@ -24,6 +24,8 @@ notices.
 | Invoice delivery and preview | GraphQL invoice delivery/preview services | Shared shell |
 | Signature request, reminder, completion, decline | GraphQL signature renderer; retained signature wrapper | Shared shell |
 | Review request | GraphQL reputation provider | Shared shell |
+| Booking confirmation, reschedule, cancellation | Booking notification outbox renderer | Shared shell |
+| Public form submission notice | Public form notification outbox renderer | Shared shell |
 | Subscription upgrade and trial lifecycle | Retained transactional helper | Shared shell |
 | Itemize administrator email | GraphQL admin renderer | Shared shell; complete HTML can no longer bypass it |
 | Retained invoice, template, workflow, and contact-email paths | Retained template wrapper | Routed through the shared shell for app-generated/simple content |
@@ -72,3 +74,11 @@ addresses and internal artifact numbers do not leak into the inbox subject.
   Gmail whenever the shared auth renderer or shell changes.
 - Release deployments that change an email renderer must deploy every service
   that owns a sender; frontend-only success is not sufficient evidence.
+
+## September 11 booking/form regression
+
+The new booking lifecycle outbox initially generated bare paragraphs, bypassing
+the shared renderer; public form notices had the same gap. Both now render the
+shared shell before snapshotting immutable outbox HTML. PostgreSQL integration
+checks require the document, HTTPS logo, brand colors, font stack, and footer in
+the queued payload. Provider delivery status alone is not branding verification.

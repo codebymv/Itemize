@@ -1,4 +1,5 @@
 import { PoolClient } from 'pg';
+import { brandedTransactionalEmail, transactionalEmailAssetOrigin } from '../common/branded-transactional-email';
 
 const escapeHtml = (value: string): string => value.replace(/[&<>"']/g, character => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
@@ -51,7 +52,12 @@ export async function enqueueBookingNotification(
     ON CONFLICT (idempotency_key) DO NOTHING`, [
     `booking-notification:${eventKey}`, organizationId,
     JSON.stringify({ to: booking.attendee_email, subject, bodyText,
-      bodyHtml: bodyText.split('\n').map(line => `<p>${escapeHtml(line)}</p>`).join(''),
+      bodyHtml: brandedTransactionalEmail({
+        assetOrigin: transactionalEmailAssetOrigin(),
+        previewText: `Your appointment with ${booking.organization_name} is ${event}.`,
+        heading: `Booking ${event}`,
+        bodyHtml: bodyText.split('\n').map(line => `<p style="margin:0 0 16px">${escapeHtml(line)}</p>`).join(''),
+      }),
       contactId: booking.contact_id, bookingId, bookingEvent: event }),
   ]);
 }

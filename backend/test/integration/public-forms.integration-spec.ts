@@ -292,7 +292,7 @@ describe('Public forms (legacy behavior pinned)', () => {
         form_id: row.form_id,
       });
       const notifications = await pool.query(
-        `SELECT payload->>'to' AS recipient, status
+        `SELECT payload->>'to' AS recipient, payload->>'bodyHtml' AS html, status
          FROM workflow_side_effect_outbox
          WHERE idempotency_key LIKE $1
          ORDER BY payload->>'to'`,
@@ -303,6 +303,11 @@ describe('Public forms (legacy behavior pinned)', () => {
         'owner@test.itemize',
       ]);
       expect(notifications.rows.every((n) => n.status === 'queued')).toBe(true);
+      for (const notification of notifications.rows) {
+        for (const marker of ['<!doctype html>', 'https://itemize.cloud/cover.png', '#2563eb', '#f1f5f9', "font-family:'Raleway'", 'Sent securely with Itemize.']) {
+          expect(notification.html).toContain(marker);
+        }
+      }
     }
   });
 
