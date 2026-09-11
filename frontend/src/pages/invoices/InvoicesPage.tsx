@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { formatCalendarDate } from '@/lib/calendar-date';
 import { useNavigate } from 'react-router-dom';
 import {
     Plus,
@@ -975,7 +976,7 @@ export function InvoicesPage() {
                                                 
                                                 {/* Due Date */}
                                                 <span className="text-xs text-muted-foreground">
-                                                    Due {new Date(invoice.due_date).toLocaleDateString()}
+                                                    Due {formatCalendarDate(invoice.due_date)}
                                                 </span>
                                                 
                                                 {/* Recurring relationship links */}

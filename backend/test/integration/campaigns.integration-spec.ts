@@ -9,6 +9,7 @@ import {
   CampaignTestEmailProvider,
 } from '../../src/campaign-delivery/campaign-test-email.provider';
 import { CampaignSendService } from '../../src/campaign-delivery/campaign-send.service';
+import { CampaignSendRepository } from '../../src/campaign-delivery/campaign-send.repository';
 import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
 
@@ -79,6 +80,44 @@ describe('Campaign management GraphQL PostgreSQL contract', () => {
     configureApp(app);
     await app.init();
 
+  });
+
+  it('dispatches due schedules once and rechecks postponement under the campaign lock', async () => {
+    await pool.query(
+      `INSERT INTO subscriptions (organization_id, plan_id, status)
+       SELECT $1, id, 'trialing' FROM subscription_plans WHERE name='starter'
+       ON CONFLICT (organization_id) DO UPDATE SET plan_id=EXCLUDED.plan_id, status=EXCLUDED.status`,
+      [organizationId],
+    );
+    await pool.query(
+      `INSERT INTO contacts (organization_id, first_name, email, source, created_by)
+       VALUES ($1,'Schedule QA',$2,'manual',$3)`,
+      [organizationId, `schedule-${organizationId}@test.itemize`, memberId],
+    );
+    const inserted = await pool.query<{ id: number }>(
+      `INSERT INTO email_campaigns (organization_id,name,subject,content_html,segment_type,status,scheduled_at,created_by)
+       VALUES ($1,'Due schedule','QA','<p>QA</p>','all','scheduled',NOW()-INTERVAL '1 minute',$2),
+              ($1,'Postponed schedule','QA','<p>QA</p>','all','scheduled',NOW()-INTERVAL '1 minute',$2)
+       RETURNING id`, [organizationId, memberId],
+    );
+    const [dueId, postponedId] = inserted.rows.map(row => Number(row.id));
+    const repository = app.get(CampaignSendRepository);
+    expect(await repository.dueScheduled(100)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: postponedId }),
+    ]));
+    await pool.query("UPDATE email_campaigns SET scheduled_at=NOW()+INTERVAL '1 day' WHERE id=$1", [postponedId]);
+    expect(await repository.prepare(organizationId, memberId, postponedId, `scheduled-campaign:${postponedId}`, true))
+      .toMatchObject({ kind: 'invalid_status' });
+    await pool.query("UPDATE email_campaigns SET status='draft',scheduled_at=NULL WHERE id=$1", [postponedId]);
+    expect(await repository.prepare(organizationId, memberId, postponedId, `scheduled-campaign:${postponedId}`, true))
+      .toMatchObject({ kind: 'invalid_status' });
+    const results = await Promise.all([campaignSendService.runScheduled(), campaignSendService.runScheduled()]);
+    expect(results.some(result => result.scheduled > 0)).toBe(true);
+    const jobs = await pool.query('SELECT count(*)::int count FROM campaign_delivery_jobs WHERE campaign_id=$1', [dueId]);
+    expect(jobs.rows[0].count).toBe(1);
+    expect((await pool.query('SELECT status FROM email_campaigns WHERE id=$1', [dueId])).rows[0].status).toBe('sending');
+    await pool.query('DELETE FROM email_campaigns WHERE id=ANY($1::int[])', [[dueId, postponedId]]);
+    await pool.query('DELETE FROM contacts WHERE organization_id=$1 AND email=$2', [organizationId, `schedule-${organizationId}@test.itemize`]);
   });
 
   afterAll(async () => {

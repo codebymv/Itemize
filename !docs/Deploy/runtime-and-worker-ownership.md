@@ -32,7 +32,16 @@ ADMIN_EMAIL_DELIVERY_SCHEDULER_ENABLED was also verified true through the runnin
 
 CALENDAR_SYNC_NEST_JOBS_ENABLED, MESSAGE_DELIVERY_SCHEDULER_ENABLED, and SOCIAL_MESSAGE_DELIVERY_SCHEDULER_ENABLED were absent from the service variable inventory. No separate worker services were present in this Railway project.
 
-The campaign delivery, campaign test-email recovery, invoice email recovery, and invoice logo cleanup commands exist as one-shot entrypoints. Their modules do not register continuous schedulers. The invoice daily worker handles invoice state/recurrence and is not an invoice-email retry scheduler. Establish an explicit cadence for these commands before relying on retry recovery or scheduled campaign delivery.
+The delivery-recovery module now provides explicit, default-off ownership flags:
+
+- CAMPAIGN_DELIVERY_SCHEDULER_ENABLED: every minute, promote up to 25 due scheduled campaigns through the existing entitlement/usage transaction, then process up to 100 recipients.
+- CAMPAIGN_TEST_EMAIL_RECOVERY_ENABLED: every minute, recover up to 25 test-email deliveries.
+- INVOICE_EMAIL_RECOVERY_ENABLED: every minute, recover up to 25 invoice-email deliveries.
+- INVOICE_LOGO_CLEANUP_SCHEDULER_ENABLED: every hour, process up to 25 superseded-logo deletion jobs.
+
+Campaign scheduling rechecks status and due time under the campaign row lock. The stable scheduled-campaign intent key prevents duplicate recipient snapshots and usage reservations across overlapping processes. Each cadence prevents local overlap, runs independently, and drains active work before the database shutdown hook. Existing queue claims and provider idempotency remain authoritative. Blocked scheduled campaigns are reported in cycle summaries and remain scheduled for operator correction.
+
+The invoice daily worker handles invoice state/recurrence; invoice email retry ownership is separate. Do not also schedule one-shot commands for queues owned by the live API. Those older commands bootstrap AppModule and can start unrelated schedulers when they inherit production flags, including the always-on account-deletion worker; use the continuous API owner instead. This change does not establish safe horizontal scaling for every existing worker.
 
 Read-only SQL on 2026-09-11 found zero rows in calendar_sync_jobs, message_delivery_jobs, campaign_delivery_jobs, and social_message_delivery_jobs. invoice_email_deliveries contained four sent rows. This is a point-in-time queue observation, not provider-delivery verification.
 

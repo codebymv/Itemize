@@ -43,3 +43,24 @@ describe('ResendCampaignTestEmailProvider', () => {
     });
   });
 });
+
+describe('campaign email sender formatting', () => {
+  const env = process.env;
+  afterEach(() => { process.env = env; jest.restoreAllMocks(); });
+  it.each([
+    ['Itemize <noreply@itemize.cloud>', null, 'QA Studio', '"QA Studio" <noreply@itemize.cloud>'],
+    ['noreply@itemize.cloud', null, 'QA Studio', '"QA Studio" <noreply@itemize.cloud>'],
+    ['Itemize <noreply@itemize.cloud>', 'sender@example.com', 'QA Studio', '"QA Studio" <sender@example.com>'],
+    ['Itemize <noreply@itemize.cloud>', null, null, 'Itemize <noreply@itemize.cloud>'],
+  ])('handles configured sender %s and campaign override %s / %s', async (configured, override, name, expected) => {
+    process.env = { ...env, RESEND_API_KEY: 'test', EMAIL_FROM: configured };
+    const fetchMock = jest.spyOn(global, 'fetch').mockResolvedValue(new Response(JSON.stringify({ id: 'test-id' }), { status: 200 }));
+    const result = await new ResendCampaignTestEmailProvider().send({
+      to: 'qa@example.com', subject: 'QA', html: '<p>QA</p>', text: null,
+      fromName: name, fromEmail: override, replyTo: null, idempotencyKey: 'qa-sender',
+    });
+    expect(result).toEqual({ kind: 'sent', providerId: 'test-id' });
+    expect(JSON.parse(fetchMock.mock.calls[0][1]?.body as string).from).toBe(expected);
+    expect(fetchMock.mock.calls[0][1]?.headers).toMatchObject({ 'Idempotency-Key': 'qa-sender' });
+  });
+});

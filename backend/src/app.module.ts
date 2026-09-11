@@ -1,4 +1,5 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { DeliveryRecoveryModule } from './delivery-recovery/delivery-recovery.module';
 import { APP_GUARD } from '@nestjs/core';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { GraphQLModule } from '@nestjs/graphql';
@@ -123,6 +124,7 @@ const apolloPlugins = [
     CampaignEditorModule,
     SegmentsModule,
     CampaignDeliveryModule,
+    DeliveryRecoveryModule,
     BookingsModule,
     CategoriesModule,
     VaultModule,

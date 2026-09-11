@@ -53,6 +53,7 @@ export class CampaignSendRepository {
     userId: number,
     campaignId: number,
     idempotencyKey: string,
+    scheduledOnly = false,
   ): Promise<CampaignSendPreparation> {
     return this.transaction(async (client) => {
       const campaignResult = await client.query<{
@@ -61,13 +62,14 @@ export class CampaignSendRepository {
         content_html: string | null; content_text: string | null;
         template_html: string | null; template_text: string | null; template_preheader: string | null;
         segment_type: string; segment_id: number | null; segment_filter: unknown;
-        tag_ids: number[] | null; excluded_tag_ids: number[] | null;
+        tag_ids: number[] | null; excluded_tag_ids: number[] | null; schedule_due: boolean;
       }>(
         `SELECT c.id, c.organization_id, c.status, c.subject, c.from_name, c.from_email,
                 c.reply_to, c.content_html, c.content_text, c.segment_type, c.segment_id,
                 c.segment_filter, c.tag_ids, c.excluded_tag_ids,
                 et.body_html AS template_html, et.body_text AS template_text,
-                et.preheader AS template_preheader
+                et.preheader AS template_preheader,
+                (c.scheduled_at <= CURRENT_TIMESTAMP) AS schedule_due
          FROM email_campaigns c
          LEFT JOIN email_templates et
            ON et.id=c.template_id AND et.organization_id=c.organization_id
@@ -91,6 +93,11 @@ export class CampaignSendRepository {
         };
       }
       if (!['draft', 'scheduled'].includes(campaign.status)) {
+        return { kind: 'invalid_status', status: campaign.status };
+      }
+      // Recheck under the campaign lock: an operator may have unscheduled or
+      // postponed this campaign after the worker selected it.
+      if (scheduledOnly && (campaign.status !== 'scheduled' || !campaign.schedule_due)) {
         return { kind: 'invalid_status', status: campaign.status };
       }
 
@@ -201,6 +208,16 @@ export class CampaignSendRepository {
       );
       return { kind: 'created', campaignId, jobId, recipientCount: recipients.length };
     });
+  }
+
+  async dueScheduled(limit: number): Promise<Array<{ id: number; organizationId: number; userId: number }>> {
+    const result = await this.pool.query<{ id: number; organization_id: number; created_by: number }>(
+      `SELECT id, organization_id, created_by FROM email_campaigns
+       WHERE status='scheduled' AND scheduled_at <= CURRENT_TIMESTAMP
+         AND created_by IS NOT NULL
+       ORDER BY scheduled_at, id LIMIT $1`, [limit],
+    );
+    return result.rows.map(row => ({ id: Number(row.id), organizationId: Number(row.organization_id), userId: Number(row.created_by) }));
   }
 
   async due(limit: number): Promise<Array<{ id: number; organizationId: number }>> {

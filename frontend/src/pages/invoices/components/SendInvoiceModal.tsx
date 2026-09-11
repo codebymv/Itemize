@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { formatCalendarDate } from '@/lib/calendar-date';
 import { Link } from 'react-router-dom';
 import {
     Dialog,
@@ -52,11 +53,11 @@ const formatCurrency = (amount: number, currency: string) => new Intl.NumberForm
 
 const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
-    return new Date(dateStr).toLocaleDateString('en-US', {
+    return formatCalendarDate(dateStr, {
         year: 'numeric',
         month: 'long',
         day: 'numeric'
-    });
+    }, 'en-US');
 };
 
 export function SendInvoiceModal({

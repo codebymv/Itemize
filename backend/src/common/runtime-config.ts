@@ -2,6 +2,10 @@ import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 
 const BOOLEAN_KEYS = [
   'DATABASE_SSL',
+  'CAMPAIGN_DELIVERY_SCHEDULER_ENABLED',
+  'CAMPAIGN_TEST_EMAIL_RECOVERY_ENABLED',
+  'INVOICE_EMAIL_RECOVERY_ENABLED',
+  'INVOICE_LOGO_CLEANUP_SCHEDULER_ENABLED',
   'ADMIN_EMAIL_DELIVERY_SCHEDULER_ENABLED',
   'CALENDAR_SYNC_JOBS_ENABLED',
   'CALENDAR_SYNC_NEST_JOBS_ENABLED',
@@ -134,7 +138,7 @@ export class RuntimeConfigValidationService implements OnApplicationBootstrap {
     const enabled = workers.filter((key) => booleanEnvironmentValue(process.env, key));
     const disabled = workers.filter((key) => !booleanEnvironmentValue(process.env, key));
     this.logger.log(`Enabled runtime workers: ${enabled.join(', ') || '(none)'}`);
-    this.logger.log('Account deletion worker: always enabled; one-shot jobs require an external schedule');
+    this.logger.log('Account deletion worker: always enabled; delivery recovery uses explicit ownership flags');
     if (disabled.length) this.logger.warn(`Disabled runtime workers: ${disabled.join(', ')}`);
     if (process.env.NODE_ENV === 'production' && process.env.ITEMIZE_SUBSCRIPTION_BILLING_ENABLED !== 'true') {
       this.logger.warn('Subscription checkout is disabled by ITEMIZE_SUBSCRIPTION_BILLING_ENABLED');

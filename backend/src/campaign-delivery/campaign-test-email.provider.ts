@@ -28,10 +28,14 @@ export class ResendCampaignTestEmailProvider implements CampaignTestEmailProvide
     const apiKey = process.env.RESEND_API_KEY?.trim();
     if (!apiKey) return { kind: 'rejected', message: 'Email service is not configured' };
     const configuredFrom = process.env.EMAIL_FROM?.trim() || 'Itemize <noreply@itemize.cloud>';
-    const fromEmail = message.fromEmail?.trim() || configuredFrom;
-    const from = message.fromName?.trim()
-      ? `${message.fromName.trim()} <${fromEmail}>`
-      : fromEmail;
+    const sender = message.fromEmail?.trim() || configuredFrom;
+    // EMAIL_FROM may already be "Itemize <noreply@itemize.cloud>".
+    // Replace its display name rather than nesting a second mailbox wrapper.
+    const mailbox = sender.match(/<([^<>]+)>\s*$/)?.[1]?.trim() || sender;
+    const displayName = message.fromName?.trim();
+    const from = displayName
+      ? `${JSON.stringify(displayName)} <${mailbox}>`
+      : sender;
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {

@@ -84,6 +84,21 @@ export class CampaignSendService {
     };
   }
 
+  async runScheduled(limit = 25): Promise<{ scheduled: number; blocked: number }> {
+    const due = await this.deliveries.dueScheduled(Math.max(1, Math.min(limit, 100)));
+    let scheduled = 0;
+    let blocked = 0;
+    for (const campaign of due) {
+      const result = await this.deliveries.prepare(
+        campaign.organizationId, campaign.userId, campaign.id,
+        `scheduled-campaign:${campaign.id}`, true,
+      );
+      if (result.kind === 'created' || result.kind === 'replayed') scheduled += 1;
+      else blocked += 1;
+    }
+    return { scheduled, blocked };
+  }
+
   async runDue(limit = 100): Promise<{ attempted: number; sent: number }> {
     const due = await this.deliveries.due(Math.max(1, Math.min(limit, 500)));
     let sent = 0;
