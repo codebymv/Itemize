@@ -1,5 +1,6 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
+import { enqueueBookingNotification } from '../bookings/booking-notification';
 import { PG_POOL } from '../database/database.module';
 
 export type PublicCalendarRow = {
@@ -268,6 +269,7 @@ export class PublicBookingsRepository {
         eventKey: `domain:booking_created:${booking.id}`,
         payload: { booking_id: booking.id, calendar_id: calendar.id },
       });
+      await enqueueBookingNotification(client, calendar.organization_id, booking.id, 'confirmed', `confirmed:${booking.id}`);
       return { kind: 'created', booking, replayed: false };
     });
   }
@@ -309,6 +311,7 @@ export class PublicBookingsRepository {
         eventKey: `domain:booking_cancelled:${booking.id}`,
         payload: { booking_id: booking.id, reason },
       });
+      await enqueueBookingNotification(client, booking.organization_id, booking.id, 'cancelled', `cancelled:${booking.id}`);
       return { kind: 'cancelled' };
     });
   }

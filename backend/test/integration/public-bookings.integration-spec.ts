@@ -6,6 +6,8 @@ import { Pool } from 'pg';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/configure-app';
+import { enqueueBookingNotification } from '../../src/bookings/booking-notification';
+import { BookingsRepository } from '../../src/bookings/bookings.repository';
 import { PG_POOL } from '../../src/database/database.module';
 
 type SeededUser = {
@@ -243,7 +245,7 @@ describe('Public bookings protocol (legacy behavior pinned)', () => {
     for (const response of [nest, legacy]) {
       expect(response.body).toMatchObject({
         success: true,
-        message: 'Booking confirmed! Check your email for confirmation details.',
+        message: 'Booking confirmed.',
       });
       expect(Object.keys(response.body.booking).sort()).toEqual([
         'attendee_email',
@@ -418,4 +420,47 @@ describe('Public bookings protocol (legacy behavior pinned)', () => {
     );
     expect(row.rows[0].cancellation_reason).toBe('Cancelled by attendee');
   });
+  it('queues durable, escaped booking emails once per lifecycle change and respects calendar preference', async () => {
+    const calendar = await insertCalendar('QA <booking> & notification');
+    await pool.query('UPDATE calendars SET confirmation_email=TRUE WHERE id=$1', [calendar.id]);
+    const key = crypto.randomUUID();
+    const body = { ...futureSlot(192), attendee_name: 'QA Attendee', attendee_email: 'qa@example.com', timezone: 'America/Phoenix' };
+    const created = await createRequest(calendar.public_id, key).send(body).expect(201);
+    const bookingId = created.body.booking.id;
+    await createRequest(calendar.public_id, key).send(body).expect(201);
+    const notifications = async () => (await pool.query(
+      "SELECT payload FROM workflow_side_effect_outbox WHERE organization_id=$1 AND payload->>'bookingId'=$2 ORDER BY id",
+      [owner.org.id, String(bookingId)],
+    )).rows;
+    let rows = await notifications();
+    expect(rows).toHaveLength(1);
+    expect(rows[0].payload).toMatchObject({ to: 'qa@example.com', bookingEvent: 'confirmed', bookingId });
+    expect(rows[0].payload.bodyHtml).toContain('QA &lt;booking&gt; &amp; notification');
+    expect(rows[0].payload.bodyText).toContain('Timezone: America/Phoenix');
+    expect(rows[0].payload.bodyText).toContain(new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Phoenix', dateStyle: 'full', timeStyle: 'short',
+    }).format(new Date(body.start_time)));
+    const originalPayload = rows[0].payload;
+    const repository = new BookingsRepository(pool);
+    const next = futureSlot(216);
+    expect((await repository.reschedule(owner.org.id, bookingId, new Date(next.start_time), new Date(next.end_time), 'America/Phoenix')).kind).toBe('rescheduled');
+    await repository.reschedule(owner.org.id, bookingId, new Date(next.start_time), new Date(next.end_time), 'America/Phoenix');
+    rows = await notifications();
+    expect(rows.map(row => row.payload.bookingEvent)).toEqual(['confirmed', 'rescheduled']);
+    expect(rows[0].payload).toEqual(originalPayload);
+    await request(app.getHttpServer()).post(`/api/bookings/public/book/${calendar.public_id}/cancel/${created.body.booking.cancellation_token}`).send({}).expect(200);
+    expect((await notifications()).map(row => row.payload.bookingEvent)).toEqual(['confirmed', 'rescheduled', 'cancelled']);
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await enqueueBookingNotification(client, owner.org.id, bookingId, 'confirmed', 'rolled-back');
+      await client.query('ROLLBACK');
+      await enqueueBookingNotification(client, -1, bookingId, 'confirmed', 'foreign-org');
+    } finally { client.release(); }
+    expect(await notifications()).toHaveLength(3);
+    await pool.query('UPDATE calendars SET confirmation_email=FALSE WHERE id=$1', [calendar.id]);
+    const disabled = await createRequest(calendar.public_id).send({ ...body, ...futureSlot(240) }).expect(201);
+    expect((await pool.query("SELECT id FROM workflow_side_effect_outbox WHERE payload->>'bookingId'=$1", [String(disabled.body.booking.id)])).rows).toHaveLength(0);
+  });
+
 });

@@ -225,7 +225,7 @@ describe('PublicBookingsController retained HTTP contract', () => {
     expect(response.body).toMatchObject({
       success: true,
       replayed: false,
-      message: 'Booking confirmed! Check your email for confirmation details.',
+      message: 'Booking confirmed.',
       booking: {
         id: 42,
         attendee_email: 'sam@example.com',

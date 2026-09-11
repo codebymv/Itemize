@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
+import { enqueueBookingNotification } from './booking-notification';
 import { BookingStatus } from './booking.enums';
 
 export type BookingRow = {
@@ -356,6 +357,7 @@ export class BookingsRepository {
          ) VALUES ($1, $2, $3, $4, $5)`,
         [organizationId, userId, idempotencyKey, requestFingerprint, booking.id],
       );
+      await enqueueBookingNotification(client, organizationId, booking.id, 'confirmed', `confirmed:${booking.id}`);
       return { kind: 'created', row, replayed: false };
     });
   }
@@ -419,6 +421,7 @@ export class BookingsRepository {
       );
       const row = await this.findByIdWith(client, organizationId, bookingId);
       if (!row) throw new Error('Booking disappeared inside cancellation');
+      await enqueueBookingNotification(client, organizationId, bookingId, 'cancelled', `cancelled:${bookingId}`);
       return { kind: 'cancelled', row };
     });
   }
@@ -521,6 +524,9 @@ export class BookingsRepository {
       );
       const row = await this.findByIdWith(client, organizationId, bookingId);
       if (!row) throw new Error('Booking disappeared inside rescheduling');
+      if (previous.start_time.getTime() !== startTime.getTime() || previous.end_time.getTime() !== endTime.getTime() || previous.timezone !== row.timezone) {
+        await enqueueBookingNotification(client, organizationId, bookingId, 'rescheduled', `rescheduled:${bookingId}:${randomUUID()}`);
+      }
       return { kind: 'rescheduled', row };
     });
   }

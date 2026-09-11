@@ -191,7 +191,7 @@ export class PublicBookingsService {
         cancellation_token: cancellationToken,
       },
       replayed: outcome.replayed,
-      message: 'Booking confirmed! Check your email for confirmation details.',
+      message: 'Booking confirmed.',
     };
   }
 
