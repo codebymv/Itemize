@@ -24,8 +24,16 @@ export async function enqueueBookingNotification(
        AND NULLIF(TRIM(b.attendee_email), '') IS NOT NULL`, [bookingId, organizationId]);
   const booking = result.rows[0];
   if (!booking) return;
+  let timezone = booking.timezone || 'UTC';
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: timezone });
+  } catch {
+    // Older public bookings accepted arbitrary timezone strings. Preserve
+    // their lifecycle operations and render an explicitly labelled UTC time.
+    timezone = 'UTC';
+  }
   const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: booking.timezone, dateStyle: 'full', timeStyle: 'short',
+    timeZone: timezone, dateStyle: 'full', timeStyle: 'short',
   });
   const subject = `Booking ${event}: ${booking.calendar_name}`;
   const bodyText = [
@@ -33,7 +41,7 @@ export async function enqueueBookingNotification(
     booking.calendar_name,
     `Start: ${formatter.format(booking.start_time)}`,
     `End: ${formatter.format(booking.end_time)}`,
-    `Timezone: ${booking.timezone}`,
+    `Timezone: ${timezone}`,
     event === 'cancelled' ? 'This appointment has been released.'
       : 'Contact the organizer if you need to change this appointment.',
   ].join('\n');

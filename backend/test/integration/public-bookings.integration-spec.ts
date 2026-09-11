@@ -458,6 +458,10 @@ describe('Public bookings protocol (legacy behavior pinned)', () => {
       await enqueueBookingNotification(client, -1, bookingId, 'confirmed', 'foreign-org');
     } finally { client.release(); }
     expect(await notifications()).toHaveLength(3);
+    await pool.query("UPDATE bookings SET timezone='legacy-invalid-zone' WHERE id=$1", [bookingId]);
+    const legacyClient = await pool.connect();
+    try { await enqueueBookingNotification(legacyClient, owner.org.id, bookingId, 'cancelled', 'legacy-zone'); } finally { legacyClient.release(); }
+    expect((await notifications())[3].payload.bodyText).toContain('Timezone: UTC');
     await pool.query('UPDATE calendars SET confirmation_email=FALSE WHERE id=$1', [calendar.id]);
     const disabled = await createRequest(calendar.public_id).send({ ...body, ...futureSlot(240) }).expect(201);
     expect((await pool.query("SELECT id FROM workflow_side_effect_outbox WHERE payload->>'bookingId'=$1", [String(disabled.body.booking.id)])).rows).toHaveLength(0);
