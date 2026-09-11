@@ -63,13 +63,8 @@ export function RichTextEditor({
     const [buttonText, setButtonText] = useState('');
     const [buttonUrl, setButtonUrl] = useState('');
     const editorContainerRef = useRef<HTMLDivElement>(null);
-    const isUpdatingFromProps = useRef(false);
 
     const handleUpdate = useCallback(({ editor }: { editor: Editor }) => {
-        if (isUpdatingFromProps.current) {
-            isUpdatingFromProps.current = false;
-            return;
-        }
         const html = editor.getHTML();
         onChange(html);
     }, [onChange]);
@@ -130,8 +125,9 @@ export function RichTextEditor({
     // Sync content from props
     useEffect(() => {
         if (editor && !editor.isDestroyed && value !== editor.getHTML()) {
-            isUpdatingFromProps.current = true;
-            editor.commands.setContent(value || '<p></p>');
+            // Tiptap 2 suppresses update events for setContent by default.
+            // A separate pending flag would swallow the next real user edit.
+            editor.commands.setContent(value || '<p></p>', false);
         }
     }, [value, editor]);
 
