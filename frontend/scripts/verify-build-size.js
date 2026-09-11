@@ -36,6 +36,13 @@ const check = (file, limit, label) => {
 
 try {
   const html = readFileSync(join(dist, 'index.html'), 'utf8');
+  const activeShell = html.replace(/<noscript\b[^>]*>[\s\S]*?<\/noscript>/gi, '');
+  if (/<(?:link|script)\b[^>]*\son[a-z]+\s*=/i.test(activeShell)) {
+    throw new Error('Built shell contains inline event handlers blocked by production CSP');
+  }
+  if (!/<link\b[^>]*rel=["']stylesheet["'][^>]*href=["']\/assets\//i.test(activeShell)) {
+    throw new Error('Built shell must load its application CSS as a stylesheet');
+  }
   const entryMatch = html.match(/<script[^>]+type=["']module["'][^>]+src=["']\/assets\/([^"']+\.js)["']/i);
   if (!entryMatch) throw new Error('Could not find the module entry in dist/index.html');
 

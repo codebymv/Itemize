@@ -1,22 +1,7 @@
-import { defineConfig, type Plugin } from "vite";
+import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import { visualizer } from "rollup-plugin-visualizer"
 import path from 'path'
-
-function asyncCssPlugin(): Plugin {
-  return {
-    name: "async-css",
-    apply: "build",
-    transformIndexHtml(html) {
-      return html.replace(
-        /<link rel="stylesheet"([^>]*?)href="([^"]+\.css)"([^>]*?)>/g,
-        (_match, before, href, after) =>
-          `<link rel="preload" as="style" href="${href}"${before}${after} onload="this.onload=null;this.rel='stylesheet'">` +
-          `<noscript><link rel="stylesheet" href="${href}"></noscript>`,
-      );
-    },
-  };
-}
 
 const devProxyTarget = process.env.DEV_API_PROXY_TARGET?.trim();
 const devGraphqlProxyTarget =
@@ -39,7 +24,6 @@ const devProxy = (target: string) => ({
 export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
-    asyncCssPlugin(),
     mode === 'production' && process.env.ANALYZE === 'true'
       ? visualizer({ open: true, filename: 'dist/stats.html' })
       : null
