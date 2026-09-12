@@ -12,12 +12,14 @@ import { SubscriptionWebhookJobsSchedulerService } from './subscription-webhook-
 import { SubscriptionWebhooksController } from './subscription-webhooks.controller';
 import { SubscriptionWebhooksService } from './subscription-webhooks.service';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { StripeSubscriptionStateProvider } from './stripe-subscription-state.provider';
 
 @Module({
   imports: [NotificationsModule],
   controllers: [SubscriptionWebhooksController],
   providers: [
     SubscriptionWebhooksService,
+    StripeSubscriptionStateProvider,
     SubscriptionWebhookJobsService,
     SubscriptionWebhookJobsSchedulerService,
     {

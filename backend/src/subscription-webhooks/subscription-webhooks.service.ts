@@ -1,17 +1,14 @@
 /**
- * Faithful port of the retained Stripe subscription webhook processor
- * (backend/src/services/subscriptionWebhookService.js). The durable
- * event claim, minimal replay snapshot, deterministic provider
- * ordering, tenant locks, plan/limit writes, subscription upsert,
- * audit trail, and notification marking must not drift while both
- * runtimes serve the receiver. reconcileEvent mirrors the legacy
- * reconciliation replay so the NestJS workers can drain the shared
- * tables with identical outcomes.
+ * Durable event claims and tenant locks serialize canonical Stripe reads with
+ * organization/subscription/audit writes. Event IDs deduplicate deliveries;
+ * snapshot timestamps and lexical IDs never decide the current billing state.
+ * Reconciliation uses the same fresh read rather than replaying old state.
  */
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
 import { NotificationsService } from '../notifications/notifications.service';
+import { StripeSubscriptionStateProvider } from './stripe-subscription-state.provider';
 import {
   API_LIMITS,
   CALENDAR_LIMITS,
@@ -66,10 +63,11 @@ type StripeObject = {
   trial_start?: unknown;
   trial_end?: unknown;
   cancel_at_period_end?: unknown;
+  canceled_at?: unknown;
   pause_collection?: { behavior?: unknown } | null;
   items?: {
     data?: Array<{
-      price?: { id?: string; recurring?: { interval?: string } };
+      price?: { id?: string; recurring?: { interval?: string } | null };
       current_period_start?: unknown;
       current_period_end?: unknown;
     }>;
@@ -246,27 +244,12 @@ export function normalizedStripeSubscriptionEventFromClaim(
   });
 }
 
-export function compareStripeProviderOrder(
-  normalized: NormalizedEvent,
-  organization: OrganizationRow,
-): number {
-  if (!organization.subscription_provider_updated_at) return 1;
-  const incomingTime = normalized.eventCreatedAt.getTime();
-  const currentTime = new Date(
-    organization.subscription_provider_updated_at,
-  ).getTime();
-  if (incomingTime !== currentTime) return incomingTime > currentTime ? 1 : -1;
-  const currentEventId = organization.subscription_provider_event_id;
-  if (!currentEventId) return 1;
-  if (normalized.eventId === currentEventId) return 0;
-  return normalized.eventId > currentEventId ? 1 : -1;
-}
-
 @Injectable()
 export class SubscriptionWebhooksService {
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,
     private readonly notifications: NotificationsService,
+    private readonly providerState: StripeSubscriptionStateProvider,
   ) {}
 
   async processStripeSubscriptionEvent(
@@ -311,20 +294,7 @@ export class SubscriptionWebhooksService {
       if (organizations.length > 1) {
         return this.markEvent(client, normalized, 'ambiguous');
       }
-      const org = organizations[0];
-      if (compareStripeProviderOrder(normalized, org) <= 0) {
-        return this.markEvent(client, normalized, 'stale', {
-          organizationId: org.id,
-        });
-      }
-
-      if (normalized.eventType === 'customer.subscription.deleted') {
-        return this.processTerminalEvent(client, normalized, org, 'canceled');
-      }
-      if (normalized.eventType === 'invoice.payment_failed') {
-        return this.processTerminalEvent(client, normalized, org, 'past_due');
-      }
-      return this.processSubscriptionUpdate(client, normalized, org);
+      return this.applyCurrentSubscription(client, normalized, organizations[0]);
     });
   }
 
@@ -366,29 +336,7 @@ export class SubscriptionWebhooksService {
       (error as Error & { code?: string }).code = 'RECONCILIATION_UNRESOLVED';
       throw error;
     }
-    const org = organizations[0];
-    let result: SubscriptionWebhookResult;
-    if (compareStripeProviderOrder(normalized, org) <= 0) {
-      result = await this.markEvent(client, normalized, 'stale', {
-        organizationId: org.id,
-      });
-    } else if (normalized.eventType === 'customer.subscription.deleted') {
-      result = await this.processTerminalEvent(
-        client,
-        normalized,
-        org,
-        'canceled',
-      );
-    } else if (normalized.eventType === 'invoice.payment_failed') {
-      result = await this.processTerminalEvent(
-        client,
-        normalized,
-        org,
-        'past_due',
-      );
-    } else {
-      result = await this.processSubscriptionUpdate(client, normalized, org);
-    }
+    const result = await this.applyCurrentSubscription(client, normalized, organizations[0]);
     await client.query(
       `UPDATE stripe_subscription_webhook_events SET
          reconciliation_status = 'resolved',
@@ -401,6 +349,32 @@ export class SubscriptionWebhooksService {
       [eventId],
     );
     return result;
+  }
+
+  private async applyCurrentSubscription(
+    client: PoolClient,
+    event: NormalizedEvent,
+    org: OrganizationRow,
+  ): Promise<SubscriptionWebhookResult> {
+    if (!event.subscriptionId || !event.customerId) {
+      throw new Error('Stripe subscription event has no complete provider identity');
+    }
+    // findOrganization holds FOR UPDATE until commit. Reading before that lock
+    // would allow a slower request to overwrite a newer provider response.
+    const current = await this.providerState.retrieve(event.subscriptionId);
+    if (current.id !== event.subscriptionId || idFromReference(current.customer) !== event.customerId) {
+      throw new Error('Stripe subscription state does not match the event identity');
+    }
+    if (!SUBSCRIPTION_STATUSES.has(current.status)) {
+      throw new Error('Stripe returned an invalid subscription state');
+    }
+    const normalized: NormalizedEvent = { ...event, object: current };
+    // A late failed-invoice event can now observe successful recovery. Likewise,
+    // an old activation snapshot cannot revive a subscription canceled since.
+    if (current.status === 'canceled') {
+      return this.processTerminalEvent(client, normalized, org, 'canceled');
+    }
+    return this.processSubscriptionUpdate(client, normalized, org);
   }
 
   private async findOrganization(
@@ -695,6 +669,10 @@ export class SubscriptionWebhooksService {
     status: string,
   ): Promise<SubscriptionWebhookResult> {
     const canceled = status === 'canceled';
+    const canceledSeconds = epochSeconds(normalized.object.canceled_at);
+    const canceledAt = canceledSeconds
+      ? new Date(canceledSeconds * 1000)
+      : normalized.eventCreatedAt;
     const terminalPlan = canceled ? PLANS.FREE : (org.plan || PLANS.FREE);
     await client.query(
       `UPDATE organizations SET
@@ -711,7 +689,7 @@ export class SubscriptionWebhooksService {
          landing_pages_limit = CASE WHEN $2 THEN $10 ELSE landing_pages_limit END,
          forms_limit = CASE WHEN $2 THEN $11 ELSE forms_limit END,
          calendars_limit = CASE WHEN $2 THEN $12 ELSE calendars_limit END,
-         canceled_at = CASE WHEN $2 THEN $13 ELSE canceled_at END,
+         canceled_at = CASE WHEN $2 THEN $16 ELSE canceled_at END,
          subscription_provider_updated_at = $13,
          subscription_provider_event_id = $14,
          updated_at = CURRENT_TIMESTAMP
@@ -732,6 +710,7 @@ export class SubscriptionWebhooksService {
         normalized.eventCreatedAt,
         normalized.eventId,
         org.id,
+        canceledAt,
       ],
     );
     await client.query(
@@ -740,7 +719,7 @@ export class SubscriptionWebhooksService {
          canceled_at = CASE WHEN $1::varchar = 'canceled' THEN $2 ELSE canceled_at END,
          updated_at = CURRENT_TIMESTAMP
        WHERE organization_id = $3`,
-      [status, normalized.eventCreatedAt, org.id],
+      [status, canceledAt, org.id],
     );
     await this.recordAuditEvent(
       client,

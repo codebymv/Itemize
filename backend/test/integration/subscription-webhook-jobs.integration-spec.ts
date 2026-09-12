@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import { Pool } from 'pg';
 import { AppModule } from '../../src/app.module';
 import { PG_POOL } from '../../src/database/database.module';
+import { StripeSubscriptionStateProvider } from '../../src/subscription-webhooks/stripe-subscription-state.provider';
 import {
   SUBSCRIPTION_NOTIFICATION_EMAIL_PROVIDER,
   SubscriptionNotificationEmail,
@@ -33,6 +34,12 @@ describe('Subscription webhook workers (legacy behavior pinned)', () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let dbHelper: any;
   const nestSent: SubscriptionNotificationEmail[] = [];
+  const currentSubscriptions = new Map<string, unknown>();
+  const stateProvider = { retrieve: jest.fn(async (id: string) => {
+    if (!currentSubscriptions.has(id)) throw new Error('Missing provider fixture');
+    return currentSubscriptions.get(id);
+  }) };
+
 
   const nestProvider = {
     send: jest.fn(async (message: SubscriptionNotificationEmail) => {
@@ -99,6 +106,10 @@ describe('Subscription webhook workers (legacy behavior pinned)', () => {
     { customerId, subscriptionId }: { customerId: string; subscriptionId: string },
   ) => {
     const eventId = `evt_rec_${suffix}_${Date.now()}`;
+    currentSubscriptions.set(subscriptionId, { id: subscriptionId, customer: customerId, status: 'active',
+      current_period_start: 1784119000, current_period_end: 1786711000,
+      items: { data: [{ price: { id: 'price_unlimited_monthly', recurring: { interval: 'month' } } }] },
+    });
     const snapshot = {
       customerId,
       subscriptionId,
@@ -166,6 +177,8 @@ describe('Subscription webhook workers (legacy behavior pinned)', () => {
       .useValue(pool)
       .overrideProvider(SUBSCRIPTION_NOTIFICATION_EMAIL_PROVIDER)
       .useValue(nestProvider)
+      .overrideProvider(StripeSubscriptionStateProvider)
+      .useValue(stateProvider)
       .compile();
     app = moduleRef.createNestApplication<NestExpressApplication>({
       bodyParser: false,
@@ -328,6 +341,24 @@ describe('Subscription webhook workers (legacy behavior pinned)', () => {
     expect(nest.org.subscription_status).toBe('active');
     expect(nest.event.reconciliation_status).toBe('resolved');
     expect(nest.event.reconciled_at).not.toBeNull();
+  });
+
+  it('retries a provider outage and reconciles current cancellation instead of the activation snapshot', async () => {
+    const owner = await seedOrganization('provider-retry');
+    const customerId = `cus_retry_${Date.now()}`, subscriptionId = `sub_retry_${Date.now()}`;
+    await pool.query('UPDATE organizations SET stripe_customer_id=$1 WHERE id=$2',[customerId,owner.org.id]);
+    const eventId = await seedReconciliationEvent('provider-retry',{customerId,subscriptionId});
+    stateProvider.retrieve.mockRejectedValueOnce(new Error('Provider unavailable'));
+    expect(await nestJobs.runReconciliation()).toEqual({claimed:1,resolved:0,retry:1,deadLetter:0});
+    expect((await reconciliationRow(eventId)).reconciliation_status).toBe('retry');
+    expect((await pool.query('SELECT plan,subscription_status FROM organizations WHERE id=$1',[owner.org.id])).rows[0])
+      .toMatchObject({plan:'starter',subscription_status:'trialing'});
+    currentSubscriptions.set(subscriptionId,{id:subscriptionId,customer:customerId,status:'canceled'});
+    await pool.query('UPDATE stripe_subscription_webhook_events SET reconciliation_next_attempt_at=NOW() WHERE stripe_event_id=$1',[eventId]);
+    expect(await nestJobs.runReconciliation()).toEqual({claimed:1,resolved:1,retry:0,deadLetter:0});
+    expect((await reconciliationRow(eventId)).reconciliation_attempt_count).toBe(2);
+    expect((await pool.query('SELECT plan,subscription_status FROM organizations WHERE id=$1',[owner.org.id])).rows[0])
+      .toMatchObject({plan:'free',subscription_status:'canceled'});
   });
 
   it('defers reconciliation identically while the mapping stays unresolved', async () => {

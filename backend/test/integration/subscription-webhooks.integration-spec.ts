@@ -7,6 +7,7 @@ import request from 'supertest';
 import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
+import { StripeSubscriptionStateProvider } from '../../src/subscription-webhooks/stripe-subscription-state.provider';
 
 const webhookSecret = 'whsec_subscription_parity';
 const stripe = new Stripe('sk_test_subscription_parity');
@@ -54,13 +55,23 @@ describe('Stripe subscription webhook retained HTTP parity (NestJS vs legacy ori
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let dbHelper: any;
   const originalSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const currentSubscriptions = new Map<string, unknown>();
+  const stateProvider = { retrieve: jest.fn(async (id: string) => {
+    if (!currentSubscriptions.has(id)) throw new Error('Missing provider fixture');
+    return currentSubscriptions.get(id);
+  }) };
+
 
   const signedPost = (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     server: any,
     event: unknown,
-    { valid = true, omitSignature = false } = {},
+    { valid = true, omitSignature = false, publish = true } = {},
   ) => {
+    const fixture = event as ReturnType<typeof subscriptionEvent>;
+    if (publish && fixture.type.startsWith('customer.subscription.')) {
+      currentSubscriptions.set(fixture.data.object.id, structuredClone(fixture.data.object));
+    }
     const payload = JSON.stringify(event);
     let req = request(server)
       .post('/api/billing/webhook')
@@ -117,6 +128,8 @@ describe('Stripe subscription webhook retained HTTP parity (NestJS vs legacy ori
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(PG_POOL)
       .useValue(pool)
+      .overrideProvider(StripeSubscriptionStateProvider)
+      .useValue(stateProvider)
       .compile();
     app = moduleRef.createNestApplication<NestExpressApplication>({
       bodyParser: false,
@@ -282,7 +295,7 @@ describe('Stripe subscription webhook retained HTTP parity (NestJS vs legacy ori
     });
   });
 
-  it('rejects stale provider ordering identically after a newer event landed', async () => {
+  it('refreshes canonical state when a delayed older event arrives', async () => {
     const suffix = `stale${Date.now()}`;
     const customerId = `cus_stale_${suffix}`;
     const subscriptionId = `sub_stale_${suffix}`;
@@ -305,9 +318,10 @@ describe('Stripe subscription webhook retained HTTP parity (NestJS vs legacy ori
         created: 1784110000,
         priceId: 'price_starter_monthly',
       }),
+      { publish: false },
     );
     expect(stale.status).toBe(200);
-    expect(stale.body).toMatchObject({ status: 'stale', duplicate: false });
+    expect(stale.body).toMatchObject({ status: 'processed', duplicate: false });
     const org = await pool.query(
       'SELECT plan FROM organizations WHERE stripe_customer_id = $1',
       [customerId],
@@ -355,6 +369,10 @@ describe('Stripe subscription webhook retained HTTP parity (NestJS vs legacy ori
 
     const failedCustomer = `cus_fail_${suffix}`;
     const failedOwner = await createBillingOrganization('failed', failedCustomer);
+    currentSubscriptions.set(`sub_fail_${suffix}`, subscriptionEvent({
+      customerId: failedCustomer, subscriptionId: `sub_fail_${suffix}`,
+      eventId: 'fixture', status: 'past_due', priceId: 'price_starter_monthly',
+    }).data.object);
     const failed = await signedPost(
       app.getHttpServer(),
       {
@@ -395,6 +413,107 @@ describe('Stripe subscription webhook retained HTTP parity (NestJS vs legacy ori
     const old = subscriptionEvent({ customerId, eventId: `evt_old_delete_${suffix}`, subscriptionId: `sub_old_${suffix}`, type: 'customer.subscription.deleted', status: 'canceled', created: 1784120501 });
     expect((await signedPost(app.getHttpServer(), old).expect(200)).body.status).toBe('unmatched');
     expect((await pool.query('SELECT plan,subscription_status,stripe_subscription_id FROM organizations WHERE id=$1', [owner.org.id])).rows[0]).toMatchObject({ plan: 'starter', subscription_status: 'active', stripe_subscription_id: `sub_current_${suffix}` });
+  });
+
+  it.each(['forward', 'reverse'])('uses current state for conflicting same-second events in %s order', async (order) => {
+    const suffix = `tie_${order}_${Date.now()}`;
+    const customerId = `cus_${suffix}`;
+    const subscriptionId = `sub_${suffix}`;
+    const owner = await createBillingOrganization(suffix, customerId);
+    const recovered = subscriptionEvent({customerId, subscriptionId, eventId: `evt_a_${suffix}`, priceId: 'price_unlimited_yearly'});
+    recovered.data.object.items.data[0].price.recurring.interval = 'year';
+    currentSubscriptions.set(subscriptionId, recovered.data.object);
+    const failed = { id: `evt_z_${suffix}`, type: 'invoice.payment_failed', created: recovered.created,
+      data: { object: { id: `in_${suffix}`, customer: customerId, subscription: subscriptionId } } };
+    const events = order === 'forward' ? [failed, recovered] : [recovered, failed];
+    for (const event of events) await signedPost(app.getHttpServer(), event, {publish:false}).expect(200);
+    expect((await pool.query('SELECT plan,subscription_status,billing_period FROM organizations WHERE id=$1',[owner.org.id])).rows[0])
+      .toMatchObject({plan:'unlimited',subscription_status:'active',billing_period:'yearly'});
+    // Both distinct events are durably claimed, but only one upgrade is queued.
+    expect((await pool.query("SELECT count(*)::int AS count FROM stripe_subscription_webhook_events WHERE organization_id=$1 AND notification_type='subscription_upgraded'",[owner.org.id])).rows[0].count).toBe(1);
+    const before = stateProvider.retrieve.mock.calls.length;
+    expect((await signedPost(app.getHttpServer(), failed, {publish:false}).expect(200)).body.status).toBe('duplicate');
+    expect(stateProvider.retrieve.mock.calls.length).toBe(before);
+  });
+
+  it.each(['forward', 'reverse'])('does not revive canceled subscriptions in %s arrival order', async order => {
+    const suffix = `cancel_${order}_${Date.now()}`;
+    const customerId = `cus_${suffix}`, subscriptionId = `sub_${suffix}`;
+    const owner = await createBillingOrganization(suffix, customerId);
+    const activation = subscriptionEvent({customerId,subscriptionId,eventId:`evt_z_${suffix}`});
+    const cancellation = subscriptionEvent({customerId,subscriptionId,eventId:`evt_a_${suffix}`,status:'canceled',type:'customer.subscription.deleted'});
+    currentSubscriptions.set(subscriptionId,{...cancellation.data.object,canceled_at:1784120100});
+    for (const event of order === 'forward' ? [activation,cancellation] : [cancellation,activation]) {
+      await signedPost(app.getHttpServer(),event,{publish:false}).expect(200);
+    }
+    expect((await pool.query('SELECT plan,subscription_status,emails_limit,users_limit FROM organizations WHERE id=$1',[owner.org.id])).rows[0])
+      .toMatchObject({plan:'free',subscription_status:'canceled',emails_limit:0,users_limit:1});
+    expect((await pool.query('SELECT canceled_at FROM organizations WHERE id=$1',[owner.org.id])).rows[0].canceled_at).toEqual(new Date(1784120100000));
+  });
+
+  it('rolls back failed provider reads and retries the same event against fresh state', async () => {
+    const suffix = `retry_${Date.now()}`;
+    const customerId = `cus_${suffix}`, subscriptionId = `sub_${suffix}`;
+    const owner = await createBillingOrganization(suffix,customerId);
+    const event = subscriptionEvent({customerId,subscriptionId,eventId:`evt_${suffix}`});
+    stateProvider.retrieve.mockRejectedValueOnce(new Error('Provider unavailable'));
+    await signedPost(app.getHttpServer(),event).expect(500);
+    expect((await pool.query('SELECT count(*)::int AS count FROM stripe_subscription_webhook_events WHERE stripe_event_id=$1',[event.id])).rows[0].count).toBe(0);
+    expect((await pool.query('SELECT plan,subscription_status FROM organizations WHERE id=$1',[owner.org.id])).rows[0])
+      .toMatchObject({plan:'starter',subscription_status:'trialing'});
+    currentSubscriptions.set(subscriptionId,{...event.data.object,status:'canceled'});
+    await signedPost(app.getHttpServer(),event,{publish:false}).expect(200);
+    expect((await pool.query('SELECT plan,subscription_status FROM organizations WHERE id=$1',[owner.org.id])).rows[0])
+      .toMatchObject({plan:'free',subscription_status:'canceled'});
+  });
+
+  it('serializes canonical reads with tenant writes across concurrent deliveries', async () => {
+    const suffix = `concurrent_${Date.now()}`;
+    const customerId = `cus_${suffix}`, subscriptionId = `sub_${suffix}`;
+    const owner = await createBillingOrganization(suffix,customerId);
+    const first = subscriptionEvent({customerId,subscriptionId,eventId:`evt_z_${suffix}`});
+    const second = subscriptionEvent({customerId,subscriptionId,eventId:`evt_a_${suffix}`});
+    let releaseRead!: () => void;
+    let enteredRead!: () => void;
+    const entered = new Promise<void>(resolve => { enteredRead = resolve; });
+    const release = new Promise<void>(resolve => { releaseRead = resolve; });
+    stateProvider.retrieve.mockImplementationOnce(async () => {
+      enteredRead();
+      await release;
+      return first.data.object;
+    });
+    currentSubscriptions.set(subscriptionId,{...first.data.object,status:'canceled'});
+    const before = stateProvider.retrieve.mock.calls.length;
+    const firstRequest = signedPost(app.getHttpServer(),first,{publish:false}).then(response => response);
+    await entered;
+    const secondRequest = signedPost(app.getHttpServer(),second,{publish:false}).then(response => response);
+    try {
+      let blocked = false;
+      for (let attempt=0;attempt<100;attempt++) {
+        const result = await pool.query("SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE datname=current_database() AND wait_event_type='Lock' AND query LIKE '%subscription_provider_event_id%') AS blocked");
+        if (result.rows[0].blocked) { blocked = true; break; }
+        await new Promise(resolve => setTimeout(resolve,20));
+      }
+      expect(blocked).toBe(true);
+      expect(stateProvider.retrieve.mock.calls.length).toBe(before+1);
+    } finally {
+      releaseRead();
+      const responses = await Promise.all([firstRequest,secondRequest]);
+      expect(responses.map(response => response.status)).toEqual([200,200]);
+    }
+    expect((await pool.query('SELECT plan,subscription_status FROM organizations WHERE id=$1',[owner.org.id])).rows[0])
+      .toMatchObject({plan:'free',subscription_status:'canceled'});
+  });
+
+  it('rejects a canonical response with a different customer identity', async () => {
+    const suffix = `identity_${Date.now()}`;
+    const customerId = `cus_${suffix}`, subscriptionId = `sub_${suffix}`;
+    const owner = await createBillingOrganization(suffix,customerId);
+    const event = subscriptionEvent({customerId,subscriptionId,eventId:`evt_${suffix}`});
+    currentSubscriptions.set(subscriptionId,{...event.data.object,customer:'cus_someone_else'});
+    await signedPost(app.getHttpServer(),event,{publish:false}).expect(500);
+    expect((await pool.query('SELECT plan,subscription_status FROM organizations WHERE id=$1',[owner.org.id])).rows[0])
+      .toMatchObject({plan:'starter',subscription_status:'trialing'});
   });
 
   it('quarantines unmatched and ambiguous tenant mappings identically', async () => {
