@@ -291,7 +291,7 @@ export function BillingPanel() {
                 <Card>
                     <CardHeader className="pb-2">
                         <CardTitle className="text-sm font-medium text-muted-foreground">
-                            Monthly Usage
+                            Usage
                         </CardTitle>
                     </CardHeader>
                     <CardContent surface="inset" className="space-y-4">
@@ -326,7 +326,7 @@ export function BillingPanel() {
                         {/* Billing Period */}
                         {usage?.period?.start && usage?.period?.end && (
                             <p className="text-xs text-muted-foreground pt-2 border-t">
-                                Usage period: {new Date(usage.period.start).toLocaleDateString()} - {new Date(usage.period.end).toLocaleDateString()}
+                                Billing period: {new Date(usage.period.start).toLocaleDateString()} - {new Date(usage.period.end).toLocaleDateString()}
                             </p>
                         )}
                     </CardContent>
