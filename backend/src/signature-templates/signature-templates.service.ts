@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { itemizeGraphqlError } from '../common/graphql-error';
 import { SignatureDocument } from '../signature-documents/signature-document.types';
-import { SignatureDocumentRow, SignatureQuotaExceededError, SignatureRecipientWrite, SignatureReferenceError } from '../signature-documents/signature-documents.repository';
+import { SignatureDocumentRow, SignatureRecipientWrite, SignatureReferenceError } from '../signature-documents/signature-documents.repository';
 import { SignatureRecipientInput } from '../signature-documents/signature-document.inputs';
 import { CreateSignatureTemplateInput, InstantiateSignatureTemplateInput, SignatureTemplateFieldInput, SignatureTemplateRoleInput, UpdateSignatureTemplateInput } from './signature-template.inputs';
 import { SignatureTemplate, SignatureTemplateDetail, SignatureTemplateField, SignatureTemplateRole } from './signature-template.types';
@@ -42,5 +42,5 @@ export class SignatureTemplatesService {
   private expiration(value:number):number{if(!Number.isSafeInteger(value)||value<1||value>3650)throw this.bad('expirationDays must be between 1 and 3650','expirationDays','INVALID_SIGNATURE_EXPIRATION');return value;}
   private positiveId(value:number,field:string):number{if(!Number.isSafeInteger(value)||value<1)throw this.bad(`${field} must be positive`,field,'INVALID_SIGNATURE_REFERENCE');return value;}
   private bad(message:string,field:string,reason:string){return itemizeGraphqlError(message,'BAD_USER_INPUT',{field,reason});}
-  private writeError(error:unknown):never{if(error instanceof SignatureQuotaExceededError)throw itemizeGraphqlError(error.message,'FORBIDDEN',{reason:'SIGNATURE_MONTHLY_LIMIT'});if(error instanceof SignatureTemplateNotReadyError)throw itemizeGraphqlError(error.message,'CONFLICT',{reason:'SIGNATURE_TEMPLATE_NOT_READY'});if(error instanceof SignatureReferenceError)throw itemizeGraphqlError(error.message,'BAD_USER_INPUT',{reason:'INVALID_SIGNATURE_REFERENCE'});throw error;}
+  private writeError(error:unknown):never{if(error instanceof SignatureTemplateNotReadyError)throw itemizeGraphqlError(error.message,'CONFLICT',{reason:'SIGNATURE_TEMPLATE_NOT_READY'});if(error instanceof SignatureReferenceError)throw itemizeGraphqlError(error.message,'BAD_USER_INPUT',{reason:'INVALID_SIGNATURE_REFERENCE'});throw error;}
 }

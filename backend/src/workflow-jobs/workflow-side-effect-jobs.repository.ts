@@ -1,3 +1,4 @@
+import { emailCapacity, lockEmailUsage, recordEmailUsage } from '../billing/email-allowance';
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { paidEntitlementSql } from '../billing/paid-entitlement.sql';
@@ -62,7 +63,24 @@ export class WorkflowSideEffectJobsRepository {
         ) UPDATE workflow_side_effect_outbox outbox SET status='processing',attempt_count=attempt_count+1,
           lease_expires_at=NOW()+($1::int*INTERVAL '1 second'),last_error=NULL
         FROM candidate WHERE outbox.id=candidate.id RETURNING outbox.*`, [leaseSeconds, outboxId]);
-      return result.rows[0] ?? null;
+      const claim = result.rows[0];
+      if (claim?.effect_type === 'email' && claim.idempotency_key.startsWith('workflow-')) {
+        await lockEmailUsage(client, claim.organization_id, Number(claim.id));
+        const reserved = await client.query(`SELECT 1 FROM email_usage_reservations
+          WHERE organization_id=$1 AND source='workflow' AND source_id=$2`, [claim.organization_id, claim.id]);
+        if (!reserved.rows[0]) {
+          if (!(await emailCapacity(client, claim.organization_id, 1)).allowed) {
+            // Waiting for capacity is not a provider attempt and must not exhaust retries.
+            await client.query(`UPDATE workflow_side_effect_outbox SET status='retry',
+              attempt_count=attempt_count-1,next_attempt_at=NOW()+INTERVAL '1 minute',
+              lease_expires_at=NULL,last_error='Monthly email allowance exhausted'
+              WHERE id=$1`, [claim.id]);
+            return null;
+          }
+          await recordEmailUsage(client, claim.organization_id, 'workflow', Number(claim.id));
+        }
+      }
+      return claim ?? null;
     });
   }
 

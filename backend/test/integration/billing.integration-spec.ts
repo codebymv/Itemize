@@ -73,6 +73,8 @@ describe('Billing GraphQL PostgreSQL contract', () => {
     [organizationId, outsiderOrganizationId] = organizations.rows.map((row) =>
       Number(row.id),
     );
+    await pool.query(`INSERT INTO email_usage_reservations (organization_id,source,source_id,amount)
+      VALUES ($1,'test_fixture',1,12)`, [organizationId]);
     await pool.query(
       `INSERT INTO organization_members (organization_id, user_id, role, joined_at)
        VALUES ($1, $2, 'owner', NOW()), ($3, $4, 'owner', NOW())`,

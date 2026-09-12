@@ -51,6 +51,7 @@ describe('Campaign management GraphQL PostgreSQL contract', () => {
       [`campaign-primary-${suffix}`, `campaign-other-${suffix}`],
     );
     [organizationId, outsiderOrganizationId] = organizations.rows.map((row) => Number(row.id));
+    await pool.query('UPDATE organizations SET emails_limit=1000 WHERE id=ANY($1::int[])', [[organizationId,outsiderOrganizationId]]);
     await pool.query(
       `INSERT INTO organization_members (organization_id, user_id, role, joined_at)
        VALUES ($1, $3, 'owner', NOW()), ($2, $4, 'owner', NOW())`,
@@ -694,11 +695,7 @@ describe('Campaign management GraphQL PostgreSQL contract', () => {
     );
     const campaignId = Number(campaign.rows[0].id);
     const usageBefore = await pool.query<{ count: number }>(
-      `SELECT COALESCE((SELECT count FROM usage_tracking
-         WHERE organization_id=$1 AND resource_type='emails_per_month'
-           AND period_start=date_trunc('month',CURRENT_TIMESTAMP)::date),0)::int count`,
-      [organizationId],
-    );
+      `SELECT COALESCE(SUM(amount),0)::int count FROM email_usage_reservations WHERE organization_id=$1`, [organizationId]);
     testEmailProvider.send.mockReset();
     testEmailProvider.send.mockResolvedValue({ kind: 'sent', providerId: 'provider-bulk' });
     const document = `mutation SendCampaign($campaignId: Int!, $idempotencyKey: String!) {
@@ -732,11 +729,7 @@ describe('Campaign management GraphQL PostgreSQL contract', () => {
       snapshot_count: recipientCount, queued_count: recipientCount,
     });
     const usageAfter = await pool.query<{ count: number }>(
-      `SELECT count::int FROM usage_tracking
-       WHERE organization_id=$1 AND resource_type='emails_per_month'
-         AND period_start=date_trunc('month',CURRENT_TIMESTAMP)::date`,
-      [organizationId],
-    );
+      `SELECT COALESCE(SUM(amount),0)::int count FROM email_usage_reservations WHERE organization_id=$1`, [organizationId]);
     expect(usageAfter.rows[0].count).toBe(usageBefore.rows[0].count + recipientCount);
 
     const replayed = await graphql(memberToken, organizationId, document, variables).expect(200);
@@ -745,11 +738,7 @@ describe('Campaign management GraphQL PostgreSQL contract', () => {
       recipientCount, replayed: true,
     });
     const replayUsage = await pool.query<{ count: number }>(
-      `SELECT count::int FROM usage_tracking
-       WHERE organization_id=$1 AND resource_type='emails_per_month'
-         AND period_start=date_trunc('month',CURRENT_TIMESTAMP)::date`,
-      [organizationId],
-    );
+      `SELECT COALESCE(SUM(amount),0)::int count FROM email_usage_reservations WHERE organization_id=$1`, [organizationId]);
     expect(replayUsage.rows[0].count).toBe(usageAfter.rows[0].count);
 
     const paused = await graphql(

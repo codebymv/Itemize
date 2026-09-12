@@ -273,7 +273,9 @@ export class SignatureDeliveryService {
 
   private deliveryError(error: unknown): never {
     if (error instanceof SignatureDeliveryStateError) {
-      throw itemizeGraphqlError(error.message, 'CONFLICT', { reason: error.reason });
+      const code = ['SIGNATURE_MONTHLY_LIMIT', 'FEATURE_NOT_AVAILABLE'].includes(error.reason)
+        ? 'FORBIDDEN' : 'CONFLICT';
+      throw itemizeGraphqlError(error.message, code, { reason: error.reason });
     }
     throw error;
   }

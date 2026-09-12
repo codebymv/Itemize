@@ -1,3 +1,4 @@
+import { emailCapacity, lockEmailUsage, recordEmailUsage } from '../billing/email-allowance';
 import { randomUUID } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
@@ -562,6 +563,9 @@ export class MessageDeliveryRepository {
           JSON.stringify(job.payload),
         ],
       );
+      if (job.kind === 'contact_email') {
+        await recordEmailUsage(client, input.organizationId, 'message', Number(inserted.rows[0].id));
+      }
       const tracked = await this.trackContactDelivery(
         client,
         inserted.rows[0],
@@ -737,8 +741,12 @@ export class MessageDeliveryRepository {
     organizationId: number,
     channel: 'email' | 'sms',
   ): Promise<boolean> {
-    const usedColumn = channel === 'email' ? 'emails_used' : 'sms_used';
-    const limitColumn = channel === 'email' ? 'emails_limit' : 'sms_limit';
+    if (channel === 'email') {
+      await lockEmailUsage(client, organizationId);
+      return (await emailCapacity(client, organizationId, 1)).allowed;
+    }
+    const usedColumn = 'sms_used';
+    const limitColumn = 'sms_limit';
     const result = await client.query(
       `UPDATE organizations
        SET ${usedColumn}=COALESCE(${usedColumn}, 0)+1

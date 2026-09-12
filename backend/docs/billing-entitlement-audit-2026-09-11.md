@@ -83,12 +83,11 @@ status/cancellation uses the existing capability scope and expiry rules independ
    share atomic quota enforcement. Public intake is retained without a new contact
    when full; manual/import/chat conversion report the established limit error.
    See [contact quota audit](contact-quota-audit-2026-09-11.md) for verification.
-2. **Usage accounting:** reconcile campaign/workflow email producers and resets with
-   the advertised allowance; distinguish transactional messages from metered marketing.
-   Do not infer universal enforcement from a settings usage meter.
-3. **Signature allowance semantics:** current monthly enforcement counts document
-   creation, not delivered signature requests. Confirm intended treatment of drafts,
-   copies and retries against the advertised 25 e-signatures/month.
+2. **Email usage accounting addressed:** campaign, contact and workflow email now
+   share durable monthly reservations and the same Settings meter; system
+   notifications remain excluded. See [allowance audit](email-signature-allowance-audit-2026-09-11.md).
+3. **Signature semantics addressed:** the owner selected documents first sent.
+   Drafts/unsent copies are unmetered; retries/reminders do not consume more.
 4. **Live payment lifecycle:** a full charge/refund/proration journey remains unrun.
    This requires a separately authorized payment test or a dedicated Stripe test setup.
 5. Unknown provider prices retain the existing fallback behavior; ensure future catalog

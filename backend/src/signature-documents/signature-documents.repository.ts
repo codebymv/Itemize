@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
-import { hasPaidEntitlement, PaidEntitlementState, signatureDocumentLimit } from '../billing/billing-entitlement';
+import { hasPaidEntitlement, PaidEntitlementState } from '../billing/billing-entitlement';
 import { SignatureDocumentStatus } from './signature-document.enums';
 import {
   SignatureCreationOutcome,
@@ -74,7 +74,6 @@ export type SignatureDocumentStatsRow = {
   completed: number | string;
 };
 
-export class SignatureQuotaExceededError extends Error {}
 export class SignatureReferenceError extends Error {}
 
 const documentColumns = `d.id, d.organization_id, d.title, d.document_number,
@@ -246,7 +245,6 @@ export class SignatureDocumentsRepository {
           ? { kind: 'created', row, replayed: true }
           : { kind: 'result_unavailable' };
       }
-      await this.lockQuota(client, organizationId);
       if (values.templateId !== null) {
         const template = await client.query('SELECT id FROM signature_templates WHERE id=$1 AND organization_id=$2', [values.templateId, organizationId]);
         if (!template.rows[0]) throw new SignatureReferenceError('Template must belong to the active organization');
@@ -394,16 +392,6 @@ export class SignatureDocumentsRepository {
         status: 'cancelled',
       };
     });
-  }
-
-  private async lockQuota(client: PoolClient, organizationId:number):Promise<void>{
-    const organization = await client.query<{plan:string|null}>('SELECT plan FROM organizations WHERE id=$1 FOR UPDATE',[organizationId]);
-    if (!organization.rows[0]) throw new SignatureReferenceError('Organization not found');
-    const plan=organization.rows[0].plan??'free'; const limit=signatureDocumentLimit(plan);
-    if(Number.isFinite(limit)){
-      const count=await client.query<{total:string}>("SELECT COUNT(*) AS total FROM signature_documents WHERE organization_id=$1 AND created_at>=(date_trunc('month',CURRENT_TIMESTAMP AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')",[organizationId]);
-      if(Number(count.rows[0]?.total??0)>=limit)throw new SignatureQuotaExceededError('Monthly signature document limit reached');
-    }
   }
 
   private async replaceRecipients(client:PoolClient,organizationId:number,documentId:number,recipients:SignatureRecipientWrite[]):Promise<Map<string,number>>{

@@ -104,7 +104,7 @@ export function SendSignatureModal({
             Send Signature Request
           </DialogTitle>
           <DialogDescription>
-            Customize the email before sending the signature request.
+            Customize the email before sending. Solo includes 25 documents first sent per UTC calendar month. Drafts, reminders, and retries do not use additional allowance.
           </DialogDescription>
         </DialogHeader>
 

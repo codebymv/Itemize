@@ -1,3 +1,4 @@
+import { emailUsageSql, lockEmailUsage } from './email-allowance';
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
@@ -51,7 +52,7 @@ export type BillingUsageRow = Pick<
 const statusSelection = `
   plan, subscription_status, billing_period, billing_period_start,
   billing_period_end, stripe_customer_id, stripe_subscription_id,
-  emails_used, emails_limit, sms_used, sms_limit, api_calls_used,
+  ${emailUsageSql('organizations.id')} AS emails_used, emails_limit, sms_used, sms_limit, api_calls_used,
   api_calls_limit, contacts_limit, users_limit, workflows_limit,
   landing_pages_limit, forms_limit, calendars_limit, trial_ends_at,
   trial_started_at, trial_end_acknowledged_at, cancel_at_period_end, canceled_at`;
@@ -61,28 +62,47 @@ export class BillingRepository {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
   async status(organizationId: number): Promise<BillingStatusRow | null> {
-    const result = await this.pool.query<BillingStatusRow>(
-      `SELECT ${statusSelection} FROM organizations WHERE id = $1`,
-      [organizationId],
-    );
-    return result.rows[0] ?? null;
+    return this.withEmailUsage(organizationId, async (client) => {
+      const result = await client.query<BillingStatusRow>(
+        `SELECT ${statusSelection} FROM organizations WHERE id = $1`,
+        [organizationId],
+      );
+      return result.rows[0] ?? null;
+    });
   }
 
   async usage(organizationId: number): Promise<BillingUsageRow | null> {
-    const result = await this.pool.query<BillingUsageRow>(
-      `SELECT
-         o.emails_used, o.emails_limit, o.sms_used, o.sms_limit,
-         o.api_calls_used, o.api_calls_limit, o.billing_period_start,
-         o.billing_period_end,
-         (SELECT COUNT(*)::int FROM contacts c WHERE c.organization_id = o.id) AS contacts,
-         (SELECT COUNT(*)::int FROM workflows w WHERE w.organization_id = o.id) AS workflows,
-         (SELECT COUNT(*)::int FROM forms f WHERE f.organization_id = o.id) AS forms,
-         (SELECT COUNT(*)::int FROM pages p WHERE p.organization_id = o.id) AS landing_pages
-       FROM organizations o
-       WHERE o.id = $1`,
-      [organizationId],
-    );
-    return result.rows[0] ?? null;
+    return this.withEmailUsage(organizationId, async (client) => {
+      const result = await client.query<BillingUsageRow>(
+        `SELECT
+           ${emailUsageSql('o.id')} AS emails_used, o.emails_limit, o.sms_used, o.sms_limit,
+           o.api_calls_used, o.api_calls_limit, o.billing_period_start,
+           o.billing_period_end,
+           (SELECT COUNT(*)::int FROM contacts c WHERE c.organization_id = o.id) AS contacts,
+           (SELECT COUNT(*)::int FROM workflows w WHERE w.organization_id = o.id) AS workflows,
+           (SELECT COUNT(*)::int FROM forms f WHERE f.organization_id = o.id) AS forms,
+           (SELECT COUNT(*)::int FROM pages p WHERE p.organization_id = o.id) AS landing_pages
+         FROM organizations o
+         WHERE o.id = $1`,
+        [organizationId],
+      );
+      return result.rows[0] ?? null;
+    });
+  }
+
+
+  private async withEmailUsage<T>(organizationId: number, work: (client: PoolClient) => Promise<T>): Promise<T> {
+    const client = await this.pool.connect();
+    try {
+      await client.query('BEGIN');
+      await lockEmailUsage(client, organizationId);
+      const result = await work(client);
+      await client.query('COMMIT');
+      return result;
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => undefined);
+      throw error;
+    } finally { client.release(); }
   }
 
   async checkoutOrganization(

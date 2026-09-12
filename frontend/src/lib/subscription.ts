@@ -421,3 +421,5 @@ export function getUsagePercentage(used: number, limit: number | 'unlimited'): n
     if (limit === 'unlimited' || limit === -1) return 0;
     return Math.min(Math.round((used / limit) * 100), 100);
 }
+
+export const EMAIL_ALLOWANCE_DESCRIPTION = 'Campaign and contact emails count once when queued; workflow emails count when delivery starts. The allowance resets each month at 00:00 UTC. System notifications are excluded; retries never consume additional allowance.';

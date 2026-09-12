@@ -161,7 +161,7 @@ describe('Message delivery GraphQL PostgreSQL contract', () => {
       idempotencyKey: `email-contact-${Date.now()}`,
     };
     const usageBefore = Number((await pool.query<{ emails_used: number }>(
-      'SELECT emails_used FROM organizations WHERE id=$1',
+      'SELECT COALESCE(SUM(amount),0)::int emails_used FROM email_usage_reservations WHERE organization_id=$1',
       [organizationId],
     )).rows[0].emails_used);
     const created = await graphql(mutation, { input }).expect(200);
@@ -180,7 +180,7 @@ describe('Message delivery GraphQL PostgreSQL contract', () => {
       replayed: true,
     });
     expect(Number((await pool.query<{ emails_used: number }>(
-      'SELECT emails_used FROM organizations WHERE id=$1',
+      'SELECT COALESCE(SUM(amount),0)::int emails_used FROM email_usage_reservations WHERE organization_id=$1',
       [organizationId],
     )).rows[0].emails_used)).toBe(usageBefore + 1);
     expect((await pool.query(

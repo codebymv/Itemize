@@ -1693,42 +1693,50 @@ describe('E-signature GraphQL read contract', () => {
     );
   });
 
-  it('serializes starter-plan monthly quota checks under concurrent draft creation', async () => {
-    await pool.query(
-      `UPDATE signature_documents
-       SET created_at = date_trunc('month', CURRENT_TIMESTAMP) - INTERVAL '1 day'
-       WHERE organization_id = $1`,
-      [organizationId],
-    );
-    const quotaBaseline = await pool.query<{ id: number }>(
-      `INSERT INTO signature_documents (organization_id, title, status, created_by)
-       SELECT $1, 'Quota baseline ' || value, 'draft', $2
-       FROM generate_series(1, 20) AS value
-       RETURNING id`,
-      [organizationId, memberId],
-    );
-    const attempts = await Promise.all(Array.from({ length: 6 }, (_, index) => graphql(
-      memberToken,
-      organizationId,
-      'mutation Create($input:CreateSignatureDocumentInput!,$key:String!){createSignatureDocument(input:$input,idempotencyKey:$key){id}}',
-      { input: { title: `Quota ${index}` }, key: `signature-quota-${index}` },
-    )));
-    const successfulIds = attempts.filter((result) => !result.body.errors).map((result) => Number(result.body.data.createSignatureDocument.id));
-    const failures = attempts.filter((result) => result.body.errors);
-    expect(successfulIds).toHaveLength(5);
+  it('counts first sends, allows drafts at the cap, and serializes the last monthly slot', async () => {
+    await pool.query(`UPDATE signature_documents SET sent_at=
+      (date_trunc('month', CURRENT_TIMESTAMP AT TIME ZONE 'UTC') AT TIME ZONE 'UTC') - INTERVAL '1 day'
+      WHERE organization_id=$1 AND sent_at IS NOT NULL`, [organizationId]);
+    const baseline = await pool.query<{ id: number }>(
+      `INSERT INTO signature_documents (organization_id,title,status,created_by,sent_at)
+       SELECT $1,'Sent quota baseline ' || value,'cancelled',$2,CURRENT_TIMESTAMP
+       FROM generate_series(1,24) value RETURNING id`, [organizationId, memberId]);
+    const fixtures = await Promise.all([createPublicSigningFixture(), createPublicSigningFixture()]);
+    const ids = fixtures.map(f => f.documentId);
+    await pool.query(`UPDATE signature_documents SET status='draft',sent_at=NULL,page_count=1
+      WHERE id=ANY($1::int[])`, [ids]);
+    await pool.query(`UPDATE signature_fields SET field_type='signature' WHERE document_id=ANY($1::int[])`, [ids]);
+    const send = (id: number, key: string) => graphql(memberToken, organizationId,
+      'mutation Send($id:Int!,$key:String!){sendSignatureDocument(id:$id,idempotencyKey:$key){id status}}',
+      { id, key });
+    const attempts = await Promise.all(ids.map((id, i) => send(id, `monthly-send-${i}`)));
+    const success = attempts.findIndex(result => !result.body.errors);
+    expect(success).toBeGreaterThanOrEqual(0);
+    const failures = attempts.filter(result => result.body.errors);
     expect(failures).toHaveLength(1);
-    expect(failures[0].body.errors[0].extensions).toMatchObject({ code: 'FORBIDDEN', reason: 'SIGNATURE_MONTHLY_LIMIT' });
-    const successfulIndex = attempts.findIndex((result) => !result.body.errors);
-    const quotaReplay = await graphql(
-      memberToken,
-      organizationId,
+    expect(failures[0].body.errors[0].extensions).toMatchObject({
+      code: 'FORBIDDEN', reason: 'SIGNATURE_MONTHLY_LIMIT',
+    });
+    expect((await send(ids[success], `monthly-send-${success}`)).body.errors).toBeUndefined();
+    const reminder = await graphql(memberToken, organizationId,
+      'mutation Remind($id:Int!,$key:String!){sendSignatureReminder(id:$id,idempotencyKey:$key){id}}',
+      { id:ids[success],key:'monthly-cap-reminder' });
+    expect(reminder.body.errors).toBeUndefined();
+    const rejectedId = ids[1 - success];
+    expect((await pool.query('SELECT status,sent_at FROM signature_documents WHERE id=$1', [rejectedId])).rows[0])
+      .toMatchObject({ status: 'draft', sent_at: null });
+    expect(Number((await pool.query('SELECT COUNT(*) AS total FROM signature_delivery_outbox WHERE document_id=$1', [rejectedId])).rows[0].total)).toBe(0);
+    const drafts = await Promise.all(Array.from({ length: 26 }, (_, i) => graphql(memberToken, organizationId,
       'mutation Create($input:CreateSignatureDocumentInput!,$key:String!){createSignatureDocument(input:$input,idempotencyKey:$key){id}}',
-      { input: { title: `Quota ${successfulIndex}` }, key: `signature-quota-${successfulIndex}` },
-    ).expect(200);
-    expect(quotaReplay.body.errors).toBeUndefined();
-    expect(Number(quotaReplay.body.data.createSignatureDocument.id)).toBe(successfulIds[0]);
+      { input: { title: `Unmetered draft ${i}` }, key: `unmetered-draft-${i}` })));
+    expect(drafts.every(result => !result.body.errors)).toBe(true);
+    // A new UTC month restores capacity without requiring a Stripe webhook.
+    await pool.query(`UPDATE signature_documents SET sent_at=sent_at-INTERVAL '1 month'
+      WHERE organization_id=$1 AND sent_at IS NOT NULL`, [organizationId]);
+    expect((await send(rejectedId, `monthly-send-${1 - success}`)).body.errors).toBeUndefined();
     await pool.query('DELETE FROM signature_documents WHERE id=ANY($1::int[])', [
-      [...quotaBaseline.rows.map((row) => Number(row.id)), ...successfulIds],
+      [...baseline.rows.map(row => Number(row.id)), ...ids,
+        ...drafts.map(result => Number(result.body.data.createSignatureDocument.id))],
     ]);
   });
 });

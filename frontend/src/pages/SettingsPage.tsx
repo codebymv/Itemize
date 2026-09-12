@@ -1,3 +1,4 @@
+import { EMAIL_ALLOWANCE_DESCRIPTION } from '@/lib/subscription';
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from 'next-themes';
@@ -345,6 +346,7 @@ function AccountInfo({
                 showAvailabilityHint={false}
               />
             </UsageIndicatorGrid>
+            <p className="mt-3 text-xs text-muted-foreground">{EMAIL_ALLOWANCE_DESCRIPTION}</p>
           </CardContent>
         </Card>
       )}

@@ -1,3 +1,4 @@
+import { EMAIL_ALLOWANCE_DESCRIPTION } from '@/lib/subscription';
 /**
  * Billing Panel Component
  * Settings page subscription management panel
@@ -298,9 +299,11 @@ export function BillingPanel() {
                         <UsageRow
                             icon={Mail}
                             label="Emails"
-                            used={usage?.usage?.emails?.used || status.emails_used || 0}
-                            limit={usage?.usage?.emails?.limit === 'unlimited' ? -1 : (status.emails_limit || 1000)}
+                            used={usage?.usage?.emails?.used ?? status.emails_used ?? 0}
+                            limit={usage?.usage?.emails?.limit === 'unlimited' ? -1 : (usage?.usage?.emails?.limit ?? status.emails_limit ?? 0)}
                         />
+
+                        <p className="text-xs text-muted-foreground">{EMAIL_ALLOWANCE_DESCRIPTION}</p>
 
                         {/* SMS */}
                         <UsageRow

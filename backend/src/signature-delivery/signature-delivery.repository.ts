@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
-import { hasPaidEntitlement, PaidEntitlementState } from '../billing/billing-entitlement';
+import { hasPaidEntitlement, PaidEntitlementState, signatureDocumentLimit } from '../billing/billing-entitlement';
 import { signatureDeliveryTokenHash } from './signature-delivery.token';
 import {
   SIGNATURE_CONSENT_SHA256,
@@ -80,6 +80,16 @@ export class SignatureDeliveryRepository {
     inspection?: { fileUrl: string; originalSha256: string; pageCount: number },
   ): Promise<SignatureDeliveryActionOutcome> {
     return this.transaction(async (client) => {
+      // Match organization writers' lock order before document/action locks.
+      // Hold this across validation, the quota check and the first-send commit.
+      await client.query('SELECT pg_advisory_xact_lock($1)', [organizationId]);
+      const organization = await client.query<PaidEntitlementState>(
+        'SELECT plan,subscription_status,trial_ends_at FROM organizations WHERE id=$1 FOR SHARE',
+        [organizationId],
+      );
+      if (!hasPaidEntitlement(organization.rows[0])) {
+        throw new SignatureDeliveryStateError('E-Signatures require an upgrade.', 'FEATURE_NOT_AVAILABLE');
+      }
       const replay = await this.claimAction(
         client,
         organizationId,
@@ -141,6 +151,20 @@ export class SignatureDeliveryRepository {
         document.page_count,
         recipients,
       );
+      const limit = signatureDocumentLimit(organization.rows[0].plan);
+      if (Number.isFinite(limit)) {
+        const usage = await client.query<{ total: string }>(
+          `SELECT COUNT(*) AS total FROM signature_documents
+           WHERE organization_id=$1 AND sent_at >=
+             (date_trunc('month',CURRENT_TIMESTAMP AT TIME ZONE 'UTC') AT TIME ZONE 'UTC')`,
+          [organizationId],
+        );
+        if (Number(usage.rows[0]?.total ?? 0) >= limit) {
+          throw new SignatureDeliveryStateError(
+            'Monthly signature send limit reached', 'SIGNATURE_MONTHLY_LIMIT',
+          );
+        }
+      }
       const sender = await this.sender(client, document);
       const routingMode = document.routing_mode || 'parallel';
       const now = new Date();

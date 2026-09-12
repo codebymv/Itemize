@@ -25,7 +25,11 @@ is at or above the new limit.
 
 ## Usage
 
-Settings shows usage for emails, signatures, and related caps. Meters stay visible even at 0%.
+Settings shows email, SMS, and API usage. Meters stay visible even at 0%.
+
+Email allowance is shared by campaigns, direct contact email, and workflow email. Campaign/contact messages count once when queued; workflow messages count when delivery starts. Retries do not count again. Booking/form notifications and other system transactional messages are excluded. Email allowance resets at 00:00 UTC on the first day of every month, including annual plans.
+
+Solo signature allowance counts each document first sent for signing, not draft creation. Unsent copies, reminders, and retries do not consume another allowance. See [Signatures](/help/!signatures).
 
 ## Yearly billing
 

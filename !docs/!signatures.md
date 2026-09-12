@@ -8,8 +8,10 @@ Open **Documents** (or start from an invoice when you need a signature with bill
 
 ## Limits
 
-- **Solo** includes 25 e-signatures per month.
+- **Solo** includes 25 documents first sent for signing per UTC calendar month.
 - **Studio** includes unlimited e-signatures.
+
+Drafts and unsent copies do not count. A document uses one allowance when its initial send is accepted, regardless of recipient count. Reminders and retries do not count again; cancellation does not return the allowance. The month resets at 00:00 UTC on the first day, including on annual subscriptions.
 
 Upgrade from Settings if you hit the Solo cap.
 

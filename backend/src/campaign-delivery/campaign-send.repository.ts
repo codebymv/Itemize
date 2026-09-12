@@ -1,3 +1,4 @@
+import { emailCapacity, lockEmailUsage, recordEmailUsage } from '../billing/email-allowance';
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { compileCampaignAudience } from '../campaigns/audience.compiler';
@@ -119,37 +120,14 @@ export class CampaignSendRepository {
       const recipients = recipientResult.rows;
       if (recipients.length === 0) return { kind: 'no_recipients' };
 
-      const subscription = await client.query<{ limit_value: string | null }>(
-        `SELECT sp.limits->>'emails_per_month' AS limit_value
-         FROM subscriptions s
-         JOIN subscription_plans sp ON sp.id=s.plan_id AND sp.is_active=TRUE
-         JOIN organizations organization ON organization.id=s.organization_id
-         WHERE s.organization_id=$1 AND s.status IN ('active','trialing')
-           AND ${paidEntitlementSql('organization')}
-         FOR UPDATE OF s`,
+      const subscription = await client.query(
+        `SELECT id FROM organizations organization WHERE id=$1 AND ${paidEntitlementSql('organization')}`,
         [organizationId],
       );
-      const rawLimit = subscription.rows[0]?.limit_value;
-      const limit = rawLimit === null || rawLimit === undefined ? NaN : Number(rawLimit);
-      if (!Number.isSafeInteger(limit) || limit < -1) return { kind: 'subscription_unavailable' };
-
-      const usage = await client.query<{ count: number }>(
-        `INSERT INTO usage_tracking (
-           organization_id, resource_type, period_start, period_end, count, limit_value
-         ) VALUES (
-           $1, 'emails_per_month', date_trunc('month',CURRENT_TIMESTAMP)::date,
-           (date_trunc('month',CURRENT_TIMESTAMP) + INTERVAL '1 month - 1 day')::date,
-           0, $2
-         ) ON CONFLICT (organization_id, resource_type, period_start)
-           DO UPDATE SET limit_value=EXCLUDED.limit_value, updated_at=CURRENT_TIMESTAMP
-         RETURNING count`,
-        [organizationId, limit],
-      );
-      const current = Number(usage.rows[0]?.count);
-      if (!Number.isSafeInteger(current) || current < 0) throw new Error('Unsafe email usage count');
-      if (limit !== -1 && current + recipients.length > limit) {
-        return { kind: 'usage_exceeded', limit, current, requested: recipients.length };
-      }
+      if (!subscription.rows[0]) return { kind: 'subscription_unavailable' };
+      await lockEmailUsage(client, organizationId);
+      const { allowed, limit, current } = await emailCapacity(client, organizationId, recipients.length);
+      if (!allowed) return { kind: 'usage_exceeded', limit, current, requested: recipients.length };
 
       const payload: CampaignDeliveryPayload = {
         subject: campaign.subject,
@@ -194,12 +172,7 @@ export class CampaignSendRepository {
       if (Number(inserted.rows[0]?.count) !== recipients.length) {
         throw new Error('Campaign recipient snapshot was incomplete');
       }
-      await client.query(
-        `UPDATE usage_tracking SET count=count+$2, updated_at=CURRENT_TIMESTAMP
-         WHERE organization_id=$1 AND resource_type='emails_per_month'
-           AND period_start=date_trunc('month',CURRENT_TIMESTAMP)::date`,
-        [organizationId, recipients.length],
-      );
+      await recordEmailUsage(client, organizationId, 'campaign', jobId, recipients.length);
       await client.query(
         `UPDATE email_campaigns SET status='sending', started_at=CURRENT_TIMESTAMP,
            completed_at=NULL, sent_by=$1, total_recipients=$2, total_sent=0,

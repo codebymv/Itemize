@@ -28,7 +28,7 @@ Authenticated operations use verified organization context. Documents, templates
 - A field's `recipientId` belongs to the same document.
 - A document's source template belongs to the same organization.
 - Public endpoints derive all authority from one high-entropy hashed recipient capability. They never accept an organization header.
-- Plan access and monthly document quota are checked transactionally. The legacy route checks feature access but does not enforce `SIGNATURE_LIMITS`; concurrent creates can exceed the advertised quota.
+- Plan access and the monthly first-send quota are checked transactionally when initial delivery is accepted. Draft creation and template instantiation do not consume signature allowance.
 
 ## Draft definition and template snapshots
 
@@ -123,7 +123,7 @@ Fresh PostgreSQL now covers concurrent initial-send exclusion, atomic cancellati
 
 `SignatureDocumentsModule` implements `createSignatureDocument`, `updateSignatureDraft`, and `deleteSignatureDraft`. `SignatureTemplatesModule` implements `createSignatureTemplate`, `updateSignatureTemplate`, `deleteSignatureTemplate`, and `instantiateSignatureTemplate`. The frontend routes these mutations directly to GraphQL. Multipart source upload remains on its existing HTTP boundary, while draft-PDF removal is a permanent GraphQL mutation.
 
-Document metadata, recipient replacement, field replacement, and role-to-recipient binding now share one row-locked transaction. Template metadata, unique roles, and role-bound fields likewise commit together. Creation and instantiation serialize on the organization row before enforcing the starter/unlimited monthly document quota, preventing concurrent requests from oversubscribing it. Inputs bind recipients to tenant-owned contacts, constrain email/role uniqueness, reject unimplemented OTP identity methods, bound aggregate sizes and geometry, and preserve explicit nullable metadata clearing. Non-draft deletion fails with `CONFLICT`.
+Document metadata, recipient replacement, field replacement, and role-to-recipient binding now share one row-locked transaction. Template metadata, unique roles, and role-bound fields likewise commit together. Initial send serializes on the organization advisory lock, then holds shared organization access while counting documents with `sent_at` in the UTC calendar month. It commits the first-send timestamp and delivery outbox atomically. Creation and template instantiation are unmetered; replay, reminder, and retry do not consume another allowance. Inputs bind recipients to tenant-owned contacts, constrain email/role uniqueness, reject unimplemented OTP identity methods, bound aggregate sizes and geometry, and preserve explicit nullable metadata clearing. Non-draft deletion fails with `CONFLICT`.
 
 Fresh PostgreSQL proves complete rollback when a child mapping fails after metadata work, GraphQL-write/retained-HTTP-file interoperability, template snapshot binding, exact draft deletion, and five winners from six concurrent starter-plan creates. Focused adapters prove all authenticated JSON callsites use GraphQL while multipart uploads, private streams, downloads, and public signing remain HTTP.
 

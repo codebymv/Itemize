@@ -55,6 +55,7 @@ describe('Workflow definitions GraphQL PostgreSQL contract', () => {
       [`workflow-primary-${suffix}`, `workflow-other-${suffix}`],
     );
     [organizationId, outsiderOrganizationId] = organizations.rows.map((row) => Number(row.id));
+    await pool.query('UPDATE organizations SET emails_limit=1000 WHERE id=ANY($1::int[])', [[organizationId,outsiderOrganizationId]]);
     await pool.query(
       `INSERT INTO organization_members (organization_id, user_id, role, joined_at)
        VALUES ($1, $3, 'owner', NOW()), ($2, $4, 'owner', NOW())`,

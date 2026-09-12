@@ -1,3 +1,4 @@
+const { runEmailAllowanceMigration } = require('./db_email_allowance_migrations');
 const { Pool } = require('pg');
 
 // Import migration tracker for fast startup (skips already-run migrations)
@@ -1172,6 +1173,8 @@ const initializeDatabase = async (pool) => {
       'message_delivery_conversation_link_v1',
       runMessageDeliveryConversationLinkMigration,
     );
+
+    await runMigrationOnce(pool, 'email_allowance_v1', runEmailAllowanceMigration);
 
     const elapsed = Date.now() - startTime;
     console.log(`✅ Database initialized successfully in ${elapsed}ms`);

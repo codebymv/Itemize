@@ -4,7 +4,7 @@ import { PageInput, pageInfo } from '../common/pagination';
 import { CreateSignatureDocumentInput, SignatureDocumentFilterInput, SignatureFieldInput, SignatureRecipientInput, UpdateSignatureDraftInput } from './signature-document.inputs';
 import { SignatureDocumentStatus } from './signature-document.enums';
 import { SignatureAuditEvent, SignatureDocument, SignatureDocumentDetail, SignatureDocumentPage, SignatureDocumentStats, SignatureField, SignatureRecipient } from './signature-document.types';
-import { SignatureAuditRow, SignatureDocumentRow, SignatureDocumentsRepository, SignatureFieldRow, SignatureFieldWrite, SignatureQuotaExceededError, SignatureRecipientRow, SignatureRecipientWrite, SignatureReferenceError } from './signature-documents.repository';
+import { SignatureAuditRow, SignatureDocumentRow, SignatureDocumentsRepository, SignatureFieldRow, SignatureFieldWrite, SignatureRecipientRow, SignatureRecipientWrite, SignatureReferenceError } from './signature-documents.repository';
 import {
   signatureCreationConflict,
   signatureCreationFingerprint,
@@ -119,5 +119,5 @@ export class SignatureDocumentsService {
   private routing(value:string):string{if(!ROUTING_MODES.has(value))throw this.bad('routingMode is invalid','routingMode','INVALID_SIGNATURE_ROUTING_MODE');return value;}
   private positiveId(value:number,field:string):number{if(!Number.isSafeInteger(value)||value<1)throw this.bad(`${field} must be a positive integer`,field,'INVALID_SIGNATURE_REFERENCE');return value;}
   private bad(message:string,field:string,reason:string){return itemizeGraphqlError(message,'BAD_USER_INPUT',{field,reason});}
-  private writeError(error:unknown):never{if(error instanceof SignatureQuotaExceededError)throw itemizeGraphqlError(error.message,'FORBIDDEN',{reason:'SIGNATURE_MONTHLY_LIMIT'});if(error instanceof SignatureReferenceError)throw itemizeGraphqlError(error.message,'BAD_USER_INPUT',{reason:'INVALID_SIGNATURE_REFERENCE'});throw error;}
+  private writeError(error:unknown):never{if(error instanceof SignatureReferenceError)throw itemizeGraphqlError(error.message,'BAD_USER_INPUT',{reason:'INVALID_SIGNATURE_REFERENCE'});throw error;}
 }
