@@ -40,6 +40,17 @@ export class InvoiceEmailDeliveryService {
     private readonly activation: ActivationService,
   ) {}
 
+  async status(organizationId: number, invoiceId: number): Promise<InvoiceSendResult | null> {
+    const delivery = await this.invoices.latestEmailDelivery(organizationId,invoiceId);
+    return delivery ? {...this.result(delivery,true),canRetry:await this.invoices.emailDeliveryCanRetry(organizationId,delivery.id)} : null;
+  }
+
+  async retry(organizationId:number, deliveryId:number): Promise<InvoiceSendResult> {
+    const delivery=await this.invoices.retryEmailDelivery(organizationId,deliveryId);
+    if (!delivery) throw itemizeGraphqlError('This delivery needs review before retrying','CONFLICT');
+    return this.result(delivery,true);
+  }
+
   async send(
     organizationId: number,
     userId: number,
@@ -104,16 +115,22 @@ export class InvoiceEmailDeliveryService {
         });
         if (link.kind === 'rejected') {
           return this.result(await this.invoices.failEmailDelivery(
-            organizationId, deliveryId, link.message, false,
+            organizationId, deliveryId, link.message, false, claimed.attempt_count,
           ), replayed);
         }
-        claimed = await this.invoices.recordPaymentLink(
-          organizationId, deliveryId, link.sessionId, link.url,
+        const linked = await this.invoices.recordPaymentLink(
+          organizationId, deliveryId, link.sessionId, link.url, claimed.attempt_count,
         );
+        if (!linked) {
+          const current = await this.invoices.findEmailDelivery(organizationId, deliveryId);
+          if (!current) throw new Error('Invoice email delivery disappeared');
+          return this.result(current, true);
+        }
+        claimed = linked;
         paymentUrl = link.url;
       } catch (error) {
         return this.result(await this.invoices.failEmailDelivery(
-          organizationId, deliveryId, this.error(error), true,
+          organizationId, deliveryId, this.error(error), true, claimed.attempt_count,
         ), replayed);
       }
     }
@@ -129,12 +146,14 @@ export class InvoiceEmailDeliveryService {
       }
     } catch (error) {
       return this.result(await this.invoices.failEmailDelivery(
-        organizationId, deliveryId, this.error(error), false,
+        organizationId, deliveryId, this.error(error), false, claimed.attempt_count,
       ), replayed);
     }
 
     try {
       const provider = await this.email.send({
+        organizationId,
+        deliveryId,
         to: claimed.recipient_email,
         cc: claimed.payload.ccEmails,
         subject: claimed.subject,
@@ -146,23 +165,25 @@ export class InvoiceEmailDeliveryService {
       });
       if (provider.kind === 'rejected') {
         return this.result(await this.invoices.failEmailDelivery(
-          organizationId, deliveryId, provider.message, false,
+          organizationId, deliveryId, provider.message, false, claimed.attempt_count,
         ), replayed);
       }
       const completed = await this.invoices.completeEmailDelivery(
-        organizationId, deliveryId, provider.providerId,
+        organizationId, deliveryId, provider.providerId, claimed.attempt_count,
       );
-      await this.activation.recordArtifactSent({
-        organizationId,
-        userId,
-        artifactType: 'invoice',
-        artifactId: Number(claimed.invoice_id),
-        source: 'invoice_email_delivered',
-      });
+      if (completed.status === 'sent') {
+        await this.activation.recordArtifactSent({
+          organizationId,
+          userId,
+          artifactType: 'invoice',
+          artifactId: Number(claimed.invoice_id),
+          source: 'invoice_email_delivered',
+        });
+      }
       return this.result(completed, replayed);
     } catch (error) {
       return this.result(await this.invoices.failEmailDelivery(
-        organizationId, deliveryId, this.error(error), true,
+        organizationId, deliveryId, this.error(error), true, claimed.attempt_count,
       ), replayed);
     }
   }
@@ -231,6 +252,7 @@ export class InvoiceEmailDeliveryService {
   private result(row: InvoiceEmailDeliveryRow, replayed: boolean): InvoiceSendResult {
     const status = row.status as InvoiceEmailDeliveryStatus;
     return {
+      canRetry: false,
       success: status === InvoiceEmailDeliveryStatus.SENT,
       emailSent: status === InvoiceEmailDeliveryStatus.SENT,
       replayed,

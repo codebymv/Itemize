@@ -797,6 +797,37 @@ export class InvoicesRepository {
     });
   }
 
+  async emailDeliveryCanRetry(organizationId: number, deliveryId: number): Promise<boolean> {
+    const result = await this.pool.query(`SELECT 1 FROM delivery_provider_receipts receipt
+      JOIN invoice_email_deliveries delivery ON delivery.id=receipt.delivery_id AND delivery.organization_id=receipt.organization_id
+      WHERE receipt.source='invoice' AND receipt.delivery_id=$1 AND receipt.organization_id=$2
+        AND delivery.status IN ('dead_letter','reconciliation_required')
+        AND (receipt.provider_id IS NOT NULL OR (NOT receipt.review_required AND receipt.request_body IS NOT NULL
+          AND receipt.first_attempt_at>CURRENT_TIMESTAMP-INTERVAL '23 hours'))`,[deliveryId,organizationId]);
+    return result.rows.length>0;
+  }
+
+  async retryEmailDelivery(organizationId: number, deliveryId: number): Promise<InvoiceEmailDeliveryRow | null> {
+    const result = await this.pool.query<InvoiceEmailDeliveryRow>(`UPDATE invoice_email_deliveries delivery
+      SET status='retry',next_attempt_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP
+      FROM delivery_provider_receipts receipt
+      WHERE delivery.organization_id=$1 AND delivery.id=$2
+        AND delivery.status IN ('dead_letter','reconciliation_required')
+        AND receipt.source='invoice' AND receipt.delivery_id=delivery.id AND receipt.organization_id=$1
+        AND (receipt.provider_id IS NOT NULL OR (NOT receipt.review_required AND receipt.request_body IS NOT NULL
+          AND receipt.first_attempt_at>CURRENT_TIMESTAMP-INTERVAL '23 hours')) RETURNING delivery.*`,[organizationId,deliveryId]);
+    if (result.rows[0]) return result.rows[0];
+    const current=await this.findEmailDelivery(organizationId,deliveryId);
+    return current && ['retry','processing','sent'].includes(current.status) ? current : null;
+  }
+
+  async latestEmailDelivery(organizationId: number, invoiceId: number): Promise<InvoiceEmailDeliveryRow | null> {
+    const result = await this.pool.query<InvoiceEmailDeliveryRow>(
+      'SELECT * FROM invoice_email_deliveries WHERE organization_id=$1 AND invoice_id=$2 ORDER BY id DESC LIMIT 1',
+      [organizationId,invoiceId]);
+    return result.rows[0] ?? null;
+  }
+
   async findEmailDelivery(
     organizationId: number,
     deliveryId: number,
@@ -851,17 +882,18 @@ export class InvoicesRepository {
     deliveryId: number,
     sessionId: string,
     paymentUrl: string,
-  ): Promise<InvoiceEmailDeliveryRow> {
+    attemptCount: number,
+  ): Promise<InvoiceEmailDeliveryRow | null> {
     return this.transaction(async (client) => {
       const delivery = await client.query<InvoiceEmailDeliveryRow>(
         `UPDATE invoice_email_deliveries
          SET payment_session_id = $3, payment_url = $4,
              updated_at = CURRENT_TIMESTAMP
-         WHERE id = $1 AND organization_id = $2 AND status = 'processing'
+         WHERE id = $1 AND organization_id = $2 AND status = 'processing' AND attempt_count = $5
          RETURNING *`,
-        [deliveryId, organizationId, sessionId, paymentUrl],
+        [deliveryId, organizationId, sessionId, paymentUrl, attemptCount],
       );
-      if (!delivery.rows[0]) throw new Error('Invoice email delivery not found');
+      if (!delivery.rows[0]) return null;
       await client.query(
         `UPDATE invoices
          SET stripe_payment_intent_id = $3, stripe_hosted_invoice_url = $4,
@@ -877,6 +909,7 @@ export class InvoicesRepository {
     organizationId: number,
     deliveryId: number,
     providerId: string | null,
+    attemptCount: number,
   ): Promise<InvoiceEmailDeliveryRow> {
     return this.transaction(async (client) => {
       const locked = await client.query<InvoiceEmailDeliveryRow>(
@@ -886,7 +919,8 @@ export class InvoicesRepository {
       );
       const delivery = locked.rows[0];
       if (!delivery) throw new Error('Invoice email delivery not found');
-      if (delivery.status === 'sent') return delivery;
+      // An expired worker must never replace a newer attempt or a terminal outcome.
+      if (delivery.status !== 'processing' || delivery.attempt_count !== attemptCount) return delivery;
       const invoice = await client.query<{ status: string }>(
         `SELECT status FROM invoices
          WHERE id = $1 AND organization_id = $2 FOR UPDATE`,
@@ -932,6 +966,7 @@ export class InvoicesRepository {
     deliveryId: number,
     error: string,
     ambiguous: boolean,
+    attemptCount: number,
   ): Promise<InvoiceEmailDeliveryRow> {
     const result = await this.pool.query<InvoiceEmailDeliveryRow>(
       `UPDATE invoice_email_deliveries
@@ -942,11 +977,13 @@ export class InvoicesRepository {
              (LEAST(300, POWER(2, GREATEST(attempt_count - 1))) * INTERVAL '1 second'),
            last_error = LEFT($4, 2000), lease_expires_at = NULL,
            claimed_by = NULL, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $1 AND organization_id = $2 RETURNING *`,
-      [deliveryId, organizationId, ambiguous, error],
+       WHERE id = $1 AND organization_id = $2 AND status = 'processing'
+         AND attempt_count = $5 RETURNING *`,
+      [deliveryId, organizationId, ambiguous, error, attemptCount],
     );
-    if (!result.rows[0]) throw new Error('Invoice email delivery not found');
-    return result.rows[0];
+    const current = result.rows[0] ?? await this.findEmailDelivery(organizationId, deliveryId);
+    if (!current) throw new Error('Invoice email delivery not found');
+    return current;
   }
 
   private async references(

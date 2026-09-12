@@ -1,3 +1,4 @@
+import { SignatureDeliveryJobsRepository } from '../../src/signature-delivery/signature-delivery-jobs.repository';
 import { createHash } from 'node:crypto';
 import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
@@ -1308,6 +1309,9 @@ describe('E-signature GraphQL read contract', () => {
       [documentId],
     );
     expect(pendingReminder.rows).toHaveLength(1);
+    const claimRepository=app.get(SignatureDeliveryJobsRepository);
+    const priorClaim=(await claimRepository.claim(1,Number(pendingReminder.rows[0].id)))!;
+    expect(priorClaim).not.toBeNull();
 
     await pool.query(
       `UPDATE signature_delivery_outbox SET status='dead_letter'
@@ -1326,6 +1330,14 @@ describe('E-signature GraphQL read contract', () => {
       graphql(memberToken, organizationId, retryOperation, retryVariables),
     ]);
     expect(retries.every((result) => !result.body.errors)).toBe(true);
+    const newClaim=(await claimRepository.claim(300,Number(pendingReminder.rows[0].id)))!;
+    expect(newClaim.attempt_count).toBe(priorClaim.attempt_count);
+    expect(newClaim.claim_generation).not.toBe(priorClaim.claim_generation);
+    expect(await claimRepository.markSent(priorClaim,'stale-provider')).toBe(false);
+    const retryOptions={maxAttempts:5,baseDelayMs:1,maximumDelayMs:1,retryable:true};
+    expect(await claimRepository.markFailure(priorClaim,new Error('late failure'),retryOptions)).toBe('stale');
+    expect(await claimRepository.markFailure(newClaim,new Error('temporary failure'),retryOptions)).toBe('retry');
+
     expect(Number((await pool.query(
       `SELECT COUNT(*) AS total FROM signature_audit_log
        WHERE document_id=$1 AND event_type='retry_queued'`,

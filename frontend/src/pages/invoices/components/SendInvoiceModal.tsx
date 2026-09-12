@@ -1,3 +1,5 @@
+import { useOrganization } from '@/hooks/useOrganization';
+import { InvoiceDeliveryStatus } from './InvoiceDeliveryStatus';
 import React, { useState, useEffect } from 'react';
 import { formatCalendarDate } from '@/lib/calendar-date';
 import { Link } from 'react-router-dom';
@@ -28,6 +30,7 @@ interface SendInvoiceModalProps {
     onSend: (options: SendOptions) => void;
     sending: boolean;
     invoiceNumber?: string;
+    invoiceId?: number;
     customerName: string;
     customerEmail: string;
     total: number;
@@ -66,6 +69,7 @@ export function SendInvoiceModal({
     onSend,
     sending,
     invoiceNumber,
+    invoiceId,
     customerName,
     customerEmail,
     total,
@@ -76,6 +80,8 @@ export function SendInvoiceModal({
     paymentLinksAvailable: initialPaymentLinksAvailable,
     senderName,
 }: SendInvoiceModalProps) {
+    const {organizationId}=useOrganization();
+    const [deliveryBlocked,setDeliveryBlocked]=useState(true);
     const [subject, setSubject] = useState('');
     const [message, setMessage] = useState('');
     const [ccEmails, setCcEmails] = useState<string[]>([]);
@@ -121,6 +127,7 @@ export function SendInvoiceModal({
     };
 
     const handleSend = () => {
+        if (invoiceId && deliveryBlocked) return;
         onSend({
             subject,
             message,
@@ -146,6 +153,7 @@ export function SendInvoiceModal({
                 </DialogHeader>
 
                 <div className={`${showPreview ? 'grid grid-cols-2 gap-6 max-h-[70vh]' : 'space-y-4 max-h-[65vh]'} overflow-y-auto`}>
+                    {open && invoiceId && organizationId && <div className="col-span-2"><InvoiceDeliveryStatus invoiceId={invoiceId} organizationId={organizationId} onBlocked={setDeliveryBlocked} sending={sending} /></div>}
                     {/* Left Column - Form */}
                     <div className="space-y-4">
                         {/* Recipient Info */}
@@ -359,7 +367,7 @@ export function SendInvoiceModal({
                         </Button>
                         <Button
                             onClick={handleSend}
-                            disabled={sending || !customerEmail}
+                            disabled={sending || !customerEmail || Boolean(invoiceId && deliveryBlocked)}
                             className="bg-primary interaction-button--primary text-primary-foreground"
                             style={{ fontFamily: '"Raleway", sans-serif' }}
                         >

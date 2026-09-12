@@ -533,7 +533,7 @@ export const sendInvoiceViaGraphql = async (
     throw new Error('Invoice subject and message are required');
   }
   const data = await graphqlMutationRequest<{
-    sendInvoice: { success: boolean; emailSent: boolean; status: string };
+    sendInvoice: { success: boolean; emailSent: boolean; status: string; deliveryId:number };
   }, {
     id: number;
     input: {
@@ -566,7 +566,9 @@ export const sendInvoiceViaGraphql = async (
     organizationId,
   );
   if (!data.sendInvoice.success || !data.sendInvoice.emailSent) {
-    throw new Error(`Invoice delivery was not confirmed (${data.sendInvoice.status})`);
+    const error = new Error(invoiceDeliveryMessage(data.sendInvoice.status));
+    Object.assign(error,{deliveryId:data.sendInvoice.deliveryId,deliveryStatus:data.sendInvoice.status});
+    throw error;
   }
   return {
     ...(await getInvoiceViaGraphql(id, organizationId)),
@@ -610,3 +612,24 @@ export const createInvoicePaymentLinkViaGraphql = async (
   }
   return { url: result.url, session_id: result.sessionId };
 };
+
+export type InvoiceDeliveryReceipt = { deliveryId:number;status:string;emailSent:boolean;canRetry:boolean };
+export async function getInvoiceDeliveryStatus(id:number,organizationId:number): Promise<InvoiceDeliveryReceipt|null> {
+  const data=await graphqlRequest<{invoiceDeliveryStatus:InvoiceDeliveryReceipt|null},{id:number}>(
+    `query InvoiceDeliveryStatus($id:Int!) { invoiceDeliveryStatus(id:$id) { deliveryId status emailSent canRetry } }`,{id},organizationId);
+  return data.invoiceDeliveryStatus;
+}
+export async function retryInvoiceDelivery(id:number,organizationId:number) {
+  return graphqlMutationRequest<{retryInvoiceDelivery:InvoiceDeliveryReceipt},{id:number}>(
+    `mutation RetryInvoiceDelivery($id:Int!) { retryInvoiceDelivery(deliveryId:$id) { deliveryId status emailSent canRetry } }`,{id},organizationId);
+}
+
+export function invoiceDeliveryMessage(status:string): string {
+  switch(status.toUpperCase()) {
+    case 'SENT': return 'Email accepted by the delivery provider.';
+    case 'QUEUED': case 'PROCESSING': return 'Email is being processed. You can close this dialog and check back.';
+    case 'RETRY': return 'Email is queued for another delivery attempt.';
+    case 'DEAD_LETTER': case 'RECONCILIATION_REQUIRED': return 'Email delivery needs review. Check delivery status before sending again.';
+    default: return 'Email delivery status could not be verified.';
+  }
+}

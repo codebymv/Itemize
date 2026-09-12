@@ -21,6 +21,7 @@ export type SignatureDeliveryClaim = {
     | 'signature_declined';
   payload: SignatureDeliveryPayload;
   attempt_count: number;
+  claim_generation: string;
 };
 
 const redactedError = (error: unknown): string =>
@@ -220,7 +221,7 @@ export class SignatureDeliveryJobsRepository {
            FOR UPDATE OF outbox SKIP LOCKED LIMIT 1
          )
          UPDATE signature_delivery_outbox outbox
-         SET status='processing',attempt_count=attempt_count+1,
+         SET status='processing',attempt_count=attempt_count+1,claim_generation=claim_generation+1,
            lease_expires_at=CURRENT_TIMESTAMP+($1::int*INTERVAL '1 second'),
            last_error=NULL,updated_at=CURRENT_TIMESTAMP
          FROM candidate WHERE outbox.id=candidate.id RETURNING outbox.*`,
@@ -237,9 +238,9 @@ export class SignatureDeliveryJobsRepository {
            provider_id=CASE WHEN cancelled_at IS NULL THEN $3 ELSE provider_id END,
            sent_at=CASE WHEN cancelled_at IS NULL THEN CURRENT_TIMESTAMP ELSE sent_at END,
            lease_expires_at=NULL,last_error=NULL,updated_at=CURRENT_TIMESTAMP
-         WHERE id=$1 AND status='processing' AND attempt_count=$2
+         WHERE id=$1 AND status='processing' AND claim_generation=$2
          RETURNING status`,
-        [claim.id, claim.attempt_count, providerId],
+        [claim.id, claim.claim_generation, providerId],
       );
       if (!updated.rows[0] || updated.rows[0].status !== 'sent') return false;
       if (claim.reminder_id) {
@@ -295,8 +296,8 @@ export class SignatureDeliveryJobsRepository {
          next_attempt_at=CASE WHEN cancelled_at IS NOT NULL OR $3::varchar='dead_letter'
            THEN next_attempt_at ELSE CURRENT_TIMESTAMP+($4::bigint*INTERVAL '1 millisecond') END,
          lease_expires_at=NULL,last_error=$5,updated_at=CURRENT_TIMESTAMP
-       WHERE id=$1 AND status='processing' AND attempt_count=$2 RETURNING status`,
-      [claim.id, claim.attempt_count, status, delay, redactedError(error)],
+       WHERE id=$1 AND status='processing' AND claim_generation=$2 RETURNING status`,
+      [claim.id, claim.claim_generation, status, delay, redactedError(error)],
     );
     return result.rows[0]?.status ?? 'stale';
   }

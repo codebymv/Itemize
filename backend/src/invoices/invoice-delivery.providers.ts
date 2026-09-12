@@ -1,8 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Pool } from 'pg';
+import { PG_POOL } from '../database/database.module';
+import { DurableEmailError, sendDurableEmail } from '../common/durable-email';
+import { Inject, Injectable } from '@nestjs/common';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 export type InvoiceEmailMessage = {
+  organizationId: number;
+  deliveryId: number;
   to: string;
   cc: string[];
   subject: string;
@@ -24,41 +29,24 @@ export interface InvoiceEmailProvider {
 
 @Injectable()
 export class ResendInvoiceEmailProvider implements InvoiceEmailProvider {
+  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
   async send(message: InvoiceEmailMessage): Promise<InvoiceProviderResult> {
     const apiKey = process.env.RESEND_API_KEY?.trim();
     if (!apiKey) return { kind: 'rejected', message: 'Email service is not configured' };
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'Idempotency-Key': message.idempotencyKey,
-      },
-      body: JSON.stringify({
-        from: process.env.EMAIL_FROM?.trim() || 'Itemize <noreply@itemize.cloud>',
-        to: [message.to],
-        ...(message.cc.length > 0 ? { cc: message.cc } : {}),
-        subject: message.subject,
-        html: message.html,
-        text: message.text,
-        attachments: [{
-          filename: message.filename,
-          content: message.pdf.toString('base64'),
-        }],
-      }),
-      signal: AbortSignal.timeout(10_000),
-    });
-    const body = await response.json().catch(() => ({})) as {
-      id?: string; message?: string; error?: { message?: string };
-    };
-    if (!response.ok) {
-      return {
-        kind: 'rejected',
-        message: body.message || body.error?.message ||
-          `Email provider rejected the request (${response.status})`,
-      };
+    try {
+      const result = await sendDurableEmail(this.pool,
+        {source:'invoice',organizationId:message.organizationId,deliveryId:message.deliveryId},
+        message.idempotencyKey, {
+          from: process.env.EMAIL_FROM?.trim() || 'Itemize <noreply@itemize.cloud>',
+          to:[message.to], ...(message.cc.length ? {cc:message.cc} : {}),
+          subject:message.subject,html:message.html,text:message.text,
+          attachments:[{filename:message.filename,content:message.pdf.toString('base64')}],
+        }, apiKey);
+      return {kind:'sent',providerId:result.providerId};
+    } catch (error) {
+      if (error instanceof DurableEmailError && !error.providerOutcomeUnknown) return {kind:'rejected',message:error.message};
+      throw error;
     }
-    return { kind: 'sent', providerId: body.id ?? null };
   }
 }
 

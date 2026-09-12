@@ -10,6 +10,7 @@ describe('SignatureCompletionJobsService', () => {
     organization_id: 3,
     document_id: 11,
     attempt_count: 1,
+    claim_generation: '1',
   };
   const repository = {
     claim: jest.fn(),

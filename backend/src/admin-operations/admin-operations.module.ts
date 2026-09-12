@@ -1,3 +1,5 @@
+import { DeliveryReconciliationService } from './delivery-reconciliation.service';
+import { DeliveryReconciliationResolver } from './delivery-reconciliation.resolver';
 import { Module } from '@nestjs/common';
 import { AdminAccessGuard } from './admin-access.guard';
 import { AdminOperationsRepository } from './admin-operations.repository';
@@ -7,7 +9,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [NotificationsModule],
-  providers: [AdminAccessGuard, AdminOperationsRepository, AdminOperationsService, AdminOperationsResolver],
+  providers: [DeliveryReconciliationService, DeliveryReconciliationResolver, AdminAccessGuard, AdminOperationsRepository, AdminOperationsService, AdminOperationsResolver],
   exports: [AdminAccessGuard],
 })
 export class AdminOperationsModule {}

@@ -36,7 +36,7 @@ describe('SignatureDeliveryJobsService', () => {
       message: 'Please sign',
       expiresAt: '2026-08-01T00:00:00.000Z',
     },
-    attempt_count: 1,
+    attempt_count: 1, claim_generation: '1',
   };
 
   beforeEach(() => {

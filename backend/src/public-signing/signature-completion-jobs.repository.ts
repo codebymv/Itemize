@@ -9,6 +9,7 @@ export type SignatureCompletionClaim = {
   organization_id: number;
   document_id: number;
   attempt_count: number;
+  claim_generation: string;
 };
 
 export type SignatureCompletionSnapshot = {
@@ -128,7 +129,7 @@ export class SignatureCompletionJobsRepository {
            FOR UPDATE OF job SKIP LOCKED LIMIT 1
          )
          UPDATE signature_completion_jobs job
-         SET status='processing',attempt_count=attempt_count+1,
+         SET status='processing',attempt_count=attempt_count+1,claim_generation=claim_generation+1,
            lease_expires_at=CURRENT_TIMESTAMP+($1::int*INTERVAL '1 second'),
            last_error=NULL,updated_at=CURRENT_TIMESTAMP
          FROM candidate
@@ -208,9 +209,9 @@ export class SignatureCompletionJobsRepository {
     return this.transaction(async (client) => {
       const job = await client.query(
         `SELECT id FROM signature_completion_jobs
-         WHERE id=$1 AND status='processing' AND attempt_count=$2
+         WHERE id=$1 AND status='processing' AND claim_generation=$2
          FOR UPDATE`,
-        [claim.id, claim.attempt_count],
+        [claim.id, claim.claim_generation],
       );
       if (!job.rows[0]) return false;
       const document = await client.query<{
@@ -239,8 +240,8 @@ export class SignatureCompletionJobsRepository {
              cancelled_at=CURRENT_TIMESTAMP,
              cancellation_reason='document_not_completable',
              lease_expires_at=NULL,updated_at=CURRENT_TIMESTAMP
-           WHERE id=$1 AND attempt_count=$2`,
-          [claim.id, claim.attempt_count],
+           WHERE id=$1 AND claim_generation=$2`,
+          [claim.id, claim.claim_generation],
         );
         return false;
       }
@@ -269,8 +270,8 @@ export class SignatureCompletionJobsRepository {
         `UPDATE signature_completion_jobs SET status='completed',
            completed_at=CURRENT_TIMESTAMP,lease_expires_at=NULL,last_error=NULL,
            updated_at=CURRENT_TIMESTAMP
-         WHERE id=$1 AND attempt_count=$2`,
-        [claim.id, claim.attempt_count],
+         WHERE id=$1 AND claim_generation=$2`,
+        [claim.id, claim.claim_generation],
       );
       await client.query(
         `INSERT INTO signature_audit_log
@@ -317,9 +318,9 @@ export class SignatureCompletionJobsRepository {
            THEN CURRENT_TIMESTAMP+($4::bigint*INTERVAL '1 millisecond')
            ELSE next_attempt_at END,
          lease_expires_at=NULL,last_error=$5,updated_at=CURRENT_TIMESTAMP
-       WHERE id=$1 AND status='processing' AND attempt_count=$2
+       WHERE id=$1 AND status='processing' AND claim_generation=$2
        RETURNING status`,
-      [claim.id, claim.attempt_count, status, delay, redactedError(error)],
+      [claim.id, claim.claim_generation, status, delay, redactedError(error)],
     );
     return result.rows[0]?.status ?? 'stale';
   }

@@ -1,8 +1,11 @@
+import { Pool } from 'pg';
+import { PG_POOL } from '../database/database.module';
+import { DeliveryIdentity, sendDurableEmail } from '../common/durable-email';
 import { lookup as dnsLookup } from 'node:dns/promises';
 import * as http from 'node:http';
 import * as https from 'node:https';
 import { isIP } from 'node:net';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import {
   asRecord,
   workflowWebhookAddressIsPublic,
@@ -20,6 +23,7 @@ export class WorkflowDeliveryError extends Error {
 }
 
 export type WorkflowEmailMessage = {
+  durableDelivery?: DeliveryIdentity;
   to: string; subject: string; html: string; text?: string; from?: string; replyTo?: string;
   tags: Array<{ name: string; value: string }>; idempotencyKey: string;
 };
@@ -28,9 +32,16 @@ export const WORKFLOW_EMAIL_PROVIDER = Symbol('WORKFLOW_EMAIL_PROVIDER');
 
 @Injectable()
 export class ResendWorkflowEmailProvider implements WorkflowEmailProvider {
+  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
   async send(message: WorkflowEmailMessage): Promise<WorkflowProviderResult> {
     const key = process.env.RESEND_API_KEY?.trim();
     if (!key) throw new WorkflowDeliveryError('Email service is not configured');
+    if (message.durableDelivery) return sendDurableEmail(this.pool,message.durableDelivery,message.idempotencyKey,{
+      from:message.from || process.env.EMAIL_FROM?.trim() || 'Itemize <noreply@itemize.cloud>',
+      to:[message.to],subject:message.subject,html:message.html,
+      ...(message.text ? {text:message.text} : {}),
+      ...(message.replyTo ? {reply_to:message.replyTo} : {}), tags:message.tags,
+    },key);
     let response: Response;
     try {
       response = await fetch('https://api.resend.com/emails', {

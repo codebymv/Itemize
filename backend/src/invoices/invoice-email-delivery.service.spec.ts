@@ -37,3 +37,45 @@ describe('InvoiceEmailDeliveryService rendering', () => {
     );
   });
 });
+
+
+describe('Invoice delivery attempt ownership', () => {
+  const delivery = { id: 7, invoice_id: 9, status: 'processing', attempt_count: 2,
+    payment_url: null, recipient_email: 'qa@example.invalid', subject: 'Invoice',
+    payload: { invoice: { invoice_number: 'INV-9', amount_due: '10', currency: 'USD' }, settings: {},
+      includePaymentLink: true, message: 'Review invoice', ccEmails: [] },
+  } as unknown as InvoiceEmailDeliveryRow;
+  const setup = () => {
+    const repository = {
+      prepareEmailDelivery: jest.fn().mockResolvedValue({kind:'replayed',delivery}),
+      claimEmailDelivery: jest.fn().mockResolvedValue(delivery),
+      findConnectedStripeAccountId: jest.fn().mockResolvedValue(null),
+      recordPaymentLink: jest.fn().mockResolvedValue(null),
+      findEmailDelivery: jest.fn().mockResolvedValue({...delivery,attempt_count:3}),
+      completeEmailDelivery: jest.fn().mockResolvedValue({...delivery,attempt_count:3}),
+    };
+    const email = {send:jest.fn().mockResolvedValue({kind:'sent',providerId:'email-7'})};
+    const links = {getOrCreate:jest.fn().mockResolvedValue({kind:'ready',sessionId:'cs-7',url:'https://pay.test/7'})};
+    const pdf = {render:jest.fn().mockResolvedValue(Buffer.from('pdf'))};
+    const activation = {recordArtifactSent:jest.fn()};
+    const service = new InvoiceEmailDeliveryService(repository as unknown as InvoicesRepository,
+      email as InvoiceEmailProvider, links as InvoicePaymentLinkProvider, pdf as InvoicePdfRenderer,
+      activation as unknown as ActivationService);
+    return {repository,email,pdf,activation,service};
+  };
+  const input = {idempotencyKey:'attempt-7',subject:'Invoice',message:'Review invoice',includePaymentLink:true,ccEmails:[],resend:false};
+  it('stops before sending if another worker owns payment-link persistence', async () => {
+    const {service,repository,email,pdf} = setup();
+    await expect(service.send(1,2,9,input)).resolves.toMatchObject({emailSent:false,status:'processing'});
+    expect(repository.recordPaymentLink).toHaveBeenCalledWith(1,7,'cs-7','https://pay.test/7',2);
+    expect(email.send).not.toHaveBeenCalled();
+    expect(pdf.render).not.toHaveBeenCalled();
+  });
+  it('does not record activation for a superseded completion', async () => {
+    const {service,repository,activation} = setup();
+    repository.claimEmailDelivery.mockResolvedValue({...delivery,payment_url:'https://pay.test/7'});
+    await expect(service.send(1,2,9,input)).resolves.toMatchObject({emailSent:false,status:'processing'});
+    expect(repository.completeEmailDelivery).toHaveBeenCalledWith(1,7,'email-7',2);
+    expect(activation.recordArtifactSent).not.toHaveBeenCalled();
+  });
+});

@@ -51,6 +51,19 @@ export class InvoicesResolver {
     return this.invoices.get(this.organizationId(), id);
   }
 
+  @OrganizationScoped()
+  @Query(() => InvoiceSendResult, {nullable:true})
+  invoiceDeliveryStatus(@Args('id',{type:()=>Int}) id:number): Promise<InvoiceSendResult | null> {
+    return this.emailDelivery.status(this.organizationId(),id);
+  }
+
+  @CsrfProtected()
+  @OrganizationScoped()
+  @Mutation(() => InvoiceSendResult)
+  retryInvoiceDelivery(@Args('deliveryId',{type:()=>Int}) id:number): Promise<InvoiceSendResult> {
+    return this.emailDelivery.retry(this.organizationId(),id);
+  }
+
   @CsrfProtected()
   @OrganizationScoped()
   @Mutation(() => Invoice)

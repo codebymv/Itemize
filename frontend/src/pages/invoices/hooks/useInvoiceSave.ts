@@ -153,6 +153,7 @@ export function useInvoiceSave({
       subject: options.subject,
       message: options.message,
       ccEmails: options.ccEmails,
+      includePaymentLink: options.includePaymentLink,
     };
     await run(async () => {
       const idempotencyKey = beginInvoiceSend(JSON.stringify({
@@ -171,7 +172,7 @@ export function useInvoiceSave({
       if (result.emailSent) {
         toast({
           title: 'Sent',
-          description: 'Invoice sent successfully and email delivered',
+          description: 'Invoice email accepted by the delivery provider',
         });
       } else if (result.emailError) {
         toast({

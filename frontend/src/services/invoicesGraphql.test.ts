@@ -268,7 +268,7 @@ describe('core invoice GraphQL adapter', () => {
     });
     await expect(sendInvoiceViaGraphql(12, {
       subject: 'Your invoice', message: 'Please pay.',
-    }, 4, 'retry-key')).rejects.toThrow('not confirmed (RETRY)');
+    }, 4, 'retry-key')).rejects.toThrow('Email is queued for another delivery attempt.');
     expect(graphqlRequest).not.toHaveBeenCalled();
   });
 

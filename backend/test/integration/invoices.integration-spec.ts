@@ -1,8 +1,11 @@
+import { sendDurableEmail, deliveryTag } from '../../src/common/durable-email';
+import { DeliveryReconciliationService } from '../../src/admin-operations/delivery-reconciliation.service';
 import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import { Pool } from 'pg';
 import request from 'supertest';
+import { InvoicesRepository } from '../../src/invoices/invoices.repository';
 import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/configure-app';
 import { PG_POOL } from '../../src/database/database.module';
@@ -666,6 +669,83 @@ describe('Core invoice GraphQL PostgreSQL contract', () => {
     expect(bypass.body.errors[0].extensions).toMatchObject({
       code: 'CONFLICT', reason: 'INVOICE_DELIVERY_IN_PROGRESS',
     });
+  });
+
+  it('fences expired invoice email attempts from replacing a newer claim or sent receipt', async () => {
+    const created = await graphql(memberToken, organizationId, createMutation, { input: input() }).expect(200);
+    const invoiceId = Number(created.body.data.createInvoice.id);
+    const repository = app.get(InvoicesRepository);
+    const prepared = await repository.prepareEmailDelivery(organizationId, memberId, invoiceId, 'lease-fence', sendInput('lease-fence'));
+    if (prepared.kind !== 'created') throw new Error('Expected a new delivery');
+    const deliveryId = Number(prepared.delivery.id);
+    const first = (await repository.claimEmailDelivery(organizationId, deliveryId))!;
+    expect(first).not.toBeNull();
+    expect(await repository.claimEmailDelivery(organizationId, deliveryId)).toBeNull();
+    await pool.query("UPDATE invoice_email_deliveries SET lease_expires_at=NOW()-INTERVAL '1 second' WHERE id=$1", [deliveryId]);
+    const second = (await repository.claimEmailDelivery(organizationId, deliveryId))!;
+    expect(second.attempt_count).toBe(first.attempt_count + 1);
+    expect(await repository.recordPaymentLink(organizationId, deliveryId, 'stale-session', 'https://pay.test/stale', first.attempt_count)).toBeNull();
+    expect((await repository.failEmailDelivery(organizationId, deliveryId, 'stale timeout', true, first.attempt_count)).status).toBe('processing');
+    expect((await repository.completeEmailDelivery(organizationId, deliveryId, 'stale-provider', first.attempt_count)).status).toBe('processing');
+    expect((await pool.query('SELECT status FROM invoices WHERE id=$1', [invoiceId])).rows[0].status).toBe('draft');
+    await repository.recordPaymentLink(organizationId, deliveryId, 'current-session', 'https://pay.test/current', second.attempt_count);
+    const completed = await repository.completeEmailDelivery(organizationId, deliveryId, 'current-provider', second.attempt_count);
+    expect(completed.status).toBe('sent');
+    const late = await repository.failEmailDelivery(organizationId, deliveryId, 'late timeout', true, first.attempt_count);
+    expect(late).toMatchObject({status:'sent',provider_id:'current-provider',payment_session_id:'current-session'});
+    expect(await repository.claimEmailDelivery(organizationId, deliveryId)).toBeNull();
+  });
+
+  it('retains encrypted immutable provider requests, expires retries, and reconciles verified evidence', async () => {
+    const originalFetch=global.fetch;
+    const originalKey=process.env.RESEND_API_KEY;
+    process.env.RESEND_API_KEY='re_test';
+    try {
+      const created=await graphql(memberToken,organizationId,createMutation,{input:input()}).expect(200);
+      const invoiceId=Number(created.body.data.createInvoice.id);
+      const repository=app.get(InvoicesRepository);
+      const prepared=await repository.prepareEmailDelivery(organizationId,memberId,invoiceId,'durable-recovery',sendInput('durable-recovery'));
+      if(prepared.kind!=='created') throw new Error('Expected delivery');
+      const deliveryId=Number(prepared.delivery.id);
+      const identity={organizationId,source:'invoice' as const,deliveryId};
+      const key=`invoice-email:${organizationId}:${deliveryId}`;
+      const payload={to:['qa@example.invalid'],subject:'Immutable invoice',html:'private signing capability',attachments:[{content:'first-pdf'}]};
+      const fetchMock=jest.fn().mockRejectedValue(new Error('lost response'));
+      global.fetch=fetchMock as typeof fetch;
+      await expect(sendDurableEmail(pool,identity,key,payload,'re_test')).rejects.toMatchObject({providerOutcomeUnknown:true});
+      await expect(sendDurableEmail(pool,identity,key,{...payload,html:'changed',attachments:[{content:'different-pdf'}]},'re_test')).rejects.toMatchObject({providerOutcomeUnknown:true});
+      expect(fetchMock.mock.calls[0][1].body).toBe(fetchMock.mock.calls[1][1].body);
+      const saved=(await pool.query('SELECT request_body FROM delivery_provider_receipts WHERE source=$1 AND delivery_id=$2',['invoice',deliveryId])).rows[0];
+      expect(saved.request_body).not.toContain('private signing capability');
+      expect(saved.request_body).not.toContain('first-pdf');
+      await pool.query("UPDATE invoice_email_deliveries SET status='reconciliation_required' WHERE id=$1",[deliveryId]);
+      expect(await repository.emailDeliveryCanRetry(organizationId,deliveryId)).toBe(true);
+      expect((await repository.retryEmailDelivery(organizationId,deliveryId))?.status).toBe('retry');
+      expect((await repository.retryEmailDelivery(organizationId,deliveryId))?.status).toBe('retry');
+      expect(await repository.retryEmailDelivery(outsiderOrganizationId,deliveryId)).toBeNull();
+      await pool.query("UPDATE invoice_email_deliveries SET status='reconciliation_required' WHERE id=$1",[deliveryId]);
+      await pool.query("UPDATE delivery_provider_receipts SET first_attempt_at=NOW()-INTERVAL '24 hours' WHERE source='invoice' AND delivery_id=$1",[deliveryId]);
+      expect(await repository.emailDeliveryCanRetry(organizationId,deliveryId)).toBe(false);
+      expect(await repository.retryEmailDelivery(organizationId,deliveryId)).toBeNull();
+      await expect(sendDurableEmail(pool,identity,key,payload,'re_test')).rejects.toMatchObject({retryable:false,providerOutcomeUnknown:true});
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      const providerId='11111111-2222-4333-8444-555555555555';
+      fetchMock.mockResolvedValue({ok:true,json:async()=>({id:providerId,to:payload.to,subject:payload.subject,tags:[]})});
+      const reconcile=app.get(DeliveryReconciliationService);
+      await expect(reconcile.reconcile(memberId,'invoice',deliveryId,providerId)).rejects.toMatchObject({extensions:{code:'CONFLICT'}});
+      fetchMock.mockResolvedValue({ok:true,json:async()=>({id:providerId,to:payload.to,subject:payload.subject,last_event:'delivered',tags:[{name:'itemize_delivery',value:deliveryTag(key)}]})});
+      await expect(reconcile.reconcile(memberId,'invoice',deliveryId,providerId)).resolves.toBe(true);
+      await expect(reconcile.reconcile(memberId,'invoice',deliveryId,providerId)).resolves.toBe(true);
+      expect((await repository.findEmailDelivery(organizationId,deliveryId))?.status).toBe('sent');
+      expect((await pool.query('SELECT COUNT(*)::int AS n FROM delivery_reconciliation_audit WHERE source=$1 AND delivery_id=$2',['invoice',deliveryId])).rows[0].n).toBe(1);
+      const calls=fetchMock.mock.calls.length;
+      await expect(sendDurableEmail(pool,identity,key,payload,'re_test')).resolves.toEqual({providerId});
+      expect(fetchMock).toHaveBeenCalledTimes(calls);
+      const hidden=await graphql(outsiderToken,outsiderOrganizationId,'query($id:Int!){invoiceDeliveryStatus(id:$id){deliveryId status canRetry}}',{id:invoiceId}).expect(200);
+      expect(hidden.body.data.invoiceDeliveryStatus).toBeNull();
+      const forbidden=await graphql(memberToken,organizationId,'mutation($source:String!,$deliveryId:Int!,$providerId:String!){reconcileEmailDelivery(source:$source,deliveryId:$deliveryId,providerId:$providerId)}',{source:'invoice',deliveryId,providerId}).expect(200);
+      expect(forbidden.body.errors[0].extensions.code).toBe('FORBIDDEN');
+    } finally { global.fetch=originalFetch; if(originalKey===undefined) delete process.env.RESEND_API_KEY; else process.env.RESEND_API_KEY=originalKey; }
   });
 
   it('creates replay-safe payment links and fences stale or ambiguous outcomes', async () => {

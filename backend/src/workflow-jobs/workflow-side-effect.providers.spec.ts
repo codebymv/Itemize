@@ -21,7 +21,7 @@ describe('workflow side-effect providers', () => {
   it('passes the stable workflow key to Resend', async () => {
     process.env.RESEND_API_KEY = 're_test';
     global.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ id: 'email-id' }) }) as any;
-    await expect(new ResendWorkflowEmailProvider().send({
+    await expect(new ResendWorkflowEmailProvider({} as import('pg').Pool).send({
       to: 'person@example.test', subject: 'Hello', html: '<p>Hello</p>', tags: [], idempotencyKey: 'stable-key',
     })).resolves.toEqual({ providerId: 'email-id' });
     expect(global.fetch).toHaveBeenCalledWith('https://api.resend.com/emails', expect.objectContaining({

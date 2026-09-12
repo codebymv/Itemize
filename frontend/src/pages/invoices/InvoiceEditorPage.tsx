@@ -1277,6 +1277,7 @@ export function InvoiceEditorPage() {
 
             {/* Send Invoice Modal */}
             <SendInvoiceModal
+                invoiceId={invoiceId ?? undefined}
                 open={showSendModal}
                 onOpenChange={setShowSendModal}
                 onSend={handleSendInvoice}

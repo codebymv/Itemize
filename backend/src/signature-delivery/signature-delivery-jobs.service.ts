@@ -114,6 +114,7 @@ export class SignatureDeliveryJobsService {
       payload,
     );
     return this.email.send({
+      durableDelivery:{source:'signature',organizationId:claim.organization_id,deliveryId:claim.id},
       to,
       subject: rendered.subject,
       html: rendered.html,

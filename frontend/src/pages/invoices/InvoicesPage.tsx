@@ -293,7 +293,7 @@ export function InvoicesPage() {
             
             // Show appropriate toast based on email status
             if (result.emailSent) {
-                toast({ title: isResend ? 'Resent' : 'Sent', description: 'Invoice email delivered successfully' });
+                toast({ title: isResend ? 'Resent' : 'Sent', description: 'Invoice email accepted by the delivery provider' });
             } else if (result.emailError) {
                 toast({ 
                     title: 'Sent with warning', 
@@ -1202,6 +1202,7 @@ export function InvoicesPage() {
             {/* Send Invoice Modal */}
             {selectedInvoiceForSend && (
                 <SendInvoiceModal
+                    invoiceId={selectedInvoiceForSend.id}
                     open={showSendModal}
                     onOpenChange={(open) => {
                         if (sending) return;
