@@ -8,6 +8,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import * as crypto from 'crypto';
+import { bookingTimezone } from '../common/booking-timezone';
 import { PublicBookingsRepository } from './public-bookings.repository';
 import { publicBookingCancellationToken } from './public-booking.token';
 
@@ -140,7 +141,7 @@ export class PublicBookingsService {
     const values = {
       startTime: String(startTime),
       endTime: body.end_time ? String(body.end_time) : null,
-      timezone: body.timezone ? String(body.timezone) : null,
+      timezone: this.timezone(body.timezone),
       attendeeName: String(attendeeName),
       attendeeEmail: String(attendeeEmail),
       attendeePhone: body.attendee_phone ? String(body.attendee_phone) : null,
@@ -195,6 +196,31 @@ export class PublicBookingsService {
     };
   }
 
+  private timezone(value: unknown): string | null {
+    if (value === null || value === undefined) return null;
+    try {
+      return bookingTimezone(value);
+    } catch (error) {
+      throw new BadRequestException({ error: (error as Error).message, code: 'INVALID_TIMEZONE' });
+    }
+  }
+
+  async getBookingStatus(identifier: string, token: unknown) {
+    if (typeof token !== 'string' || !CANCELLATION_TOKEN.test(token)) {
+      throw new NotFoundException({ error: 'Booking status unavailable' });
+    }
+    const booking = await this.guard(
+      () => this.repository.bookingStatus(identifier, this.hashToken(token)),
+      'Error reading booking status',
+      'Failed to refresh booking status',
+    );
+    if (!booking) throw new NotFoundException({ error: 'Booking status unavailable' });
+    // Legacy invalid zones must not crash the confirmation page.
+    try { booking.timezone = bookingTimezone(booking.timezone); }
+    catch { booking.timezone = 'UTC'; }
+    return booking;
+  }
+
   async cancelPublicBooking(
     identifier: string,
     token: string,
@@ -245,7 +271,7 @@ export class PublicBookingsService {
       return await read();
     } catch (error) {
       if (error instanceof HttpException) throw error;
-      this.logger.error(`${logMessage}: ${(error as Error).message}`);
+      this.logger.error(logMessage);
       throw serverFailure(failureMessage);
     }
   }

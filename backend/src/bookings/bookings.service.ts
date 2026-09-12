@@ -1,3 +1,4 @@
+import { bookingTimezone } from '../common/booking-timezone';
 import { Injectable } from '@nestjs/common';
 import { itemizeGraphqlError } from '../common/graphql-error';
 import { PageInput, pageInfo } from '../common/pagination';
@@ -327,24 +328,15 @@ export class BookingsService {
   }
 
   private timezone(value: string): string {
-    const normalized = value.trim();
-    if (!normalized || normalized.length > 100) {
-      throw itemizeGraphqlError(
-        'timezone must contain between 1 and 100 characters',
-        'BAD_USER_INPUT',
-        { field: 'timezone', reason: 'INVALID_TIMEZONE' },
-      );
-    }
     try {
-      new Intl.DateTimeFormat('en-US', { timeZone: normalized }).format();
-    } catch {
+      return bookingTimezone(value);
+    } catch (error) {
       throw itemizeGraphqlError(
-        'timezone must be a valid IANA timezone',
+        (error as Error).message,
         'BAD_USER_INPUT',
         { field: 'timezone', reason: 'INVALID_TIMEZONE' },
       );
     }
-    return normalized;
   }
 
   private record(

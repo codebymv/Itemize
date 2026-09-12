@@ -236,6 +236,14 @@ export const submitPublicBooking = async (
     }>(response.data);
 };
 
+export const getPublicBookingStatus = async (
+    slug: string,
+    token: string,
+): Promise<Pick<Booking, 'start_time' | 'end_time' | 'timezone' | 'status'>> => {
+    const response = await api.post(`/api/bookings/public/book/${slug}/status`, { token });
+    return unwrapResponse(response.data);
+};
+
 export const cancelPublicBooking = async (
     slug: string,
     token: string,

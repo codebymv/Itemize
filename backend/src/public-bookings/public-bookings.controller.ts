@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   HttpCode,
+  Header,
   Param,
   Post,
   Query,
@@ -46,6 +47,14 @@ export class PublicBookingsController {
       body ?? {},
       request.get('idempotency-key'),
     );
+  }
+
+  @Post(':slug/status')
+  @HttpCapabilityScoped()
+  @HttpCode(200)
+  @Header('Cache-Control', 'no-store')
+  async status(@Param('slug') slug: string, @Body() body: Record<string, unknown>) {
+    return this.bookings.getBookingStatus(slug, body?.token);
   }
 
   @Post(':slug/cancel/:token')

@@ -162,6 +162,32 @@ describe('Public bookings protocol (legacy behavior pinned)', () => {
         
   });
 
+  it('reads current times only with the matching unexpired capability', async () => {
+    const calendar = await insertCalendar('Status owner');
+    const other = await insertCalendar('Other status calendar');
+    const created = await createRequest(calendar.public_id).send({
+      ...futureSlot(72), attendee_name: 'Status QA', attendee_email: 'status@test.itemize', timezone: ' UTC ',
+    }).expect(201);
+    expect(created.body.booking.timezone).toBe('UTC');
+    const token = created.body.booking.cancellation_token;
+    const read = (identifier = calendar.public_id, capability = token) => request(app.getHttpServer())
+      .post(`/api/bookings/public/book/${identifier}/status`).send({ token: capability });
+    const initial = await read().expect(200);
+    expect(Object.keys(initial.body).sort()).toEqual(['end_time', 'start_time', 'status', 'timezone']);
+    await read(other.public_id).expect(404);
+    await read(calendar.public_id, 'ff'.repeat(32)).expect(404);
+    const next = futureSlot(120);
+    const repository = app.get(BookingsRepository);
+    expect((await repository.reschedule(owner.org.id, created.body.booking.id, new Date(next.start_time), new Date(next.end_time), 'America/Phoenix')).kind).toBe('rescheduled');
+    const updated = await read().expect(200);
+    expect(updated.body).toEqual({ ...next, status: 'confirmed', timezone: 'America/Phoenix' });
+    await pool.query("UPDATE bookings SET cancellation_token_expires_at = CURRENT_TIMESTAMP - INTERVAL '1 second' WHERE id = $1", [created.body.booking.id]);
+    await read().expect(404);
+    await pool.query("UPDATE bookings SET cancellation_token_expires_at = CURRENT_TIMESTAMP + INTERVAL '1 day' WHERE id = $1", [created.body.booking.id]);
+    await request(app.getHttpServer()).post(`/api/bookings/public/book/${calendar.public_id}/cancel/${token}`).send({}).expect(200);
+    await read().expect(404);
+  });
+
   it('validates and serves slot ranges identically', async () => {
     const calendar = await insertCalendar('Parity Slots');
     const day = futureSlot(72).start_time.slice(0, 10);

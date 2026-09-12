@@ -14,6 +14,7 @@ describe('PublicBookingsController retained HTTP contract', () => {
     publicSlots: jest.fn(),
     createPublicBooking: jest.fn(),
     cancelPublicBooking: jest.fn(),
+    bookingStatus: jest.fn(),
   };
 
   beforeAll(async () => {
@@ -152,6 +153,27 @@ describe('PublicBookingsController retained HTTP contract', () => {
         },
       ],
     });
+  });
+
+  it.each(['', '   ', 'Invalid/Zone', 123, {}, 'a'.repeat(101)])('rejects invalid timezone %p before a booking write', async timezone => {
+    await request(app.getHttpServer()).post('/api/bookings/public/book/cal_abc123')
+      .set('idempotency-key', 'timezone-validation')
+      .send({ start_time: '2026-09-01T13:00:00Z', attendee_name: 'Sam', attendee_email: 'sam@example.com', timezone })
+      .expect(400);
+    expect(repository.createPublicBooking).not.toHaveBeenCalled();
+  });
+
+  it('requires a valid capability for the minimal uncached status read', async () => {
+    const token = 'ab'.repeat(32);
+    const status = { start_time: '2026-09-01T15:00:00Z', end_time: '2026-09-01T15:30:00Z', timezone: 'UTC', status: 'confirmed' };
+    repository.bookingStatus.mockResolvedValue(status);
+    const response = await request(app.getHttpServer()).post('/api/bookings/public/book/cal_abc123/status').send({ token }).expect(200);
+    expect(response.body).toEqual(status);
+    expect(response.headers['cache-control']).toBe('no-store');
+    expect(repository.bookingStatus).toHaveBeenCalledWith('cal_abc123', crypto.createHash('sha256').update(token).digest('hex'));
+    repository.bookingStatus.mockClear();
+    await request(app.getHttpServer()).post('/api/bookings/public/book/cal_abc123/status').send({ token: 'invalid' }).expect(404);
+    expect(repository.bookingStatus).not.toHaveBeenCalled();
   });
 
   it('requires the mandatory booking fields', async () => {

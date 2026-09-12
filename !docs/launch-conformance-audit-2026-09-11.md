@@ -1,4 +1,4 @@
-﻿# Launch convention conformance audit — 2026-09-11
+# Launch convention conformance audit — 2026-09-11
 
 ## Scope and conclusion
 
@@ -26,12 +26,12 @@ Reviewed launch changes from `8d745d51` through `daf412a5`, plus the corrections
 - Current production checks returned HTTP 200 on both origins, HSTS and nosniff on both, and SPA CSP. API health intentionally has no document CSP.
 - Runtime booleans confirmed calendar sync, campaign delivery, campaign test recovery, invoice email recovery, invoice logo cleanup, and workflow scheduler enabled. Direct and social message schedulers were disabled/unset.
 
-## Open acceptance gaps
+## Acceptance gaps and follow-up status
 
-These are not marked passed by this audit:
+The initial gaps are listed below. Corrected entries are identified explicitly; the others remain open:
 
-1. Public booking creation accepts an arbitrary timezone string, while authenticated booking mutations validate IANA timezones. Email rendering now safely falls back to UTC for legacy bad data, but input validation still needs alignment.
-2. An already-open public confirmation page retains the old appointment time after an organizer reschedules it. Refresh/reconciliation behavior needs an explicit acceptance test and correction.
+1. Corrected in the booking follow-up: public and organizer mutations now share timezone validation. See the scheduling contract for validation and verification details.
+2. Corrected in the booking follow-up: the open confirmation page refreshes minimal capability-authorized status and warns on unverified data. This does not provide persistent links or reload recovery.
 3. Invoice dashboard date-only overdue comparisons require comparison with the authoritative backend policy. This is a follow-up concern, not a confirmed billing defect.
 4. Hosted public pages inherit frame-ancestors restrictions. Whether iframe embedding is supported needs a clear product contract before changing the policy.
 5. Deleted form fields have no immutable label snapshot in old submissions; unknown keys remain visible to avoid hiding data.

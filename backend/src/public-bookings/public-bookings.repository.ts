@@ -274,6 +274,26 @@ export class PublicBookingsRepository {
     });
   }
 
+  async bookingStatus(identifier: string, tokenHash: string) {
+    const client = await this.pool.connect();
+    try {
+      const calendarId = await this.resolvePublicCalendarId(client, identifier);
+      if (calendarId === null) return null;
+      const result = await client.query<{
+        start_time: Date; end_time: Date; timezone: string; status: string;
+      }>(
+        `SELECT b.start_time, b.end_time, b.timezone, b.status
+         FROM bookings b JOIN calendars c
+           ON c.id = b.calendar_id AND c.organization_id = b.organization_id
+         WHERE b.calendar_id = $1 AND c.is_active = TRUE
+           AND b.cancellation_token_hash = $2
+           AND b.cancellation_token_expires_at > CURRENT_TIMESTAMP`,
+        [calendarId, tokenHash],
+      );
+      return result.rows.length === 1 ? result.rows[0] : null;
+    } finally { client.release(); }
+  }
+
   async cancelPublicBooking(
     identifier: string,
     tokenHash: string,

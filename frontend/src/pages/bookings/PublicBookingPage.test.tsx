@@ -8,6 +8,7 @@ const api = vi.hoisted(() => ({
   getAvailableSlots: vi.fn(),
   submitPublicBooking: vi.fn(),
   cancelPublicBooking: vi.fn(),
+  getPublicBookingStatus: vi.fn(),
 }));
 
 vi.mock('@/services/calendarsApi', () => api);
@@ -73,6 +74,7 @@ describe('PublicBookingPage', () => {
       slots: [slot],
     });
     api.submitPublicBooking.mockResolvedValue(bookingResponse);
+    api.getPublicBookingStatus.mockResolvedValue(bookingResponse.booking);
     api.cancelPublicBooking.mockResolvedValue({ success: true, message: 'Cancelled' });
   });
 
@@ -104,6 +106,37 @@ describe('PublicBookingPage', () => {
       timezone: 'America/Phoenix',
     }), expect.any(String)));
     expect(await screen.findByRole('heading', { name: 'You’re booked' })).toBeInTheDocument();
+  });
+
+  it('refreshes rescheduled times on focus and marks failed reads as unverified', async () => {
+    const interval = vi.spyOn(window, 'setInterval');
+    const { unmount } = renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: '9:00 AM' }));
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Maya Patel' } });
+    fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'maya@example.com' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm booking' }));
+    await screen.findByRole('heading', { name: /booked/i });
+    await waitFor(() => expect(api.getPublicBookingStatus).toHaveBeenCalledWith('cal_public', 'ab'.repeat(32)));
+    api.getPublicBookingStatus.mockResolvedValue({ ...bookingResponse.booking, start_time: '2026-09-01T18:00:00Z', end_time: '2026-09-01T18:30:00Z', timezone: 'UTC' });
+    fireEvent(window, new Event('focus'));
+    expect(await screen.findByText(/6:00 PM/)).toBeInTheDocument();
+    expect(screen.getByText('UTC')).toBeInTheDocument();
+    api.getPublicBookingStatus.mockRejectedValue(new Error('expired'));
+    fireEvent(window, new Event('focus'));
+    expect(await screen.findByText(/latest booking status could not be verified/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Cancel booking' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Booking details' })).toBeInTheDocument();
+    api.getPublicBookingStatus.mockResolvedValue(bookingResponse.booking);
+    const refresh = interval.mock.calls.find(call => call[1] === 30_000)?.[0];
+    expect(typeof refresh).toBe('function');
+    await act(async () => { await (refresh as () => Promise<void>)(); });
+    expect(screen.getByRole('heading', { name: /booked/i })).toBeInTheDocument();
+    unmount();
+    const calls = api.getPublicBookingStatus.mock.calls.length;
+    fireEvent(window, new Event('focus'));
+    await act(async () => { await (refresh as () => Promise<void>)(); });
+    expect(api.getPublicBookingStatus).toHaveBeenCalledTimes(calls);
+    interval.mockRestore();
   });
 
   it('retains the one-time cancellation capability after confirmation', async () => {

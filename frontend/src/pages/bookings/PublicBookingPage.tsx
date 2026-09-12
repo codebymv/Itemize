@@ -29,6 +29,7 @@ import {
   cancelPublicBooking,
   getAvailableSlots,
   getPublicCalendar,
+  getPublicBookingStatus,
   submitPublicBooking,
 } from '@/services/calendarsApi';
 import type { AvailableSlotsResponse, Booking, PublicCalendarInfo } from '@/types';
@@ -89,6 +90,7 @@ export default function PublicBookingPage() {
   const [slotError, setSlotError] = useState('');
   const [confirmed, setConfirmed] = useState<ConfirmedBooking | null>(null);
   const [cancelled, setCancelled] = useState(false);
+  const [confirmationNotice, setConfirmationNotice] = useState('');
   const cancelling = pending && activeAction === 'cancel';
   const [attendee, setAttendee] = useState({ name: '', email: '', phone: '', notes: '' });
 
@@ -134,6 +136,36 @@ export default function PublicBookingPage() {
       });
     return () => { active = false; };
   }, [calendar, confirmed, identifier, selectedDate]);
+
+  const confirmationToken = confirmed?.cancellation_token;
+  useEffect(() => {
+    if (!identifier || !confirmationToken || cancelled) return;
+    let active = true;
+    let inFlight = false;
+    const refresh = async () => {
+      if (!active || inFlight || document.visibilityState === 'hidden') return;
+      inFlight = true;
+      try {
+        const current = await getPublicBookingStatus(identifier, confirmationToken);
+        if (!active) return;
+        setConfirmed(previous => previous ? { ...previous, ...current } : previous);
+        setConfirmationNotice('');
+        if (current.status === 'cancelled') setCancelled(true);
+      } catch {
+        if (active) setConfirmationNotice('The latest booking status could not be verified. These details may be out of date. Please contact the organizer if this continues.');
+      } finally { inFlight = false; }
+    };
+    void refresh();
+    const timer = window.setInterval(() => void refresh(), 30_000);
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, [identifier, confirmationToken, cancelled]);
 
   const maxDate = calendar
     ? dateInputValue(addDays(today, calendar.max_future_days))
@@ -229,26 +261,26 @@ export default function PublicBookingPage() {
             )}>
               <CalendarCheck2 className="h-7 w-7" />
             </div>
-            <h1 className="mt-5 text-2xl font-semibold">{cancelled ? 'Booking cancelled' : 'You’re booked'}</h1>
+            <h1 className="mt-5 text-2xl font-semibold">{cancelled ? 'Booking cancelled' : confirmationNotice || confirmed.status !== 'confirmed' ? 'Booking details' : 'You’re booked'}</h1>
             <p className="mt-2 text-muted-foreground">
-              {cancelled ? `Your appointment with ${calendar.organization_name} has been cancelled.` : `Your appointment with ${calendar.organization_name} is confirmed.`}
+              {cancelled ? `Your appointment with ${calendar.organization_name} has been cancelled.` : confirmationNotice ? 'Showing the last known appointment details.' : confirmed.status !== 'confirmed' ? `Appointment status: ${confirmed.status}.` : `Your appointment with ${calendar.organization_name} is confirmed.`}
             </p>
             <div className="mx-auto mt-6 max-w-md rounded-lg border bg-muted/20 p-4 text-left">
               <p className="font-medium">{calendar.name}</p>
               <p className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
                 <CalendarDays className="h-4 w-4" />
-                {formatBookingDate(confirmed.start_time, calendar.timezone)}
+                {formatBookingDate(confirmed.start_time, confirmed.timezone || calendar.timezone)}
               </p>
               <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
                 <Clock3 className="h-4 w-4" />
-                {formatSlot(confirmed.start_time, calendar.timezone)}–{formatSlot(confirmed.end_time, calendar.timezone)}
+                {formatSlot(confirmed.start_time, confirmed.timezone || calendar.timezone)}–{formatSlot(confirmed.end_time, confirmed.timezone || calendar.timezone)}
               </p>
               <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
                 <MapPin className="h-4 w-4" />
-                {calendar.timezone}
+                {confirmed.timezone || calendar.timezone}
               </p>
             </div>
-            {!cancelled ? (
+            {!cancelled && !confirmationNotice && confirmed.status === 'confirmed' ? (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button type="button" variant="outline" className="mt-6" disabled={cancelling}>
@@ -280,6 +312,7 @@ export default function PublicBookingPage() {
                 </AlertDialogContent>
               </AlertDialog>
             ) : null}
+            {confirmationNotice ? <Alert className="mt-6 text-left"><AlertDescription>{confirmationNotice}</AlertDescription></Alert> : null}
             {error ? <Alert variant="destructive" className="mt-6 text-left"><AlertDescription>{error}</AlertDescription></Alert> : null}
           </BrandedPublicCard>
         </BrandedPublicContainer>
