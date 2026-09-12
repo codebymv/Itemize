@@ -162,6 +162,30 @@ describe('Public bookings protocol (legacy behavior pinned)', () => {
         
   });
 
+  it('stops new public intake after paid access ends but preserves existing cancellation', async () => {
+    const calendar = await insertCalendar('Entitlement expiry');
+    const body = { ...futureSlot(96), attendee_name: 'Entitlement QA', attendee_email: 'entitlement@test.itemize', timezone: 'UTC' };
+    const created = await createRequest(calendar.public_id).send(body).expect(201);
+    try {
+      for (const state of [
+        { plan: 'free', status: 'active', end: null },
+        { plan: 'starter', status: 'past_due', end: null },
+        { plan: 'starter', status: 'trialing', end: new Date(Date.now() - 1000) },
+      ]) {
+        await pool.query('UPDATE organizations SET plan=$2,subscription_status=$3,trial_ends_at=$4 WHERE id=$1', [owner.org.id,state.plan,state.status,state.end]);
+        await request(app.getHttpServer()).get(`/api/bookings/public/book/${calendar.public_id}`).expect(404);
+        await request(app.getHttpServer()).get(`/api/bookings/public/book/${calendar.public_id}/slots?start_date=${body.start_time.slice(0,10)}`).expect(404);
+        await createRequest(calendar.public_id).send({ ...body, ...futureSlot(120) }).expect(404);
+      }
+      await request(app.getHttpServer()).post(`/api/bookings/public/book/${calendar.public_id}/status`).send({ token: created.body.booking.cancellation_token }).expect(200);
+      await request(app.getHttpServer()).post(`/api/bookings/public/book/${calendar.public_id}/cancel/${created.body.booking.cancellation_token}`).send({}).expect(200);
+      expect(Number((await pool.query('SELECT count(*) FROM bookings WHERE calendar_id=$1', [calendar.id])).rows[0].count)).toBe(1);
+    } finally {
+      await pool.query("UPDATE organizations SET plan='starter',subscription_status='trialing',trial_ends_at=NOW()+INTERVAL '14 days' WHERE id=$1", [owner.org.id]);
+    }
+    await request(app.getHttpServer()).get(`/api/bookings/public/book/${calendar.public_id}`).expect(200);
+  });
+
   it('reads current times only with the matching unexpired capability', async () => {
     const calendar = await insertCalendar('Status owner');
     const other = await insertCalendar('Other status calendar');

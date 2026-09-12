@@ -3,6 +3,14 @@ import { describe, expect, it, vi } from 'vitest';
 import { PricingCards } from './PricingCards';
 
 describe('PricingCards', () => {
+  it('shows the annual commitment alongside an accurate monthly equivalent', () => {
+    render(<PricingCards billingPeriod="yearly" onBillingPeriodChange={vi.fn()} />);
+    expect(screen.getByText('$24.17')).toBeInTheDocument();
+    expect(screen.getByText('$40.83')).toBeInTheDocument();
+    expect(screen.getByText('$290 billed annually')).toBeInTheDocument();
+    expect(screen.getByText('$490 billed annually')).toBeInTheDocument();
+  });
+
   it('uses the shared tab primitive for billing periods', () => {
     const onBillingPeriodChange = vi.fn();
     render(

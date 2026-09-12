@@ -1,3 +1,4 @@
+import { paidEntitlementSql } from '../billing/paid-entitlement.sql';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { enqueueBookingNotification } from '../bookings/booking-notification';
@@ -97,7 +98,8 @@ export class PublicBookingsRepository {
            o.name as organization_name
          FROM calendars c
          JOIN organizations o ON c.organization_id = o.id
-         WHERE c.id = $1 AND c.is_active = TRUE`,
+         WHERE c.id = $1 AND c.is_active = TRUE
+           AND ${paidEntitlementSql('o')}`,
         [calendarId],
       );
       if (result.rows.length !== 1) return null;
@@ -126,7 +128,9 @@ export class PublicBookingsRepository {
       const calendar = await client.query<SlotPolicyCalendarRow>(
         `SELECT id, duration_minutes, min_notice_hours, max_future_days, timezone
          FROM calendars
-         WHERE id = $1 AND is_active = TRUE`,
+         WHERE id = $1 AND is_active = TRUE
+           AND EXISTS (SELECT 1 FROM organizations organization WHERE organization.id = calendars.organization_id
+             AND ${paidEntitlementSql('organization')})`,
         [calendarId],
       );
       if (calendar.rows.length !== 1) return null;
@@ -160,11 +164,21 @@ export class PublicBookingsRepository {
       }>(
         `SELECT id, organization_id, public_id, duration_minutes, assigned_to, min_notice_hours, timezone
          FROM calendars
-         WHERE id = $1 AND is_active = TRUE`,
+         WHERE id = $1 AND is_active = TRUE
+           AND EXISTS (SELECT 1 FROM organizations organization WHERE organization.id = calendars.organization_id
+             AND ${paidEntitlementSql('organization')})`,
         [resolvedCalendarId],
       );
       if (initial.rows.length !== 1) return { kind: 'calendar_not_found' };
       let calendar = initial.rows[0];
+      // Serialize admission with subscription changes; existing capability
+      // status/cancellation intentionally remains available after access ends.
+      const entitlement = await client.query(
+        `SELECT id FROM organizations organization WHERE id = $1
+         AND ${paidEntitlementSql('organization')} FOR SHARE`,
+        [calendar.organization_id],
+      );
+      if (!entitlement.rows.length) return { kind: 'calendar_not_found' };
 
       const endTime =
         values.endTime ||
@@ -190,6 +204,8 @@ export class PublicBookingsRepository {
         `SELECT id, organization_id, public_id, duration_minutes, assigned_to, min_notice_hours, timezone
          FROM calendars
          WHERE id = $1 AND is_active = TRUE
+           AND EXISTS (SELECT 1 FROM organizations organization WHERE organization.id = calendars.organization_id
+             AND ${paidEntitlementSql('organization')})
          FOR UPDATE`,
         [calendar.id],
       );

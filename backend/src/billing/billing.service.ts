@@ -270,6 +270,11 @@ export class BillingService {
     period: BillingPeriod;
     priceId: string;
   }): void {
+    if (resolved.planId === 'pro') {
+      throw itemizeGraphqlError('This legacy plan is not offered to new buyers', 'BAD_USER_INPUT', {
+        reason: 'LEGACY_PLAN_NOT_PURCHASABLE',
+      });
+    }
     if (isPurchasableStripePriceId(resolved.priceId)) return;
     throw itemizeGraphqlError(
       'This plan is not available for checkout yet',
@@ -287,9 +292,11 @@ export class BillingService {
     idempotencyKey: string,
   ): Promise<{ session: BillingSession; checkoutCreated: boolean }> {
     if (customer.existed) {
-      const active = await this.stripe.activeSubscription(customer.customerId);
+      const active = await this.stripe.activeSubscription(customer.customerId, true);
       if (active) {
-        // Never change an active subscription from an application CTA. The
+        // Recoverable unpaid subscriptions also belong in the portal: starting
+        // another checkout can create a second subscription for the same org.
+        // Never change an existing subscription from an application CTA. The
         // Stripe portal presents the amount and proration before the customer
         // explicitly confirms a plan change.
         return {

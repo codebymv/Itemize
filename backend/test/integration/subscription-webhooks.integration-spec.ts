@@ -241,6 +241,28 @@ describe('Stripe subscription webhook retained HTTP parity (NestJS vs legacy ori
     },
   );
 
+  it('applies configured annual prices through upgrade, downgrade and payment recovery', async () => {
+    const previous = process.env.STRIPE_PRICE_UNLIMITED_YEARLY;
+    process.env.STRIPE_PRICE_UNLIMITED_YEARLY = 'price_1AnnualStudioIntegration';
+    const customerId = `cus_annual_${Date.now()}`;
+    const owner = await createBillingOrganization('annual', customerId);
+    try {
+      const event = subscriptionEvent({ customerId, eventId: `evt_annual_${Date.now()}`, subscriptionId: 'sub_annual', priceId: process.env.STRIPE_PRICE_UNLIMITED_YEARLY });
+      event.data.object.items.data[0].price.recurring.interval = 'year';
+      event.data.object.cancel_at_period_end = true;
+      await signedPost(app.getHttpServer(), event).expect(200);
+      const upgraded = (await pool.query('SELECT plan,subscription_status,billing_period,contacts_limit,users_limit,cancel_at_period_end FROM organizations WHERE id=$1', [owner.org.id])).rows[0];
+      expect(upgraded).toMatchObject({ plan: 'unlimited', subscription_status: 'active', billing_period: 'yearly', contacts_limit: 25000, users_limit: 10, cancel_at_period_end: true });
+      for (const [index,status] of ['past_due', 'active'].entries()) {
+        await signedPost(app.getHttpServer(), subscriptionEvent({ customerId, eventId: `evt_recovery_${index}_${Date.now()}`, subscriptionId: 'sub_annual', priceId: 'price_starter_monthly', status, created: 1784120001+index })).expect(200);
+      }
+      expect((await pool.query('SELECT plan,subscription_status,contacts_limit,users_limit FROM organizations WHERE id=$1', [owner.org.id])).rows[0]).toMatchObject({ plan: 'starter', subscription_status: 'active', contacts_limit: 5000, users_limit: 3 });
+    } finally {
+      if (previous === undefined) delete process.env.STRIPE_PRICE_UNLIMITED_YEARLY;
+      else process.env.STRIPE_PRICE_UNLIMITED_YEARLY = previous;
+    }
+  });
+
   it('replays a legacy-claimed event as a duplicate through NestJS', async () => {
     const suffix = `cross${Date.now()}`;
     const customerId = `cus_cross_${suffix}`;
@@ -345,7 +367,7 @@ describe('Stripe subscription webhook retained HTTP parity (NestJS vs legacy ori
             id: `in_fail_${suffix}`,
             object: 'invoice',
             customer: failedCustomer,
-            subscription: null,
+            parent: { subscription_details: { subscription: `sub_fail_${suffix}` } },
           },
         },
       },
@@ -360,6 +382,19 @@ describe('Stripe subscription webhook retained HTTP parity (NestJS vs legacy ori
       plan: 'starter',
       subscription_status: 'past_due',
     });
+  });
+
+  it('does not revoke current access for a one-off invoice or an older subscription', async () => {
+    const suffix = `${Date.now()}`;
+    const customerId = `cus_isolation_${suffix}`;
+    const owner = await createBillingOrganization('isolation', customerId, `sub_current_${suffix}`);
+    await pool.query("UPDATE organizations SET subscription_status='active' WHERE id=$1", [owner.org.id]);
+    const invoice = { id: `evt_oneoff_${suffix}`, type: 'invoice.payment_failed', created: 1784120500,
+      data: { object: { id: `in_oneoff_${suffix}`, object: 'invoice', customer: customerId, subscription: null } } };
+    expect((await signedPost(app.getHttpServer(), invoice).expect(200)).body.status).toBe('ignored');
+    const old = subscriptionEvent({ customerId, eventId: `evt_old_delete_${suffix}`, subscriptionId: `sub_old_${suffix}`, type: 'customer.subscription.deleted', status: 'canceled', created: 1784120501 });
+    expect((await signedPost(app.getHttpServer(), old).expect(200)).body.status).toBe('unmatched');
+    expect((await pool.query('SELECT plan,subscription_status,stripe_subscription_id FROM organizations WHERE id=$1', [owner.org.id])).rows[0]).toMatchObject({ plan: 'starter', subscription_status: 'active', stripe_subscription_id: `sub_current_${suffix}` });
   });
 
   it('quarantines unmatched and ambiguous tenant mappings identically', async () => {

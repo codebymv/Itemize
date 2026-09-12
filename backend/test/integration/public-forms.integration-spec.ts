@@ -158,6 +158,20 @@ describe('Public forms (legacy behavior pinned)', () => {
     }
   }, 60000);
 
+  it('stops published form intake on payment failure and resumes after recovery', async () => {
+    const form = await seedForm(`entitlement-${Date.now()}`);
+    try {
+      await pool.query("UPDATE organizations SET subscription_status='past_due' WHERE id=$1", [organizationId]);
+      await request(app.getHttpServer()).get(`/api/forms/public/form/${form.public_id}`).expect(404);
+      await request(app.getHttpServer()).post(`/api/forms/public/form/${form.public_id}`).send(validSubmission(form, 'blocked@test.itemize')).expect(404);
+      expect(Number((await pool.query('SELECT count(*) FROM form_submissions WHERE form_id=$1', [form.id])).rows[0].count)).toBe(0);
+    } finally {
+      await pool.query("UPDATE organizations SET subscription_status='trialing',trial_ends_at=NOW()+INTERVAL '14 days' WHERE id=$1", [organizationId]);
+    }
+    await request(app.getHttpServer()).get(`/api/forms/public/form/${form.public_id}`).expect(200);
+    await request(app.getHttpServer()).post(`/api/forms/public/form/${form.public_id}`).send(validSubmission(form, 'recovered@test.itemize')).expect(201);
+  });
+
   it('serves the published definition by public ID and slug', async () => {
     for (const identifier of [nestForm.public_id, nestForm.slug]) {
       const nest = await request(app.getHttpServer()).get(

@@ -306,4 +306,17 @@ describe('Billing GraphQL PostgreSQL contract', () => {
     );
     expect(stored.rows[0].acknowledged).toBe(true);
   });
+  it('starts one Solo trial under concurrent requests and prevents reuse after expiry', async () => {
+    await pool.query("UPDATE organizations SET plan='free',subscription_status='none',trial_started_at=NULL,trial_ends_at=NULL,stripe_subscription_id=NULL,stripe_customer_id=NULL WHERE id=$1", [outsiderOrganizationId]);
+    const query = 'mutation { startBillingSoloTrial { plan subscriptionStatus trialEligible trialEndsAt usersLimit } }';
+    const results = await Promise.all([mutation(query, {}, outsiderToken, outsiderOrganizationId), mutation(query, {}, outsiderToken, outsiderOrganizationId)]);
+    const successes = results.filter(response => response.body.data?.startBillingSoloTrial);
+    expect(successes).toHaveLength(1);
+    expect(successes[0].body.data.startBillingSoloTrial).toMatchObject({ plan: 'starter', subscriptionStatus: 'trialing', trialEligible: false, usersLimit: 3 });
+    expect(results.filter(response => response.body.errors?.length)).toHaveLength(1);
+    await pool.query("UPDATE organizations SET plan='free',subscription_status='none',trial_ends_at=NOW()-INTERVAL '1 day' WHERE id=$1", [outsiderOrganizationId]);
+    const repeat = await mutation(query, {}, outsiderToken, outsiderOrganizationId);
+    expect(repeat.body.errors[0].extensions.reason).toBe('TRIAL_NOT_AVAILABLE');
+  });
+
 });

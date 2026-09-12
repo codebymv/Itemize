@@ -40,3 +40,13 @@ The standalone Express origin and its routers have been deleted. Current NestJS
 PostgreSQL suites cover authenticated form management and the anonymous protocol.
 Frontend transport tests prove authenticated methods call GraphQL and the two
 public methods alone call HTTP.
+
+
+## Paid public intake (2026-09-11)
+
+Public form/calendar discovery and new intake require the shared paid-entitlement
+predicate: a paid plan with active status or a non-expired trial. Intake locks the
+organization for the transaction so subscription changes cannot race admission.
+Ineligible resources return 404 without deleting or changing their publication state.
+Existing booking capability status/cancellation remains available while the token
+is valid. Queued workflow notifications retain the existing paid-access claim rule.

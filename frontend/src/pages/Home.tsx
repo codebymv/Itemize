@@ -98,6 +98,8 @@ const Home: React.FC = () => {
     };
   }, []);
 
+  const [pricingPeriod, setPricingPeriod] = useState<'monthly' | 'yearly'>('monthly');
+
   const handleGetStarted = () => navigate('/register?mode=trial');
   const handleChoosePlan = (plan: 'free' | 'starter' | 'unlimited' | 'pro') => {
     if (isAuthenticated) {
@@ -563,7 +565,9 @@ const Home: React.FC = () => {
                 <Suspense fallback={<div className="h-64 w-full animate-pulse bg-slate-100 dark:bg-slate-800 rounded-xl" />}>
                   <PricingCards
                     variant="landing"
-                    showYearlyToggle={false}
+                    showYearlyToggle
+                    billingPeriod={pricingPeriod}
+                    onBillingPeriodChange={setPricingPeriod}
                     onUpgrade={handleChoosePlan}
                   />
                 </Suspense>

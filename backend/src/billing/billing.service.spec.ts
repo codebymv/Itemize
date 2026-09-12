@@ -165,6 +165,7 @@ describe('BillingService', () => {
   it('rejects unsupported modes, prices, redirect origins, and weak keys before provider work', async () => {
     for (const input of [
       { ...checkout, mode: 'payment' },
+      { ...checkout, planId: 'pro' },
       { ...checkout, planId: undefined, priceId: 'price_untrusted' },
       { ...checkout, successUrl: 'https://attacker.test/success' },
       { ...checkout, idempotencyKey: 'short' },
@@ -222,14 +223,14 @@ describe('BillingService', () => {
     });
   });
 
-  it('routes an already-subscribed tenant to a provider portal', async () => {
+  it.each(['active', 'past_due', 'unpaid', 'paused', 'incomplete'])('routes an existing %s subscription to recovery instead of another checkout', async status => {
     repository.ensureCustomer.mockResolvedValue({
       customerId: 'cus_existing',
       existed: true,
     });
     provider.activeSubscription.mockResolvedValue({
       id: 'sub_active',
-      status: 'active',
+      status,
       priceId: 'price_1U78itEHPD0TpM72ybhQuqwH',
     });
     provider.createPortalSession.mockResolvedValue('https://stripe.test/portal');
@@ -237,6 +238,7 @@ describe('BillingService', () => {
     await expect(service.checkout(4, checkout)).resolves.toEqual({
       url: 'https://stripe.test/portal',
     });
+    expect(provider.activeSubscription).toHaveBeenCalledWith('cus_existing', true);
     expect(provider.createCheckoutSession).not.toHaveBeenCalled();
     expect(provider.createPortalSession).toHaveBeenCalledWith(
       'cus_existing',

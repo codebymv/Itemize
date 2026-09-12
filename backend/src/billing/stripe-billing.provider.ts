@@ -50,17 +50,21 @@ export class StripeBillingProvider {
 
   async activeSubscription(
     customerId: string,
+    includeRecoverable = false,
   ): Promise<BillingSubscription | null> {
     this.requireConfiguration();
-    const subscriptions = await this.stripe.subscriptions.list({
+    const subscriptions = this.stripe.subscriptions.list({
       customer: customerId,
       status: 'all',
-      limit: 10,
+      limit: 100,
     });
-    const subscription = subscriptions.data.find(
-      (candidate) =>
-        candidate.status === 'active' || candidate.status === 'trialing',
-    );
+    const statuses = new Set(includeRecoverable
+      ? ['active', 'trialing', 'past_due', 'unpaid', 'paused', 'incomplete']
+      : ['active', 'trialing']);
+    let subscription: Stripe.Subscription | undefined;
+    for await (const candidate of subscriptions) {
+      if (statuses.has(candidate.status)) { subscription = candidate; break; }
+    }
     if (!subscription) return null;
     const raw = subscription as unknown as Record<string, unknown>;
     const items = subscription.items.data;
@@ -120,6 +124,9 @@ export class StripeBillingProvider {
       {
         customer: customerId,
         return_url: returnUrl,
+        ...(process.env.STRIPE_BILLING_PORTAL_CONFIGURATION_ID?.trim()
+          ? { configuration: process.env.STRIPE_BILLING_PORTAL_CONFIGURATION_ID.trim() }
+          : {}),
       },
       { idempotencyKey },
     );

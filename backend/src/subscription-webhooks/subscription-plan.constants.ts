@@ -1,8 +1,9 @@
+import { planForPrice } from '../billing/billing.constants';
+
 /**
- * Verbatim port of the plan values the retained Stripe subscription
- * webhook applies (backend/src/lib/subscription.constants.js). The
- * webhook writes these limits into organizations, so the two runtimes
- * must resolve identical numbers while both serve the receiver.
+ * Persisted organization limits applied by the Nest Stripe receiver.
+ * Price resolution shares the checkout catalog and retains historical aliases.
+ * Billing catalog parity tests protect these stored limits from drift.
  */
 export const PLANS = {
   FREE: 'free',
@@ -42,7 +43,7 @@ const STRIPE_PRICE_TO_PLAN: Readonly<Record<string, string>> = {
 
 export const getPlanFromStripePrice = (
   priceId: string | null,
-): string | null => (priceId ? STRIPE_PRICE_TO_PLAN[priceId] || null : null);
+): string | null => (priceId ? planForPrice(priceId)?.planId ?? STRIPE_PRICE_TO_PLAN[priceId] ?? null : null);
 
 type LimitMap = Readonly<Record<string, number>>;
 

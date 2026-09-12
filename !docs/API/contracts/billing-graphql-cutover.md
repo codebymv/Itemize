@@ -9,9 +9,9 @@ Authenticated billing application traffic is GraphQL-only:
 - `createBillingCheckoutSession`
 - `createBillingPortalSession`
 - `acknowledgeBillingTrialEnd`
+- `startBillingSoloTrial`
 
-`billingPlans` is a public GraphQL metadata query. It returns the three complete
-purchasable plans (`starter`, `unlimited`, and `pro`); the legacy half-defined
+`billingPlans` is a public GraphQL metadata query. It returns the plan metadata for `starter`, `unlimited`, and legacy `pro`; the legacy half-defined
 `free` object is deliberately removed. Unlimited plan limits use `-1`, the
 application's established sentinel, rather than the `null` produced when JSON
 serialized JavaScript `Infinity`.
@@ -43,7 +43,8 @@ Arbitrary prices and the unused legacy one-time-payment mode are rejected.
 Success, cancellation, and portal-return URLs must be credential-free HTTP(S)
 URLs and, when application origins are configured, must match one of them.
 
-When an organization already has an active or trialing subscription, checkout
+When an organization already has an active, trialing, past-due, unpaid, paused, or
+incomplete subscription, checkout
 returns a provider portal session instead of creating a second subscription.
 Status may perform a best-effort provider reconciliation only when persisted
 state is visibly stale; the signed webhook remains authoritative and a
@@ -56,11 +57,29 @@ snake-case status fields, and `unlimited` usage string while all six methods
 call the GraphQL adapter directly. There is no rollout flag, REST fallback, or
 dual write.
 
-The Express billing router declares only the signed webhook. The six retired
+The Nest HTTP billing controller retains the signed webhook. The six retired
 application paths return `404`. Focused frontend tests cover every adapter and
 compatibility envelope; service tests cover plan completeness, input and
 redirect refusal, active-subscription routing, and error redaction; fresh
 PostgreSQL tests cover public access, tenant denial, CSRF, status/usage mapping,
 price refusal, concurrent customer creation, checkout, portal, and persisted
-acknowledgement. The full clean-schema gate passes 473/473 retained Express
-tests and 252/252 NestJS PostgreSQL tests.
+acknowledgement. Current verification results are recorded in the dated billing entitlement audit.
+
+
+## Launch billing configuration (2026-09-11)
+
+Only Solo and Studio are offered for new checkout; legacy `pro` checkout is rejected.
+Existing legacy customers can still manage their subscription in the portal.
+The receiver resolves environment-configured prices through the same catalog as
+checkout, with historical price aliases retained for existing subscriptions.
+`STRIPE_BILLING_PORTAL_CONFIGURATION_ID` selects the isolated Itemize portal; it
+must be supplied in production to avoid relying on shared-account default settings.
+
+Subscription webhook matching checks both customer and subscription identity.
+An event for an old subscription cannot mutate the current one. One-off invoice
+payment failures are ignored; subscription invoice failures support both legacy
+`subscription` and current `parent.subscription_details.subscription` references.
+Trials are serialized per organization and cannot be restarted after expiry.
+
+See [billing entitlement audit](../../billing-entitlement-audit-2026-09-11.md)
+for live configuration evidence, remaining quota gaps, and verification limits.

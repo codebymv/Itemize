@@ -59,6 +59,7 @@ type StripeObject = {
   id: string;
   customer?: unknown;
   subscription?: unknown;
+  parent?: { subscription_details?: { subscription?: unknown } | null } | null;
   status?: string;
   current_period_start?: unknown;
   current_period_end?: unknown;
@@ -149,7 +150,7 @@ export function normalizeStripeSubscriptionEvent(
     objectId: object.id,
     subscriptionId: parsed.type.startsWith('customer.subscription.')
       ? object.id
-      : idFromReference(object.subscription),
+      : idFromReference(object.subscription) ?? idFromReference(object.parent?.subscription_details?.subscription),
     supported: SUPPORTED_TYPES.has(parsed.type),
   };
 }
@@ -293,7 +294,8 @@ export class SubscriptionWebhooksService {
       }
       if (
         !normalized.supported ||
-        normalized.eventType === 'checkout.session.completed'
+        normalized.eventType === 'checkout.session.completed' ||
+        (normalized.eventType === 'invoice.payment_failed' && !normalized.subscriptionId)
       ) {
         return this.markEvent(client, normalized, 'ignored');
       }
@@ -344,6 +346,14 @@ export class SubscriptionWebhooksService {
     const normalized = normalizedStripeSubscriptionEventFromClaim(
       claim.rows[0],
     );
+    if (normalized.eventType === 'invoice.payment_failed' && !normalized.subscriptionId) {
+      const result = await this.markEvent(client, normalized, 'ignored');
+      await client.query(`UPDATE stripe_subscription_webhook_events SET
+        reconciliation_status='resolved', reconciliation_reason=NULL,
+        reconciliation_next_attempt_at=NULL, reconciliation_lease_expires_at=NULL,
+        reconciliation_last_error=NULL WHERE stripe_event_id=$1`, [eventId]);
+      return result;
+    }
     const organizations = await this.findOrganization(
       client,
       normalized.customerId,
@@ -403,8 +413,10 @@ export class SubscriptionWebhooksService {
       `SELECT id, plan, subscription_status, billing_period_start, subscription_provider_updated_at,
               subscription_provider_event_id
        FROM organizations
-       WHERE ($1::varchar IS NOT NULL AND stripe_customer_id = $1)
-          OR ($2::varchar IS NOT NULL AND stripe_subscription_id = $2)
+       WHERE (($1::varchar IS NOT NULL AND stripe_customer_id = $1)
+          OR ($2::varchar IS NOT NULL AND stripe_subscription_id = $2))
+         AND ($1::varchar IS NULL OR stripe_customer_id IS NULL OR stripe_customer_id=$1)
+         AND ($2::varchar IS NULL OR stripe_subscription_id IS NULL OR stripe_subscription_id=$2)
        ORDER BY id
        FOR UPDATE`,
       [customerId, subscriptionId],

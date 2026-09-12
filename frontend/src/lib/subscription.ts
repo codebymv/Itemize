@@ -290,9 +290,9 @@ export const FEATURES: Record<FeatureKey, FeatureDefinition> = {
         description: 'Your branded mobile app'
     },
     PRIORITY_SUPPORT: {
-        allowedPlans: ['pro'],
+        allowedPlans: ['unlimited', 'pro'],
         label: 'Priority Support',
-        description: '24/7 priority support'
+        description: 'Priority support'
     },
     DEDICATED_SUPPORT: {
         allowedPlans: ['pro'],

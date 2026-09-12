@@ -180,3 +180,13 @@ The scheduling slice is not ready for traffic until:
 2. worker-consumer retry/idempotency is frozen for the now-versioned create/reschedule/cancellation events;
 3. create/reschedule plus the remaining retained HTTP protocols and critical calendar/public-booking/provider journeys pass semantic parity and rollback tests;
 4. a sandbox Google push/pull/rate-limit/revocation rehearsal passes before the default-off worker is enabled.
+
+
+## Paid public intake (2026-09-11)
+
+Public form/calendar discovery and new intake require the shared paid-entitlement
+predicate: a paid plan with active status or a non-expired trial. Intake locks the
+organization for the transaction so subscription changes cannot race admission.
+Ineligible resources return 404 without deleting or changing their publication state.
+Existing booking capability status/cancellation remains available while the token
+is valid. Queued workflow notifications retain the existing paid-access claim rule.

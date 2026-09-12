@@ -39,7 +39,7 @@ const PLAN_FEATURES: Record<Plan, string[]> = {
         'Everything in Solo',
         'Own unlimited organizations',
         'Unlimited e-signatures',
-        '25,000 contacts and 10 teammates',
+        '25,000 contacts and 10 team members',
         'Automations and higher sending limits',
         'Priority support',
     ],
@@ -305,7 +305,7 @@ export function PricingCards({
                                         'text-3xl font-bold',
                                         isHighlighted ? 'text-white' : textPrimary
                                     )}>
-                                        ${Math.round(price)}
+                                        ${billingPeriod === 'yearly' && price > 0 ? price.toFixed(2) : price}
                                     </span>
                                     <span className={cn(
                                         isHighlighted ? 'text-blue-100' : textSecondary
@@ -314,6 +314,12 @@ export function PricingCards({
                                     </span>
                                 </div>
                                 
+                                {billingPeriod === 'yearly' && price > 0 && (
+                                    <p className={cn('mt-1 text-sm', isHighlighted ? 'text-blue-100' : textSecondary)}>
+                                        ${pricing.yearly} billed annually
+                                    </p>
+                                )}
+
                                 <p className={cn(
                                     'mt-2 text-sm',
                                     isHighlighted ? 'text-blue-100' : textSecondary

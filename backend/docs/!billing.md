@@ -4,11 +4,11 @@ Plans are billed per organization. Upgrade anytime from Settings.
 
 ## Solo
 
-For freelancers needing signature, invoicing, and organization tools. Includes the full Workspace, contacts and pipelines, invoices, 25 e-signatures per month, inbox, forms, landing pages, and three teammates. A user who owns a live Solo organization may own up to three organizations total.
+For freelancers needing signature, invoicing, and organization tools. Includes the full Workspace, contacts and pipelines, invoices, 25 e-signatures per month, inbox, forms, landing pages, and three team members including the owner. A user who owns a live Solo organization may own up to three organizations total.
 
 ## Studio
 
-Everything in Solo, plus unlimited e-signatures, higher contact and teammate limits, automations, priority support, and no organization-ownership cap.
+Everything in Solo, plus unlimited e-signatures, 25,000 contacts and ten team members including the owner, automations, priority support, and no organization-ownership cap.
 
 ## Organization ownership and billing
 
@@ -29,7 +29,22 @@ Settings shows usage for emails, signatures, and related caps. Meters stay visib
 
 ## Yearly billing
 
+Solo costs $29/month or $290/year; Studio costs $49/month or $490/year (USD).
 Yearly is billed up front and saves about 17% versus month-to-month.
+
+## Managing access
+
+The organization owner manages billing from Settings. Existing subscriptions open
+Stripe's customer portal for payment details, invoices, plan changes, and cancellation.
+The portal shows the amount and any prorations before a change is confirmed.
+Cancellation takes effect at the end of the paid period. Downgrades and changes to
+a shorter billing interval are scheduled at period end.
+
+Paid tools require an active subscription or an unexpired trial. Past-due and unpaid
+subscriptions pause paid access until resolved. Expiry or cancellation preserves
+stored data. Public forms and calendars stop accepting new submissions and bookings;
+existing attendee booking-status and cancellation links remain available while valid.
+Queued paid-workflow deliveries pause until paid access resumes.
 
 ## Next
 

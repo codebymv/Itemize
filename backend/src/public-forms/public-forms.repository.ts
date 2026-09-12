@@ -1,3 +1,4 @@
+import { paidEntitlementSql } from '../billing/paid-entitlement.sql';
 import { Inject, Injectable } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { Pool, PoolClient } from 'pg';
@@ -106,6 +107,7 @@ export class PublicFormsRepository {
         `f.id, f.organization_id, f.name, f.slug, f.success_message,
          f.redirect_url, f.notify_on_submit, f.notification_emails,
          f.create_contact, f.contact_tags, o.id as org_id`,
+        true,
       );
       if (!form) return { status: 'not_found' };
 
@@ -298,7 +300,18 @@ export class PublicFormsRepository {
     client: PoolClient,
     identifier: string,
     columns: string,
+    lockEntitlement = false,
   ): Promise<T | null> {
+    const entitled = async (form: T | undefined): Promise<T | null> => {
+      if (!form) return null;
+      const result = await client.query(
+        `SELECT o.id FROM organizations o JOIN forms f ON f.organization_id = o.id
+         WHERE f.id = $1 AND ${paidEntitlementSql('o')}
+         ${lockEntitlement ? 'FOR SHARE OF o' : ''}`,
+        [form.id],
+      );
+      return result.rows.length ? form : null;
+    };
     const byPublicId = await client.query<T>(
       `SELECT ${columns}
        FROM forms f
@@ -307,7 +320,7 @@ export class PublicFormsRepository {
          AND f.status = 'published'`,
       [identifier],
     );
-    if (byPublicId.rows.length === 1) return byPublicId.rows[0];
+    if (byPublicId.rows.length === 1) return entitled(byPublicId.rows[0]);
 
     const byLegacySlug = await client.query<T>(
       `SELECT ${columns}
@@ -319,7 +332,7 @@ export class PublicFormsRepository {
        LIMIT 2`,
       [identifier],
     );
-    return byLegacySlug.rows.length === 1 ? byLegacySlug.rows[0] : null;
+    return byLegacySlug.rows.length === 1 ? entitled(byLegacySlug.rows[0]) : null;
   }
 
   private async formFields(

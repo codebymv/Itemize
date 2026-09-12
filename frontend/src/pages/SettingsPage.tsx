@@ -385,7 +385,7 @@ function AccountInfo({
                 canSubscribeCurrentTrial={canSubscribeCurrentTrial}
                 onUpgrade={handleUpgrade}
                 isLoading={isLoading}
-                showYearlyToggle={false}
+                showYearlyToggle
                 billingPeriod={billingPeriod}
                 onBillingPeriodChange={setBillingPeriod}
               />

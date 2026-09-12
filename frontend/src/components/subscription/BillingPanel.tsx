@@ -230,8 +230,8 @@ export function BillingPanel() {
                             <div>
                                 <h3 className="text-xl font-semibold">{meta.displayName}</h3>
                                 <p className="text-sm text-muted-foreground">
-                                    ${billingPeriod === 'yearly' ? pricing.yearlyMonthly.toFixed(2) : pricing.monthly}/month
-                                    {billingPeriod === 'yearly' && ' (billed annually)'}
+                                    ${status.billing_period === 'yearly' ? pricing.yearlyMonthly.toFixed(2) : pricing.monthly}/month
+                                    {status.billing_period === 'yearly' && ` ($${pricing.yearly} billed annually)`}
                                 </p>
                             </div>
                         </div>
@@ -379,7 +379,7 @@ export function BillingPanel() {
                     variant="dashboard"
                     onUpgrade={handleUpgrade}
                     isLoading={processing}
-                    showYearlyToggle={false}
+                    showYearlyToggle
                     billingPeriod={billingPeriod}
                     onBillingPeriodChange={setBillingPeriod}
                 />

@@ -236,7 +236,7 @@ const FEATURE_TIERS: Record<FeatureName, number> = {
   custom_domains: 2,
   saas_mode: 3,
   client_billing: 3,
-  priority_support: 3,
+  priority_support: 2,
 };
 
 interface SubscriptionProviderProps {
@@ -471,7 +471,7 @@ export function SubscriptionProvider({ children, isAuthenticated = false }: Subs
   const isTrialing = subscription?.status === 'trialing'
     && Boolean(subscription.trial?.endsAt)
     && new Date(subscription.trial!.endsAt).getTime() > Date.now();
-  const isSubscribed = subscription?.status === 'active' || isTrialing;
+  const isSubscribed = Boolean(subscription?.tierLevel && (subscription?.status === 'active' || isTrialing));
   const isPastDue = subscription?.status === 'past_due';
   const tierLevel = subscription?.tierLevel || 0;
   const planName = subscription?.planName || null;
