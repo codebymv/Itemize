@@ -81,7 +81,9 @@ export function SubscriptionStatus() {
         <div className="space-y-2 text-right">
           <p className="text-sm font-medium text-muted-foreground">Price</p>
           <div className="whitespace-nowrap text-2xl font-semibold text-foreground">
-            {currentPlan === "free" ? "$0" : `$${planPricing.monthly}/month`}
+            {currentPlan === "free" ? "$0" : subscription?.billingPeriod === "yearly"
+              ? `$${planPricing.yearly}/year`
+              : `$${planPricing.monthly}/month`}
           </div>
           {manage.available && (
             <button
@@ -103,7 +105,7 @@ export function SubscriptionStatus() {
         <div className="space-y-1">
           {renewalDate && (
             <div className="text-xs text-muted-foreground">
-              Renews on {renewalDate}
+              {subscription?.cancelAtPeriodEnd ? "Access ends on" : subscription?.status === "trialing" ? "Trial ends on" : "Renews on"} {renewalDate}
             </div>
           )}
           {subscription?.status === "trialing" && (

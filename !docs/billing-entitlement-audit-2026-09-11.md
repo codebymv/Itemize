@@ -14,7 +14,8 @@ no payment was taken. SMS and backup/restore remain outside the authorized scope
   the existing Itemize products: Solo $290/year and Studio $490/year.
 - Enabled the existing annual selector in public pricing and billing settings. Cards
   show the annual commitment and precise monthly equivalent; browsing periods does
-  not change the current subscription price display.
+  not change the current subscription price display. Account status shows the actual
+  annual charge and labels scheduled cancellation as access ending, not renewal.
 - Checkout and signed webhook price maps differed. Both now resolve configured prices
   through the billing catalog, preserving historical aliases and testing quota parity.
 - Recoverable subscriptions could start duplicate checkout. All pages of subscriptions
