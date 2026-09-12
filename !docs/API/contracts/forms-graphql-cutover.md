@@ -29,23 +29,14 @@ unique public identifiers, ambiguous legacy-slug denial, bounded typed
 validation, safe redirects, transactional contact reuse/submission persistence,
 and durable workflow and notification intents.
 
-NestJS `PublicFormsModule` now owns an identical implementation of both
-routes, including a faithful port of the public-form validation contract
-with its exact error messages, codes, and field attribution. A
-dual-runtime fresh-PostgreSQL parity suite
-(`backend-v2/test/integration/public-forms.integration-spec.ts`) proves
-both runtimes identical across identifier resolution, the validation
-matrix, conditional requirements, contact reuse, and durable
-trigger/notification fan-out. The legacy origin routes both paths
-through a default-off proxy (`PUBLIC_FORMS_NESTJS_ENABLED`) that falls
-through to the retained handlers and replicates the dedicated
-submission rate limit on the proxied path.
+NestJS `PublicFormsModule` owns both public routes directly. The current
+PostgreSQL suite is `backend/test/integration/public-forms.integration-spec.ts`.
+The legacy runtime, default-off proxy, and `PUBLIC_FORMS_NESTJS_ENABLED` switch
+were retired; historical parity tests are not a second production owner.
 
 ## Retirement proof
 
-The legacy Express router declares only the two public routes. All nine former
-authenticated paths return `404`. The NestJS PostgreSQL suite owns the
-authenticated definition, field, and submission-management contract; the
-retained Express PostgreSQL suite owns the anonymous retrieval/submission
-contract. Frontend transport tests prove authenticated methods call GraphQL and
-the two public methods alone call HTTP.
+The standalone Express origin and its routers have been deleted. Current NestJS
+PostgreSQL suites cover authenticated form management and the anonymous protocol.
+Frontend transport tests prove authenticated methods call GraphQL and the two
+public methods alone call HTTP.

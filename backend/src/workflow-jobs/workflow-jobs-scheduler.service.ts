@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnApplicationBootstrap, OnApplicationShutdown } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationBootstrap, BeforeApplicationShutdown } from '@nestjs/common';
 import { WorkflowEnrollmentJobsService, WorkflowEnrollmentRun } from './workflow-enrollment-jobs.service';
 import { boundedInteger } from './workflow-job.util';
 import { WorkflowSideEffectJobsService, WorkflowSideEffectRun } from './workflow-side-effect-jobs.service';
@@ -16,10 +16,11 @@ export type WorkflowJobCycleRun = {
 };
 
 @Injectable()
-export class WorkflowJobsSchedulerService implements OnApplicationBootstrap, OnApplicationShutdown {
+export class WorkflowJobsSchedulerService implements OnApplicationBootstrap, BeforeApplicationShutdown {
   private readonly logger = new Logger(WorkflowJobsSchedulerService.name);
   private timer: NodeJS.Timeout | null = null;
-  private running = false;
+  private active: Promise<void> | null = null;
+  private stopping = false;
 
   constructor(
     private readonly triggers: WorkflowTriggerJobsService,
@@ -42,9 +43,11 @@ export class WorkflowJobsSchedulerService implements OnApplicationBootstrap, OnA
     this.timer.unref();
   }
 
-  onApplicationShutdown(): void {
+  async beforeApplicationShutdown(): Promise<void> {
+    this.stopping = true;
     if (this.timer) clearInterval(this.timer);
     this.timer = null;
+    await this.active;
   }
 
   async runCycle(): Promise<WorkflowJobCycleRun> {
@@ -73,24 +76,21 @@ export class WorkflowJobsSchedulerService implements OnApplicationBootstrap, OnA
     return { scheduled, trigger, enrollment, sideEffect };
   }
 
-  private async tick(): Promise<void> {
-    if (this.running) {
-      this.logger.warn('Skipping overlapping workflow job cycle');
-      return;
-    }
-    this.running = true;
+  private tick(): void {
+    if (this.stopping || this.active) return;
+    this.active = this.executeCycle().finally(() => { this.active = null; });
+  }
+
+  private async executeCycle(): Promise<void> {
     try {
       const result = await this.runCycle();
       if (Object.values(result).some((phase) => phase.claimed > 0)) {
         this.logger.log(`Workflow job cycle completed ${JSON.stringify(result)}`);
       }
-    } catch (error) {
-      this.logger.error(
-        'Workflow job cycle failed',
-        error instanceof Error ? error.stack : String(error),
-      );
-    } finally {
-      this.running = false;
+    } catch {
+      // Match delivery recovery: provider exceptions can include recipient data
+      // and credentials. Persisted queue diagnostics retain redacted failures.
+      this.logger.error('Workflow job cycle failed; inspect queue status');
     }
   }
 }

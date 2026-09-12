@@ -5,7 +5,7 @@
 2026-09-11 launch-hardening verification is recorded in
 [launch-hardening-2026-09-11.md](../launch-hardening-2026-09-11.md).
 API headers, frontend CSP, GraphQL resource limits, and locked API image builds
-are implemented locally; production rollout is a separate check. The local
+are deployed; both production origins were rechecked during the convention audit. The local
 production-dependency audit has no high/critical findings after compatible fixes;
 TipTap remains a moderate advisory requiring a coordinated major upgrade.
 Backup setup and a production restore drill were explicitly deferred by the user.
@@ -25,7 +25,7 @@ This checklist outlines essential security measures to be verified and implement
 
 ### 2. Authentication & Authorization
 - [ ] **Implement Multi-Factor Authentication (MFA)**: For all administrative and sensitive user accounts.
-- [x] **Set up rate limiting**: 100 requests/hour on public endpoints (implemented in backend).
+- [x] **Set up rate limiting**: Global API defaults are 1,000 requests per 15 minutes, plus route/identity-specific limits; inspect the current limiter and guard contracts.
 - [x] **Configure proper session timeouts**: JWT tokens have expiration times.
 - [x] **Review JWT secret management**: Production startup requires a Railway-provided `JWT_SECRET` of at least 32 characters.
 - [x] **Keep session JWTs out of browser storage**: Access and refresh tokens use secure HttpOnly cookies; protected mutations also require the CSRF cookie/header pair.
@@ -44,14 +44,14 @@ This checklist outlines essential security measures to be verified and implement
 - [ ] **Perform penetration testing**: Engage security professionals to conduct simulated attacks.
 - [x] **Review third-party dependencies**: npm audit shows no critical vulnerabilities (verify regularly).
 - [x] **Implement secure error handling**: ErrorBoundary component catches React errors gracefully.
-- [x] **Validate all inputs**: 
+- [ ] **Complete validation coverage review**: Existing primitives below do not prove every input is validated: 
   - DOMPurify for HTML sanitization (backend)
   - Helmet.js for security headers (backend)
   - CORS configuration (backend)
   - Zod schemas available for frontend validation
 
 ### 5. API Security
-- [x] **Rate limiting**: Implemented on public endpoints (100 req/hour).
+- [x] **Rate limiting**: Global API and route/identity-specific limits are implemented; stores remain process-local.
 - [x] **Authentication middleware**: JWT verification on protected routes.
 - [x] **API retry with backoff**: Implemented in frontend API client.
 - [x] **Request size limits**: JSON and URL-encoded application requests are bounded to 1 MB; specialized binary routes enforce their own contracts.
@@ -61,7 +61,7 @@ This checklist outlines essential security measures to be verified and implement
 - [x] **XSS Prevention**: DOMPurify sanitization on user content.
 - [x] **Error Boundary**: Graceful error handling without exposing internals.
 - [x] **Logger utility**: Debug logs stripped in production builds.
-- [ ] **CSP Headers**: Public capability responses have restrictive policies, but the static application shell still needs one explicit tested production policy.
+- [x] **CSP Headers**: The static server emits the tested policy; production headers and CSP-compatible stylesheet/PDF-worker loading were verified. Integration-specific flows still need their own journey evidence.
 - [ ] **Subresource Integrity**: For external scripts/styles if any.
 
 ### 7. Compliance & Policies

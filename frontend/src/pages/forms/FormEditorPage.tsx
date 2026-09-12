@@ -931,7 +931,7 @@ export default function FormEditorPage() {
                                                         <dl className="grid gap-x-4 gap-y-1 mt-3 text-sm sm:grid-cols-2">
                                                             {Object.entries(submission.data).map(([key, value]) => (
                                                                 <div key={key} className="min-w-0">
-                                                                    <dt className="font-medium truncate">{key}</dt>
+                                                                    <dt className="font-medium truncate">{form.fields?.find(field => String(field.id) === key)?.label || key}</dt>
                                                                     <dd className="text-muted-foreground break-words">
                                                                         {typeof value === 'string'
                                                                             ? value

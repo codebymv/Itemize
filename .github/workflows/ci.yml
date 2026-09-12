@@ -25,7 +25,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npm run docs:check
+      - run: npm run release:contracts
       - run: npm run lint:frontend
       - run: npm run test
       - run: npm run release:integration

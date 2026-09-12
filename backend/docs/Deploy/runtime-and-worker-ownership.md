@@ -30,7 +30,7 @@ The Railway Variables page was inspected on 2026-09-11. The following values wer
 
 ADMIN_EMAIL_DELIVERY_SCHEDULER_ENABLED was also verified true through the running service. An authenticated S3 HeadBucket request from that service succeeded.
 
-CALENDAR_SYNC_NEST_JOBS_ENABLED, MESSAGE_DELIVERY_SCHEDULER_ENABLED, and SOCIAL_MESSAGE_DELIVERY_SCHEDULER_ENABLED were absent from the service variable inventory. No separate worker services were present in this Railway project.
+A follow-up runtime check on 2026-09-11 confirmed CALENDAR_SYNC_NEST_JOBS_ENABLED and all four delivery-recovery flags below are true. MESSAGE_DELIVERY_SCHEDULER_ENABLED and SOCIAL_MESSAGE_DELIVERY_SCHEDULER_ENABLED remain false/unset. No separate worker service owns these queues.
 
 The delivery-recovery module now provides explicit, default-off ownership flags:
 
@@ -43,7 +43,7 @@ Campaign scheduling rechecks status and due time under the campaign row lock. Th
 
 The invoice daily worker handles invoice state/recurrence; invoice email retry ownership is separate. Do not also schedule one-shot commands for queues owned by the live API. Those older commands bootstrap AppModule and can start unrelated schedulers when they inherit production flags, including the always-on account-deletion worker; use the continuous API owner instead. This change does not establish safe horizontal scaling for every existing worker.
 
-Read-only SQL on 2026-09-11 found zero rows in calendar_sync_jobs, message_delivery_jobs, campaign_delivery_jobs, and social_message_delivery_jobs. invoice_email_deliveries contained four sent rows. This is a point-in-time queue observation, not provider-delivery verification.
+The initial pre-rollout read-only SQL on 2026-09-11 found zero rows in calendar_sync_jobs, message_delivery_jobs, campaign_delivery_jobs, and social_message_delivery_jobs. invoice_email_deliveries contained four sent rows. This is a point-in-time queue observation, not provider-delivery verification.
 
 ## Runtime requirements
 
@@ -52,6 +52,8 @@ Production requires HTTPS FRONTEND_URL, DATABASE_URL, a JWT_SECRET of at least 3
 ITEMIZE_SUBSCRIPTION_BILLING_ENABLED was verified true. Preserve this deliberate billing control. AWS variable names and both Sentry DSN variable names were present; their values were not exposed or copied.
 
 The environment contract remains backend/.env.example; run npm run config:check --workspace itemize-graphql-api. Before scaling, replace the in-memory auth/API rate-limit stores and review every scheduler's lease/idempotency behavior, including overlap during deployment.
+
+The current workflow owner is WORKFLOW_NEST_SCHEDULER_ENABLED; the retired three-phase flags do not control it. See workflow-rollout-runbook.md. Booking and public-form notification outboxes use this owner and the shared paid-entitlement predicate.
 
 ## Rollout checks
 

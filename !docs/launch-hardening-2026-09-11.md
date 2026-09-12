@@ -1,6 +1,17 @@
 # Launch hardening — 2026-09-11
 
-## Scope and deployment status
+## Status correction after rollout
+
+The sections below preserve the initial pre-deploy checkpoint. They are not the
+current deployment state. Subsequent commits deployed headers/CSP and resource
+limits, restored recovery workers, fixed campaign metrics and rich-text editing,
+and verified QA email/form/booking journeys. Email branding was subsequently
+corrected and checked in actual provider HTML. Current findings and evidence:
+[launch-conformance-audit-2026-09-11.md](launch-conformance-audit-2026-09-11.md).
+Worker ownership is maintained in Deploy/runtime-and-worker-ownership.md.
+Backup/restore and SMS remain explicitly outside this work.
+
+## Initial scope and deployment status
 
 This follow-up verifies the earlier audit against the repository and Railway,
 implements local hardening, and runs automated checks. Production configuration
@@ -88,7 +99,7 @@ The browser rendered the built homepage and sign-in route with CSP enabled.
 This did not exercise a signed-in checkout, Google OAuth completion, external
 message delivery, or an actual public signing transaction.
 
-## Remaining launch decisions
+## Decisions remaining at the initial checkpoint (historical)
 
 1. Deploy the verified code and recheck headers, OAuth, embeds, and downloads on
    the production origins. Railway currently does not wait for GitHub CI.

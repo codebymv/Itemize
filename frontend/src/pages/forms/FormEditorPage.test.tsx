@@ -122,6 +122,22 @@ describe('FormEditorPage', () => {
         apiMocks.deleteFormSubmission.mockResolvedValue(undefined);
     });
 
+    it('shows configured labels for numeric submission keys and preserves unknown historical fields', async () => {
+        apiMocks.getFormSubmissions.mockResolvedValue({
+            submissions: [{ id: 90, form_id: 7, organization_id: 42,
+                data: { '11': 'ada@example.com', 'Removed question': 'Historical answer' },
+                created_at: '2026-01-03T00:00:00.000Z' }],
+            pagination: { page: 1, limit: 25, total: 1, totalPages: 1 },
+        });
+        renderEditor();
+        await screen.findByLabelText('Name');
+        fireEvent.mouseDown(screen.getByRole('tab', { name: /^Submissions/ }), { button: 0, ctrlKey: false });
+        await screen.findByText('Historical answer');
+        expect(screen.getByText('Email', { selector: 'dt' })).toBeInTheDocument();
+        expect(screen.getByText('Removed question', { selector: 'dt' })).toBeInTheDocument();
+        expect(screen.queryByText('11', { selector: 'dt' })).not.toBeInTheDocument();
+    });
+
     it('loads and saves form settings through the shared adapter', async () => {
         renderEditor();
 
