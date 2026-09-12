@@ -24,6 +24,9 @@ describe('PublicFormsRepository submission idempotency', () => {
         if (sql.includes('FROM forms f') && sql.includes('f.public_id')) {
           return { rows: [form] };
         }
+        if (sql.includes('FROM organizations o JOIN forms f')) {
+          return { rows: [{ id: form.organization_id }] };
+        }
         if (sql.includes('FROM form_fields')) return { rows: [] };
         if (sql.includes('SELECT request_fingerprint')) {
           return {
