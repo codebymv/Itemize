@@ -407,7 +407,6 @@ describe('visual language: shared page chrome', () => {
 
   it('hands mobile controls to desktop tools at one shared 768px breakpoint', () => {
     expect(read('hooks/use-mobile.tsx')).toContain('const MOBILE_BREAKPOINT = 768');
-    expect(read('components/MobileControlsBar.tsx')).toContain('md:hidden');
     expect(read('components/AppShell.tsx')).toContain('md:hidden');
     expect(INDEX_CSS).toMatch(/@media \(min-width: 768px\) \{\s*\.desktop-header-tools \{\s*display: block;/);
     expect(INDEX_CSS).toContain('.desktop-header-tools--responsive');
@@ -544,5 +543,98 @@ describe('visual language: theme colour', () => {
   it('never hard-codes the two blue inks in the interaction layer', () => {
     expect(INDEX_CSS).not.toContain('rgb(37 99 235)');
     expect(INDEX_CSS).not.toContain('rgb(96 165 250)');
+  });
+});
+
+describe('visual language: width decisions', () => {
+  /**
+   * Responsive decisions follow the available content width, sidebar
+   * included, not the viewport (design-system/index.md, "Width decisions").
+   * The sanctioned mechanisms are container queries (`@container` plus the
+   * `@sm:`..`@2xl:` utilities), ResponsiveValue, ResponsiveHeaderTools, and
+   * the single 768px shell handoff owned by hooks/use-mobile.tsx.
+   *
+   * Each baseline below only moves down: lower it in the same commit that
+   * removes an offender, and never raise it. When it reaches zero the ratchet
+   * is a hard ban.
+   */
+  const MARKETING = (path: string) =>
+    path.startsWith('pages/home/') || path === 'pages/Index.tsx' || path === 'pages/Home.tsx';
+
+  const ratchet = (
+    label: string,
+    baseline: number,
+    pattern: RegExp,
+    exclude: (path: string) => boolean,
+  ) => {
+    const byFile = ALL_SOURCES
+      .filter(file => !exclude(file.path))
+      .map(file => ({ path: file.path, count: (file.body.match(pattern) ?? []).length }))
+      .filter(file => file.count > 0)
+      .sort((a, b) => b.count - a.count);
+    const total = byFile.reduce((sum, file) => sum + file.count, 0);
+    const worst = byFile.slice(0, 8).map(file => `${file.count}\t${file.path}`).join('\n');
+    expect(total, `${label} rose above the baseline. Worst files:\n${worst}`)
+      .toBeLessThanOrEqual(baseline);
+    expect(total, `${label} fell to ${total}; lower the baseline to match so the ratchet holds`)
+      .toBe(baseline);
+  };
+
+  it('ratchets invented pixel breakpoints down to the baseline', () => {
+    // min-[1100px] is "viewport minus sidebar" hand-tuned for one card. It
+    // moves the wrong way when the sidebar collapses. Use @container on the
+    // card and @md:/@lg: on its children instead.
+    const ARBITRARY_BREAKPOINT_BASELINE = 50;
+    ratchet(
+      'invented pixel breakpoints',
+      ARBITRARY_BREAKPOINT_BASELINE,
+      /(?:min|max)-\[\d+px\]/g,
+      MARKETING,
+    );
+  });
+
+  it('ratchets viewport-hook layout branching down to the baseline', () => {
+    // useIsMobile is the shell handoff and an input-modality hint. It is not
+    // a layout switch for content: a table at 1000px with the sidebar open
+    // has 744px, and a 767px tablet has more room than the hook admits.
+    const VIEWPORT_HOOK_BASELINE = 7;
+    const SHELL_AND_MODALITY: Record<string, string> = {
+      'hooks/use-mobile.tsx': 'owns the 768px handoff',
+      'components/ui/sidebar.tsx': 'the shell decides its own drawer/rail handoff',
+      'components/layout/ResponsiveCardRail.tsx': 'rail-to-grid is the documented shell handoff',
+      'pages/pipelines/components/KanbanBoard.tsx': 'native drag is disabled on touch; "Move to" is the documented alternative',
+      'pages/canvas.tsx': 'documented flush-frame exception with its own viewport-height math',
+    };
+    ratchet(
+      'viewport-hook layout branches',
+      VIEWPORT_HOOK_BASELINE,
+      /useIsMobile\(/g,
+      path => path in SHELL_AND_MODALITY,
+    );
+  });
+
+  it('ratchets direct viewport width reads down to the baseline', () => {
+    // Floating layers clamp their own position to the viewport; everything
+    // else measures its host (ResizeObserver, as ResponsiveValue does).
+    const VIEWPORT_READ_BASELINE = 5;
+    const FLOATING_LAYER_OR_DECOR: Record<string, string> = {
+      'hooks/use-mobile.tsx': 'owns the 768px handoff',
+      'components/Canvas/ContextMenu.tsx': 'clamps a floating menu inside the viewport',
+      'components/NoteCard/noteMentionSuggestion.ts': 'clamps a floating suggestion list inside the viewport',
+      'components/workspace/MentionInput.tsx': 'clamps a floating suggestion list inside the viewport',
+      'components/ui/BackgroundClouds.tsx': 'decorative viewport-sized backdrop',
+    };
+    ratchet(
+      'direct viewport width reads',
+      VIEWPORT_READ_BASELINE,
+      /window\.innerWidth|matchMedia\(\s*[`'"]\((?:min|max)-width/g,
+      path => path in FLOATING_LAYER_OR_DECOR,
+    );
+  });
+
+  it('keeps the container-query utilities available to every surface', () => {
+    const tailwind = readFileSync(join(process.cwd(), 'tailwind.config.ts'), 'utf8');
+    expect(tailwind).toContain('@tailwindcss/container-queries');
+    expect(tailwind).toMatch(/plugins:\s*\[[^\]]*containerQueries/);
   });
 });

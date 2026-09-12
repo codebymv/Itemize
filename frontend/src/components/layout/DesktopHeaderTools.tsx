@@ -243,7 +243,7 @@ function MobileHeaderTools({
   );
 }
 
-/** Legacy desktop-only renderer retained while pages migrate to one responsive command spec. */
+/** The desktop command lane on its own. The shell renders it through ResponsiveHeaderTools. */
 export function DesktopHeaderTools(props: DesktopHeaderToolsProps) {
   return (
     <div className="desktop-header-tools" data-desktop-header-tools>

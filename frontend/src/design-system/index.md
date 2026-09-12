@@ -88,15 +88,49 @@ an earlier one emitted invalid classes (`m-md`) and has been removed.
 
 - Page identity gets space before controls; complete section titles are the last thing allowed to truncate.
 - Keep one visually primary action in the shell header when the page has a real create or commit command. Do not promote secondary navigation just to fill the primary slot.
-- Frequent search, filters, and sorting may use named `desktopTools`; result counts stay in the page surface.
+- Frequent search, filters, and sorting use the named `headerTools` slots; result counts stay in the page surface.
 - Secondary navigation uses outline or ghost styling so it does not compete with creation.
 - Keep descriptive action labels in onboarding and empty states; icon-only header actions require an accessible label and tooltip.
-- Responsive decisions must follow the available content width, including the sidebar, rather than viewport width alone.
+- Responsive decisions must follow the available content width, including the sidebar, rather than viewport width alone. See "Width decisions" below for the mechanisms.
 - Audit subtext at 300px of available component width. If authored copy occupies three full text lines, rewrite it to two lines or fewer: lead with the state and next action, remove inventories and implementation detail, and use direct phrasing such as “Workspace ready.” Do not use truncation to hide overlong authored copy; reserve line clamping for unpredictable user-generated values.
 - Legal, destructive, security, and payment-consequence copy may exceed two lines only when every remaining detail changes the user's decision. Make it concise first, and never move a required warning exclusively into a tooltip.
 
-Use the named `PageLayout.desktopTools` slots with `HeaderSearch`, `HeaderFilters`,
+Use the named `PageLayout.headerTools` slots with `HeaderSearch`, `HeaderFilters`,
 `HeaderCombinedQuery`, and `HeaderAction`. Do not construct a parallel page toolbar.
+
+### Width decisions
+
+A component decides its layout from the width it actually has, never from the
+viewport. The sidebar takes 256px expanded and 64px collapsed, so a viewport
+number is wrong in one of those states by definition.
+
+Sanctioned mechanisms, in order of preference:
+
+1. **Container queries.** Put `@container` on the card, section, or row that
+   owns the decision and use `@sm:` … `@2xl:` (or `@[48rem]:`) on its children.
+   Name the container only when a query must cross a component boundary
+   (`dashboard-overview`, `expanded-row-actions`, `desktop-header-tools` in
+   `index.css`).
+2. **`ResponsiveValue`** for a figure or label that should show its widest
+   fitting form: pass the candidates from full to compact and let it measure.
+3. **A layout primitive** when the same anatomy appears three or more times:
+   `ResponsiveCardRail`, `ResponsiveHeaderTools`, `EntityDetailHeader`. Add a
+   primitive rather than a fourth copy.
+4. **The 768px shell handoff** (`useIsMobile`, `md:`) only for the shell's own
+   layers and for input modality that genuinely tracks device class. Prefer
+   `(pointer: coarse)` for modality.
+
+Banned in application code, enforced by `visual-language.test.ts`:
+
+- Arbitrary pixel breakpoints such as `min-[1100px]:` — a viewport number tuned
+  to one sidebar state.
+- `useIsMobile()` choosing between two content layouts (a table and a card
+  list, a popover and a sheet).
+- `window.innerWidth` or `matchMedia('(min-width…')` outside
+  `hooks/use-mobile.tsx`; floating layers may clamp their own position.
+
+Each ban is a ratchet with a baseline: lower the baseline in the commit that
+removes an offender.
 
 ### Buttons
 
@@ -434,7 +468,7 @@ An icon that represents a *status* takes that status's `iconClass` instead.
 
 ### Page Layout Pattern
 
-All authenticated pages must use `PageLayout`. It owns the shell title, page-level actions, mobile controls, and page frame. Do not call `setHeaderContent` or import `HeaderContext` from pages.
+All authenticated pages must use `PageLayout`. It owns the shell title, the responsive command lane, and the page frame. Do not call `setHeaderContent` or import `HeaderContext` from pages.
 
 ```tsx
 import { PageLayout } from '@/components/layout/PageLayout'
@@ -446,8 +480,10 @@ function MyPage() {
     <PageLayout
       title="CONTACTS"
       icon={<Users className="h-5 w-5 text-icon-accent flex-shrink-0" />}
-      pageActions={<>{/* wrapping desktop controls inside the page */}</>}
-      mobileActions={<>{/* mobile controls inside a page-level card */}</>}
+      headerTools={{
+        search: <HeaderSearch value={query} onChange={setQuery} placeholder="Search contacts" />,
+        primaryAction: <HeaderAction label="Add" icon={<Plus />} onClick={openCreate} />,
+      }}
     >
       {initError ? (
         <ErrorState title="Couldn't load" description={initError} />
@@ -499,9 +535,9 @@ Mobile pages use three clearly separated layers:
 
 1. The sticky 56 pixel global row contains only the sidebar trigger, organization, notifications, and account controls.
 2. The sticky 48 pixel minimum section row contains the complete responsive heading and a bounded `ResponsiveHeaderTools` command rail. Long stable titles may wrap. Labels compact before the title, primary commands remain reachable, query controls become popovers, and multi-command secondary groups collapse into the standard More popover.
-3. `MobileControlsBar` is reserved for controls that genuinely require persistent body width, such as bulk selection or workbench modes. Do not recreate search, filters, or page commands in a body-level mobile row.
+3. Controls that genuinely require persistent body width, such as bulk selection or workbench modes, live in a card inside the page surface and scroll with it. Do not recreate search, filters, or page commands in a body-level mobile row.
 
-`headerTools` is one command declaration rendered responsively on both sides of the 768 pixel handoff. Application pages may not use legacy `desktopTools`, `mobileActions`, or `mobileClassName`. On compact detail pages, persisted status hands off to `EntityDetailHeader` when the command rail also contains context or actions; this preserves the complete page title without repeating status. Editor command rails keep context first, overflow actions in the middle, and the task-advancing primary command last.
+`headerTools` is one command declaration rendered responsively on both sides of the 768 pixel handoff; `PageLayout` accepts no other command slot. On compact detail pages, persisted status hands off to `EntityDetailHeader` when the command rail also contains context or actions; this preserves the complete page title without repeating status. Editor command rails keep context first, overflow actions in the middle, and the task-advancing primary command last.
 
 Desktop tools form one non-wrapping command lane in this fixed order: section identity, editor mode navigation when applicable, search, filters/sort, status, secondary action, primary action, global controls. The last applicable page action is therefore closest to notification and account chrome. A secondary-only action remains secondary and uses outline or ghost styling. The lane uses its own available width, not viewport width, to select a density:
 

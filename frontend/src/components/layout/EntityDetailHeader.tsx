@@ -17,7 +17,7 @@ interface EntityDetailHeaderProps {
   iconClassName?: string;
   title: ReactNode;
   mobileStatus?: ReactNode;
-  /** Where `mobileStatus` yields to `PageLayout`'s `desktopTools.status`. Defaults to `md`. */
+  /** Where `mobileStatus` yields to `PageLayout`'s `headerTools.status`. Defaults to `md`. */
   statusHandoff?: EntityStatusHandoff;
   descriptor?: ReactNode;
   metadata?: ReactNode;

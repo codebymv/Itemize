@@ -60,11 +60,11 @@ describe('PageLayout', () => {
     expect(header).not.toContainElement(action);
   });
 
-  it('renders named desktop tools in query-to-primary order', () => {
+  it('renders header tools in query-to-primary order in the desktop lane', () => {
     renderLayout(
       <PageLayout
         title="CONTENTS"
-        desktopTools={{
+        headerTools={{
           search: <button type="button">Search</button>,
           filters: <button type="button">Filters</button>,
           combinedQuery: <button type="button">Search and filters</button>,
@@ -76,12 +76,15 @@ describe('PageLayout', () => {
       </PageLayout>
     );
 
-    const tools = screen.getByTestId('desktop-tools');
-    const search = screen.getByRole('button', { name: 'Search' });
-    const filters = screen.getByRole('button', { name: 'Filters' });
-    const secondary = screen.getByRole('button', { name: 'Canvas' });
-    const primary = screen.getByRole('button', { name: 'Add' });
-    expect(tools.querySelector('[data-desktop-header-tools]')).toBeInTheDocument();
+    const lane = screen.getByTestId('desktop-tools').querySelector('.responsive-header-tools__desktop');
+    expect(lane).toBeInTheDocument();
+    const within = (name: string) => Array.from(lane!.querySelectorAll('button')).find(
+      button => button.textContent === name,
+    )!;
+    const search = within('Search');
+    const filters = within('Filters');
+    const secondary = within('Canvas');
+    const primary = within('Add');
     expect(search.compareDocumentPosition(filters) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(filters.compareDocumentPosition(secondary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(secondary.compareDocumentPosition(primary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -92,7 +95,7 @@ describe('PageLayout', () => {
     renderLayout(
       <PageLayout
         title="SHARED"
-        desktopTools={{
+        headerTools={{
           search: <button type="button">Search shared content</button>,
           secondaryAction: <button type="button">Canvas</button>,
         }}
@@ -101,11 +104,9 @@ describe('PageLayout', () => {
       </PageLayout>
     );
 
-    const tools = screen.getByTestId('desktop-tools');
-    expect(tools.querySelector('[data-promoted-primary]')).toContainElement(
-      screen.getByRole('button', { name: 'Canvas' }),
-    );
-    expect(tools.querySelector('.desktop-header-tools__secondary')).toBeNull();
+    const lane = screen.getByTestId('desktop-tools').querySelector('.responsive-header-tools__desktop')!;
+    expect(lane.querySelector('[data-promoted-primary]')?.textContent).toContain('Canvas');
+    expect(lane.querySelector('.desktop-header-tools__secondary')).toBeNull();
   });
 
   it('renders compact section navigation in the shell until wide navigation takes over', () => {
@@ -132,17 +133,6 @@ describe('PageLayout', () => {
     );
   });
 
-  it('renders mobile actions in the mobile controls bar', () => {
-    const { container } = renderLayout(
-      <PageLayout title="CONTACTS" mobileActions={<button type="button">Add Contact</button>}>
-        Body
-      </PageLayout>
-    );
-
-    expect(screen.getByRole('button', { name: 'Add Contact' })).toBeInTheDocument();
-    expect(container.querySelector('[data-mobile-controls-bar]')).toBeInTheDocument();
-  });
-
   it('renders responsive header tools without creating a duplicate mobile body bar', () => {
     const { container } = renderLayout(
       <PageLayout
@@ -162,11 +152,12 @@ describe('PageLayout', () => {
     expect(container.querySelector('[data-responsive-header-tools]')).toBeInTheDocument();
   });
 
-  it('omits the mobile bar when mobileActions is omitted', () => {
+  it('never renders a body-level mobile command row', () => {
     const { container } = renderLayout(
       <PageLayout title="CONTACTS">Body</PageLayout>
     );
 
+    expect(container.querySelector('[data-mobile-controls-bar]')).toBeNull();
     expect(container.querySelector('.md\\:hidden')).toBeNull();
   });
 

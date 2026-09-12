@@ -2,9 +2,7 @@ import { useEffect, type ReactNode } from 'react';
 import { useSetDesktopHeaderTools, useSetHeaderContent } from '@/contexts/HeaderContext';
 import { ResponsivePageHeading } from '@/components/layout/ResponsivePageHeading';
 import {
-    DesktopHeaderTools,
     ResponsiveHeaderTools,
-    type DesktopHeaderToolsProps,
     type ResponsiveHeaderToolsProps,
 } from '@/components/layout/DesktopHeaderTools';
 
@@ -17,7 +15,6 @@ interface UsePageHeaderOptions {
     compactNavigation?: ReactNode;
     compactNavigationBreakpoint?: 'md' | 'wide';
     headerTools?: ResponsiveHeaderToolsProps;
-    desktopTools?: DesktopHeaderToolsProps;
 }
 
 export const usePageHeader = ({
@@ -27,7 +24,6 @@ export const usePageHeader = ({
     compactNavigation,
     compactNavigationBreakpoint,
     headerTools,
-    desktopTools,
 }: UsePageHeaderOptions) => {
     const setHeaderContent = useSetHeaderContent();
     const setDesktopTools = useSetDesktopHeaderTools();
@@ -46,13 +42,7 @@ export const usePageHeader = ({
     }, [compactNavigation, compactNavigationBreakpoint, icon, leading, setHeaderContent, title]);
 
     useEffect(() => {
-        setDesktopTools(
-            headerTools
-                ? <ResponsiveHeaderTools {...headerTools} />
-                : desktopTools
-                  ? <DesktopHeaderTools {...desktopTools} />
-                  : null,
-        );
+        setDesktopTools(headerTools ? <ResponsiveHeaderTools {...headerTools} /> : null);
         return () => setDesktopTools(null);
-    }, [desktopTools, headerTools, setDesktopTools]);
+    }, [headerTools, setDesktopTools]);
 };
