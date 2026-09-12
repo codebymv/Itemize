@@ -1,3 +1,6 @@
+import { AVATAR_CATALOG } from '../common/avatar-catalog';
+import { AvatarOption } from './auth.types';
+import { UpdateViewerAvatarInput } from './auth.inputs';
 import { Args, Context, Mutation, Query, Resolver } from '@nestjs/graphql';
 import { Request, Response } from 'express';
 import { AccountScoped, CsrfProtected, Public } from '../common/metadata';
@@ -133,6 +136,19 @@ export class AuthResolver {
     const identity = this.requestContext.current().identity;
     if (!identity) throw new Error('Verified user identity is unavailable');
     return this.identityLifecycle.updateViewerProfile(identity.userId, input.name);
+  }
+
+  @Query(() => [AvatarOption])
+  avatarCatalog() {
+    return AVATAR_CATALOG;
+  }
+
+  @CsrfProtected()
+  @Mutation(() => CurrentUser)
+  updateViewerAvatar(@Args('input') input: UpdateViewerAvatarInput) {
+    const identity = this.requestContext.current().identity;
+    if (!identity) throw new Error('Verified user identity is unavailable');
+    return this.identityLifecycle.updateViewerAvatar(identity.userId, input.avatarKey);
   }
 
   @CsrfProtected()

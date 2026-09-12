@@ -70,6 +70,44 @@ describe('Authentication lifecycle GraphQL PostgreSQL contract', () => {
   const mutation = (document: string, variables: Record<string, unknown>) =>
     request(app.getHttpServer()).post('/graphql').send({ query: document, variables });
 
+  it('persists a free account avatar through protected GraphQL updates and subsequent login', async () => {
+    const email = `avatar-${suffix}@test.itemize`;
+    const registered = await mutation(`mutation Register($input: RegisterInput!) { register(input:$input) { success } }`,
+      { input: { email, password: 'StrongPass1', name: 'Avatar QA' } }).expect(200);
+    expect(registered.body.errors).toBeUndefined();
+    const result = await pool.query('SELECT id, avatar_key FROM users WHERE email=$1', [email]);
+    const id = Number(result.rows[0].id);
+    createdUserIds.push(id);
+    await pool.query('UPDATE users SET email_verified=true WHERE id=$1', [id]);
+    const agent = request.agent(app.getHttpServer());
+    const login = () => agent.post('/graphql').send({ query: `mutation Login($input: LoginInput!) { login(input:$input) { user { avatarKey photoURL } } }`, variables: { input: { email, password: 'StrongPass1' } } });
+    const loggedIn = await login().expect(200);
+    expect(loggedIn.body.errors).toBeUndefined();
+    expect(loggedIn.body.data.login.user.avatarKey).toBe(result.rows[0].avatar_key);
+    const catalog = await agent.post('/graphql').send({ query: '{ avatarCatalog { key name } }' }).expect(200);
+    expect(catalog.body.errors).toBeUndefined();
+    expect(catalog.body.data.avatarCatalog.map((a: {key:string}) => a.key)).toContain(result.rows[0].avatar_key);
+    const document = `mutation Avatar($input: UpdateViewerAvatarInput!) { updateViewerAvatar(input:$input) { id avatarKey } }`;
+    const unprotected = await agent.post('/graphql').send({ query: document, variables: { input: { avatarKey: 'dawn' } } });
+    expect(unprotected.body.errors).toBeDefined();
+    const csrf = await agent.post('/graphql').send({ query: '{ csrfToken { token } }' }).expect(200);
+    const token = csrf.body.data.csrfToken.token;
+    const select = (avatarKey: string | null) => agent.post('/graphql').set('x-csrf-token', token).send({ query: document, variables: { input: { avatarKey } } });
+    const invalid = await select('../escape').expect(200);
+    expect(invalid.body.errors[0].extensions.code).toBe('BAD_USER_INPUT');
+    expect((await pool.query('SELECT avatar_key FROM users WHERE id=$1', [id])).rows[0].avatar_key).toBe(result.rows[0].avatar_key);
+    const selected = await select('dawn').expect(200);
+    expect(selected.body.errors).toBeUndefined();
+    expect(selected.body.data.updateViewerAvatar.avatarKey).toBe('dawn');
+    const freshLogin = await login().expect(200);
+    expect(freshLogin.body.data.login.user).toMatchObject({ avatarKey: 'dawn', photoURL: '/assets/avatars/dawn.svg' });
+    const csrf2 = await agent.post('/graphql').send({ query: '{ csrfToken { token } }' }).expect(200);
+    const reset = await agent.post('/graphql').set('x-csrf-token', csrf2.body.data.csrfToken.token).send({ query: document, variables: { input: { avatarKey: null } } }).expect(200);
+    expect(reset.body.errors).toBeUndefined();
+    expect((await pool.query('SELECT avatar_key FROM users WHERE id=$1', [id])).rows[0].avatar_key).toBeNull();
+    emails.sendVerification.mockClear();
+  });
+
   it('atomically creates the user, personal workspace, owner membership, and default', async () => {
     const response = await mutation(
       `mutation Register($input: RegisterInput!) {

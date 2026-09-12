@@ -1,3 +1,4 @@
+import { UserAvatar } from '@/components/UserAvatar';
 import React, { useEffect, useState, createContext, useContext } from 'react';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
@@ -131,12 +132,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
         }
     };
 
-    const getUserInitials = (name: string, email: string): string => {
-        if (name && name.trim()) {
-            return name.trim()[0].toUpperCase();
-        }
-        return email ? email[0].toUpperCase() : 'U';
-    };
+
 
     const getTierIcon = (plan?: Plan) => {
         if (!plan) return User;
@@ -231,12 +227,10 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                                 <DropdownMenuTrigger asChild>
                                     <Button
                                       variant="ghost"
-                                      className="relative h-11 w-11 rounded-full bg-primary p-0 interaction-button--primary"
+                                      className="relative h-11 w-11 rounded-full p-0"
                                       aria-label={`Account menu for ${currentUser.name || currentUser.email}`}
                                     >
-                                        <span className="text-sm font-medium text-white">
-                                            {getUserInitials(currentUser.name || '', currentUser.email || '')}
-                                        </span>
+                                        <UserAvatar avatarKey={currentUser.avatarKey} name={currentUser.name} email={currentUser.email} className="h-11 w-11" />
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-64">

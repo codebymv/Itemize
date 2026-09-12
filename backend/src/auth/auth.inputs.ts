@@ -112,3 +112,10 @@ export class RecoverViewerAccountInput {
   @Field()
   token: string;
 }
+
+@InputType()
+export class UpdateViewerAvatarInput {
+  /** Explicit null selects initials; an omitted value is rejected. */
+  @Field(() => String, { nullable: true })
+  avatarKey: string | null;
+}

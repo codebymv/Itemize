@@ -192,6 +192,7 @@ describe('organization GraphQL consumer', () => {
         invited_at: organization.createdAt,
         invited_by: 7,
         user_name: 'Organization Member',
+        avatar_key: null,
         email: 'member@test.itemize',
       },
     ]);

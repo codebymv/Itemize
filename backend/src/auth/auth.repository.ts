@@ -1,3 +1,4 @@
+import { pickStarterAvatar } from '../common/avatar-catalog';
 import { Inject, Injectable } from '@nestjs/common';
 import { normalizeThemeColor, type ThemeColor } from '../common/theme-color';
 import { Pool, PoolClient } from 'pg';
@@ -16,6 +17,7 @@ export type AuthenticationUser = {
   role: string;
   createdAt: Date;
   themeColor: ThemeColor;
+  avatarKey?: string | null;
 };
 
 type AuthenticationUserRow = {
@@ -29,11 +31,12 @@ type AuthenticationUserRow = {
   created_at: Date | string;
   account_deletion_scheduled_at: Date | string | null;
   theme_color: string | null;
+  avatar_key?: string | null;
 };
 
 const USER_COLUMNS = `
   id, email, name, password_hash, provider, email_verified, role, created_at,
-  account_deletion_scheduled_at, theme_color
+  account_deletion_scheduled_at, theme_color, avatar_key
 `;
 
 const mapUser = (row: AuthenticationUserRow): AuthenticationUser => ({
@@ -46,6 +49,7 @@ const mapUser = (row: AuthenticationUserRow): AuthenticationUser => ({
   role: row.role || 'USER',
   createdAt: new Date(row.created_at),
   themeColor: normalizeThemeColor(row.theme_color),
+  avatarKey: row.avatar_key ?? null,
 });
 
 @Injectable()
@@ -87,8 +91,8 @@ export class AuthRepository {
       const inserted = await client.query<AuthenticationUserRow>(
         `INSERT INTO users (
            email, name, password_hash, provider, email_verified,
-           verification_token, verification_token_expires, created_at, updated_at
-         ) VALUES ($1, $2, $3, 'email', false, $4, $5, NOW(), NOW())
+           verification_token, verification_token_expires, created_at, updated_at, avatar_key
+         ) VALUES ($1, $2, $3, 'email', false, $4, $5, NOW(), NOW(), $6)
          RETURNING ${USER_COLUMNS}`,
         [
           input.email,
@@ -96,6 +100,7 @@ export class AuthRepository {
           input.passwordHash,
           input.verificationTokenHash,
           input.verificationTokenExpires,
+          pickStarterAvatar(),
         ],
       );
       const user = mapUser(inserted.rows[0]);
@@ -234,6 +239,15 @@ export class AuthRepository {
     return result.rows[0] ? mapUser(result.rows[0]) : null;
   }
 
+  async updateAvatar(userId: number, avatarKey: string | null): Promise<AuthenticationUser | null> {
+    const result = await this.pool.query<AuthenticationUserRow>(
+      `UPDATE users SET avatar_key=$2, updated_at=NOW()
+       WHERE id=$1 AND account_deletion_scheduled_at IS NULL RETURNING ${USER_COLUMNS}`,
+      [userId, avatarKey],
+    );
+    return result.rows[0] ? mapUser(result.rows[0]) : null;
+  }
+
   async updateThemeColor(userId: number, themeColor: ThemeColor): Promise<AuthenticationUser | null> {
     const result = await this.pool.query<AuthenticationUserRow>(
       `UPDATE users SET theme_color = $1, updated_at = NOW()
@@ -277,10 +291,10 @@ export class AuthRepository {
       } else {
         result = await client.query<AuthenticationUserRow>(
           `INSERT INTO users (
-             email, name, google_id, provider, email_verified, created_at, updated_at
-           ) VALUES ($1, $2, $3, 'google', true, NOW(), NOW())
+             email, name, google_id, provider, email_verified, created_at, updated_at, avatar_key
+           ) VALUES ($1, $2, $3, 'google', true, NOW(), NOW(), $4)
            RETURNING ${USER_COLUMNS}`,
-          [identity.email, identity.name, identity.googleId],
+          [identity.email, identity.name, identity.googleId, pickStarterAvatar()],
         );
       }
 

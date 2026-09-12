@@ -113,6 +113,9 @@ export class OrganizationMember {
   @Field(() => String, { nullable: true })
   userName: string | null;
 
+  @Field(() => String, { nullable: true })
+  avatarKey?: string | null;
+
   @Field()
   email: string;
 }

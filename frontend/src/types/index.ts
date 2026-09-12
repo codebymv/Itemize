@@ -392,6 +392,7 @@ export interface Organization {
 
 // Organization member
 export interface OrganizationMember {
+  avatar_key?: string | null;
   id: number;
   organization_id: number;
   user_id: number;

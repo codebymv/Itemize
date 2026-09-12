@@ -31,6 +31,7 @@ export type OrganizationMemberRow = {
   joined_at: Date | string | null;
   invited_by: number | string | null;
   user_name: string | null;
+  avatar_key?: string | null;
   email: string;
 };
 
@@ -158,7 +159,7 @@ const organizationMemberSelection = `
   om.invited_at,
   om.joined_at,
   om.invited_by,
-  u.name AS user_name,
+  u.name AS user_name, u.avatar_key,
   u.email`;
 
 @Injectable()
@@ -768,7 +769,7 @@ export class OrganizationsRepository {
            inserted.invited_at,
            inserted.joined_at,
            inserted.invited_by,
-           u.name AS user_name,
+           u.name AS user_name, u.avatar_key,
            u.email
          FROM inserted
          JOIN users u ON u.id = inserted.user_id`,
@@ -860,7 +861,7 @@ export class OrganizationsRepository {
            updated.invited_at,
            updated.joined_at,
            updated.invited_by,
-           u.name AS user_name,
+           u.name AS user_name, u.avatar_key,
            u.email
          FROM updated
          JOIN users u ON u.id = updated.user_id`,

@@ -656,6 +656,7 @@ export class OrganizationsService {
     joinedAt: row.joined_at ? new Date(row.joined_at) : null,
     invitedBy: row.invited_by === null ? null : Number(row.invited_by),
     userName: row.user_name,
+    avatarKey: row.avatar_key ?? null,
     email: row.email,
   });
 

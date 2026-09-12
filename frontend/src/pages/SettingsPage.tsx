@@ -1,3 +1,5 @@
+import { UserAvatar } from '@/components/UserAvatar';
+import { AvatarSelector } from '@/pages/settings/components/AvatarSelector';
 import { EMAIL_ALLOWANCE_DESCRIPTION } from '@/lib/subscription';
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -268,9 +270,7 @@ function AccountInfo({
         </CardHeader>
         <CardContent surface="inset" className="space-y-6">
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
-            <div className="h-16 w-16 rounded-full bg-primary flex items-center justify-center text-white text-xl font-medium flex-shrink-0">
-              {currentUser?.name?.[0]?.toUpperCase() || 'U'}
-            </div>
+            <UserAvatar avatarKey={currentUser?.avatarKey} name={currentUser?.name} email={currentUser?.email} className="h-16 w-16 text-xl" />
             <div className="text-center sm:text-left min-w-0 flex-1">
               <p className="font-medium break-words">{currentUser?.name || 'User'}</p>
               <div className="mt-1 flex flex-col gap-x-6 gap-y-2 text-sm text-muted-foreground sm:flex-row sm:flex-wrap sm:items-center sm:gap-y-1">
@@ -289,6 +289,8 @@ function AccountInfo({
 
           <Separator />
 
+          <AvatarSelector />
+          <Separator />
           <SubscriptionStatus />
         </CardContent>
       </Card>

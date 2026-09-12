@@ -1,3 +1,4 @@
+import { avatarAssetPath } from '../common/avatar-catalog';
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import bcrypt from 'bcryptjs';
@@ -93,6 +94,7 @@ export class SessionService {
       role: user.role,
       createdAt: user.createdAt,
       themeColor: user.themeColor,
+      avatarKey: user.avatarKey ?? null,
     };
   }
 
@@ -242,7 +244,8 @@ export class SessionService {
       name: user.name,
       role: user.role,
       provider: user.provider || 'email',
-      photoURL: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`,
+      photoURL: avatarAssetPath(user.avatarKey),
+        avatarKey: user.avatarKey ?? null,
     };
   }
 

@@ -1,3 +1,4 @@
+import { avatarAssetPath, isAvatarKey } from '../common/avatar-catalog';
 import { Injectable } from '@nestjs/common';
 import { THEME_COLORS, isThemeColor } from '../common/theme-color';
 import type { AuthenticationUser } from './auth.repository';
@@ -88,7 +89,8 @@ export class IdentityLifecycleService {
         name: user.name,
         role: user.role,
         provider: user.provider || 'email',
-        photoURL: `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`,
+        photoURL: avatarAssetPath(user.avatarKey),
+        avatarKey: user.avatarKey ?? null,
       },
     };
   }
@@ -224,6 +226,15 @@ export class IdentityLifecycleService {
     return this.currentUser(user);
   }
 
+  async updateViewerAvatar(userId: number, avatarKey: string | null) {
+    if (avatarKey !== null && !isAvatarKey(avatarKey)) {
+      throw itemizeGraphqlError('Choose an available avatar or initials', 'BAD_USER_INPUT', { field: 'avatarKey' });
+    }
+    const user = await this.users.updateAvatar(userId, avatarKey);
+    if (!user) throw itemizeGraphqlError('User not found', 'NOT_FOUND');
+    return this.currentUser(user);
+  }
+
   private currentUser(user: AuthenticationUser) {
     return {
       id: user.id,
@@ -234,6 +245,7 @@ export class IdentityLifecycleService {
       role: user.role,
       createdAt: user.createdAt,
       themeColor: user.themeColor,
+      avatarKey: user.avatarKey ?? null,
     };
   }
 

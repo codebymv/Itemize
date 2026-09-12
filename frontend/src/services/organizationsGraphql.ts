@@ -28,6 +28,7 @@ type GraphqlOrganizationMember = {
   joinedAt: string | null;
   invitedBy: number | null;
   userName: string | null;
+  avatarKey?: string | null;
   email: string;
 };
 
@@ -213,7 +214,7 @@ const addOrganizationMemberMutation = `
     $input: AddOrganizationMemberInput!
   ) {
     addOrganizationMember(organizationId: $organizationId, input: $input) {
-      id organizationId userId role invitedAt joinedAt invitedBy userName email
+      id organizationId userId role invitedAt joinedAt invitedBy userName email avatarKey
     }
   }
 `;
@@ -231,7 +232,7 @@ const updateOrganizationMemberRoleMutation = `
       role: $role
       idempotencyKey: $idempotencyKey
     ) {
-      id organizationId userId role invitedAt joinedAt invitedBy userName email
+      id organizationId userId role invitedAt joinedAt invitedBy userName email avatarKey
     }
   }
 `;
@@ -257,7 +258,7 @@ const transferOrganizationOwnershipMutation = `
       memberId: $memberId
       idempotencyKey: $idempotencyKey
     ) {
-      id organizationId userId role invitedAt joinedAt invitedBy userName email
+      id organizationId userId role invitedAt joinedAt invitedBy userName email avatarKey
     }
   }
 `;
@@ -306,6 +307,7 @@ const mapOrganizationMember = (
   invited_at: member.invitedAt,
   ...(member.joinedAt === null ? {} : { joined_at: member.joinedAt }),
   ...(member.invitedBy === null ? {} : { invited_by: member.invitedBy }),
+  avatar_key: member.avatarKey ?? null,
   ...(member.userName === null ? {} : { user_name: member.userName }),
   email: member.email,
 });

@@ -19,6 +19,7 @@ export interface User {
   name: string;
   email: string;
   photoURL?: string;
+  avatarKey?: string | null;
   role?: 'USER' | 'ADMIN';
   provider?: string;
   createdAt?: string;
@@ -84,6 +85,7 @@ const normalizeUser = (data: Record<string, unknown>): User | null => {
     name: (data.name as string) || '',
     email: (data.email as string) || '',
     photoURL: data.photoURL as string | undefined,
+    avatarKey: typeof data.avatarKey === 'string' ? data.avatarKey : null,
     role: data.role as User['role'],
     provider: data.provider as string | undefined,
     createdAt: data.createdAt as string | undefined,

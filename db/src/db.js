@@ -1,3 +1,4 @@
+const { runUserAvatarMigration } = require('./db_user_avatar_migrations');
 const { runEmailAllowanceMigration } = require('./db_email_allowance_migrations');
 const { Pool } = require('pg');
 
@@ -740,6 +741,7 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'workspace_archive_v1', runWorkspaceArchiveMigration);
     await runMigrationOnce(pool, 'workspace_frame_category_v1', runWorkspaceFrameCategoryMigration);
     await runMigrationOnce(pool, 'user_theme_color_v1', runUserThemeColorMigration);
+    await runMigrationOnce(pool, 'user_avatar_v1', runUserAvatarMigration);
     await runMigrationOnce(
       pool,
       'email_template_creation_receipts_v1',

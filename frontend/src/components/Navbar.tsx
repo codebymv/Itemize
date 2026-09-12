@@ -1,3 +1,4 @@
+import { UserAvatar } from '@/components/UserAvatar';
 import React from 'react';
 import { useTheme } from 'next-themes';
 import { useAISuggest } from '@/context/AISuggestContext';
@@ -50,17 +51,7 @@ const Navbar: React.FC = () => {
   };
 
   // Function to get user initials
-  const getUserInitials = (name: string, email: string): string => {
-    if (name && name.trim()) {
-      const nameParts = name.trim().split(' ');
-      if (nameParts.length >= 2) {
-        return (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase();
-      }
-      return nameParts[0][0].toUpperCase();
-    }
-    // Fallback to email if no name
-    return email ? email[0].toUpperCase() : 'U';
-  };
+
 
   // Get tier icon based on subscription plan
   const getTierIcon = (plan?: Plan) => {
@@ -136,8 +127,8 @@ const Navbar: React.FC = () => {
             {currentUser ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-9 w-9 rounded-full p-0 bg-blue-600 interaction-button--primary border-0">
-                    <User className="h-5 w-5 text-white" />
+                  <Button variant="ghost" className="relative h-11 w-11 rounded-full p-0" aria-label={`Account menu for ${currentUser.name || currentUser.email}`}>
+                    <UserAvatar avatarKey={currentUser.avatarKey} name={currentUser.name} email={currentUser.email} className="h-11 w-11" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-64" align="end" forceMount>

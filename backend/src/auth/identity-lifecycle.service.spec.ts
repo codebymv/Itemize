@@ -30,6 +30,7 @@ describe('IdentityLifecycleService', () => {
     | 'consumePasswordResetToken'
     | 'changePasswordIfCurrent'
     | 'updateName'
+    | 'updateAvatar'
   >>;
   let emails: jest.Mocked<Pick<
     AuthEmailService,
@@ -37,6 +38,20 @@ describe('IdentityLifecycleService', () => {
   >>;
   let sessions: jest.Mocked<Pick<SessionService, 'createSession'>>;
   let service: IdentityLifecycleService;
+
+  it('persists valid avatar selections and explicit initials for the authenticated user', async () => {
+    users.updateAvatar.mockResolvedValue({ ...user, avatarKey: 'dawn' });
+    await expect(service.updateViewerAvatar(41, 'dawn')).resolves.toMatchObject({ avatarKey: 'dawn' });
+    expect(users.updateAvatar).toHaveBeenCalledWith(41, 'dawn');
+    users.updateAvatar.mockResolvedValue({ ...user, avatarKey: null });
+    await expect(service.updateViewerAvatar(41, null)).resolves.toMatchObject({ avatarKey: null });
+    expect(users.updateAvatar).toHaveBeenLastCalledWith(41, null);
+  });
+
+  it.each(['../dawn', 'https://example.com/pic', '', 'missing', undefined])('rejects invalid avatar %s before persistence', async key => {
+    await expect(service.updateViewerAvatar(41, key as string)).rejects.toMatchObject({ extensions: { code: 'BAD_USER_INPUT' } });
+    expect(users.updateAvatar).not.toHaveBeenCalled();
+  });
 
   beforeEach(() => {
     users = {
@@ -49,6 +64,7 @@ describe('IdentityLifecycleService', () => {
       consumePasswordResetToken: jest.fn(),
       changePasswordIfCurrent: jest.fn(),
       updateName: jest.fn(),
+      updateAvatar: jest.fn(),
     };
     emails = {
       sendVerification: jest.fn().mockResolvedValue(true),

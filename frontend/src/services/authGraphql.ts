@@ -12,6 +12,7 @@ export type AuthGraphqlUser = {
   role: 'USER' | 'ADMIN';
   provider: string;
   photoURL: string;
+  avatarKey?: string | null;
 };
 
 export type CurrentGraphqlUser = {
@@ -23,6 +24,7 @@ export type CurrentGraphqlUser = {
   role: 'USER' | 'ADMIN';
   createdAt: string;
   themeColor: string;
+  avatarKey?: string | null;
 };
 
 export type SignupMode = 'FREE' | 'TRIAL';
@@ -50,7 +52,7 @@ export type AccountDeletionPreflight = {
 
 const SESSION_FIELDS = `
   success
-  user { uid email name role provider photoURL }
+  user { uid email name role provider photoURL avatarKey }
 `;
 
 export const loginViaGraphql = async (email: string, password: string) => {
@@ -168,7 +170,7 @@ export const updateViewerProfileViaGraphql = async (name: string) => {
   >(
     `mutation UpdateViewerProfile($input: UpdateViewerProfileInput!) {
       updateViewerProfile(input: $input) {
-        id email name provider emailVerified role createdAt themeColor
+        id email name provider emailVerified role createdAt themeColor avatarKey
       }
     }`,
     { input: { name } },
@@ -184,7 +186,7 @@ export const updateViewerPreferencesViaGraphql = async (themeColor: ThemeColor) 
   >(
     `mutation UpdateViewerPreferences($input: UpdateViewerPreferencesInput!) {
       updateViewerPreferences(input: $input) {
-        id email name provider emailVerified role createdAt themeColor
+        id email name provider emailVerified role createdAt themeColor avatarKey
       }
     }`,
     { input: { themeColor } },
@@ -214,7 +216,7 @@ export const getCurrentUserViaGraphql = async (): Promise<CurrentGraphqlUser> =>
     Record<string, never>
   >(
     `query CurrentUser {
-      currentUser { id email name provider emailVerified role createdAt themeColor }
+      currentUser { id email name provider emailVerified role createdAt themeColor avatarKey }
     }`,
     {},
   );
@@ -301,4 +303,24 @@ export const logoutViaGraphql = async (): Promise<void> => {
     `mutation Logout { logout { success } }`,
     {},
   );
+};
+
+export type AvatarOption = { key: string; name: string };
+
+export const getAvatarCatalogViaGraphql = async (): Promise<AvatarOption[]> => {
+  const data = await graphqlRequest<{ avatarCatalog: AvatarOption[] }, Record<string, never>>(
+    `query AvatarCatalog { avatarCatalog { key name } }`,
+    {},
+  );
+  return data.avatarCatalog;
+};
+
+export const updateViewerAvatarViaGraphql = async (avatarKey: string | null) => {
+  const data = await graphqlMutationRequest<
+    { updateViewerAvatar: CurrentGraphqlUser },
+    { input: { avatarKey: string | null } }
+  >(`mutation UpdateViewerAvatar($input: UpdateViewerAvatarInput!) {
+    updateViewerAvatar(input: $input) { id email name provider emailVerified role createdAt themeColor avatarKey }
+  }`, { input: { avatarKey } });
+  return data.updateViewerAvatar;
 };

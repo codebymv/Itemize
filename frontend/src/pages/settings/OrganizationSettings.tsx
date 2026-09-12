@@ -19,7 +19,7 @@ import {
 import { HeaderAction } from '@/components/layout/DesktopHeaderTools';
 import { EmptyState } from '@/components/EmptyState';
 import { FailureNotice } from '@/components/FailureNotice';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { UserAvatar } from '@/components/UserAvatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -117,15 +117,6 @@ const LOCALES = [
 
 const roleLabel = (role: OrganizationMember['role']) =>
   role.charAt(0).toUpperCase() + role.slice(1);
-
-const initials = (member: OrganizationMember) => {
-  const value = member.user_name?.trim() || member.email || 'Member';
-  return value
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join('');
-};
 
 const settingString = (settings: JsonRecord, key: string, fallback: string) =>
   typeof settings[key] === 'string' ? String(settings[key]) : fallback;
@@ -944,9 +935,7 @@ export function OrganizationSettings({
                   Boolean(member.joined_at);
                 return (
                   <div key={member.id} className="flex items-center gap-3 p-3">
-                    <Avatar className="h-9 w-9 shrink-0">
-                      <AvatarFallback className="bg-primary text-sm text-white">{initials(member)}</AvatarFallback>
-                    </Avatar>
+                    <UserAvatar avatarKey={isSelf ? currentUser?.avatarKey : member.avatar_key} name={member.user_name} email={member.email} className="h-9 w-9" />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium" title={member.user_name || member.email || 'Member'}>
                         {member.user_name || member.email || 'Member'}

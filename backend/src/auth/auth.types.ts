@@ -19,6 +19,9 @@ export class AuthSessionUser {
 
   @Field()
   photoURL: string;
+
+  @Field(() => String, { nullable: true })
+  avatarKey?: string | null;
 }
 
 @ObjectType()
@@ -80,4 +83,16 @@ export class CurrentUser {
   /** Product accent the viewer chose: blue | purple | pink. */
   @Field()
   themeColor: string;
+
+  @Field(() => String, { nullable: true })
+  avatarKey?: string | null;
+}
+
+@ObjectType()
+export class AvatarOption {
+  @Field()
+  key: string;
+
+  @Field()
+  name: string;
 }

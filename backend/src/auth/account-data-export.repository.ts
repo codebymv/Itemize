@@ -18,6 +18,7 @@ export class AccountDataExportRepository {
              'id', u.id,
              'email', u.email,
              'name', u.name,
+             'avatarKey', u.avatar_key,
              'provider', u.provider,
              'emailVerified', u.email_verified,
              'role', u.role,
