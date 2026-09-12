@@ -50,3 +50,12 @@ organization for the transaction so subscription changes cannot race admission.
 Ineligible resources return 404 without deleting or changing their publication state.
 Existing booking capability status/cancellation remains available while the token
 is valid. Queued workflow notifications retain the existing paid-access claim rule.
+
+
+## Shared contact quota (2026-09-11)
+
+Contact creation uses the shared organization transaction lock and stored quota.
+Public forms/bookings preserve intake with no new contact when full, while reusing
+existing email-matched contacts. Explicit chat conversion returns PLAN_LIMIT_REACHED
+without changing session/transcript state, and can be retried after capacity returns.
+See [contact quota audit](../../contact-quota-audit-2026-09-11.md).

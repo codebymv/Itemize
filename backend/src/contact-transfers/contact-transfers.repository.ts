@@ -1,3 +1,4 @@
+import { contactCapacity, lockContactCreation } from '../contacts/contact-capacity';
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
@@ -72,7 +73,7 @@ export class ContactTransfersRepository {
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
-      await client.query('SELECT pg_advisory_xact_lock($1)', [organizationId]);
+      await lockContactCreation(client, organizationId);
       const receipt = await client.query<{
         request_fingerprint: string;
         imported: number | null;
@@ -121,22 +122,8 @@ export class ContactTransfersRepository {
         contacts,
         skipDuplicates,
       );
-      const organization = await client.query<{
-        plan: string | null;
-        contacts_limit: number | null;
-      }>(
-        'SELECT plan, contacts_limit FROM organizations WHERE id = $1',
-        [organizationId],
-      );
-      const plan = organization.rows[0]?.plan ?? 'starter';
-      const limit =
-        organization.rows[0]?.contacts_limit ?? this.defaultLimit(plan);
-      const count = await client.query<{ total: number }>(
-        'SELECT COUNT(*)::int AS total FROM contacts WHERE organization_id = $1',
-        [organizationId],
-      );
-      const current = count.rows[0]?.total ?? 0;
-      if (limit !== -1 && current + filtered.contacts.length > limit) {
+      const { limit, current, allowed } = await contactCapacity(client, organizationId, filtered.contacts.length);
+      if (!allowed) {
         await client.query('ROLLBACK');
         return {
           kind: 'limit',
@@ -288,9 +275,4 @@ export class ContactTransfersRepository {
     );
   }
 
-  private defaultLimit(plan: string): number {
-    if (plan === 'unlimited') return 25_000;
-    if (plan === 'pro') return -1;
-    return 5_000;
-  }
 }

@@ -79,10 +79,10 @@ status/cancellation uses the existing capability scope and expiry rules independ
 
 ## Remaining launch work
 
-1. **Contact quota bypass:** public form and booking contact creation inserts directly,
-   whereas manual creation checks `contacts_limit`. Audit imports and other contact
-   producers together, then enforce a common atomic quota policy. Decide explicitly
-   whether a full CRM should reject intake or retain the submission without a contact.
+1. **Contact quota bypass addressed in the follow-up:** all five creation paths now
+   share atomic quota enforcement. Public intake is retained without a new contact
+   when full; manual/import/chat conversion report the established limit error.
+   See [contact quota audit](contact-quota-audit-2026-09-11.md) for verification.
 2. **Usage accounting:** reconcile campaign/workflow email producers and resets with
    the advertised allowance; distinguish transactional messages from metered marketing.
    Do not infer universal enforcement from a settings usage meter.

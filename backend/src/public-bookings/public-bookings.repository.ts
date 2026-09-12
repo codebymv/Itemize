@@ -1,3 +1,4 @@
+import { contactCapacity, lockContactCreation } from '../contacts/contact-capacity';
 import { paidEntitlementSql } from '../billing/paid-entitlement.sql';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
@@ -171,6 +172,7 @@ export class PublicBookingsRepository {
       );
       if (initial.rows.length !== 1) return { kind: 'calendar_not_found' };
       let calendar = initial.rows[0];
+      await lockContactCreation(client, calendar.organization_id);
       // Serialize admission with subscription changes; existing capability
       // status/cancellation intentionally remains available after access ends.
       const entitlement = await client.query(
@@ -395,6 +397,7 @@ export class PublicBookingsRepository {
         [organizationId, normalizedEmail],
       );
       if (existing.rows.length > 0) return existing.rows[0].id;
+      if (!(await contactCapacity(client, organizationId)).allowed) return null;
       const nameParts = values.attendeeName.trim().split(' ');
       const created = await client.query<{ id: number }>(
         `INSERT INTO contacts (organization_id, first_name, last_name, email, phone, source)

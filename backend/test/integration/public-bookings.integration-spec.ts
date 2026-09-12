@@ -87,6 +87,7 @@ describe('Public bookings protocol (legacy behavior pinned)', () => {
       `public-bookings-owner-${Date.now()}@test.itemize`,
       'Bookings Owner',
     );
+    await pool.query('UPDATE organizations SET contacts_limit=5000 WHERE id=$1', [owner.org.id]);
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(PG_POOL)
@@ -518,6 +519,25 @@ describe('Public bookings protocol (legacy behavior pinned)', () => {
     await pool.query('UPDATE calendars SET confirmation_email=FALSE WHERE id=$1', [calendar.id]);
     const disabled = await createRequest(calendar.public_id).send({ ...body, ...futureSlot(240) }).expect(201);
     expect((await pool.query("SELECT id FROM workflow_side_effect_outbox WHERE payload->>'bookingId'=$1", [String(disabled.body.booking.id)])).rows).toHaveLength(0);
+  });
+
+  it('preserves bookings at contact capacity and reuses an existing contact', async () => {
+    const calendar = await insertCalendar('Contact quota');
+    const existing = (await pool.query("INSERT INTO contacts (organization_id,first_name,email) VALUES ($1,'Existing',$2) RETURNING id,email", [owner.org.id, `quota-existing-${Date.now()}@test.itemize`])).rows[0];
+    const saved = (await pool.query('SELECT contacts_limit FROM organizations WHERE id=$1', [owner.org.id])).rows[0].contacts_limit;
+    const before = Number((await pool.query('SELECT COUNT(*)::int AS n FROM contacts WHERE organization_id=$1', [owner.org.id])).rows[0].n);
+    try {
+      await pool.query('UPDATE organizations SET contacts_limit=$2 WHERE id=$1', [owner.org.id, before]);
+      const [fresh, linked] = await Promise.all([
+        createRequest(calendar.public_id).send({ ...futureSlot(480), attendee_name: 'New lead', attendee_email: `quota-new-${Date.now()}@test.itemize`, timezone: 'UTC' }),
+        createRequest(calendar.public_id).send({ ...futureSlot(504), attendee_name: 'Existing lead', attendee_email: existing.email, timezone: 'UTC' }),
+      ]);
+      expect(fresh.status).toBe(201); expect(linked.status).toBe(201);
+      const rows = await pool.query('SELECT id, contact_id, attendee_email FROM bookings WHERE id=ANY($1::int[]) ORDER BY id', [[fresh.body.booking.id, linked.body.booking.id]]);
+      expect(rows.rows.find(row => row.id === fresh.body.booking.id)).toMatchObject({ contact_id: null, attendee_email: expect.stringContaining('quota-new-') });
+      expect(rows.rows.find(row => row.id === linked.body.booking.id)).toMatchObject({ contact_id: existing.id });
+      expect((await pool.query('SELECT COUNT(*)::int AS n FROM contacts WHERE organization_id=$1', [owner.org.id])).rows[0].n).toBe(before);
+    } finally { await pool.query('UPDATE organizations SET contacts_limit=$2 WHERE id=$1', [owner.org.id, saved]); }
   });
 
 });

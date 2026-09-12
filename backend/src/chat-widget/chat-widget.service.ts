@@ -285,6 +285,12 @@ ichat('init', ${key});
       if (outcome.kind === 'session_not_found') {
         throw itemizeGraphqlError('Chat session not found', 'NOT_FOUND');
       }
+      if (outcome.kind === 'limit') {
+        throw itemizeGraphqlError('Contact limit reached', 'FORBIDDEN', {
+          reason: 'PLAN_LIMIT_REACHED', current: outcome.current,
+          limit: outcome.limit, plan: outcome.plan,
+        });
+      }
       if (outcome.kind === 'already_converted') {
         throw itemizeGraphqlError(
           'Chat session was already converted',

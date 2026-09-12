@@ -441,11 +441,21 @@ describe('Authenticated Chat Widget GraphQL PostgreSQL contract', () => {
   });
 
   it('serializes conversion and copies the tenant transcript once', async () => {
+    await pool.query('UPDATE organizations SET contacts_limit=-1 WHERE id=$1', [organizationId]);
     const mutation = `mutation {
       convertChatSession(sessionId: ${sessionId}) {
         success contactId conversationId
       }
     }`;
+    const savedLimit = (await pool.query('SELECT contacts_limit FROM organizations WHERE id=$1', [organizationId])).rows[0].contacts_limit;
+    const before = (await pool.query('SELECT COUNT(*)::int AS n FROM contacts WHERE organization_id=$1', [organizationId])).rows[0].n;
+    try {
+      await pool.query('UPDATE organizations SET contacts_limit=$2 WHERE id=$1', [organizationId, before]);
+      const denied = await graphql(memberToken, organizationId, mutation, {}, true).expect(200);
+      expect(denied.body.errors[0].extensions).toMatchObject({ code: 'FORBIDDEN', reason: 'PLAN_LIMIT_REACHED' });
+      expect((await pool.query('SELECT contact_id FROM chat_sessions WHERE id=$1', [sessionId])).rows[0].contact_id).toBeNull();
+      expect((await pool.query('SELECT COUNT(*)::int AS n FROM contacts WHERE organization_id=$1', [organizationId])).rows[0].n).toBe(before);
+    } finally { await pool.query('UPDATE organizations SET contacts_limit=$2 WHERE id=$1', [organizationId, savedLimit]); }
     const converted = await graphql(
       memberToken,
       organizationId,

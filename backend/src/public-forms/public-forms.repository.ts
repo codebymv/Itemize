@@ -1,3 +1,4 @@
+import { contactCapacity, lockContactCreation } from '../contacts/contact-capacity';
 import { paidEntitlementSql } from '../billing/paid-entitlement.sql';
 import { Inject, Injectable } from '@nestjs/common';
 import * as crypto from 'crypto';
@@ -166,7 +167,7 @@ export class PublicFormsRepository {
           );
           if (existing.rows.length > 0) {
             contactId = existing.rows[0].id;
-          } else {
+          } else if ((await contactCapacity(client, form.organization_id)).allowed) {
             const created = await client.query<{ id: number }>(
               `INSERT INTO contacts (
                  organization_id, first_name, last_name,
@@ -304,6 +305,13 @@ export class PublicFormsRepository {
   ): Promise<T | null> {
     const entitled = async (form: T | undefined): Promise<T | null> => {
       if (!form) return null;
+      if (lockEntitlement) {
+        const owner = await client.query<{ organization_id: number }>(
+          'SELECT organization_id FROM forms WHERE id = $1', [form.id],
+        );
+        if (!owner.rows[0]) return null;
+        await lockContactCreation(client, owner.rows[0].organization_id);
+      }
       const result = await client.query(
         `SELECT o.id FROM organizations o JOIN forms f ON f.organization_id = o.id
          WHERE f.id = $1 AND ${paidEntitlementSql('o')}

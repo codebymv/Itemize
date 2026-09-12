@@ -90,3 +90,12 @@ the contact, conversation, or transcript.
   polling with `after`, visitor submission, end-session replay denial, typing),
   and asserts the agent-room events and visitor eviction through a live
   Socket.IO client connected to the NestJS realtime host.
+
+
+## Shared contact quota (2026-09-11)
+
+Contact creation uses the shared organization transaction lock and stored quota.
+Public forms/bookings preserve intake with no new contact when full, while reusing
+existing email-matched contacts. Explicit chat conversion returns PLAN_LIMIT_REACHED
+without changing session/transcript state, and can be retried after capacity returns.
+See [contact quota audit](../../contact-quota-audit-2026-09-11.md).

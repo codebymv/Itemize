@@ -1,3 +1,4 @@
+import { contactCapacity, lockContactCreation } from '../contacts/contact-capacity';
 import { createHash, randomBytes } from 'node:crypto';
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
@@ -138,7 +139,8 @@ export type AgentMessageOutcome =
 export type ConversionOutcome =
   | { kind: 'ok'; contactId: number; conversationId: number }
   | { kind: 'session_not_found' }
-  | { kind: 'already_converted' };
+  | { kind: 'already_converted' }
+  | { kind: 'limit'; current: number; limit: number; plan: string };
 
 const widgetSelection = `
   id, organization_id, widget_key, name, primary_color, text_color, position,
@@ -546,6 +548,7 @@ export class ChatWidgetRepository {
     sessionId: number,
   ): Promise<ConversionOutcome> {
     return this.transaction(async (client) => {
+      await lockContactCreation(client, organizationId);
       const session = await client.query<{
         visitor_name: string | null;
         visitor_email: string | null;
@@ -562,6 +565,8 @@ export class ChatWidgetRepository {
       );
       if (!session.rows[0]) return { kind: 'session_not_found' };
       if (session.rows[0].contact_id) return { kind: 'already_converted' };
+      const capacity = await contactCapacity(client, organizationId);
+      if (!capacity.allowed) return { kind: 'limit', ...capacity };
       const parts = (session.rows[0].visitor_name ?? '')
         .trim()
         .split(/\s+/)

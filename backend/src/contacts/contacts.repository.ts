@@ -1,3 +1,4 @@
+import { contactCapacity, lockContactCreation } from './contact-capacity';
 import { Inject, Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { Pool, PoolClient } from 'pg';
@@ -200,7 +201,7 @@ export class ContactsRepository {
     requestFingerprint: string,
   ): Promise<CreateContactOutcome> {
     return this.transaction(async (client) => {
-      await client.query('SELECT pg_advisory_xact_lock($1)', [organizationId]);
+      await lockContactCreation(client, organizationId);
       const receipt = await client.query<ContactCreationReceiptRow>(
         `SELECT request_fingerprint, result_contact_id
          FROM contact_creation_receipts
@@ -225,18 +226,8 @@ export class ContactsRepository {
           ? { kind: 'created', row, replayed: true }
           : { kind: 'result-unavailable' };
       }
-      const organization = await client.query<{
-        plan: string | null;
-        contacts_limit: number | null;
-      }>('SELECT plan, contacts_limit FROM organizations WHERE id = $1', [organizationId]);
-      const plan = organization.rows[0]?.plan ?? 'starter';
-      const limit = organization.rows[0]?.contacts_limit ?? this.defaultLimit(plan);
-      const count = await client.query<{ total: number }>(
-        'SELECT COUNT(*)::int AS total FROM contacts WHERE organization_id = $1',
-        [organizationId],
-      );
-      const current = count.rows[0]?.total ?? 0;
-      if (limit !== -1 && current >= limit) {
+      const { plan, limit, current, allowed } = await contactCapacity(client, organizationId);
+      if (!allowed) {
         return { kind: 'limit', current, limit, plan };
       }
       if (!(await this.isMember(client, organizationId, values.assignedToId))) {
@@ -630,11 +621,6 @@ export class ContactsRepository {
     return values.filter((tag) => !compared.has(tag));
   }
 
-  private defaultLimit(plan: string): number {
-    if (plan === 'unlimited') return 25_000;
-    if (plan === 'pro') return Number.POSITIVE_INFINITY;
-    return 5_000;
-  }
 
   private whereClause(criteria: ContactCriteria): {
     where: string;

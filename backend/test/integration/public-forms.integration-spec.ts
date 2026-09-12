@@ -1,3 +1,5 @@
+import { ContactsRepository } from '../../src/contacts/contacts.repository';
+import { ContactTransfersRepository } from '../../src/contact-transfers/contact-transfers.repository';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import { Pool } from 'pg';
@@ -131,6 +133,7 @@ describe('Public forms (legacy behavior pinned)', () => {
     );
     organizationId = owner.org.id;
     ownerId = owner.user.id;
+    await pool.query('UPDATE organizations SET contacts_limit=5000 WHERE id=$1', [organizationId]);
     nestForm = await seedForm(`parity-nest-${Date.now()}`);
 
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
@@ -386,4 +389,65 @@ describe('Public forms (legacy behavior pinned)', () => {
       .expect(201);
     expect(accepted.body.data.success).toBe(true);
   });
+  it('shares the final contact slot across public intake, manual creation and imports', async () => {
+    const form = await seedForm(`quota-race-${Date.now()}`);
+    const saved = (await pool.query('SELECT contacts_limit FROM organizations WHERE id=$1', [organizationId])).rows[0].contacts_limit;
+    const before = Number((await pool.query('SELECT COUNT(*)::int AS n FROM contacts WHERE organization_id=$1', [organizationId])).rows[0].n);
+    const suffix = Date.now();
+    const manual = { firstName: 'Quota', lastName: 'Manual', email: `manual-${suffix}@test.itemize`, phone: null,
+      company: null, jobTitle: null, address: {}, source: 'manual', status: 'active', customFields: {}, tags: [], assignedToId: null };
+    const imported = { ...manual, email: `import-${suffix}@test.itemize`, status: 'active' as const, rowNumber: 1 };
+    const contacts = app.get(ContactsRepository);
+    const transfers = app.get(ContactTransfersRepository);
+    try {
+      await pool.query('UPDATE organizations SET contacts_limit=$2 WHERE id=$1', [organizationId, before + 1]);
+      const [entry, batch, first, second] = await Promise.all([
+        contacts.create(organizationId, ownerId, manual, `manual-quota-${suffix}`, 'a'.repeat(64)),
+        transfers.importRows(organizationId, ownerId, [imported], true, `import-quota-${suffix}`, 'b'.repeat(64)),
+        request(app.getHttpServer()).post(`/api/forms/public/form/${form.public_id}`).send(validSubmission(form, `form-a-${suffix}@test.itemize`)),
+        request(app.getHttpServer()).post(`/api/forms/public/form/${form.public_id}`).send(validSubmission(form, `form-b-${suffix}@test.itemize`)),
+      ]);
+      expect(first.status).toBe(201); expect(second.status).toBe(201);
+      expect(['created', 'limit']).toContain(entry.kind);
+      expect(['imported', 'limit']).toContain(batch.kind);
+      const count = await pool.query('SELECT COUNT(*)::int AS n FROM contacts WHERE organization_id=$1', [organizationId]);
+      expect(count.rows[0].n).toBe(before + 1);
+      const submissions = await pool.query('SELECT contact_id, data FROM form_submissions WHERE form_id=$1', [form.id]);
+      expect(submissions.rows).toHaveLength(2);
+      expect(submissions.rows.filter(row => row.contact_id === null).length).toBeGreaterThanOrEqual(1);
+      expect(submissions.rows.every(row => row.data[String(form.fieldIds.email)])).toBe(true);
+      if (entry.kind === 'created') expect(await contacts.create(organizationId, ownerId, manual, `manual-quota-${suffix}`, 'a'.repeat(64))).toMatchObject({ kind: 'created', replayed: true });
+      if (batch.kind === 'imported') expect(await transfers.importRows(organizationId, ownerId, [imported], true, `import-quota-${suffix}`, 'b'.repeat(64))).toMatchObject({ kind: 'imported', replayed: true });
+      const existing = (await pool.query('SELECT id,email FROM contacts WHERE organization_id=$1 ORDER BY id DESC LIMIT 1', [organizationId])).rows[0];
+      await request(app.getHttpServer()).post(`/api/forms/public/form/${form.public_id}`).send(validSubmission(form, existing.email)).expect(201);
+      const linked = await pool.query('SELECT contact_id FROM form_submissions WHERE form_id=$1 ORDER BY id DESC LIMIT 1', [form.id]);
+      expect(linked.rows[0].contact_id).toBe(existing.id);
+    } finally { await pool.query('UPDATE organizations SET contacts_limit=$2 WHERE id=$1', [organizationId, saved]); }
+  });
+
+  it('admits imports atomically after deduplication and replays them after a downgrade', async () => {
+    const transfers = app.get(ContactTransfersRepository);
+    const saved = (await pool.query('SELECT contacts_limit FROM organizations WHERE id=$1', [organizationId])).rows[0].contacts_limit;
+    const before = (await pool.query('SELECT COUNT(*)::int AS n FROM contacts WHERE organization_id=$1', [organizationId])).rows[0].n;
+    const suffix = Date.now();
+    const rows = [1, 2].map(n => ({ firstName: 'Batch', lastName: String(n), email: `batch-${suffix}-${n}@test.itemize`,
+      phone: null, company: null, jobTitle: null, address: {}, status: 'active' as const, tags: [], rowNumber: n }));
+    const key = `atomic-import-${suffix}`;
+    try {
+      await pool.query('UPDATE organizations SET contacts_limit=$2 WHERE id=$1', [organizationId, before + 1]);
+      expect(await transfers.importRows(organizationId, ownerId, rows, true, key, 'c'.repeat(64)))
+        .toMatchObject({ kind: 'limit', current: before, limit: before + 1, attempted: 2 });
+      expect((await pool.query('SELECT COUNT(*)::int AS n FROM contacts WHERE organization_id=$1', [organizationId])).rows[0].n).toBe(before);
+      await pool.query('UPDATE organizations SET contacts_limit=$2 WHERE id=$1', [organizationId, before + 2]);
+      expect(await transfers.importRows(organizationId, ownerId, rows, true, key, 'c'.repeat(64)))
+        .toMatchObject({ kind: 'imported', imported: 2, replayed: false });
+      await pool.query('UPDATE organizations SET contacts_limit=0 WHERE id=$1', [organizationId]);
+      expect(await transfers.importRows(organizationId, ownerId, rows, true, key, 'c'.repeat(64)))
+        .toMatchObject({ kind: 'imported', imported: 2, replayed: true });
+      expect(await transfers.importRows(organizationId, ownerId, rows, true, `${key}-duplicates`, 'd'.repeat(64)))
+        .toMatchObject({ kind: 'imported', imported: 0, skipped: 2 });
+      expect((await pool.query('SELECT COUNT(*)::int AS n FROM contacts WHERE organization_id=$1', [organizationId])).rows[0].n).toBe(before + 2);
+    } finally { await pool.query('UPDATE organizations SET contacts_limit=$2 WHERE id=$1', [organizationId, saved]); }
+  });
+
 });
