@@ -1726,17 +1726,23 @@ describe('E-signature GraphQL read contract', () => {
     expect((await pool.query('SELECT status,sent_at FROM signature_documents WHERE id=$1', [rejectedId])).rows[0])
       .toMatchObject({ status: 'draft', sent_at: null });
     expect(Number((await pool.query('SELECT COUNT(*) AS total FROM signature_delivery_outbox WHERE document_id=$1', [rejectedId])).rows[0].total)).toBe(0);
-    const drafts = await Promise.all(Array.from({ length: 26 }, (_, i) => graphql(memberToken, organizationId,
-      'mutation Create($input:CreateSignatureDocumentInput!,$key:String!){createSignatureDocument(input:$input,idempotencyKey:$key){id}}',
-      { input: { title: `Unmetered draft ${i}` }, key: `unmetered-draft-${i}` })));
-    expect(drafts.every(result => !result.body.errors)).toBe(true);
+    const draftIds: number[] = [];
+    // Only first sends need a race here. Create the drafts sequentially through
+    // Supertest while still proving that more than 25 drafts are unmetered.
+    for (let i = 0; i < 26; i += 1) {
+      const draft = await graphql(memberToken, organizationId,
+        'mutation Create($input:CreateSignatureDocumentInput!,$key:String!){createSignatureDocument(input:$input,idempotencyKey:$key){id}}',
+        { input: { title: `Unmetered draft ${i}` }, key: `unmetered-draft-${i}` });
+      expect(draft.body.errors).toBeUndefined();
+      draftIds.push(Number(draft.body.data.createSignatureDocument.id));
+    }
     // A new UTC month restores capacity without requiring a Stripe webhook.
     await pool.query(`UPDATE signature_documents SET sent_at=sent_at-INTERVAL '1 month'
       WHERE organization_id=$1 AND sent_at IS NOT NULL`, [organizationId]);
     expect((await send(rejectedId, `monthly-send-${1 - success}`)).body.errors).toBeUndefined();
     await pool.query('DELETE FROM signature_documents WHERE id=ANY($1::int[])', [
       [...baseline.rows.map(row => Number(row.id)), ...ids,
-        ...drafts.map(result => Number(result.body.data.createSignatureDocument.id))],
+        ...draftIds],
     ]);
   });
 });
