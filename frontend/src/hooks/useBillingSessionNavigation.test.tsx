@@ -48,6 +48,8 @@ describe('useBillingSessionNavigation', () => {
       expect.objectContaining({
         planId: 'starter',
         billingPeriod: 'monthly',
+        successUrl: `${window.location.origin}/settings?section=plans&checkout=success`,
+        cancelUrl: `${window.location.origin}/settings?section=plans&checkout=canceled`,
         idempotencyKey: 'billing-request-1',
       }),
     );
@@ -93,7 +95,7 @@ describe('useBillingSessionNavigation', () => {
 
     expect(billingApi.createPortalSession).toHaveBeenCalledTimes(1);
     expect(billingApi.createPortalSession).toHaveBeenCalledWith(
-      expect.stringContaining('/payment-settings'),
+      `${window.location.origin}/settings?section=plans`,
       'billing-request-1',
     );
     expect(navigate).toHaveBeenCalledTimes(2);

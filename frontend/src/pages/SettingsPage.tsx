@@ -557,11 +557,8 @@ function PreferencesSettings() {
   );
 }
 
-function PaymentsSettings({ setSaveButton, showCheckoutSuccess, onCloseCheckoutSuccess, onCheckoutConfirmed }: {
+function PaymentsSettings({ setSaveButton }: {
   setSaveButton?: (button: React.ReactNode) => void;
-  showCheckoutSuccess?: boolean;
-  onCloseCheckoutSuccess?: () => void;
-  onCheckoutConfirmed?: () => void | Promise<void>;
 }) {
   const { toast } = useToast();
   const location = useLocation();
@@ -700,11 +697,6 @@ function PaymentsSettings({ setSaveButton, showCheckoutSuccess, onCloseCheckoutS
 
   return (
     <div className="flex flex-col gap-6">
-      <CheckoutSuccessModal
-        open={!!showCheckoutSuccess}
-        onClose={() => onCloseCheckoutSuccess?.()}
-        onConfirmed={onCheckoutConfirmed}
-      />
       {settings && (
         <PaymentSettingsForm
           settings={settings}
@@ -775,10 +767,10 @@ export function SettingsPage() {
     if (checkoutStatus === 'success') {
       setShowCheckoutSuccess(true);
       refreshSubscription();
-      navigate(location.pathname, { replace: true });
+      navigate(AVAILABLE_PLANS_PATH, { replace: true });
     } else if (checkoutStatus === 'canceled') {
-      toast({ title: 'Checkout canceled', description: 'You can upgrade anytime from the Payments page.' });
-      navigate(location.pathname, { replace: true });
+      toast({ title: 'Checkout canceled', description: 'You can upgrade anytime from Account settings.' });
+      navigate(AVAILABLE_PLANS_PATH, { replace: true });
     }
   }, [location.search, location.pathname, navigate, toast, refreshSubscription]);
 
@@ -791,6 +783,11 @@ export function SettingsPage() {
       nav={<SettingsNav />}
       navigationBreakpoint="wide"
     >
+      <CheckoutSuccessModal
+        open={showCheckoutSuccess}
+        onClose={() => setShowCheckoutSuccess(false)}
+        onConfirmed={refreshSubscription}
+      />
       <div key={location.pathname}>
         {location.pathname === '/preferences' && <PreferencesSettings />}
         {location.pathname === '/organization-settings' && (
@@ -800,9 +797,6 @@ export function SettingsPage() {
         {location.pathname === '/payment-settings' && (
           <PaymentsSettings
             setSaveButton={setSaveButton}
-            showCheckoutSuccess={showCheckoutSuccess}
-            onCloseCheckoutSuccess={() => setShowCheckoutSuccess(false)}
-            onCheckoutConfirmed={async () => { await refreshSubscription(); }}
           />
         )}
         {location.pathname === '/settings' && <AccountSettings />}

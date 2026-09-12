@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+import { AVAILABLE_PLANS_PATH } from '@/lib/settingsNavigation';
 import type { Plan } from '@/lib/subscription';
 import { billingApi } from '@/services/billingApi';
 import { useStableMutationKey } from './useStableMutationKey';
@@ -121,8 +122,8 @@ export const useBillingSessionNavigation = (
           planId,
           billingPeriod,
           mode: 'subscription',
-          successUrl: `${window.location.origin}/payment-settings?checkout=success`,
-          cancelUrl: `${window.location.origin}/payment-settings?checkout=canceled`,
+          successUrl: `${window.location.origin}${AVAILABLE_PLANS_PATH}&checkout=success`,
+          cancelUrl: `${window.location.origin}${AVAILABLE_PLANS_PATH}&checkout=canceled`,
           idempotencyKey,
         });
         if (!result.success || !result.data?.url) {
@@ -148,7 +149,7 @@ export const useBillingSessionNavigation = (
 
   const openBillingPortal = useCallback((): Promise<void> => {
     const generation = scopeGeneration.current;
-    const returnUrl = `${window.location.origin}/payment-settings`;
+    const returnUrl = `${window.location.origin}${AVAILABLE_PLANS_PATH}`;
     const signature = JSON.stringify({ organizationId, returnUrl });
     if (portalConfirmed.current?.signature === signature) {
       try {

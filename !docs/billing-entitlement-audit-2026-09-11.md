@@ -24,6 +24,9 @@ no payment was taken. SMS and backup/restore remain outside the authorized scope
   price changes between the two published plans and cancellation. Cancellation, lower
   amounts, and shorter intervals take effect at period end; other changes use displayed
   prorations. The shared Stripe default configuration was not changed.
+- Browser QA found subscription checkout/portal returning to invoice settings. Shared
+  session URLs now return to Account plan comparison; confirmation is mounted outside
+  the paid-payment-tools gate while signed subscription state is being confirmed.
 - New legacy Studio+ purchases are rejected; existing customers retain portal access.
 - Studio now receives the advertised priority-support entitlement. Free status no
   longer counts as a subscribed UI state. Seat copy includes the owner.
