@@ -15,6 +15,9 @@ registerEnumType(InvoiceEmailDeliveryStatus, {
 
 @ObjectType()
 export class InvoiceSendResult {
+  @Field(() => String, { nullable: true })
+  providerStatus?: string | null;
+
   @Field()
   canRetry: boolean;
   @Field()

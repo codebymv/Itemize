@@ -1,12 +1,4 @@
-/**
- * Faithful port of the retained Resend webhook processor
- * (backend/src/services/emailWebhookService.js). Event normalization,
- * status-regression protection, ambiguous-tenant quarantine, and the
- * durable svix-id claim semantics must stay identical while both
- * runtimes serve the receiver. reconcileEvent mirrors the legacy
- * reconciliation replay so the NestJS worker can drain the shared
- * email_webhook_events table with identical outcomes.
- */
+/** Shared Resend event normalization, tenant-safe matching, and durable reconciliation. */
 import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
@@ -54,6 +46,8 @@ const STATUS_RANK: Readonly<Record<string, number>> = Object.freeze({
   bounced: 5,
   complained: 5,
   failed: 5,
+  suppressed: 5,
+  delivery_delayed: 1,
   unsubscribed: 5,
 });
 
@@ -64,6 +58,14 @@ type NormalizedEvent = {
   eventCreatedAt: Date;
   eventType: string;
   externalId: string;
+};
+
+type DeliveryReceiptRow = {
+  source: string;
+  delivery_id: string;
+  organization_id: number;
+  provider_status: string | null;
+  provider_status_at: Date | null;
 };
 
 type TargetRow = {
@@ -284,6 +286,9 @@ export class EmailWebhooksService {
     if (targets.organizationCount > 1) {
       return this.markPending(client, normalized, 'ambiguous');
     }
+    if (!targets.emailLog && !targets.campaignRecipient && !targets.deliveryReceipt) {
+      return this.markPending(client, normalized, 'unmatched');
+    }
 
     const emailLog = await this.updateEmailLog(
       client,
@@ -295,7 +300,8 @@ export class EmailWebhooksService {
       targets.campaignRecipient,
       normalized,
     );
-    const matched = Boolean(emailLog || campaignRecipient);
+    const deliveryReceipt = await this.updateDeliveryReceipt(client, targets.deliveryReceipt, normalized);
+    const matched = Boolean(emailLog || campaignRecipient || deliveryReceipt);
 
     if (emailLog && targets.emailLog) {
       await this.syncDirectDelivery(client, targets.emailLog, normalized);
@@ -347,6 +353,8 @@ export class EmailWebhooksService {
          processing_status = $2::varchar,
          matched_email_log_id = $3,
          matched_campaign_recipient_id = $4,
+         matched_delivery_source = $6,
+         matched_delivery_id = $7,
          processed_at = CASE WHEN $2::text = 'processed' THEN CURRENT_TIMESTAMP ELSE NULL END,
          reconciliation_status = CASE WHEN $5 THEN 'resolved' ELSE reconciliation_status END,
          reconciliation_reason = CASE WHEN $5 THEN NULL ELSE reconciliation_reason END,
@@ -361,6 +369,8 @@ export class EmailWebhooksService {
         emailLog?.id || null,
         campaignRecipient?.id || null,
         options.reconciliation === true,
+        deliveryReceipt?.source ?? null,
+        deliveryReceipt?.delivery_id ?? null,
       ],
     );
 
@@ -392,6 +402,7 @@ export class EmailWebhooksService {
     campaignRecipient: TargetRow | null;
     emailLog: TargetRow | null;
     organizationCount: number;
+    deliveryReceipt: DeliveryReceiptRow | null;
   }> {
     const emailLogResult = await client.query<TargetRow>(
       `SELECT id, organization_id, contact_id, status, provider_status_at, metadata
@@ -410,17 +421,59 @@ export class EmailWebhooksService {
        FOR UPDATE`,
       [externalId],
     );
+    // Include legacy outbox ownership as well as the unique durable provider receipt.
+    // This prevents a corrupted/reused provider ID from crossing a tenant boundary.
+    const deliveryOwners = await client.query<{ organization_id: number }>(
+      `SELECT organization_id FROM invoice_email_deliveries WHERE provider_id=$1
+       UNION SELECT organization_id FROM signature_delivery_outbox WHERE provider_id=$1`,
+      [externalId],
+    );
+    const receiptResult = await client.query<DeliveryReceiptRow>(
+      `SELECT source,delivery_id,organization_id,provider_status,provider_status_at
+       FROM delivery_provider_receipts WHERE provider_id=$1 FOR UPDATE`, [externalId],
+    );
     const organizationIds = new Set(
       [
         ...emailLogResult.rows.map((row) => row.organization_id),
         ...campaignResult.rows.map((row) => row.organization_id),
+        ...deliveryOwners.rows.map((row) => row.organization_id),
+        ...receiptResult.rows.map((row) => row.organization_id),
       ].filter(Boolean),
     );
     return {
       campaignRecipient: campaignResult.rows[0] || null,
       emailLog: emailLogResult.rows[0] || null,
       organizationCount: organizationIds.size,
+      deliveryReceipt: receiptResult.rows[0] || null,
     };
+  }
+
+  private async updateDeliveryReceipt(
+    client: PoolClient,
+    row: DeliveryReceiptRow | null,
+    normalized: NormalizedEvent,
+  ): Promise<DeliveryReceiptRow | null> {
+    if (!row || !normalized.config) return null;
+    const { eventType, eventCreatedAt, config } = normalized;
+    const status = eventType === 'email.suppressed' ? 'suppressed'
+      : eventType === 'email.delivery_delayed' ? 'delivery_delayed'
+      : config.emailLogStatus ?? row.provider_status ?? 'sent';
+    const replace = shouldReplaceStatus(row.provider_status_at, eventCreatedAt,
+      row.provider_status ?? 'sent', status);
+    // Provider transport events must never change invoice payment or signing state,
+    // reset the retry window, or authorize another external send.
+    await client.query(
+      `UPDATE delivery_provider_receipts SET
+         provider_status=CASE WHEN $4 THEN $5 ELSE provider_status END,
+         provider_status_at=GREATEST(COALESCE(provider_status_at,'-infinity'::timestamptz),$6::timestamptz),
+         last_provider_event=CASE WHEN $4 THEN $7 ELSE last_provider_event END,
+         delivered_at=CASE WHEN $8 THEN LEAST(COALESCE(delivered_at,$6::timestamptz),$6::timestamptz) ELSE delivered_at END,
+         bounced_at=CASE WHEN $9 THEN LEAST(COALESCE(bounced_at,$6::timestamptz),$6::timestamptz) ELSE bounced_at END
+       WHERE source=$1 AND delivery_id=$2 AND organization_id=$3`,
+      [row.source,row.delivery_id,row.organization_id,replace,status,eventCreatedAt.toISOString(),
+        eventType,Boolean(config.delivered),Boolean(config.bounced)],
+    );
+    return row;
   }
 
   private async updateEmailLog(

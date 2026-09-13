@@ -42,7 +42,7 @@ export class InvoiceEmailDeliveryService {
 
   async status(organizationId: number, invoiceId: number): Promise<InvoiceSendResult | null> {
     const delivery = await this.invoices.latestEmailDelivery(organizationId,invoiceId);
-    return delivery ? {...this.result(delivery,true),canRetry:await this.invoices.emailDeliveryCanRetry(organizationId,delivery.id)} : null;
+    return delivery ? {...this.result(delivery,true),providerStatus:delivery.provider_status ?? null,canRetry:await this.invoices.emailDeliveryCanRetry(organizationId,delivery.id)} : null;
   }
 
   async retry(organizationId:number, deliveryId:number): Promise<InvoiceSendResult> {

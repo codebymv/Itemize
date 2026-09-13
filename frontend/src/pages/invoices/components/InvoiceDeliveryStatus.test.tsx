@@ -22,6 +22,12 @@ describe('invoice delivery recovery',()=>{
   expect(screen.queryByRole('button',{name:'Retry original email'})).not.toBeInTheDocument();
   expect(blocked).toHaveBeenLastCalledWith(true);
  });
+ it.each([['delivered','Email delivered.'],['bounced','Email bounced. Check the recipient address before sending another email.']])('shows provider outcome %s separately from send acceptance',async(providerStatus,message)=>{
+  mocks.get.mockResolvedValue({deliveryId:73,status:'SENT',canRetry:false,providerStatus});
+  mount();
+  await screen.findByText(message);
+  expect(screen.queryByRole('button',{name:'Retry original email'})).not.toBeInTheDocument();
+ });
  it('fails closed when status cannot be loaded',async()=>{
   mocks.get.mockRejectedValue(new Error('offline'));
   const {blocked}=mount();

@@ -129,6 +129,7 @@ export type InvoiceEmailDeliveryRow = {
   sent_at: Date | null;
   created_at: Date;
   updated_at: Date;
+  provider_status?: string | null;
 };
 
 export type InvoiceEmailPreparation =
@@ -823,7 +824,10 @@ export class InvoicesRepository {
 
   async latestEmailDelivery(organizationId: number, invoiceId: number): Promise<InvoiceEmailDeliveryRow | null> {
     const result = await this.pool.query<InvoiceEmailDeliveryRow>(
-      'SELECT * FROM invoice_email_deliveries WHERE organization_id=$1 AND invoice_id=$2 ORDER BY id DESC LIMIT 1',
+      `SELECT delivery.*,receipt.provider_status FROM invoice_email_deliveries delivery
+       LEFT JOIN delivery_provider_receipts receipt ON receipt.source='invoice'
+         AND receipt.delivery_id=delivery.id AND receipt.organization_id=delivery.organization_id
+       WHERE delivery.organization_id=$1 AND delivery.invoice_id=$2 ORDER BY delivery.id DESC LIMIT 1`,
       [organizationId,invoiceId]);
     return result.rows[0] ?? null;
   }

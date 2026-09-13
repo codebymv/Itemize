@@ -1,3 +1,4 @@
+const { runTransactionalEmailEventMigration } = require('./db_transactional_email_event_migrations');
 const { runDeliveryRecoveryMigration } = require('./db_delivery_recovery_migrations');
 const { runUserAvatarMigration } = require('./db_user_avatar_migrations');
 const { runEmailAllowanceMigration } = require('./db_email_allowance_migrations');
@@ -1179,6 +1180,7 @@ const initializeDatabase = async (pool) => {
 
     await runMigrationOnce(pool, 'email_allowance_v1', runEmailAllowanceMigration);
     await runMigrationOnce(pool, 'delivery_recovery_v1', runDeliveryRecoveryMigration);
+    await runMigrationOnce(pool, 'transactional_email_events_v1', runTransactionalEmailEventMigration);
 
     const elapsed = Date.now() - startTime;
     console.log(`✅ Database initialized successfully in ${elapsed}ms`);

@@ -613,15 +613,15 @@ export const createInvoicePaymentLinkViaGraphql = async (
   return { url: result.url, session_id: result.sessionId };
 };
 
-export type InvoiceDeliveryReceipt = { deliveryId:number;status:string;emailSent:boolean;canRetry:boolean };
+export type InvoiceDeliveryReceipt = { deliveryId:number;status:string;emailSent:boolean;canRetry:boolean;providerStatus?:string|null };
 export async function getInvoiceDeliveryStatus(id:number,organizationId:number): Promise<InvoiceDeliveryReceipt|null> {
   const data=await graphqlRequest<{invoiceDeliveryStatus:InvoiceDeliveryReceipt|null},{id:number}>(
-    `query InvoiceDeliveryStatus($id:Int!) { invoiceDeliveryStatus(id:$id) { deliveryId status emailSent canRetry } }`,{id},organizationId);
+    `query InvoiceDeliveryStatus($id:Int!) { invoiceDeliveryStatus(id:$id) { deliveryId status emailSent canRetry providerStatus } }`,{id},organizationId);
   return data.invoiceDeliveryStatus;
 }
 export async function retryInvoiceDelivery(id:number,organizationId:number) {
   return graphqlMutationRequest<{retryInvoiceDelivery:InvoiceDeliveryReceipt},{id:number}>(
-    `mutation RetryInvoiceDelivery($id:Int!) { retryInvoiceDelivery(deliveryId:$id) { deliveryId status emailSent canRetry } }`,{id},organizationId);
+    `mutation RetryInvoiceDelivery($id:Int!) { retryInvoiceDelivery(deliveryId:$id) { deliveryId status emailSent canRetry providerStatus } }`,{id},organizationId);
 }
 
 export function invoiceDeliveryMessage(status:string): string {

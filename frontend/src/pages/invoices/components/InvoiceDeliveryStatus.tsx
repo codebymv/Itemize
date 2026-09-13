@@ -3,6 +3,12 @@ import {useQuery} from '@tanstack/react-query';
 import {Button} from '@/components/ui/button';
 import {useSingleFlightAction} from '@/hooks/useSingleFlightAction';
 import {getInvoiceDeliveryStatus,invoiceDeliveryMessage,retryInvoiceDelivery} from '@/services/invoicesGraphql';
+const providerMessages: Record<string,string> = {
+  delivered: 'Email delivered.', opened: 'Email delivered and opened.', clicked: 'Email link clicked.',
+  bounced: 'Email bounced. Check the recipient address before sending another email.',
+  unsubscribed: 'Recipient reported this email as spam.', failed: 'Email delivery failed.',
+  suppressed: 'Email was suppressed by the delivery provider.', delivery_delayed: 'Email delivery is delayed.',
+};
 export function InvoiceDeliveryStatus({invoiceId,organizationId,onBlocked,sending=false}:{invoiceId:number;organizationId:number;onBlocked:(value:boolean)=>void;sending?:boolean}) {
   const {pending,run}=useSingleFlightAction();
   const [error,setError]=useState('');
@@ -15,7 +21,7 @@ export function InvoiceDeliveryStatus({invoiceId,organizationId,onBlocked,sendin
   useEffect(()=>onBlocked(blocked),[blocked,onBlocked]);
   const retry=()=>run(async()=>{setError('');try{await retryInvoiceDelivery(receipt!.deliveryId,organizationId);await query.refetch();}catch{setError('Could not retry this delivery. Refresh its status before trying again.');}});
   return <div className="space-y-2 rounded-md border border-border bg-muted p-3 text-sm" aria-live="polite">
-    <p>{query.isPending?'Checking email delivery...':query.isError?'Email delivery status is unavailable. Refresh before sending.':receipt?invoiceDeliveryMessage(receipt.status):'No previous email delivery.'}</p>
+    <p>{query.isPending?'Checking email delivery...':query.isError?'Email delivery status is unavailable. Refresh before sending.':receipt?(providerMessages[receipt.providerStatus ?? ""] ?? invoiceDeliveryMessage(receipt.status)):'No previous email delivery.'}</p>
     {receipt && <p className="text-xs text-muted-foreground">Delivery #{receipt.deliveryId}</p>}
     <div className="flex flex-wrap gap-2">
       <Button type="button" size="sm" variant="outline" disabled={query.isFetching||pending} onClick={()=>void query.refetch()}>Refresh status</Button>

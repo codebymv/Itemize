@@ -1,3 +1,5 @@
+import { EmailWebhookJobsService } from '../../src/email-webhooks/email-webhook-jobs.service';
+import { InvoicesRepository } from '../../src/invoices/invoices.repository';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import { Pool } from 'pg';
@@ -375,4 +377,82 @@ describe('Resend webhook receiver (legacy behavior pinned)', () => {
       process.env.RESEND_WEBHOOK_SECRET = signingSecret;
     }
   });
+  it.each(['invoice', 'signature'])('matches %s receipts, deduplicates events and preserves newer outcomes', async (source) => {
+    const externalId = `receipt-${source}-${Date.now()}`;
+    const id = source === 'invoice' ? 900001 : 900002;
+    await pool.query(`INSERT INTO delivery_provider_receipts
+      (organization_id,source,delivery_id,idempotency_key,provider_id,request_body,review_required,first_attempt_at)
+      VALUES ($1,$2,$3,$4,$4,'encrypted-snapshot',true,'2026-08-01')`, [organizationId,source,id,externalId]);
+    const svix = `receipt-event-${source}-${Date.now()}`;
+    const event = emailEvent('email.delivered',externalId,'2026-08-20T12:00:00Z');
+    const delivered = await signedRequest(app.getHttpServer(),svix,event).expect(200);
+    expect(delivered.body.matched).toBe(true);
+    expect((await signedRequest(app.getHttpServer(),svix,event).expect(200)).body.duplicate).toBe(true);
+    await Promise.all([
+      signedRequest(app.getHttpServer(),`${svix}-bounce`,emailEvent('email.bounced',externalId,'2026-08-20T13:00:00Z')).expect(200),
+      signedRequest(app.getHttpServer(),`${svix}-old`,emailEvent('email.sent',externalId,'2026-08-20T11:00:00Z')).expect(200),
+    ]);
+    // A same-time lower-rank event cannot overwrite the bounce either.
+    await signedRequest(app.getHttpServer(),`${svix}-tie`,emailEvent('email.delivered',externalId,'2026-08-20T13:00:00Z')).expect(200);
+    const receipt = (await pool.query('SELECT * FROM delivery_provider_receipts WHERE provider_id=$1',[externalId])).rows[0];
+    expect(receipt).toMatchObject({provider_status:'bounced',last_provider_event:'email.bounced',request_body:'encrypted-snapshot',review_required:true});
+    expect(receipt.first_attempt_at.toISOString()).toBe('2026-08-01T00:00:00.000Z');
+    expect(receipt.delivered_at.toISOString()).toBe('2026-08-20T12:00:00.000Z');
+    expect((await pool.query('SELECT processing_status,matched_delivery_source,matched_delivery_id FROM email_webhook_events WHERE svix_id=$1',[svix])).rows[0])
+      .toEqual({processing_status:'processed',matched_delivery_source:source,matched_delivery_id:String(id)});
+  });
+
+  it('quarantines a receipt whose provider ID also belongs to another tenant', async () => {
+    const other = await dbHelper.seedUser(`receipt-other-${Date.now()}@test.itemize`,'Other receipt owner');
+    const externalId = `receipt-ambiguous-${Date.now()}`;
+    await seedContactAndLog(externalId);
+    await pool.query(`INSERT INTO delivery_provider_receipts (organization_id,source,delivery_id,idempotency_key,provider_id)
+      VALUES ($1,'signature',900003,$2,$2)`,[other.org.id,externalId]);
+    const response = await signedRequest(app.getHttpServer(),`svix-${externalId}`,emailEvent('email.delivered',externalId,'2026-08-20T12:00:00Z')).expect(200);
+    expect(response.body.reason).toBe('ambiguous');
+    expect((await pool.query('SELECT provider_status FROM delivery_provider_receipts WHERE provider_id=$1',[externalId])).rows[0].provider_status).toBeNull();
+    expect((await pool.query('SELECT status FROM email_logs WHERE external_id=$1',[externalId])).rows[0].status).toBe('sent');
+  });
+
+  it('replays an event that arrived before its provider receipt was persisted', async () => {
+    const externalId = `receipt-race-${Date.now()}`;
+    const svix = `svix-${externalId}`;
+    const response = await signedRequest(app.getHttpServer(),svix,emailEvent('email.delivered',externalId,'2026-08-20T12:00:00Z')).expect(200);
+    expect(response.body.reason).toBe('unmatched');
+    await pool.query(`INSERT INTO delivery_provider_receipts (organization_id,source,delivery_id,idempotency_key,provider_id)
+      VALUES ($1,'signature',900004,$2,$2)`,[organizationId,externalId]);
+    await app.get(EmailWebhookJobsService).run({batchSize:100});
+    const stored=(await pool.query('SELECT processing_status,reconciliation_status FROM email_webhook_events WHERE svix_id=$1',[svix])).rows[0];
+    expect(stored).toEqual({processing_status:'processed',reconciliation_status:'resolved'});
+  });
+
+  it('backfills legacy acceptance and requeues only resolvable backlog without changing paid invoices', async () => {
+    const externalId=`legacy-receipt-${Date.now()}`;
+    const invoice=(await pool.query(`INSERT INTO invoices (organization_id,invoice_number,due_date,status,total,amount_paid)
+      VALUES ($1,$2,CURRENT_DATE,'paid',25,25) RETURNING id`,[organizationId,externalId])).rows[0];
+    const delivery=(await pool.query(`INSERT INTO invoice_email_deliveries
+      (organization_id,invoice_id,idempotency_key,recipient_email,subject,payload,status,provider_id)
+      VALUES ($1,$2,$3,'qa@example.test','Legacy','{}','sent',$3) RETURNING id`,[organizationId,invoice.id,externalId])).rows[0];
+    const svix=`svix-${externalId}`;
+    await signedRequest(app.getHttpServer(),svix,emailEvent('email.delivered',externalId,'2026-08-20T12:00:00Z')).expect(200);
+    await pool.query("UPDATE email_webhook_events SET reconciliation_status='dead_letter',reconciliation_attempt_count=12 WHERE svix_id=$1",[svix]);
+    const unknown=`unknown-${Date.now()}`;
+    await signedRequest(app.getHttpServer(),unknown,emailEvent('email.delivered',unknown,'2026-08-20T12:00:00Z')).expect(200);
+    await pool.query("UPDATE email_webhook_events SET reconciliation_status='dead_letter' WHERE svix_id=$1",[unknown]);
+    const {runTransactionalEmailEventMigration}=require('../../../db/src/db_transactional_email_event_migrations');
+    await runTransactionalEmailEventMigration(pool);
+    await runTransactionalEmailEventMigration(pool);
+    expect((await pool.query('SELECT reconciliation_status,reconciliation_attempt_count FROM email_webhook_events WHERE svix_id=$1',[svix])).rows[0])
+      .toEqual({reconciliation_status:'retry',reconciliation_attempt_count:12});
+    expect((await pool.query('SELECT reconciliation_status FROM email_webhook_events WHERE svix_id=$1',[unknown])).rows[0].reconciliation_status).toBe('dead_letter');
+    await app.get(EmailWebhookJobsService).run({batchSize:100});
+    expect((await pool.query('SELECT processing_status,reconciliation_status FROM email_webhook_events WHERE svix_id=$1',[svix])).rows[0])
+      .toEqual({processing_status:'processed',reconciliation_status:'resolved'});
+    expect((await app.get(InvoicesRepository).latestEmailDelivery(organizationId,invoice.id))?.provider_status).toBe('delivered');
+    expect((await pool.query('SELECT status,total,amount_paid FROM invoices WHERE id=$1',[invoice.id])).rows[0])
+      .toEqual({status:'paid',total:'25.00',amount_paid:'25.00'});
+    expect((await pool.query('SELECT status,attempt_count FROM invoice_email_deliveries WHERE id=$1',[delivery.id])).rows[0])
+      .toEqual({status:'sent',attempt_count:0});
+  });
+
 });
