@@ -78,16 +78,17 @@ describe('ReputationRequestDeliveryService', () => {
     })).resolves.toMatchObject({ batchId: 14, status: 'sent', accepted: 1, sent: 1 });
     expect(email.send).toHaveBeenCalledWith(expect.objectContaining({
       to: 'ada@example.test', idempotencyKey: 'review-request-email:3:21',
+      durableDelivery: expect.objectContaining({source:'review_request',organizationId:3,deliveryId:21}),
     }));
     expect(deliveries.complete).toHaveBeenCalledWith(3, 21, 'email-44');
     expect(sms.send).not.toHaveBeenCalled();
   });
 
-  it('retries an email transport exception because provider submission is idempotent', async () => {
+  it.each([false, true])('handles email failure with unknown acceptance=%s', async unknown => {
     const initial = snapshot('email');
     deliveries.prepareSend.mockResolvedValue({ kind: 'created', snapshot: initial });
     deliveries.claim.mockResolvedValue({ ...initial.deliveries[0], status: 'processing' });
-    email.send.mockRejectedValue(new Error('timeout for ada@example.test'));
+    email.send.mockRejectedValue(Object.assign(new Error('failure for ada@example.test'), { providerOutcomeUnknown: unknown }));
     deliveries.findSnapshot.mockResolvedValue({
       ...initial, batch: { ...initial.batch, status: 'processing' },
       deliveries: [{ ...initial.deliveries[0], status: 'retry' }],
@@ -96,7 +97,7 @@ describe('ReputationRequestDeliveryService', () => {
     await expect(service.send(3, 2, {
       idempotencyKey: 'request-14', contactEmail: 'ada@example.test', channel: 'email',
     })).resolves.toMatchObject({ status: 'processing', sent: 0 });
-    expect(deliveries.fail).toHaveBeenCalledWith(3, 21, 'timeout for [recipient]', false);
+    expect(deliveries.fail).toHaveBeenCalledWith(3, 21, 'failure for [recipient]', unknown);
   });
 
   it('quarantines an ambiguous SMS result instead of risking duplicate delivery', async () => {

@@ -82,6 +82,7 @@ export class WorkflowSideEffectJobsService {
     const payload = asRecord(claim.payload);
     if (claim.effect_type === 'email') {
       return this.email.send({
+        durableDelivery: { source: 'workflow', organizationId: Number(claim.organization_id), deliveryId: Number(claim.id), attemptCount: claim.attempt_count },
         to: this.required(payload, 'to'), subject: this.required(payload, 'subject'),
         html: String(payload.bodyHtml || ''),
         ...(payload.bodyText ? { text: String(payload.bodyText) } : {}),

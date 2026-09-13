@@ -1,5 +1,8 @@
-import { verifyEmailProviderResponse } from '../common/email-provider-receipt';
-import { Injectable } from '@nestjs/common';
+import { Pool } from 'pg';
+import { PG_POOL } from '../database/database.module';
+import { DeliveryIdentity, DurableEmailError, sendDurableEmail } from '../common/durable-email';
+import { EmailAcceptanceUnknownError, verifyEmailProviderResponse } from '../common/email-provider-receipt';
+import { Inject, Injectable } from '@nestjs/common';
 import {
   brandedTransactionalEmail,
   transactionalEmailAssetOrigin,
@@ -10,6 +13,7 @@ export type ReputationDeliveryProviderResult =
   | { kind: 'rejected'; message: string };
 
 export type ReputationEmailMessage = {
+  durableDelivery?: DeliveryIdentity;
   to: string;
   subject: string;
   text: string;
@@ -38,6 +42,7 @@ const escapeHtml = (value: string): string => value.replace(/[&<>"']/g, (char) =
 
 @Injectable()
 export class ResendReputationEmailProvider implements ReputationEmailProvider {
+  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
   async send(message: ReputationEmailMessage): Promise<ReputationDeliveryProviderResult> {
     const apiKey = process.env.RESEND_API_KEY?.trim();
     if (!apiKey) return { kind: 'rejected', message: 'Email service is not configured' };
@@ -50,6 +55,18 @@ export class ResendReputationEmailProvider implements ReputationEmailProvider {
       ...(reviewUrl ? { cta: { label: 'Leave a review', url: reviewUrl } } : {}),
       footerText: 'This feedback request was sent with Itemize.',
     });
+    if (message.durableDelivery) {
+      try {
+        const result = await sendDurableEmail(this.pool, message.durableDelivery, message.idempotencyKey, {
+          from: process.env.EMAIL_FROM?.trim() || 'Itemize <noreply@itemize.cloud>',
+          to: [message.to], subject: message.subject, html: html, text: message.text,
+        }, apiKey);
+        return { kind: 'sent', providerId: result.providerId };
+      } catch (error) {
+        if (error instanceof DurableEmailError && !error.providerOutcomeUnknown) return { kind: 'rejected', message: error.message };
+        throw error;
+      }
+    }
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -65,7 +82,7 @@ export class ResendReputationEmailProvider implements ReputationEmailProvider {
         html,
       }),
       signal: AbortSignal.timeout(10_000),
-    });
+    }).catch(() => { throw new EmailAcceptanceUnknownError(); });
     const body = await response.json().catch(() => ({})) as {
       id?: string; message?: string; error?: { message?: string };
     };

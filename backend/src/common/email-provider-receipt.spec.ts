@@ -12,9 +12,9 @@ describe('transactional email receipt boundary', () => {
   });
   const message = { to:'qa@example.test',subject:'QA',html:'<p>QA</p>',text:'QA',tags:[],idempotencyKey:'qa-receipt' };
   const providers = [
-    ['estimate', () => new ResendEstimateEmailProvider()],
-    ['review', () => new ResendReputationEmailProvider()],
-    ['trial', () => new ResendTrialReminderEmailProvider()],
+    ['estimate', () => new ResendEstimateEmailProvider({} as import('pg').Pool)],
+    ['review', () => new ResendReputationEmailProvider({} as import('pg').Pool)],
+    ['trial', () => new ResendTrialReminderEmailProvider({} as import('pg').Pool)],
     ['workflow/booking', () => new ResendWorkflowEmailProvider({} as import('pg').Pool)],
   ] as const;
   it.each(providers)('%s never accepts missing receipts or uncertain HTTP responses', async (_name, create) => {

@@ -25,7 +25,7 @@ describe('ResendReputationEmailProvider', () => {
   });
 
   it('sends feedback requests with the shared shell and a text alternative', async () => {
-    await expect(new ResendReputationEmailProvider().send({
+    await expect(new ResendReputationEmailProvider({} as import('pg').Pool).send({
       to: 'customer@example.com',
       subject: 'We would love your feedback',
       text: 'Please review us: https://itemize.cloud/review/abc\n<script>alert(1)</script>',

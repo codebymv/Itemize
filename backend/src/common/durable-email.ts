@@ -1,7 +1,7 @@
 import { encryptDeliveryPayload, decryptDeliveryPayload } from './delivery-payload-encryption';
 import { createHash } from 'node:crypto';
 import { Pool } from 'pg';
-export type DeliveryIdentity = { organizationId: number; source: 'invoice' | 'signature'; deliveryId: number };
+export type DeliveryIdentity = { organizationId: number; source: 'invoice' | 'signature' | 'workflow' | 'estimate' | 'review_request' | 'trial_reminder'; deliveryId: number; attemptCount?: number };
 export const deliveryTag = (key: string) => createHash('sha256').update(key).digest('hex');
 export class DurableEmailError extends Error {
   constructor(message: string, public readonly retryable: boolean, public readonly providerOutcomeUnknown: boolean) { super(message); }
@@ -11,10 +11,14 @@ export async function sendDurableEmail(pool: Pool, identity: DeliveryIdentity, k
   payload: Record<string, unknown>, apiKey: string): Promise<{providerId: string}> {
   const tags = [...(Array.isArray(payload.tags) ? payload.tags : []), {name:'itemize_delivery',value:deliveryTag(key)}];
   const requestBody = JSON.stringify({...payload,tags});
+  // An old runtime may attempt queued work after the pre-deploy backfill.
+  // A later claim with no receipt cannot establish what was sent or when.
+  const untrackedAttempt = (identity.attemptCount ?? 1) > 1;
   await pool.query(`INSERT INTO delivery_provider_receipts
-    (organization_id,source,delivery_id,idempotency_key,request_body)
-    VALUES ($1,$2,$3,$4,$5) ON CONFLICT (source,delivery_id) DO NOTHING`,
-    [identity.organizationId,identity.source,identity.deliveryId,key,encryptDeliveryPayload(requestBody,key)]);
+    (organization_id,source,delivery_id,idempotency_key,request_body,review_required)
+    VALUES ($1,$2,$3,$4,$5,$6) ON CONFLICT (source,delivery_id) DO NOTHING`,
+    [identity.organizationId,identity.source,identity.deliveryId,key,
+      untrackedAttempt ? null : encryptDeliveryPayload(requestBody,key),untrackedAttempt]);
   const result = await pool.query<{request_body:string;provider_id:string|null;review_required:boolean;within_window:boolean;idempotency_key:string}>(
     `SELECT *, first_attempt_at > CURRENT_TIMESTAMP - INTERVAL '23 hours' AS within_window
      FROM delivery_provider_receipts WHERE source=$1 AND delivery_id=$2 AND organization_id=$3`,
@@ -37,9 +41,16 @@ export async function sendDurableEmail(pool: Pool, identity: DeliveryIdentity, k
     throw new DurableEmailError(uncertain ? 'Email acceptance could not be verified' : 'Email provider rejected the request',
       uncertain || response.status === 429, uncertain);
   }
-  if (!body.id) throw new DurableEmailError('Email provider returned no receipt',true,true);
-  await pool.query(`UPDATE delivery_provider_receipts SET provider_id=$4
-    WHERE source=$1 AND delivery_id=$2 AND organization_id=$3 AND (provider_id IS NULL OR provider_id=$4)`,
-    [identity.source,identity.deliveryId,identity.organizationId,body.id]);
+  if (typeof body.id !== 'string' || !body.id.trim() || body.id.length > 255) {
+    throw new DurableEmailError('Email provider returned no receipt',true,true);
+  }
+  try {
+    const saved = await pool.query(`UPDATE delivery_provider_receipts SET provider_id=$4
+      WHERE source=$1 AND delivery_id=$2 AND organization_id=$3 AND (provider_id IS NULL OR provider_id=$4)`,
+      [identity.source,identity.deliveryId,identity.organizationId,body.id]);
+    if (saved.rowCount !== 1) throw new Error('Provider receipt conflict');
+  } catch {
+    throw new DurableEmailError('Email was accepted but its receipt could not be saved; review before retrying',false,true);
+  }
   return {providerId:body.id};
 }

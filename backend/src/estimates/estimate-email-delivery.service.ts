@@ -91,6 +91,7 @@ export class EstimateEmailDeliveryService {
     }
     try {
       const providerResult = await this.provider.send({
+        durableDelivery: { source: 'estimate', organizationId, deliveryId: Number(claimed.id), attemptCount: claimed.attempt_count },
         to: claimed.recipient_email,
         subject: claimed.subject,
         html: this.html(claimed),

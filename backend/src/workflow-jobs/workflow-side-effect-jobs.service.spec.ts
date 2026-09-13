@@ -35,6 +35,7 @@ describe('WorkflowSideEffectJobsService', () => {
     await expect(service.run()).resolves.toMatchObject({ claimed: 1, sent: 1 });
     expect(email.send).toHaveBeenCalledWith(expect.objectContaining({
       to: 'person@example.test', idempotencyKey: 'workflow-3-4-5',
+      durableDelivery: {source:'workflow',organizationId:2,deliveryId:8,attemptCount:1},
       tags: [{ name: 'workflow_enrollment_id', value: '3' }, { name: 'workflow_step_id', value: '4' }],
     }));
     expect(repository.markSent).toHaveBeenCalledWith(expect.objectContaining({ id: 8 }), 'email-8');

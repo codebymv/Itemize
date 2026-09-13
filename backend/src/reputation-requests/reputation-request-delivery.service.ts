@@ -98,6 +98,7 @@ export class ReputationRequestDeliveryService {
     try {
       const provider = claimed.channel === 'email'
         ? await this.email.send({
+          durableDelivery: { source: 'review_request', organizationId, deliveryId: Number(claimed.id), attemptCount: claimed.attempt_count },
           to: claimed.recipient,
           subject: claimed.subject || 'We would love your feedback',
           text: claimed.payload.message,
@@ -117,7 +118,7 @@ export class ReputationRequestDeliveryService {
         organizationId,
         deliveryId,
         this.redact(error instanceof Error ? error.message : 'Unknown provider failure', claimed.recipient),
-        claimed.channel === 'sms',
+        claimed.channel === 'sms' || (error as { providerOutcomeUnknown?: boolean }).providerOutcomeUnknown === true,
       );
       return false;
     }

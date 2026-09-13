@@ -1,7 +1,11 @@
+import { Pool } from 'pg';
+import { PG_POOL } from '../database/database.module';
+import { DeliveryIdentity, DurableEmailError, sendDurableEmail } from '../common/durable-email';
 import { verifyEmailProviderResponse } from '../common/email-provider-receipt';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 
 export type EstimateEmailMessage = {
+  durableDelivery?: DeliveryIdentity;
   to: string;
   subject: string;
   html: string;
@@ -21,10 +25,23 @@ export interface EstimateEmailProvider {
 
 @Injectable()
 export class ResendEstimateEmailProvider implements EstimateEmailProvider {
+  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
   async send(message: EstimateEmailMessage): Promise<EstimateEmailProviderResult> {
     const apiKey = process.env.RESEND_API_KEY?.trim();
     if (!apiKey) {
       return { kind: 'rejected', message: 'Email service is not configured' };
+    }
+    if (message.durableDelivery) {
+      try {
+        const result = await sendDurableEmail(this.pool, message.durableDelivery, message.idempotencyKey, {
+          from: process.env.EMAIL_FROM?.trim() || 'Itemize <noreply@itemize.cloud>',
+          to: [message.to], subject: message.subject, html: message.html, text: message.text,
+        }, apiKey);
+        return { kind: 'sent', providerId: result.providerId };
+      } catch (error) {
+        if (error instanceof DurableEmailError && !error.providerOutcomeUnknown) return { kind: 'rejected', message: error.message };
+        throw error;
+      }
     }
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',

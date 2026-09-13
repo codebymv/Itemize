@@ -27,7 +27,7 @@ describe('ResendEstimateEmailProvider', () => {
   });
 
   it('returns a definite rejection without contacting Resend when unconfigured', async () => {
-    await expect(new ResendEstimateEmailProvider().send(message)).resolves.toEqual({
+    await expect(new ResendEstimateEmailProvider({} as import('pg').Pool).send(message)).resolves.toEqual({
       kind: 'rejected',
       message: 'Email service is not configured',
     });
@@ -42,7 +42,7 @@ describe('ResendEstimateEmailProvider', () => {
       json: async () => ({ id: 'email-provider-12' }),
     });
 
-    await expect(new ResendEstimateEmailProvider().send(message)).resolves.toEqual({
+    await expect(new ResendEstimateEmailProvider({} as import('pg').Pool).send(message)).resolves.toEqual({
       kind: 'sent',
       providerId: 'email-provider-12',
     });
@@ -74,7 +74,7 @@ describe('ResendEstimateEmailProvider', () => {
       json: async () => ({ message: 'Rate limited' }),
     });
 
-    await expect(new ResendEstimateEmailProvider().send(message)).resolves.toEqual({
+    await expect(new ResendEstimateEmailProvider({} as import('pg').Pool).send(message)).resolves.toEqual({
       kind: 'rejected',
       message: 'Rate limited',
     });
@@ -84,7 +84,7 @@ describe('ResendEstimateEmailProvider', () => {
     process.env.RESEND_API_KEY = 're_test_contract';
     (global.fetch as jest.Mock).mockRejectedValue(new Error('socket closed'));
 
-    await expect(new ResendEstimateEmailProvider().send(message))
+    await expect(new ResendEstimateEmailProvider({} as import('pg').Pool).send(message))
       .rejects.toThrow('socket closed');
   });
 });

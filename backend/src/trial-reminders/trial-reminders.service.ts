@@ -1,3 +1,6 @@
+import { Pool } from 'pg';
+import { PG_POOL } from '../database/database.module';
+import { DeliveryIdentity, DurableEmailError, sendDurableEmail } from '../common/durable-email';
 import { EmailAcceptanceUnknownError, verifyEmailProviderResponse } from '../common/email-provider-receipt';
 /**
  * NestJS owner of the daily trial reminder job. The legacy
@@ -40,6 +43,7 @@ const escapeHtml = (value: unknown): string =>
   );
 
 export type TrialReminderEmail = {
+  durableDelivery?: DeliveryIdentity;
   to: string;
   subject: string;
   html: string;
@@ -62,6 +66,7 @@ export interface TrialReminderEmailProvider {
 export class ResendTrialReminderEmailProvider
   implements TrialReminderEmailProvider
 {
+  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
   async send(message: TrialReminderEmail): Promise<TrialReminderSendResult> {
     const apiKey = process.env.RESEND_API_KEY?.trim();
     if (!apiKey) {
@@ -70,6 +75,18 @@ export class ResendTrialReminderEmailProvider
         error: 'Email service not configured',
         retryable: false,
       };
+    }
+    if (message.durableDelivery) {
+      try {
+        const result = await sendDurableEmail(this.pool, message.durableDelivery, message.idempotencyKey, {
+          from: process.env.EMAIL_FROM?.trim() || 'Itemize <noreply@itemize.cloud>',
+          to: [message.to], subject: message.subject, html: message.html,
+        }, apiKey);
+        return { kind: 'sent', providerId: result.providerId };
+      } catch (error) {
+        if (error instanceof DurableEmailError && !error.providerOutcomeUnknown) return { kind: 'rejected', error: error.message, retryable: error.retryable };
+        throw new EmailAcceptanceUnknownError();
+      }
     }
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -214,7 +231,9 @@ export class TrialRemindersService {
           );
         }
         const message = this.message(claim);
-        const result = await this.emailProvider.send(message);
+        const result = await this.emailProvider.send({ ...message,
+          durableDelivery: { source: 'trial_reminder', organizationId: Number(claim.organization_id), deliveryId: Number(claim.id), attemptCount: claim.attempt_count },
+        });
         if (result.kind === 'rejected') {
           await this.repository.fail(
             claim,

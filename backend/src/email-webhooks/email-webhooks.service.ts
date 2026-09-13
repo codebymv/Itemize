@@ -497,7 +497,11 @@ export class EmailWebhooksService {
     // This prevents a corrupted/reused provider ID from crossing a tenant boundary.
     const deliveryOwners = await client.query<{ organization_id: number }>(
       `SELECT organization_id FROM invoice_email_deliveries WHERE provider_id=$1
-       UNION SELECT organization_id FROM signature_delivery_outbox WHERE provider_id=$1`,
+       UNION SELECT organization_id FROM signature_delivery_outbox WHERE provider_id=$1
+       UNION SELECT organization_id FROM estimate_email_deliveries WHERE provider_id=$1
+       UNION SELECT organization_id FROM review_request_deliveries WHERE provider_id=$1 AND channel='email'
+       UNION SELECT organization_id FROM trial_reminder_deliveries WHERE provider_id=$1
+       UNION SELECT organization_id FROM workflow_side_effect_outbox WHERE provider_id=$1 AND effect_type='email'`,
       [externalId],
     );
     const receiptResult = await client.query<DeliveryReceiptRow>(
