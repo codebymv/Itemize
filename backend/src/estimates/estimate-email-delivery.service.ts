@@ -100,14 +100,15 @@ export class EstimateEmailDeliveryService {
       });
       if (providerResult.kind === 'rejected') {
         const failed = await this.estimates.failEmailDelivery(
-          organizationId, deliveryId, providerResult.message, false,
+          organizationId, deliveryId, providerResult.message, false, claimed.attempt_count,
         );
         return this.result(failed, replayed);
       }
       const completed = await this.estimates.completeEmailDelivery(
-        organizationId, deliveryId, providerResult.providerId,
+        organizationId, deliveryId, providerResult.providerId, claimed.attempt_count,
       );
-      if (claimed.delivery_type === 'estimate_sent') {
+      if (claimed.delivery_type === 'estimate_sent' && completed.status === 'sent'
+        && completed.attempt_count === claimed.attempt_count) {
         await this.activation.recordArtifactSent({
           organizationId,
           userId,
@@ -120,7 +121,7 @@ export class EstimateEmailDeliveryService {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown provider failure';
       const ambiguous = await this.estimates.failEmailDelivery(
-        organizationId, deliveryId, message, true,
+        organizationId, deliveryId, message, true, claimed.attempt_count,
       );
       return this.result(ambiguous, replayed);
     }

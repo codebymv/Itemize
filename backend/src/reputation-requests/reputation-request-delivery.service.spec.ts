@@ -65,7 +65,7 @@ describe('ReputationRequestDeliveryService', () => {
   it('confirms immediate email before returning sent and uses a durable provider key', async () => {
     const initial = snapshot('email');
     deliveries.prepareSend.mockResolvedValue({ kind: 'created', snapshot: initial });
-    deliveries.claim.mockResolvedValue({ ...initial.deliveries[0], status: 'processing' });
+    deliveries.claim.mockResolvedValue({ ...initial.deliveries[0], status: 'processing', attempt_count: 1 });
     email.send.mockResolvedValue({ kind: 'sent', providerId: 'email-44' });
     deliveries.findSnapshot.mockResolvedValue({
       ...initial,
@@ -80,14 +80,14 @@ describe('ReputationRequestDeliveryService', () => {
       to: 'ada@example.test', idempotencyKey: 'review-request-email:3:21',
       durableDelivery: expect.objectContaining({source:'review_request',organizationId:3,deliveryId:21}),
     }));
-    expect(deliveries.complete).toHaveBeenCalledWith(3, 21, 'email-44');
+    expect(deliveries.complete).toHaveBeenCalledWith(3, 21, 'email-44', 1);
     expect(sms.send).not.toHaveBeenCalled();
   });
 
   it.each([false, true])('handles email failure with unknown acceptance=%s', async unknown => {
     const initial = snapshot('email');
     deliveries.prepareSend.mockResolvedValue({ kind: 'created', snapshot: initial });
-    deliveries.claim.mockResolvedValue({ ...initial.deliveries[0], status: 'processing' });
+    deliveries.claim.mockResolvedValue({ ...initial.deliveries[0], status: 'processing', attempt_count: 1 });
     email.send.mockRejectedValue(Object.assign(new Error('failure for ada@example.test'), { providerOutcomeUnknown: unknown }));
     deliveries.findSnapshot.mockResolvedValue({
       ...initial, batch: { ...initial.batch, status: 'processing' },
@@ -97,13 +97,13 @@ describe('ReputationRequestDeliveryService', () => {
     await expect(service.send(3, 2, {
       idempotencyKey: 'request-14', contactEmail: 'ada@example.test', channel: 'email',
     })).resolves.toMatchObject({ status: 'processing', sent: 0 });
-    expect(deliveries.fail).toHaveBeenCalledWith(3, 21, 'failure for [recipient]', unknown);
+    expect(deliveries.fail).toHaveBeenCalledWith(3, 21, 'failure for [recipient]', unknown, 1);
   });
 
   it('quarantines an ambiguous SMS result instead of risking duplicate delivery', async () => {
     const initial = snapshot('sms');
     deliveries.prepareSend.mockResolvedValue({ kind: 'created', snapshot: initial });
-    deliveries.claim.mockResolvedValue({ ...initial.deliveries[0], status: 'processing' });
+    deliveries.claim.mockResolvedValue({ ...initial.deliveries[0], status: 'processing', attempt_count: 1 });
     sms.send.mockRejectedValue(new Error('provider outcome unknown'));
     deliveries.findSnapshot.mockResolvedValue({
       ...initial, batch: { ...initial.batch, status: 'reconciliation_required' },
@@ -113,7 +113,7 @@ describe('ReputationRequestDeliveryService', () => {
     await expect(service.send(3, 2, {
       idempotencyKey: 'request-14', contactPhone: '+16025550123', channel: 'sms',
     })).resolves.toMatchObject({ status: 'reconciliation_required', sent: 0 });
-    expect(deliveries.fail).toHaveBeenCalledWith(3, 21, 'provider outcome unknown', true);
+    expect(deliveries.fail).toHaveBeenCalledWith(3, 21, 'provider outcome unknown', true, 1);
     expect(deliveries.complete).not.toHaveBeenCalled();
   });
 
@@ -132,6 +132,16 @@ describe('ReputationRequestDeliveryService', () => {
     });
     expect(deliveries.claim).not.toHaveBeenCalled();
     expect(email.send).not.toHaveBeenCalled();
+  });
+
+  it('does not count a stale completion as a successful worker delivery', async () => {
+    deliveries.due.mockResolvedValue([{ organizationId: 3, id: 21 }]);
+    deliveries.claim.mockResolvedValue({ ...snapshot().deliveries[0], status: 'processing', attempt_count: 2 });
+    email.send.mockResolvedValue({ kind: 'sent', providerId: 'accepted' });
+    deliveries.complete.mockResolvedValue(false);
+    await expect(service.runDue()).resolves.toEqual({ attempted: 1, sent: 0 });
+    expect(deliveries.complete).toHaveBeenCalledWith(3, 21, 'accepted', 2);
+    expect(deliveries.fail).not.toHaveBeenCalled();
   });
 
   it('fails closed on conflicting idempotency-key reuse', async () => {

@@ -812,6 +812,7 @@ export class EstimatesRepository {
     organizationId: number,
     deliveryId: number,
     providerId: string | null,
+    attemptCount: number,
   ): Promise<EstimateEmailDeliveryRow> {
     return this.transaction(async (client) => {
       const locked = await client.query<EstimateEmailDeliveryRow>(
@@ -822,7 +823,8 @@ export class EstimatesRepository {
       );
       const delivery = locked.rows[0];
       if (!delivery) throw new Error('Estimate email delivery not found');
-      if (delivery.status === 'sent') return delivery;
+      // A reclaimed or completed delivery belongs to a different worker outcome.
+      if (delivery.status !== 'processing' || delivery.attempt_count !== attemptCount) return delivery;
       if (delivery.delivery_type !== 'estimate_sent') {
         const completed = await client.query<EstimateEmailDeliveryRow>(
           `UPDATE estimate_email_deliveries
@@ -886,6 +888,7 @@ export class EstimatesRepository {
     deliveryId: number,
     error: string,
     ambiguous: boolean,
+    attemptCount: number,
   ): Promise<EstimateEmailDeliveryRow> {
     const result = await this.pool.query<EstimateEmailDeliveryRow>(
       `UPDATE estimate_email_deliveries
@@ -898,12 +901,14 @@ export class EstimatesRepository {
              (LEAST(300, POWER(2, GREATEST(attempt_count - 1))) * INTERVAL '1 second'),
            last_error = LEFT($4, 2000), lease_expires_at = NULL,
            claimed_by = NULL, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $1 AND organization_id = $2
+       WHERE id = $1 AND organization_id = $2 AND status = 'processing'
+         AND attempt_count = $5
        RETURNING *`,
-      [deliveryId, organizationId, ambiguous, error],
+      [deliveryId, organizationId, ambiguous, error, attemptCount],
     );
-    if (!result.rows[0]) throw new Error('Estimate email delivery not found');
-    return result.rows[0];
+    const current = result.rows[0] ?? await this.findEmailDelivery(organizationId, deliveryId);
+    if (!current) throw new Error('Estimate email delivery not found');
+    return current;
   }
 
   private async references(

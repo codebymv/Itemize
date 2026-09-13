@@ -2,7 +2,7 @@
 
 ## Scope and status
 
-Implementation validated locally and prepared for release; production deployment verification is pending. Booking/workflow email, estimate send/response, review-request email and trial reminders now use the existing invoice/signature encrypted provider-receipt mechanism. No production emails were sent. SMS and backup/restore remain out of scope.
+Deployed as db39649b; Railway deployment success verified on 2026-09-13. Booking/workflow email, estimate send/response, review-request email and trial reminders now use the existing invoice/signature encrypted provider-receipt mechanism. No production emails were sent. SMS and backup/restore remain out of scope.
 
 ## Behavior
 
@@ -31,4 +31,8 @@ The migration's down operation preserves evidence. Before rolling application co
 
 ## Remaining launch work
 
-Fence estimate/review completion and failure writes against stale claim attempts. Extend operator reconciliation and user-facing delivery outcomes for these sources. Resolve the policy for custom full-HTML workflow templates, then visually verify real app-generated emails against the shared design system. This slice does not claim those gaps are closed.
+Release update at 2026-09-13 19:53 UTC: GitHub CI run 34777554083 completed successfully. Both Railway deployments listed below now report SUCCESS on db39649b. Runtime receipt/backfill and queue inspection remain separate follow-up checks; deployment success alone does not verify every delivery journey.
+
+Release check at 2026-09-13 19:32 UTC: db39649b is pushed to master. GitHub CI run 34777554083 passed its contracts, lint, unit and integration steps and is still building. Railway frontend 2df438cf-cbda-4ed9-9697-4ad50640c7ec and backend d2abef16-682c-42ba-a832-06f1e0e11213 were last observed WAITING for CI. The currently serving API readiness, frontend HTML and script returned 200; the unsigned billing webhook returned 400. These health checks do not verify the pending release or migration in production.
+
+Follow-up local implementation: [Estimate/review attempt fencing](estimate-review-attempt-fencing-2026-09-13.md). Extend operator reconciliation and user-facing delivery outcomes for these sources. Resolve the policy for custom full-HTML workflow templates, then visually verify real app-generated emails against the shared design system. This durable-receipt release does not claim those gaps are closed.

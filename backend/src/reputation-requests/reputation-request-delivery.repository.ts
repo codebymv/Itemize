@@ -246,18 +246,18 @@ export class ReputationRequestDeliveryRepository {
     });
   }
 
-  async complete(organizationId: number, deliveryId: number, providerId: string | null): Promise<void> {
-    await this.transaction(async (client) => {
+  async complete(organizationId: number, deliveryId: number, providerId: string | null, attemptCount: number): Promise<boolean> {
+    return this.transaction(async (client) => {
       const updated = await client.query<{ batch_id: number; review_request_id: number; channel: ReputationDeliveryChannel }>(
         `UPDATE review_request_deliveries SET status='sent',provider_id=$3,
            sent_at=COALESCE(sent_at,CURRENT_TIMESTAMP),last_error=NULL,
            lease_expires_at=NULL,claimed_by=NULL,updated_at=CURRENT_TIMESTAMP
-         WHERE id=$1 AND organization_id=$2 AND status='processing'
+         WHERE id=$1 AND organization_id=$2 AND status='processing' AND attempt_count=$4
          RETURNING batch_id,review_request_id,channel`,
-        [deliveryId, organizationId, providerId],
+        [deliveryId, organizationId, providerId, attemptCount],
       );
       const row = updated.rows[0];
-      if (!row) return;
+      if (!row) return false;
       await client.query(
         `UPDATE review_requests SET
            email_sent=CASE WHEN $3='email' THEN TRUE ELSE email_sent END,
@@ -269,10 +269,11 @@ export class ReputationRequestDeliveryRepository {
         [row.review_request_id, organizationId, row.channel],
       );
       await this.finalize(client, Number(row.batch_id), Number(row.review_request_id));
+      return true;
     });
   }
 
-  async fail(organizationId: number, deliveryId: number, error: string, ambiguous: boolean): Promise<void> {
+  async fail(organizationId: number, deliveryId: number, error: string, ambiguous: boolean, attemptCount: number): Promise<void> {
     await this.transaction(async (client) => {
       const updated = await client.query<{ batch_id: number; review_request_id: number }>(
         `UPDATE review_request_deliveries SET
@@ -282,9 +283,9 @@ export class ReputationRequestDeliveryRepository {
              (LEAST(300,POWER(2,GREATEST(attempt_count-1))) * INTERVAL '1 second'),
            last_error=LEFT($4,2000),lease_expires_at=NULL,claimed_by=NULL,
            updated_at=CURRENT_TIMESTAMP
-         WHERE id=$1 AND organization_id=$2 AND status='processing'
+         WHERE id=$1 AND organization_id=$2 AND status='processing' AND attempt_count=$5
          RETURNING batch_id,review_request_id`,
-        [deliveryId, organizationId, ambiguous, error],
+        [deliveryId, organizationId, ambiguous, error, attemptCount],
       );
       const row = updated.rows[0];
       if (row) await this.finalize(client, Number(row.batch_id), Number(row.review_request_id));

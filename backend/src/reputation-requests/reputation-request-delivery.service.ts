@@ -107,18 +107,18 @@ export class ReputationRequestDeliveryService {
         : await this.sms.send({ to: claimed.recipient, message: claimed.payload.message });
       if (provider.kind === 'rejected') {
         await this.deliveries.fail(
-          organizationId, deliveryId, this.redact(provider.message, claimed.recipient), false,
+          organizationId, deliveryId, this.redact(provider.message, claimed.recipient), false, claimed.attempt_count,
         );
         return false;
       }
-      await this.deliveries.complete(organizationId, deliveryId, provider.providerId);
-      return true;
+      return await this.deliveries.complete(organizationId, deliveryId, provider.providerId, claimed.attempt_count);
     } catch (error) {
       await this.deliveries.fail(
         organizationId,
         deliveryId,
         this.redact(error instanceof Error ? error.message : 'Unknown provider failure', claimed.recipient),
-        claimed.channel === 'sms' || (error as { providerOutcomeUnknown?: boolean }).providerOutcomeUnknown === true,
+        claimed.channel === 'sms' || (error as { providerOutcomeUnknown?: boolean } | null)?.providerOutcomeUnknown === true,
+        claimed.attempt_count,
       );
       return false;
     }
