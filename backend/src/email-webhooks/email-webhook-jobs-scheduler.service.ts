@@ -1,9 +1,6 @@
 /**
- * NestJS replacement for the legacy per-minute email webhook
- * reconciliation cron (backend/src/scheduler.js). Default-off: the
- * legacy runtime keeps draining until EMAIL_WEBHOOK_NEST_JOBS_ENABLED
- * flips at cutover (SKIP LOCKED claims make an overlap window safe,
- * but only one runtime should own the cadence).
+ * Explicitly owned email webhook reconciliation cadence. Each new runtime
+ * reconsiders known receipt evidence before draining the normal leased queue.
  */
 import {
   Injectable,
@@ -20,6 +17,7 @@ export class EmailWebhookJobsSchedulerService
   private readonly logger = new Logger(EmailWebhookJobsSchedulerService.name);
   private timer: NodeJS.Timeout | null = null;
   private running = false;
+  private recoveredKnownReceipts = false;
 
   constructor(private readonly jobs: EmailWebhookJobsService) {}
 
@@ -52,6 +50,11 @@ export class EmailWebhookJobsSchedulerService
     }
     this.running = true;
     try {
+      if (!this.recoveredKnownReceipts) {
+        const recovered = await this.jobs.recoverKnownReceipts();
+        this.recoveredKnownReceipts = true;
+        if (recovered > 0) this.logger.log(`Reconsidering ${recovered} known email receipts after startup`);
+      }
       const summary = await this.jobs.run({
         batchSize: process.env.EMAIL_WEBHOOK_JOB_BATCH_SIZE,
         leaseSeconds: process.env.EMAIL_WEBHOOK_JOB_LEASE_SECONDS,

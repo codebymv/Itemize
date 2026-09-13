@@ -85,6 +85,24 @@ export class EmailWebhookJobsService {
     private readonly emailWebhooks: EmailWebhooksService,
   ) {}
 
+  /** Reconsider known transactional events after this runtime takes ownership.
+   * A pre-deploy migration can otherwise be followed by an old worker's backoff.
+   * This only schedules work; the normal matcher still verifies tenant ownership.
+   */
+  async recoverKnownReceipts(): Promise<number> {
+    const result = await this.pool.query(
+      `UPDATE email_webhook_events event SET
+         reconciliation_status='retry',
+         reconciliation_next_attempt_at=CURRENT_TIMESTAMP
+       WHERE processing_status='pending'
+         AND reconciliation_status IN ('pending','retry','dead_letter')
+         AND reconciliation_reason='unmatched'
+         AND EXISTS (SELECT 1 FROM delivery_provider_receipts receipt
+                     WHERE receipt.provider_id=event.external_id)`,
+    );
+    return result.rowCount ?? 0;
+  }
+
   async run(
     workerOptions: EmailReconciliationOptions = {},
   ): Promise<EmailReconciliationRun> {

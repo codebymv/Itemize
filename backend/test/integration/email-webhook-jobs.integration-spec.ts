@@ -222,6 +222,33 @@ describe('Email webhook reconciliation worker (legacy behavior pinned)', () => {
     expect(nest.status).toBe('unsubscribed');
   });
 
+  it('recovers known receipts after old-runtime backoff without reviving unknown or active claims', async () => {
+    const events = [];
+    for (const [index, state] of ['retry', 'dead_letter', 'processing', 'unknown', 'ambiguous'].entries()) {
+      const event = await seedReconcilableEvent(`startup-${state}`, { attemptCount: 9 });
+      events.push(event);
+      await pool.query(`UPDATE email_webhook_events SET reconciliation_status=$2,
+        reconciliation_reason=$3,reconciliation_next_attempt_at=CURRENT_TIMESTAMP+INTERVAL '1 day',
+        reconciliation_lease_expires_at=CURRENT_TIMESTAMP+INTERVAL '1 day' WHERE svix_id=$1`,
+      [event.svixId, ['unknown','ambiguous'].includes(state) ? 'retry' : state,
+        state === 'ambiguous' ? 'ambiguous' : 'unmatched']);
+      if (state !== 'unknown') await pool.query(`INSERT INTO delivery_provider_receipts
+        (organization_id,source,delivery_id,idempotency_key,provider_id)
+        VALUES ($1,'invoice',$2,$3,$4)`, [organizationId, 900000 + index, event.svixId,event.externalId]);
+    }
+    expect(await nestJobs.recoverKnownReceipts()).toBe(2);
+    for (const event of events) expect((await eventRow(event.svixId)).reconciliation_attempt_count).toBe(9);
+    expect(await nestJobs.run()).toEqual({ claimed: 2, resolved: 2, retry: 0, deadLetter: 0 });
+    for (const event of events.slice(0, 2)) {
+      expect((await eventRow(event.svixId)).reconciliation_status).toBe('resolved');
+    }
+    expect((await eventRow(events[2].svixId)).reconciliation_status).toBe('processing');
+    for (const event of events.slice(3)) {
+      expect((await eventRow(event.svixId)).reconciliation_next_attempt_at!.getTime()).toBeGreaterThan(Date.now());
+    }
+    expect(await nestJobs.recoverKnownReceipts()).toBe(0);
+  });
+
   it('claims nothing when the queue holds only deferred or terminal rows', async () => {
     for (const runner of runners) {
       const summary = await runner.run();
