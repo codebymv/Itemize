@@ -120,7 +120,7 @@ export class WorkflowSideEffectJobsRepository {
     maxAttempts: number; baseDelayMs: number; maximumDelayMs: number;
     retryable?: boolean; providerOutcomeUnknown?: boolean;
   }): Promise<'cancelled' | 'dead_letter' | 'reconciliation_required' | 'retry' | 'stale'> {
-    if (claim.effect_type === 'sms' && options.providerOutcomeUnknown) {
+    if (['sms', 'email'].includes(claim.effect_type) && options.providerOutcomeUnknown) {
       const result = await this.pool.query<{ status: 'cancelled' | 'reconciliation_required' }>(
         `UPDATE workflow_side_effect_outbox SET
           status=CASE WHEN cancelled_at IS NOT NULL THEN 'cancelled' ELSE 'reconciliation_required' END,

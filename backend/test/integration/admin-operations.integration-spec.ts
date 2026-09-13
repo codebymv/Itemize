@@ -133,6 +133,7 @@ describe('Admin operations GraphQL PostgreSQL contract', () => {
       ]),
       queues: expect.arrayContaining([
         expect.objectContaining({ id: 'messages' }),
+        expect.objectContaining({ id: 'trial-reminders', available: true }),
         expect.objectContaining({ id: 'stripe-reconciliation' }),
       ]),
     });

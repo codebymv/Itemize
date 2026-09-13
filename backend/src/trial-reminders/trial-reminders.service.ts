@@ -1,3 +1,4 @@
+import { EmailAcceptanceUnknownError, verifyEmailProviderResponse } from '../common/email-provider-receipt';
 /**
  * NestJS owner of the daily trial reminder job. The legacy
  * implementation (backend/src/jobs/trialReminderCron.js +
@@ -84,12 +85,13 @@ export class ResendTrialReminderEmailProvider
         html: message.html,
       }),
       signal: AbortSignal.timeout(10_000),
-    });
+    }).catch(() => { throw new EmailAcceptanceUnknownError(); });
     const body = (await response.json().catch(() => ({}))) as {
       id?: string;
       message?: string;
       error?: { message?: string };
     };
+    verifyEmailProviderResponse(response, body.id);
     if (!response.ok) {
       return {
         kind: 'rejected',
@@ -203,6 +205,7 @@ export class TrialRemindersService {
     for (const id of dueIds) {
       const claim = await this.repository.claim(id, leaseSeconds);
       if (!claim) continue;
+      let emailAccepted = false;
       try {
         if (!claim.recipient_email) {
           throw Object.assign(
@@ -222,6 +225,7 @@ export class TrialRemindersService {
           summary.failed += 1;
           continue;
         }
+        emailAccepted = true;
         if (await this.repository.complete(claim, result.providerId)) {
           summary.sent += 1;
         }
@@ -229,7 +233,7 @@ export class TrialRemindersService {
         await this.repository.fail(
           claim,
           error,
-          (error as { retryable?: boolean })?.retryable !== false,
+          !emailAccepted && (error as { retryable?: boolean })?.retryable !== false,
           maxAttempts,
         );
         summary.failed += 1;

@@ -64,6 +64,16 @@ describe('WorkflowSideEffectJobsService', () => {
     await expect(service.run()).resolves.toMatchObject({ claimed: 1, ...expected });
   });
 
+  it('requests reconciliation when persistence fails after email acceptance', async () => {
+    repository.claim.mockResolvedValueOnce(claim()).mockResolvedValueOnce(null);
+    email.send.mockResolvedValue({providerId:'email-accepted'});
+    repository.markSent.mockRejectedValue(new Error('database unavailable'));
+    repository.markFailure.mockResolvedValue('reconciliation_required');
+    await expect(service.run()).resolves.toMatchObject({sent:0,reconciliationRequired:1});
+    expect(repository.markFailure).toHaveBeenCalledWith(expect.anything(),expect.anything(),
+      expect.objectContaining({providerOutcomeUnknown:true}));
+  });
+
   it('reports expired SMS quarantine and runs one targeted item', async () => {
     repository.quarantineExpiredSms.mockResolvedValue(2);
     repository.claim.mockResolvedValue(claim({ id: 12 }));

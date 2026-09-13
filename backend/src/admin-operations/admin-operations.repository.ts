@@ -157,6 +157,7 @@ const ADMIN_JOB_QUEUES = [
   queue('realtime', 'Realtime events', 'realtime_event_outbox', {
     kindColumns: ['event_type', 'event_name'],
   }),
+  queue('trial-reminders', 'Trial reminder emails', 'trial_reminder_deliveries'),
   queue('email-webhooks', 'Email webhook reconciliation', 'email_webhook_events', {
     statusColumn: 'reconciliation_status', createdColumn: 'received_at',
     idColumn: 'svix_id',

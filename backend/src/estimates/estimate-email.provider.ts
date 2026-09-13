@@ -1,3 +1,4 @@
+import { verifyEmailProviderResponse } from '../common/email-provider-receipt';
 import { Injectable } from '@nestjs/common';
 
 export type EstimateEmailMessage = {
@@ -46,6 +47,7 @@ export class ResendEstimateEmailProvider implements EstimateEmailProvider {
       message?: string;
       error?: { message?: string };
     };
+    verifyEmailProviderResponse(response, body.id);
     if (!response.ok) {
       return {
         kind: 'rejected',

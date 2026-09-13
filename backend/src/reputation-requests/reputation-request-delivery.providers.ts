@@ -1,3 +1,4 @@
+import { verifyEmailProviderResponse } from '../common/email-provider-receipt';
 import { Injectable } from '@nestjs/common';
 import {
   brandedTransactionalEmail,
@@ -68,6 +69,7 @@ export class ResendReputationEmailProvider implements ReputationEmailProvider {
     const body = await response.json().catch(() => ({})) as {
       id?: string; message?: string; error?: { message?: string };
     };
+    verifyEmailProviderResponse(response, body.id);
     if (!response.ok) {
       return {
         kind: 'rejected',

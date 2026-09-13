@@ -50,10 +50,12 @@ export class WorkflowSideEffectJobsService {
       const claim = await this.repository.claim(leaseSeconds, options.outboxId ?? null);
       if (!claim) break;
       summary.claimed += 1;
+      let emailAccepted = false;
       try {
         const result = await this.deliver(claim, {
           webhookTimeoutMs, webhookMaxRequestBytes, webhookMaxResponseBytes,
         });
+        emailAccepted = claim.effect_type === 'email';
         if (await this.repository.markSent(claim, result.providerId)) summary.sent += 1;
         else summary.stale += 1;
       } catch (error) {
@@ -61,7 +63,7 @@ export class WorkflowSideEffectJobsService {
         const outcome = await this.repository.markFailure(claim, error, {
           maxAttempts, baseDelayMs, maximumDelayMs,
           retryable: typed.retryable,
-          providerOutcomeUnknown: typed.providerOutcomeUnknown,
+          providerOutcomeUnknown: emailAccepted || typed.providerOutcomeUnknown,
         });
         if (outcome === 'dead_letter') summary.deadLetter += 1;
         else if (outcome === 'retry') summary.retry += 1;

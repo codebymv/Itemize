@@ -35,6 +35,14 @@ Review the dry-run aggregate before applying. The previous read-only investigati
 
 ## Status
 
-Implementation and rollout tooling are local, not yet committed or deployed. The existing 18 production records and Railway configuration have not been changed in this implementation pass. Production remains 6d86c42d. The prior production verification notes are preserved in email-webhook-startup-recovery-2026-09-13.md.
+Deployed and applied in production on 2026-09-13 as 6bab604b4fbe7a3fe7758d7e6e3423493a1fc61d. The prior production verification notes are preserved in email-webhook-startup-recovery-2026-09-13.md.
 
 Validation passed: 28 fresh PostgreSQL integration tests, 13 unit tests, all 10 release contracts, backend build, script syntax and diff checks. The fresh database verified 168 required tables and 163 migration markers; no migration was added. Tests include invalid signatures, duplicate ignored events, unknown/missing/spoofed senders, Itemize evidence in both logs and an otherwise unmatched outbox, failed/mismatched provider responses, unchanged dry-run/dead-letter history, and a worker acquiring a claim during provider verification. Documentation was synchronized and checked.
+
+## Production result
+
+GitHub CI run 34773056438 passed the full release checks. Railway frontend deployment ac32470e-dd71-4d4b-9feb-a7aef580e696 and API deployment f68eb010-4e3b-4da8-9d07-eb8e18f8227f both report SUCCESS on 6bab604b, with one active deployment per service. Public API readiness, frontend HTML and its script return 200; an unsigned billing webhook returns 400.
+
+The backend runtime confirmed the release commit, packaged backfill command and exact RESEND_OTHER_APP_SENDERS value above. Production dry run returned would_ignore=18 with no verification failures or conflicts. The subsequent --apply invocation performed fresh provider checks again and returned other_application=18. Read-only verification found 14 Gleam and four Tucson Loves Music records retained as ignored/not_required with resend_api evidence. No email webhook records remained in pending, processing, retry or dead_letter reconciliation states.
+
+QA invoice delivery 6 and signature delivery 8 remain delivered with their original provider timestamps and attempt_count=1. No email was sent, no record was deleted, and no shared Resend subscription or other-app configuration was changed. Future signed-event classification is enabled by the runtime sender list and covered by integration tests; this verification did not generate a new provider event merely to exercise it.

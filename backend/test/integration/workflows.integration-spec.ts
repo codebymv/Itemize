@@ -895,6 +895,21 @@ describe('Workflow definitions GraphQL PostgreSQL contract', () => {
     expect(sent.rows[0]).toEqual({ status: 'sent', attempt_count: 2, last_error: null });
   });
 
+  it('holds uncertain booking/workflow email for review without a second provider call', async () => {
+    const row = await pool.query(`INSERT INTO workflow_side_effect_outbox
+      (idempotency_key,organization_id,enrollment_run_at,effect_type,payload)
+      VALUES ($1,$2,NOW(),'email',$3::jsonb) RETURNING id`,
+    [`booking-review-${Date.now()}`,organizationId,JSON.stringify({to:'qa@example.test',subject:'Booking QA',bodyHtml:'<p>QA</p>'})]);
+    const outboxId = Number(row.rows[0].id);
+    const email = {send:jest.fn().mockRejectedValue(new WorkflowDeliveryError('acceptance unknown',false,true))};
+    const worker = new WorkflowSideEffectJobsService(workflowSideEffectRepository,email,{send:jest.fn()},{send:jest.fn()});
+    await expect(worker.run({outboxId})).resolves.toMatchObject({sent:0,reconciliationRequired:1});
+    await expect(worker.run({outboxId})).resolves.toMatchObject({claimed:0});
+    expect(email.send).toHaveBeenCalledTimes(1);
+    expect((await pool.query('SELECT status,reconciliation_reason,attempt_count FROM workflow_side_effect_outbox WHERE id=$1',[outboxId])).rows[0])
+      .toMatchObject({status:'reconciliation_required',reconciliation_reason:'provider_result_unknown',attempt_count:1});
+  });
+
   it('quarantines ambiguous and expired SMS work and makes cancellation win a failed delivery', async () => {
     const ambiguous = await pool.query<{ id: number }>(`INSERT INTO workflow_side_effect_outbox
       (idempotency_key,organization_id,enrollment_run_at,effect_type,payload,status,next_attempt_at)

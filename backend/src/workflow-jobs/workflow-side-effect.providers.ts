@@ -1,3 +1,4 @@
+import { EmailAcceptanceUnknownError, verifyEmailProviderResponse } from '../common/email-provider-receipt';
 import { Pool } from 'pg';
 import { PG_POOL } from '../database/database.module';
 import { DeliveryIdentity, sendDurableEmail } from '../common/durable-email';
@@ -58,9 +59,10 @@ export class ResendWorkflowEmailProvider implements WorkflowEmailProvider {
         signal: AbortSignal.timeout(10_000),
       });
     } catch {
-      throw new WorkflowDeliveryError('Workflow email request failed');
+      throw new EmailAcceptanceUnknownError();
     }
     const body = await response.json().catch(() => ({})) as { id?: string; message?: string; error?: { message?: string } };
+    verifyEmailProviderResponse(response, body.id);
     if (!response.ok) {
       throw new WorkflowDeliveryError(body.message || body.error?.message
         || `Email provider rejected the request (${response.status})`);
