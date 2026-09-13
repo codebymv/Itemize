@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { EmailDeliveryStatus } from '@/components/EmailDeliveryStatus';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { Mail, MessageSquareText, MessagesSquare, MoreHorizontal, Plus, RotateCw, Send, Trash2 } from 'lucide-react';
@@ -27,7 +28,6 @@ import { SendReviewRequestModal } from './SendReviewRequestModal';
 import { getReviewRequestStatusVisual } from './constants/reputationVisuals';
 import { useKeyedSingleFlightAction } from '@/hooks/useSingleFlightAction';
 
-const EMAIL_OUTCOMES: Record<string,string> = {sent:'Email accepted',delivered:'Email delivered',delivery_delayed:'Email delivery delayed',bounced:'Email bounced',complained:'Email reported as spam',failed:'Email delivery failed',suppressed:'Email suppressed',opened:'Email opened',clicked:'Email link clicked'};
 
 const REQUEST_STATUSES: Array<ReviewRequest['status'] | 'all'> = ['all', 'pending', 'sent', 'opened', 'clicked', 'completed', 'failed', 'unsubscribed'];
 
@@ -200,7 +200,7 @@ export function ReputationRequestsPage() {
                         <span className="inline-flex items-center gap-1"><ChannelIcon className="h-3.5 w-3.5" />{channelLabel(request.channel)}</span>
                         {request.contact_email ? <span className="truncate">{request.contact_email}</span> : null}
                         {request.contact_phone ? <span>{request.contact_phone}</span> : null}
-                        {request.channel !== 'sms' && request.email_delivery_status && EMAIL_OUTCOMES[request.email_delivery_status] ? <span>{EMAIL_OUTCOMES[request.email_delivery_status]}</span> : null}
+                        {request.channel !== 'sms' ? <EmailDeliveryStatus status={request.email_delivery_status} /> : null}
                         <time dateTime={activityDate}>{new Date(activityDate).toLocaleDateString()}</time>
                       </div>
                     </div>

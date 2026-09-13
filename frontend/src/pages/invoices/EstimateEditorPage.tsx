@@ -1,3 +1,5 @@
+import { EmailDeliveryStatus } from '@/components/EmailDeliveryStatus';
+import { hasPendingEmailOutcome } from '@/lib/emailDelivery';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate, useSearchParams, useLocation, Link } from 'react-router-dom';
@@ -261,7 +263,8 @@ export function EstimateEditorPage() {
             signal,
         ),
         enabled: Boolean(organizationId) && !hasInvalidEstimateId,
-        refetchOnWindowFocus: false,
+        refetchOnWindowFocus: true,
+        refetchInterval: query => query.state.data?.estimate && hasPendingEmailOutcome(query.state.data.estimate) ? 15_000 : false,
     });
 
     useEffect(() => {
@@ -492,6 +495,7 @@ export function EstimateEditorPage() {
                 await sendEstimate(Number(id), organizationId, idempotencyKey);
                 resetEstimateSend();
                 setStatus('sent');
+                void bootstrapQuery.refetch();
                 toast({ title: 'Sent', description: 'Estimate sent successfully' });
             } catch {
                 releaseEstimateSend();
@@ -634,7 +638,7 @@ export function EstimateEditorPage() {
                 }} />
             }
             headerTools={{
-                status: <Badge className={cn('pointer-events-none whitespace-nowrap', statusVisual.badgeClass)}>{statusVisual.label}</Badge>,
+                status: <div className="flex flex-wrap items-center gap-2"><Badge className={cn('pointer-events-none whitespace-nowrap', statusVisual.badgeClass)}>{statusVisual.label}</Badge><EmailDeliveryStatus status={bootstrapQuery.data?.estimate?.email_delivery_status} /></div>,
                 secondaryAction: estimateActions,
                 primaryAction: (
                     <HeaderAction
@@ -653,7 +657,7 @@ export function EstimateEditorPage() {
                     icon={<EstimateStatusIcon className={cn('h-6 w-6', statusVisual.iconClass)} aria-hidden="true" />}
                     iconClassName={statusVisual.iconBackgroundClass}
                     title={estimateNumber || 'New estimate'}
-                    mobileStatus={<Badge className={statusVisual.badgeClass}>{statusVisual.label}</Badge>}
+                    mobileStatus={<div className="flex flex-wrap items-center gap-2"><Badge className={statusVisual.badgeClass}>{statusVisual.label}</Badge><EmailDeliveryStatus status={bootstrapQuery.data?.estimate?.email_delivery_status} /></div>}
                     descriptor={(
                         <span className="inline-flex items-baseline gap-2">
                             Estimate total

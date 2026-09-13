@@ -1,6 +1,6 @@
 # Review email CTA and delivery visibility
 
-Implementation validated locally and prepared for release; production deployment verification is pending. No live email was sent in this implementation pass. The preceding live journey is documented in review-email-live-journey-2026-09-13.md.
+Implemented and verified in production on commit 700a8318. One fresh app-generated QA email confirmed the canonical button, shared branded layout and provider-confirmed delivery label. The preceding baseline journey is documented in review-email-live-journey-2026-09-13.md.
 
 ## Changes
 
@@ -19,6 +19,17 @@ The request card displays a separate provider label such as Email delivered, Ema
 - Five frontend tests passed across GraphQL mapping and rendered cards, including simultaneous Sent/Email delivered and Clicked/Email bounced labels and no invented delivery for unknown outcomes.
 - Ten release contracts, backend build, final frontend build, bundle budgets, frontend lint and documentation/diff checks passed.
 
-## Rollout
+## Production verification
 
-Deploy the backend before the frontend consumes the new GraphQL field. No schema migration is required. After deployment, repeat the authorized app-generated QA journey, inspect the canonical CTA in Gmail and confirm the app transitions from acceptance to the provider-confirmed label. This local validation does not claim a new production send or mobile inbox verification.
+Verified on 2026-09-13. CI run 34782226290 passed. Railway frontend deployment d73f47fd-322d-4256-9801-6f8eb8641a5d and backend deployment 7636b4d0-6141-4e00-a49b-58611aad725b both succeeded on 700a831879b6080295ab8f6437cce6cdd6a3d6b5. At 22:29 UTC the readiness endpoint, frontend HTML and deployed entry asset returned 200; the unsigned billing webhook correctly returned 400 for a missing signature. No schema migration was required.
+
+One fresh single review request was sent through the production app to the authorized Itemize QA Launch contact, codebymv@gmail.com. The clearly labeled QA custom message deliberately contained https://example.com before the generated review-link suffix. No resend, SMS, public review submission or direct provider send was performed.
+
+- Organization 14, review request 2, delivery 2; one delivery attempt, sent at 2026-09-13T22:32:23.156Z.
+- Provider message d5f835b6-305d-41f5-82e0-8003d74724fa: Resend read-only retrieval returned 200 and last_event delivered; the persisted receipt also reported delivered.
+- The stored receipt uses the authenticated v1 encrypted format. Decrypting it produced HTML identical to the provider-retrieved HTML.
+- The canonical review URL appeared exactly once in the HTML, as the button target. The plain-text alternative retained the review URL. The HTML omitted the generated raw-link label, preserved the custom text, and did not use example.com as the button target.
+- Shared-shell logo URL, blue accent, slate background, white card and Raleway font tokens were present. Desktop Gmail visually displayed the branded card, logo, blue button and muted footer without the redundant raw review URL. Yellow text highlights in the inspected view came from Gmail search.
+- The new app card initially showed Sent, then displayed Email delivered without a manual page reload. The older request also displayed its existing provider-confirmed delivery evidence after loading the new frontend.
+
+This verifies the new production email path and desktop Gmail rendering. Mobile inbox rendering and other email clients were not checked in this pass.

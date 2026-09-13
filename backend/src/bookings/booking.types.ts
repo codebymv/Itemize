@@ -47,6 +47,12 @@ export class Booking {
   @Field(() => BookingStatus)
   status: BookingStatus;
 
+  @Field(() => String, { nullable: true })
+  emailDeliveryStatus: string | null;
+
+  @Field(() => String, { nullable: true })
+  emailDeliveryEvent: string | null;
+
   @Field(() => GraphQLISODateTime, { nullable: true })
   cancelledAt: Date | null;
 

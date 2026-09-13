@@ -392,6 +392,8 @@ export class BookingsService {
         row.assigned_to === null ? null : Number(row.assigned_to),
       assignedToName: row.assigned_to_name,
       status: row.status,
+      emailDeliveryStatus: row.email_delivery_status ?? null,
+      emailDeliveryEvent: row.email_delivery_event ?? null,
       cancelledAt: row.cancelled_at,
       cancellationReason: row.cancellation_reason,
       notes: row.notes,

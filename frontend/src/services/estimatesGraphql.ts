@@ -57,6 +57,7 @@ export type GraphqlEstimate = {
   createdById: number | null;
   createdAt: string;
   updatedAt: string;
+  emailDeliveryStatus?: string | null;
   contactFirstName: string | null;
   contactLastName: string | null;
   contactEmail: string | null;
@@ -66,7 +67,7 @@ export type GraphqlEstimate = {
 const coreFields = `
   id organizationId estimateNumber contactId businessId customerName
   customerEmail customerPhone customerAddress issueDate validUntil subtotal
-  taxAmount discountAmount discountType discountValue total currency status
+  taxAmount discountAmount discountType discountValue total currency status emailDeliveryStatus
   notes termsAndConditions sentAt viewedAt acceptedAt declinedAt
   convertedInvoiceId customFields createdById createdAt updatedAt
   contactFirstName contactLastName contactEmail
@@ -119,6 +120,7 @@ export const mapEstimate = (estimate: GraphqlEstimate): Estimate => ({
   discount_value: Number(estimate.discountValue),
   total: Number(estimate.total),
   currency: estimate.currency,
+  email_delivery_status: estimate.emailDeliveryStatus ?? null,
   status: estimate.status,
   notes: estimate.notes,
   terms_and_conditions: estimate.termsAndConditions,

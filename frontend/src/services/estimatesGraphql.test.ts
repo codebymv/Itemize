@@ -33,7 +33,7 @@ describe('estimate GraphQL adapter', () => {
   it('maps list filters, pagination, and decimals', async () => {
     vi.mocked(graphqlRequest).mockResolvedValue({
       estimates: {
-        nodes: [row()],
+        nodes: [row({emailDeliveryStatus: 'bounced'})],
         pageInfo: { page: 2, pageSize: 10, total: 21, totalPages: 3 },
       },
     });
@@ -41,7 +41,7 @@ describe('estimate GraphQL adapter', () => {
       status: 'draft', contact_id: 9, search: 'Ada', page: 2, limit: 10,
     }, 4);
     expect(result.estimates[0]).toMatchObject({
-      estimate_number: 'EST-00008', subtotal: 25, total: 26,
+      estimate_number: 'EST-00008', subtotal: 25, total: 26, email_delivery_status: 'bounced',
     });
     expect(result.pagination).toEqual({ page: 2, limit: 10, total: 21, totalPages: 3 });
     expect(vi.mocked(graphqlRequest).mock.calls[0][1]).toEqual({

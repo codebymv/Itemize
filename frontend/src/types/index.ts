@@ -649,6 +649,8 @@ export interface Calendar {
 
 // Booking/Appointment
 export interface Booking {
+    email_delivery_status?: string | null;
+    email_delivery_event?: string | null;
   id: number;
   organization_id: number;
   calendar_id: number;

@@ -1,3 +1,5 @@
+import { useEmailOutcomeRefresh } from '@/hooks/useEmailOutcomeRefresh';
+import { EmailDeliveryStatus } from '@/components/EmailDeliveryStatus';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -134,19 +136,21 @@ export function EstimatesPage() {
         if (initError) setLoadError(initError);
     }, [initError]);
 
-    const fetchEstimates = useCallback(async () => {
+    const fetchEstimates = useCallback(async (quiet = false) => {
         if (!organizationId) return;
-        setLoading(true);
-        setLoadError(null);
+        if (!quiet) setLoading(true);
+        if (!quiet) setLoadError(null);
         try {
             const response = await getEstimates({}, organizationId);
             setEstimates(response.estimates);
         } catch (error) {
-            setLoadError('Estimates could not be loaded. Please try again.');
+            if (!quiet) setLoadError('Estimates could not be loaded. Please try again.');
         } finally {
-            setLoading(false);
+            if (!quiet) setLoading(false);
         }
     }, [organizationId]);
+
+    useEmailOutcomeRefresh(estimates, fetchEstimates);
 
     useEffect(() => {
         fetchEstimates();
@@ -493,6 +497,7 @@ export function EstimatesPage() {
                                                         {statusVisual.label}
                                                     </Badge>
                                                 </span>
+                                                <EmailDeliveryStatus status={estimate.email_delivery_status} />
                                                 {estimate.converted_invoice_id && (
                                                     <Badge variant="outline" className="text-xs">Converted</Badge>
                                                 )}

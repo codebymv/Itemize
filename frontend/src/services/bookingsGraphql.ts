@@ -33,11 +33,13 @@ type GraphqlBooking = {
   contactPhone: string | null;
   createdAt: string;
   updatedAt: string;
+  emailDeliveryStatus?: string | null;
+  emailDeliveryEvent?: string | null;
 };
 
 const fields = `
   id organizationId calendarId contactId title startTime endTime timezone
-  attendeeName attendeeEmail attendeePhone assignedToId assignedToName status
+  attendeeName attendeeEmail attendeePhone assignedToId assignedToName status emailDeliveryStatus emailDeliveryEvent
   cancelledAt cancellationReason notes internalNotes reminderSentAt customFields
   source calendarName calendarColor calendarSlug contactFirstName contactLastName
   contactEmail contactPhone createdAt updatedAt
@@ -96,6 +98,8 @@ const mapBooking = (booking: GraphqlBooking): Booking => ({
   ...optional('attendee_phone', booking.attendeePhone),
   ...optional('assigned_to', booking.assignedToId),
   ...optional('assigned_to_name', booking.assignedToName),
+  email_delivery_status: booking.emailDeliveryStatus ?? null,
+  email_delivery_event: booking.emailDeliveryEvent ?? null,
   status: booking.status.toLowerCase() as Booking['status'],
   ...optional('cancelled_at', booking.cancelledAt),
   ...optional('cancellation_reason', booking.cancellationReason),

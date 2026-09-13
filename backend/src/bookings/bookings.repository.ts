@@ -19,6 +19,8 @@ export type BookingRow = {
   attendee_phone: string | null;
   assigned_to: number | null;
   assigned_to_name: string | null;
+  email_delivery_status?: string | null;
+  email_delivery_event?: string | null;
   status: BookingStatus;
   cancelled_at: Date | null;
   cancellation_reason: string | null;
@@ -122,9 +124,21 @@ const bookingSelection = `
   contact.email AS contact_email,
   contact.phone AS contact_phone,
   b.created_at,
-  b.updated_at`;
+  b.updated_at,
+  booking_email.provider_status AS email_delivery_status,
+  booking_email.event AS email_delivery_event`;
 
 const bookingJoins = `
+  LEFT JOIN LATERAL (
+    SELECT receipt.provider_status, delivery.payload->>'bookingEvent' AS event
+    FROM workflow_side_effect_outbox delivery
+    LEFT JOIN delivery_provider_receipts receipt ON receipt.source='workflow'
+      AND receipt.delivery_id=delivery.id AND receipt.organization_id=b.organization_id
+    WHERE delivery.organization_id=b.organization_id AND delivery.effect_type='email'
+      AND delivery.payload->>'bookingId'=b.id::text
+      AND delivery.payload->>'bookingEvent' IN ('confirmed','rescheduled','cancelled')
+    ORDER BY delivery.created_at DESC,delivery.id DESC LIMIT 1
+  ) booking_email ON TRUE
   LEFT JOIN calendars calendar
     ON calendar.id = b.calendar_id
    AND calendar.organization_id = b.organization_id

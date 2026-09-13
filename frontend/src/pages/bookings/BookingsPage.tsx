@@ -1,3 +1,5 @@
+import { useEmailOutcomeRefresh } from '@/hooks/useEmailOutcomeRefresh';
+import { EmailDeliveryStatus } from '@/components/EmailDeliveryStatus';
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
@@ -102,10 +104,10 @@ export function BookingsPage() {
         return () => window.clearTimeout(timeout);
     }, [searchQuery]);
 
-    const fetchBookings = useCallback(async () => {
+    const fetchBookings = useCallback(async (quiet = false) => {
         if (!organizationId) return;
-        setLoading(true);
-        setLoadError('');
+        if (!quiet) setLoading(true);
+        if (!quiet) setLoadError('');
         try {
             const params: BookingsQueryParams = {
                 organization_id: organizationId,
@@ -119,11 +121,13 @@ export function BookingsPage() {
             setPagination(response.pagination);
         } catch (error) {
             console.error('Error fetching bookings:', error);
-            setLoadError(toastMessages.failedToLoad('bookings'));
+            if (!quiet) setLoadError(toastMessages.failedToLoad('bookings'));
         } finally {
-            setLoading(false);
+            if (!quiet) setLoading(false);
         }
     }, [organizationId, statusFilter, debouncedSearch, pagination.page, pagination.limit]);
+
+    useEmailOutcomeRefresh(bookings, fetchBookings);
 
     useEffect(() => {
         void fetchBookings();
@@ -279,6 +283,7 @@ export function BookingsPage() {
                                                     <h3 className="truncate text-sm font-medium md:text-base">{attendee}</h3>
                                                     <Badge className={cn('shrink-0 text-xs', visual.badgeClass)}>{visual.label}</Badge>
                                                 </div>
+                                                <EmailDeliveryStatus status={booking.email_delivery_status} event={booking.email_delivery_event} />
                                                 {booking.title ? <p className="mt-1 truncate text-sm text-muted-foreground">{booking.title}</p> : null}
                                                 <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                                                     <span className="inline-flex items-center gap-1"><Clock3 className="h-3 w-3" />{format(parseISO(booking.start_time), 'MMM d, yyyy · h:mm a')}</span>

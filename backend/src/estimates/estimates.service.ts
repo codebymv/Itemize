@@ -432,6 +432,7 @@ export class EstimatesService {
       total: row.total,
       currency: row.currency,
       status: row.status,
+      emailDeliveryStatus: row.email_delivery_status ?? null,
       notes: row.notes,
       termsAndConditions: row.terms_and_conditions,
       sentAt: row.sent_at,

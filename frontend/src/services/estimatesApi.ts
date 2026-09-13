@@ -30,6 +30,7 @@ export interface EstimateItem {
 }
 
 export interface Estimate {
+    email_delivery_status?: string | null;
   id: number;
   organization_id: number;
   estimate_number: string;

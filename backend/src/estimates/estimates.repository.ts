@@ -23,6 +23,7 @@ export type EstimateRow = {
   discount_value: string;
   total: string;
   currency: string;
+  email_delivery_status?: string | null;
   status: string;
   notes: string | null;
   terms_and_conditions: string | null;
@@ -210,7 +211,13 @@ const selection = `
   e.accepted_at, e.declined_at, e.converted_invoice_id, e.custom_fields,
   e.created_by, e.created_at, e.updated_at,
   c.first_name AS contact_first_name, c.last_name AS contact_last_name,
-  c.email AS contact_email`;
+  c.email AS contact_email,
+  (SELECT receipt.provider_status FROM estimate_email_deliveries delivery
+   LEFT JOIN delivery_provider_receipts receipt ON receipt.source='estimate'
+     AND receipt.delivery_id=delivery.id AND receipt.organization_id=e.organization_id
+   WHERE delivery.estimate_id=e.id AND delivery.organization_id=e.organization_id
+     AND delivery.delivery_type='estimate_sent'
+   ORDER BY delivery.created_at DESC,delivery.id DESC LIMIT 1) AS email_delivery_status`;
 
 @Injectable()
 export class EstimatesRepository {

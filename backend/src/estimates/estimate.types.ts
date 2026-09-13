@@ -113,6 +113,9 @@ export class Estimate {
   status: string;
 
   @Field(() => String, { nullable: true })
+  emailDeliveryStatus: string | null;
+
+  @Field(() => String, { nullable: true })
   notes: string | null;
 
   @Field(() => String, { nullable: true })
