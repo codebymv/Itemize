@@ -1,4 +1,5 @@
 import { EmailWebhookJobsService } from '../../src/email-webhooks/email-webhook-jobs.service';
+import { EmailWebhooksService } from '../../src/email-webhooks/email-webhooks.service';
 import { InvoicesRepository } from '../../src/invoices/invoices.repository';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
@@ -42,6 +43,12 @@ describe('Resend webhook receiver (legacy behavior pinned)', () => {
   let organizationId: number;
   let ownerId: number;
   const originalSecret = process.env.RESEND_WEBHOOK_SECRET;
+  const originalOtherAppSenders = process.env.RESEND_OTHER_APP_SENDERS;
+  afterEach(() => {
+    jest.restoreAllMocks();
+    if (originalOtherAppSenders === undefined) delete process.env.RESEND_OTHER_APP_SENDERS;
+    else process.env.RESEND_OTHER_APP_SENDERS = originalOtherAppSenders;
+  });
 
   const signedRequest = (
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -133,6 +140,85 @@ describe('Resend webhook receiver (legacy behavior pinned)', () => {
       await cleanup.teardown();
     }
   }, 60000);
+
+  it('classifies only signed allowlisted senders and deduplicates ignored events', async () => {
+    process.env.RESEND_OTHER_APP_SENDERS = 'noreply@gleamai.dev';
+    const id = `other-app-${Date.now()}`;
+    const event = emailEvent('email.delivered', id, new Date().toISOString(), { from:'Gleam <noreply@gleamai.dev>' });
+    expect((await signedRequest(app.getHttpServer(), id, event, { valid:false })).status).toBe(400);
+    expect((await pool.query('SELECT 1 FROM email_webhook_events WHERE svix_id=$1',[id])).rowCount).toBe(0);
+    const response = await signedRequest(app.getHttpServer(), id, event);
+    expect(response.body).toMatchObject({ ignored:true, reason:'other_application' });
+    expect((await signedRequest(app.getHttpServer(), id, event)).body.duplicate).toBe(true);
+    const row = (await pool.query('SELECT * FROM email_webhook_events WHERE svix_id=$1',[id])).rows[0];
+    expect(row).toMatchObject({ processing_status:'ignored', reconciliation_status:'not_required', reconciliation_reason:'other_application', reconciliation_attempt_count:0 });
+    expect(row.details).toMatchObject({otherAppSender:'noreply@gleamai.dev',senderEvidence:'signed_webhook'});
+    expect(row.details.classifiedAt).toBeTruthy();
+  });
+
+  it.each([undefined, 'noreply@itemize.cloud', 'noreply@unknown.test', 'noreply@gleamai.dev.evil.test', 'noreply@gleamai.dev <attacker@evil.test>'])
+  ('keeps missing, Itemize and unlisted sender evidence pending (%s)', async from => {
+    process.env.RESEND_OTHER_APP_SENDERS = 'noreply@gleamai.dev';
+    const id = `unknown-${Math.random()}`;
+    const response = await signedRequest(app.getHttpServer(),id,emailEvent('email.delivered',id,new Date().toISOString(),{from}));
+    expect(response.body).toMatchObject({pending:true,reason:'unmatched'});
+  });
+
+  it('quarantines contradictory Itemize evidence instead of ignoring or updating its delivery', async () => {
+    process.env.RESEND_OTHER_APP_SENDERS = 'noreply@gleamai.dev';
+    const id = `sender-conflict-${Date.now()}`;
+    const {log} = await seedContactAndLog(id);
+    const response = await signedRequest(app.getHttpServer(),id,emailEvent('email.delivered',id,new Date().toISOString(),{from:'noreply@gleamai.dev'}));
+    expect(response.body).toMatchObject({pending:true,reason:'sender_conflict'});
+    expect((await pool.query('SELECT status FROM email_logs WHERE id=$1',[log.id])).rows[0].status).toBe('sent');
+  });
+
+  it('checks Itemize outboxes even when they have no normal webhook target yet', async () => {
+    process.env.RESEND_OTHER_APP_SENDERS = 'noreply@gleamai.dev';
+    const id = `trial-sender-conflict-${Date.now()}`;
+    await pool.query(`INSERT INTO trial_reminder_deliveries(organization_id,trial_ends_at,status,provider_id)
+      VALUES ($1,CURRENT_TIMESTAMP,'sent',$2)`,[organizationId,id]);
+    const response = await signedRequest(app.getHttpServer(),id,emailEvent('email.delivered',id,new Date().toISOString(),{from:'noreply@gleamai.dev'}));
+    expect(response.body).toMatchObject({pending:true,reason:'sender_conflict'});
+  });
+
+  it('backfills only fresh provider-verified evidence; dry run and lookup failures preserve history', async () => {
+    process.env.RESEND_OTHER_APP_SENDERS = 'noreply@gleamai.dev';
+    const id = `historical-${Date.now()}`;
+    await signedRequest(app.getHttpServer(),id,emailEvent('email.delivered',id,new Date().toISOString(),{from:undefined}));
+    await pool.query(`UPDATE email_webhook_events SET reconciliation_status='dead_letter',reconciliation_attempt_count=10,
+      reconciliation_last_error='historical failure' WHERE svix_id=$1`,[id]);
+    const originalKey = process.env.RESEND_API_KEY;
+    process.env.RESEND_API_KEY = 're_test_only';
+    try {
+      const fetchMock = jest.spyOn(global,'fetch');
+      const service = app.get(EmailWebhooksService);
+      fetchMock.mockResolvedValueOnce(new Response('{}',{status:503}));
+      await expect(service.classifyStoredOtherAppEvent(id,true)).rejects.toThrow('503');
+      fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({id:'wrong',from:'noreply@gleamai.dev'})));
+      await expect(service.classifyStoredOtherAppEvent(id,true)).rejects.toThrow('mismatch');
+      fetchMock.mockImplementation(async () => new Response(JSON.stringify({id,from:'Gleam <noreply@gleamai.dev>'})));
+      expect((await service.classifyStoredOtherAppEvent(id)).reason).toBe('would_ignore');
+      expect((await pool.query('SELECT reconciliation_status FROM email_webhook_events WHERE svix_id=$1',[id])).rows[0].reconciliation_status).toBe('dead_letter');
+      expect((await service.classifyStoredOtherAppEvent(id,true)).ignored).toBe(true);
+      const row = (await pool.query('SELECT * FROM email_webhook_events WHERE svix_id=$1',[id])).rows[0];
+      expect(row).toMatchObject({processing_status:'ignored',reconciliation_status:'not_required',reconciliation_attempt_count:10,reconciliation_last_error:'historical failure'});
+      expect(row.details.senderEvidence).toBe('resend_api');
+      expect((await service.classifyStoredOtherAppEvent(id,true)).reason).toBe('ineligible');
+      const activeId = `${id}-active`;
+      await signedRequest(app.getHttpServer(),activeId,emailEvent('email.delivered',activeId,new Date().toISOString(),{from:undefined}));
+      fetchMock.mockImplementation(async () => {
+        await pool.query(`UPDATE email_webhook_events SET reconciliation_status='processing' WHERE svix_id=$1`,[activeId]);
+        return new Response(JSON.stringify({id:activeId,from:'noreply@gleamai.dev'}));
+      });
+      expect((await service.classifyStoredOtherAppEvent(activeId,true)).reason).toBe('ineligible');
+      expect((await pool.query('SELECT processing_status,reconciliation_status FROM email_webhook_events WHERE svix_id=$1',[activeId])).rows[0])
+        .toMatchObject({processing_status:'pending',reconciliation_status:'processing'});
+    } finally {
+      if (originalKey === undefined) delete process.env.RESEND_API_KEY;
+      else process.env.RESEND_API_KEY = originalKey;
+    }
+  });
 
   it('reads campaign totals from unique recipient event history despite stale counters and repeated events', async () => {
     const externalId = `campaign-metrics-${Date.now()}`;

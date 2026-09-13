@@ -3,6 +3,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { PG_POOL } from '../database/database.module';
 import { NotificationsService } from '../notifications/notifications.service';
+import { verifiedOtherAppSender } from './other-app-email-policy';
 
 export class EmailWebhookInputError extends Error {
   constructor(message: string) {
@@ -101,6 +102,7 @@ export function normalizeEmailWebhook(
     type?: unknown;
     created_at?: unknown;
     data?: {
+      from?: unknown;
       email_id?: unknown;
       created_at?: unknown;
       bounce?: { type?: unknown; subType?: unknown; message?: unknown };
@@ -125,6 +127,11 @@ export function normalizeEmailWebhook(
   }
 
   const details: Record<string, string | null> = {};
+  const otherAppSender = verifiedOtherAppSender(parsed.data?.from);
+  if (otherAppSender) {
+    details.otherAppSender = otherAppSender;
+    details.senderEvidence = 'signed_webhook';
+  }
   if (parsed.data?.bounce) {
     details.bounceType = boundedText(parsed.data.bounce.type, 50);
     details.bounceSubType = boundedText(parsed.data.bounce.subType, 100);
@@ -280,6 +287,10 @@ export class EmailWebhooksService {
     options: { reconciliation?: boolean } = {},
   ): Promise<EmailWebhookResult> {
     const targets = await this.loadTargets(client, normalized.externalId);
+    if (verifiedOtherAppSender(normalized.details.otherAppSender)
+      && ['signed_webhook', 'resend_api'].includes(normalized.details.senderEvidence ?? '')) {
+      return this.classifyOtherApplication(client, normalized, targets.organizationCount > 0);
+    }
     if (targets.organizationCount === 0) {
       return this.markPending(client, normalized, 'unmatched');
     }
@@ -375,6 +386,67 @@ export class EmailWebhooksService {
     );
 
     return { duplicate: false, matched, pending: !matched };
+  }
+
+  /** Operator-only backfill; no HTTP/GraphQL route. A fresh provider lookup is mandatory. */
+  async classifyStoredOtherAppEvent(deliveryId: string, apply = false): Promise<EmailWebhookResult> {
+    const original = await this.pool.query<EmailWebhookClaimRow>(
+      `SELECT * FROM email_webhook_events WHERE svix_id=$1 AND processing_status='pending'
+       AND reconciliation_status IN ('pending','retry','dead_letter')`, [deliveryId]);
+    const row = original.rows[0];
+    if (!row) return { duplicate: false, matched: false, reason: 'ineligible' };
+    if (!process.env.RESEND_API_KEY) throw new Error('RESEND_API_KEY is required for provider verification');
+    const response = await fetch(`https://api.resend.com/emails/${encodeURIComponent(row.external_id)}`, {
+      headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}` },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) throw new Error(`Resend verification failed (${response.status})`);
+    const email = await response.json() as { id?: unknown; from?: unknown };
+    if (email.id !== row.external_id) throw new Error('Resend provider ID mismatch');
+    const sender = verifiedOtherAppSender(email.from);
+    if (!sender) return { duplicate: false, matched: false, reason: 'unknown_sender' };
+    return this.transaction(async client => {
+      const locked = await client.query<EmailWebhookClaimRow>(
+        `SELECT * FROM email_webhook_events WHERE svix_id=$1 AND external_id=$2
+         AND processing_status='pending' AND reconciliation_status IN ('pending','retry','dead_letter')
+         FOR UPDATE`, [deliveryId,row.external_id]);
+      if (!locked.rows[0]) return { duplicate: false, matched: false, reason: 'ineligible' };
+      const normalized = normalizedEmailWebhookFromClaim(locked.rows[0]);
+      normalized.details = { ...normalized.details, otherAppSender: sender, senderEvidence: 'resend_api' };
+      const targets = await this.loadTargets(client, row.external_id);
+      return this.classifyOtherApplication(client, normalized, targets.organizationCount > 0, apply);
+    });
+  }
+
+  private async classifyOtherApplication(
+    client: PoolClient, event: NormalizedEvent, hasTarget: boolean, apply = true,
+  ): Promise<EmailWebhookResult> {
+    // These outboxes are not all handled by the normal outcome matcher yet.
+    // Their provider evidence still prevents classifying Itemize mail as unrelated.
+    const additional = await client.query<{ found: boolean }>(`SELECT EXISTS (
+      SELECT 1 FROM admin_email_deliveries WHERE provider_id=$1
+      UNION ALL SELECT 1 FROM campaign_test_email_deliveries WHERE provider_id=$1
+      UNION ALL SELECT 1 FROM estimate_email_deliveries WHERE provider_id=$1
+      UNION ALL SELECT 1 FROM review_request_deliveries WHERE provider_id=$1
+      UNION ALL SELECT 1 FROM trial_reminder_deliveries WHERE provider_id=$1
+      UNION ALL SELECT 1 FROM message_delivery_jobs WHERE provider_id=$1 AND channel='email'
+      UNION ALL SELECT 1 FROM workflow_side_effect_outbox WHERE provider_id=$1 AND effect_type='email'
+      UNION ALL SELECT 1 FROM stripe_subscription_webhook_events WHERE notification_provider_id=$1
+    ) AS found`, [event.externalId]);
+    if (hasTarget || additional.rows[0].found) {
+      return apply ? this.markPending(client, event, 'sender_conflict')
+        : { duplicate: false, matched: false, pending: true, reason: 'sender_conflict' };
+    }
+    if (!apply) return { duplicate: false, matched: false, reason: 'would_ignore' };
+    await client.query(`UPDATE email_webhook_events SET
+      processing_status='ignored',reconciliation_status='not_required',
+      reconciliation_reason='other_application',processed_at=CURRENT_TIMESTAMP,
+      reconciliation_next_attempt_at=NULL,reconciliation_lease_expires_at=NULL,
+      details=details || $2::jsonb || jsonb_build_object('classifiedAt',CURRENT_TIMESTAMP)
+      WHERE svix_id=$1`, [event.deliveryId, JSON.stringify({
+        otherAppSender: event.details.otherAppSender, senderEvidence: event.details.senderEvidence,
+      })]);
+    return { duplicate: false, matched: false, ignored: true, reason: 'other_application' };
   }
 
   private async markPending(

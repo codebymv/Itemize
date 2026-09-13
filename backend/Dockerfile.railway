@@ -66,6 +66,7 @@ WORKDIR /app/backend
 COPY --from=builder /app/backend/dist ./dist
 COPY backend/docs ./docs
 COPY backend/pdf-service ./pdf-service
+COPY backend/scripts/classify-other-app-email-events.cjs ./scripts/classify-other-app-email-events.cjs
 
 # The pre-deploy container uses the same image. Include the canonical tracked
 # migration stream and its runtime dependencies so schema readiness gates app rollout.

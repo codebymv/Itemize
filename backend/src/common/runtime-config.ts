@@ -1,4 +1,5 @@
 import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
+import { otherAppSenders } from '../email-webhooks/other-app-email-policy';
 
 const BOOLEAN_KEYS = [
   'DATABASE_SSL',
@@ -78,6 +79,7 @@ export function integerEnvironmentValue(
 export function validateRuntimeEnvironment(
   environment: NodeJS.ProcessEnv = process.env,
 ): void {
+  otherAppSenders(environment);
   for (const key of BOOLEAN_KEYS) {
     booleanEnvironmentValue(environment, key);
   }

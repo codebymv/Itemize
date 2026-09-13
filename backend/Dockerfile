@@ -73,6 +73,7 @@ RUN npm install --omit=dev --legacy-peer-deps && \
 COPY --from=builder /app/dist ./dist
 COPY docs ./docs
 COPY pdf-service ./pdf-service
+COPY scripts/classify-other-app-email-events.cjs ./scripts/classify-other-app-email-events.cjs
 
 RUN mkdir -p uploads/logos uploads/signatures && \
     chown -R nodejs:nodejs uploads
