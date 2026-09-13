@@ -1,6 +1,6 @@
 # Operator recovery for remaining email journeys
 
-Implementation validated locally and prepared for release; production deployment verification is pending. No production email was sent and no production queue was modified.
+Deployed as 0080601f; production deployment and read-only runtime verification passed on 2026-09-13. No production email was sent and no production queue was modified.
 
 ## Recovery behavior
 
@@ -20,6 +20,14 @@ All 37 fresh PostgreSQL integration tests and 12 frontend tests passed. The full
 
 The initial database run failed in fixture cleanup: the production delete guard rejected cascading deletion of an unresolved review job, contaminating the later global-count fixture. Cleanup now explicitly removes this suite's child delivery before teardown; the same three suites passed on a fresh database. No production guard was weakened.
 
+## Production verification — 2026-09-13 20:25 UTC
+
+GitHub CI run 34780086443 completed successfully, including full unit/integration suites, builds, bundle budgets and the production dependency audit. Railway frontend deployment 83d0a81f-c1c7-42a8-bd21-fc9c89f785ef and backend eb3ba9af-1d32-4941-9380-2e6240114e11 report SUCCESS on 0080601f, with one active deployment per service.
+
+API readiness, frontend HTML and the new /assets/index-Cc2MwGP_.js entry script return 200. The unsigned billing webhook returns 400. A read-only SSH probe confirms the running commit and enabled workflow, trial-reminder, estimate-email, review-request and email-webhook worker flags. All five queues are available with zero queued, processing, retrying or action-required jobs. Receipt counts remain 12 workflow, 10 estimate, six signature and six invoice, all with provider IDs and none requiring review.
+
+The signed-in admin Operations page was reloaded after deployment and shows Healthy with zero outstanding/retrying/review jobs. No genuine held jobs exist on which to exercise the recovery control. Production verification therefore covers deployment, runtime configuration and queue UI health; it does not claim a live recovery mutation was executed. Provider-evidence verification and no-send recovery are covered by the local tests above.
+
 ## Next scope
 
-After deployment, verify admin queue details and run an isolated app-generated recovery journey. Broader user-facing delivery status and visual verification of shared email design remain separate launch tasks. No claim is made that this action can reconstruct legacy evidence or guarantee inbox delivery.
+Admin review queue details loaded successfully after deployment and show zero outstanding jobs. An isolated app-generated recovery journey, broader user-facing delivery status and visual verification of shared email design remain separate launch tasks. No claim is made that this action can reconstruct legacy evidence or guarantee inbox delivery.

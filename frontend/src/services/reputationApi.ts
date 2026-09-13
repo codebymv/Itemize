@@ -104,6 +104,7 @@ export interface ReviewRequest {
     channel: 'email' | 'sms' | 'both';
     template_id?: number;
     email_sent: boolean;
+    email_delivery_status?: string | null;
     email_sent_at?: string;
     email_opened: boolean;
     email_opened_at?: string;

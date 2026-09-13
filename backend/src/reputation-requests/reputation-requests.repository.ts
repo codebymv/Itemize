@@ -15,6 +15,7 @@ export type ReputationRequestRow = {
   custom_message: string | null; created_at: Date | string; updated_at: Date | string;
   contact_first_name: string | null; contact_last_name: string | null;
   current_contact_email: string | null;
+  email_delivery_status?: string | null;
 };
 
 export type ReputationRequestPageQuery = {
@@ -28,7 +29,12 @@ const projection = `rr.id, rr.organization_id, rr.contact_id, rr.contact_email,
   rr.review_id, rr.preferred_platform, rr.redirect_url, rr.status, rr.scheduled_at,
   rr.expires_at, rr.custom_message, rr.created_at, rr.updated_at,
   c.first_name AS contact_first_name, c.last_name AS contact_last_name,
-  c.email AS current_contact_email`;
+  c.email AS current_contact_email,
+  (SELECT receipt.provider_status FROM review_request_deliveries delivery
+   LEFT JOIN delivery_provider_receipts receipt ON receipt.source='review_request'
+     AND receipt.delivery_id=delivery.id AND receipt.organization_id=rr.organization_id
+   WHERE delivery.review_request_id=rr.id AND delivery.organization_id=rr.organization_id AND delivery.channel='email'
+   ORDER BY delivery.created_at DESC,delivery.id DESC LIMIT 1) AS email_delivery_status`;
 
 @Injectable()
 export class ReputationRequestsRepository {

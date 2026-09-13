@@ -20,7 +20,7 @@ vi.mock('./graphqlClient', async (importOriginal) => ({
 const request = {
   id: 8, organizationId: 3, contactId: 4, contactEmail: 'snapshot@example.test',
   contactPhone: null, contactName: 'Ada Lovelace', channel: 'email' as const,
-  templateId: null, emailSent: true, emailSentAt: '2026-07-21T10:00:00.000Z',
+  templateId: null, emailSent: true, emailDeliveryStatus: 'delivered', emailSentAt: '2026-07-21T10:00:00.000Z',
   emailOpened: false, emailOpenedAt: null, smsSent: false, smsSentAt: null,
   clicked: true, clickedAt: '2026-07-21T11:00:00.000Z', ratingGiven: null,
   reviewSubmitted: false, reviewSubmittedAt: null, reviewId: null,
@@ -50,7 +50,7 @@ describe('reputation request management GraphQL adapter', () => {
       .resolves.toEqual({
         requests: [expect.objectContaining({
           id: 8, organization_id: 3, contact_id: 4, contact_email: 'snapshot@example.test',
-          email_sent: true, clicked: true, status: 'clicked', first_name: 'Ada',
+          email_sent: true, email_delivery_status: 'delivered', clicked: true, status: 'clicked', first_name: 'Ada',
           email: 'current@example.test',
         })],
         pagination: { page: 2, limit: 10, total: 11, totalPages: 2 },

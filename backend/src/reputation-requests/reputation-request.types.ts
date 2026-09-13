@@ -30,6 +30,9 @@ export class ReputationRequest {
   @Field(() => Boolean)
   emailSent: boolean;
 
+  @Field(() => String, { nullable: true })
+  emailDeliveryStatus: string | null;
+
   @Field(() => GraphQLISODateTime, { nullable: true })
   emailSentAt: Date | null;
 

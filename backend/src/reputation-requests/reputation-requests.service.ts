@@ -77,6 +77,7 @@ export class ReputationRequestsService {
       contactId: this.nullableId(row.contact_id, 'contactId'),
       contactEmail: row.contact_email, contactPhone: row.contact_phone, contactName: row.contact_name,
       channel: row.channel, templateId: this.nullableId(row.template_id, 'templateId'),
+      emailDeliveryStatus: row.email_delivery_status ?? null,
       emailSent: row.email_sent === true, emailSentAt: this.nullableDate(row.email_sent_at, 'emailSentAt'),
       emailOpened: row.email_opened === true, emailOpenedAt: this.nullableDate(row.email_opened_at, 'emailOpenedAt'),
       smsSent: row.sms_sent === true, smsSentAt: this.nullableDate(row.sms_sent_at, 'smsSentAt'),

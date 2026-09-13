@@ -13,6 +13,7 @@ export type ReputationDeliveryProviderResult =
   | { kind: 'rejected'; message: string };
 
 export type ReputationEmailMessage = {
+  reviewUrl?: string;
   durableDelivery?: DeliveryIdentity;
   to: string;
   subject: string;
@@ -46,12 +47,15 @@ export class ResendReputationEmailProvider implements ReputationEmailProvider {
   async send(message: ReputationEmailMessage): Promise<ReputationDeliveryProviderResult> {
     const apiKey = process.env.RESEND_API_KEY?.trim();
     if (!apiKey) return { kind: 'rejected', message: 'Email service is not configured' };
-    const reviewUrl = message.text.match(/https?:\/\/[^\s<>"']+/i)?.[0];
+    const reviewUrl = message.reviewUrl;
+    const suffix = reviewUrl ? `\n\nLeave a review: ${reviewUrl}\n\nThank you!` : null;
+    const htmlText = suffix && message.text.endsWith(suffix)
+      ? `${message.text.slice(0, -suffix.length)}\n\nThank you!` : message.text;
     const html = brandedTransactionalEmail({
       assetOrigin: transactionalEmailAssetOrigin(),
-      previewText: message.text,
+      previewText: htmlText,
       heading: message.subject,
-      bodyHtml: `<div style="white-space:pre-wrap">${escapeHtml(message.text)}</div>`,
+      bodyHtml: `<div style="white-space:pre-wrap">${escapeHtml(htmlText)}</div>`,
       ...(reviewUrl ? { cta: { label: 'Leave a review', url: reviewUrl } } : {}),
       footerText: 'This feedback request was sent with Itemize.',
     });

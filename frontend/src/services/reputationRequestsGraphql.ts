@@ -9,6 +9,7 @@ import type {
 type GraphqlReputationRequest = {
   id: number; organizationId: number; contactId: number | null; contactEmail: string | null;
   contactPhone: string | null; contactName: string | null; channel: ReviewRequest['channel'];
+  emailDeliveryStatus?: string | null;
   templateId: number | null; emailSent: boolean; emailSentAt: string | null;
   emailOpened: boolean; emailOpenedAt: string | null; smsSent: boolean; smsSentAt: string | null;
   clicked: boolean; clickedAt: string | null; ratingGiven: number | null;
@@ -20,7 +21,7 @@ type GraphqlReputationRequest = {
 };
 
 const fields = `id organizationId contactId contactEmail contactPhone contactName channel templateId
-  emailSent emailSentAt emailOpened emailOpenedAt smsSent smsSentAt clicked clickedAt ratingGiven
+  emailDeliveryStatus emailSent emailSentAt emailOpened emailOpenedAt smsSent smsSentAt clicked clickedAt ratingGiven
   reviewSubmitted reviewSubmittedAt reviewId preferredPlatform redirectUrl status scheduledAt expiresAt
   customMessage createdAt updatedAt contactFirstName contactLastName currentContactEmail`;
 
@@ -34,6 +35,7 @@ const mapRequest = (request: GraphqlReputationRequest): ReviewRequest => ({
   channel: request.channel,
   ...(request.templateId === null ? {} : { template_id: request.templateId }),
   email_sent: request.emailSent,
+  email_delivery_status: request.emailDeliveryStatus ?? null,
   ...(request.emailSentAt === null ? {} : { email_sent_at: request.emailSentAt }),
   email_opened: request.emailOpened,
   ...(request.emailOpenedAt === null ? {} : { email_opened_at: request.emailOpenedAt }),

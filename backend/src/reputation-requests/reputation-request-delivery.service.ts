@@ -102,6 +102,7 @@ export class ReputationRequestDeliveryService {
           to: claimed.recipient,
           subject: claimed.subject || 'We would love your feedback',
           text: claimed.payload.message,
+          reviewUrl: claimed.payload.reviewUrl,
           idempotencyKey: `review-request-email:${organizationId}:${claimed.id}`,
         })
         : await this.sms.send({ to: claimed.recipient, message: claimed.payload.message });

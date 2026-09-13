@@ -26,7 +26,7 @@ export type ReputationDeliveryBatchRow = {
   created_at: Date; updated_at: Date;
 };
 
-export type ReputationDeliveryPayload = { message: string };
+export type ReputationDeliveryPayload = { message: string; reviewUrl?: string };
 
 export type ReputationDeliveryRow = {
   id: number; batch_id: number; organization_id: number; review_request_id: number;
@@ -99,6 +99,7 @@ export class ReputationRequestDeliveryRepository {
       await this.insertDeliveries(client, batch.id, request.id, organizationId, {
         channel: input.channel, email, phone,
         message: this.message(input.customMessage, name, context.organizationName, token),
+        reviewUrl: `${this.frontendOrigin()}/review/${token}`,
         organizationName: context.organizationName,
         nextAttemptAt: input.scheduledAt,
       });
@@ -148,6 +149,7 @@ export class ReputationRequestDeliveryRepository {
         await this.insertDeliveries(client, batch.id, request.id, organizationId, {
           channel: input.channel, email, phone,
           message: this.message(input.customMessage, name, context.organizationName, token),
+          reviewUrl: `${this.frontendOrigin()}/review/${token}`,
           organizationName: context.organizationName, nextAttemptAt: null,
         });
       }
@@ -195,6 +197,7 @@ export class ReputationRequestDeliveryRepository {
       await this.insertDeliveries(client, batch.id, request.id, organizationId, {
         channel: request.channel, email: request.contact_email, phone: request.contact_phone,
         message: this.message(request.custom_message, request.contact_name, context.organizationName, request.unique_token),
+        reviewUrl: `${this.frontendOrigin()}/review/${request.unique_token}`,
         organizationName: context.organizationName, nextAttemptAt: null,
       });
       await client.query(
@@ -236,6 +239,13 @@ export class ReputationRequestDeliveryRepository {
         [deliveryId, organizationId, `nest:${process.pid}`],
       );
       if (result.rows[0]) {
+        if (result.rows[0].channel === 'email' && !result.rows[0].payload.reviewUrl) {
+          const request = await client.query<{ unique_token: string }>(
+            'SELECT unique_token FROM review_requests WHERE id=$1 AND organization_id=$2',
+            [result.rows[0].review_request_id, organizationId]);
+          const token = request.rows[0]?.unique_token;
+          if (token) result.rows[0].payload = { ...result.rows[0].payload, reviewUrl: `${this.frontendOrigin()}/review/${token}` };
+        }
         await client.query(
           `UPDATE review_request_delivery_batches SET status='processing',updated_at=CURRENT_TIMESTAMP
            WHERE id=$1 AND status='queued'`,
@@ -419,7 +429,7 @@ export class ReputationRequestDeliveryRepository {
 
   private async insertDeliveries(client: PoolClient, batchId: number, requestId: number, organizationId: number, input: {
     channel: ReputationRequestChannel; email: string | null; phone: string | null;
-    message: string; organizationName: string; nextAttemptAt: Date | null;
+    message: string; reviewUrl: string; organizationName: string; nextAttemptAt: Date | null;
   }): Promise<void> {
     const channels: Array<{ channel: ReputationDeliveryChannel; recipient: string }> = [];
     if ((input.channel === 'email' || input.channel === 'both') && input.email) {
@@ -435,7 +445,7 @@ export class ReputationRequestDeliveryRepository {
          ) VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,COALESCE($8,CURRENT_TIMESTAMP))`,
         [batchId, organizationId, requestId, delivery.channel, delivery.recipient,
           delivery.channel === 'email' ? `We'd love your feedback on ${input.organizationName}`.slice(0, 255) : null,
-          JSON.stringify({ message: input.message }), input.nextAttemptAt],
+          JSON.stringify({ message: input.message, reviewUrl: input.reviewUrl }), input.nextAttemptAt],
       );
     }
   }
