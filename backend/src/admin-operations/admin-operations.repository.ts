@@ -134,6 +134,7 @@ const ADMIN_JOB_QUEUES = [
     referenceColumns: [{ column: 'batch_id', label: 'Batch' }],
   }),
   queue('review-requests', 'Review requests', 'review_request_deliveries', {
+    kindColumns: ['channel'],
     referenceColumns: [{ column: 'review_request_id', label: 'Review request' }],
   }),
   queue('signatures', 'Signature delivery', 'signature_delivery_outbox', {

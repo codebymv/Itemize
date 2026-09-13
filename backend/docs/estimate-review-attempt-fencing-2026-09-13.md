@@ -1,6 +1,6 @@
 # Estimate and review-request attempt fencing
 
-Implementation validated locally and prepared for release; production deployment verification is pending.
+Deployed as 2445df2c; deployment and read-only runtime verification passed on 2026-09-13.
 
 ## Problem and change
 
@@ -18,4 +18,6 @@ All ten release contracts, the backend build, environment contract, documentatio
 
 ## Release follow-up
 
-Deploy and verify this slice after committing it. Durable receipt release db39649b is tracked separately in remaining-email-durable-recovery-2026-09-13.md. The remaining work includes operator reconciliation for the newer receipt sources, user-facing delivery status, and visual validation of shared email conventions. This change prevents stale database writes; it does not introduce exactly-once delivery guarantees.
+At 20:06 UTC, GitHub CI run 34779082097 passed. Railway frontend eea30d23-6708-46eb-ac56-b7685f93ccc7 and backend c742275d-fceb-46e6-860a-52850dc0a257 reported SUCCESS on 2445df2c. API readiness, frontend HTML and its script returned 200; an unsigned billing webhook returned 400. A read-only SSH probe confirmed the running commit and available estimate, review-request, workflow, trial-reminder and email-webhook queues, all with zero queued, processing, retrying or action-required jobs. No mail was sent and no production rows were changed.
+
+Durable receipt release db39649b is tracked separately in remaining-email-durable-recovery-2026-09-13.md. The next local implementation is documented in [remaining-email-operator-recovery-2026-09-13.md](remaining-email-operator-recovery-2026-09-13.md). User-facing delivery status and visual validation of shared email conventions remain follow-up work. This change prevents stale database writes; it does not introduce exactly-once delivery guarantees.

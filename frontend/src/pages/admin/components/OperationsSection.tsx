@@ -302,7 +302,7 @@ function QueueDetailsPanel({
                                         <TableCell className="max-w-40 text-xs text-muted-foreground">{timestamp(item.nextAttemptAt)}</TableCell>
                                         <TableCell className="max-w-64 whitespace-normal text-xs text-muted-foreground">
                                             {item.lastError || (item.leaseExpiresAt ? `Lease expires ${timestamp(item.leaseExpiresAt)}` : '—')}
-                                            <DeliveryReconciliation queueId={queue.id} deliveryId={item.id} status={item.status} onResolved={onRetry} />
+                                            <DeliveryReconciliation queueId={queue.id} deliveryId={item.id} status={item.status} kind={item.kind} onResolved={onRetry} />
                                         </TableCell>
                                     </TableRow>
                                 ))}
@@ -333,7 +333,7 @@ function QueueDetailsPanel({
                                     </div>
                                 </div>
                                 {item.lastError && <p className="break-words rounded bg-muted p-2 text-xs text-muted-foreground">{item.lastError}</p>}
-                                <DeliveryReconciliation queueId={queue.id} deliveryId={item.id} status={item.status} onResolved={onRetry} />
+                                <DeliveryReconciliation queueId={queue.id} deliveryId={item.id} status={item.status} kind={item.kind} onResolved={onRetry} />
                             </div>
                         ))}
                     </div>

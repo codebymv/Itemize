@@ -31,6 +31,8 @@ The migration's down operation preserves evidence. Before rolling application co
 
 ## Remaining launch work
 
+Read-only runtime verification on 2026-09-13 before the subsequent 2445df2c rollout confirmed db39649b running, all operations queues available and empty, and accepted backfilled receipts for 12 workflow emails and 10 estimate emails with no review-required receipts. The existing invoice/signature receipt groups each contained six accepted receipts. No review-request or trial-reminder receipt groups were present. This verifies stored evidence and empty queues, not new end-to-end sends.
+
 Release update at 2026-09-13 19:53 UTC: GitHub CI run 34777554083 completed successfully. Both Railway deployments listed below now report SUCCESS on db39649b. Runtime receipt/backfill and queue inspection remain separate follow-up checks; deployment success alone does not verify every delivery journey.
 
 Release check at 2026-09-13 19:32 UTC: db39649b is pushed to master. GitHub CI run 34777554083 passed its contracts, lint, unit and integration steps and is still building. Railway frontend 2df438cf-cbda-4ed9-9697-4ad50640c7ec and backend d2abef16-682c-42ba-a832-06f1e0e11213 were last observed WAITING for CI. The currently serving API readiness, frontend HTML and script returned 200; the unsigned billing webhook returned 400. These health checks do not verify the pending release or migration in production.
