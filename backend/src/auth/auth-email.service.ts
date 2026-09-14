@@ -19,6 +19,15 @@ const escapeHtml = (value: string): string =>
 export class AuthEmailService {
   private readonly logger = new Logger(AuthEmailService.name);
 
+  sendMfaChanged(user: AuthEmailUser): Promise<boolean> {
+    const text = 'Your Itemize administrator authenticator was enrolled, replaced, or entered recovery. If this was not you, contact the Itemize maintainer immediately.';
+    return this.send(user,'Itemize administrator security changed',text,brandedTransactionalEmail({
+      assetOrigin:transactionalEmailAssetOrigin(),previewText:'Your administrator security settings changed.',
+      heading:'Administrator security changed',bodyHtml:this.greeting(user)+`<p style="margin:0">${text}</p>`,
+      showFooter:false,
+    }));
+  }
+
   sendVerification(
     user: AuthEmailUser,
     token: string,

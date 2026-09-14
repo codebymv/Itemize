@@ -109,12 +109,12 @@ export class AccountDeletionService {
         emailHash,
       });
       throw itemizeGraphqlError(
-        'We could not send the account recovery email. Your deletion request was not scheduled.',
+        'We could not send the account recovery email. Your deletion request was not scheduled. Please sign in again before retrying.',
         'SERVICE_UNAVAILABLE',
         { reason: 'ACCOUNT_RECOVERY_EMAIL_UNAVAILABLE' },
       );
     }
-    this.sessions.logout(response);
+    await this.sessions.logout(response);
     return {
       success: true,
       message: `Your account is locked and scheduled for deletion on ${outcome.scheduledAt.toISOString().slice(0, 10)}. Use the recovery email before then to keep it.`,

@@ -1,20 +1,12 @@
-# Production API restore (hollow Express)
+﻿# Production API recovery
 
-Observed 18 Aug 2026 against `https://itemize-backend-production-92ad.up.railway.app`:
+Updated September 14, 2026. The separate Express runtime was retired on August 24. Do not redeploy it, configure GRAPHQL_UPSTREAM_URL, or use the removed backend migration runner. Follow the [incident response procedure](incident-response.md).
 
-- `GET /api/health` returned `status: "healthy"` with a live database (uptime ~8.5 days).
-- `GET /api/signatures/documents/1/file` and `GET /api/status` returned `API_INITIALIZATION_FAILED`.
-- `GET /graphql` returned `405 Method Not Allowed` (proxy mounted; POST-only).
+1. Record the failing request, UTC time, affected service, running commit and Railway deployment ID. Inspect Nest startup errors and migration pre-deploy output. Keep secrets and customer payloads out of incident notes.
+2. Check the active API environment against `backend/.env.example` and its startup ownership summary. Correct missing requirements; do not bypass startup validation.
+3. Confirm the migration gate `npm --prefix /app/db run migrate` succeeded. Schema authority is `db/`. Investigate failed migrations before retrying; never run the test database initializer against production.
+4. Redeploy the verified image, or select a known-good image after checking compatibility with the current schema. Code rollback does not reverse migrations, charges, messages or provider events.
+5. Check API `/health`, frontend HTML and its current entry asset, then an authenticated read and one affected journey. Health alone is insufficient.
+6. Inspect Admin Operations queue age, retries and jobs needing review. Preserve worker ownership; do not run one-shot jobs alongside continuous owners. Resume incident-paused owners deliberately after inspecting their backlogs.
 
-That combination means deferred init obtained a Postgres pool, then threw **before** `registerApiRoutes` finished. `/api/health` is registered before that work, so Railway kept the process.
-
-## Restore
-
-1. Railway logs for `itemize-backend-production-92ad`: search `Database-dependent API initialization failed`. The `error` field is the cause.
-2. Typical causes:
-   - `schema_migrations` missing, or required marker not recorded. Current boot requires `054_vault_zero_knowledge`.
-   - Invalid `GRAPHQL_UPSTREAM_URL` thrown while creating HTTP proxies.
-3. Run `node backend/scripts/run-migrations.js --status` then `node backend/scripts/run-migrations.js` against production Postgres.
-4. Confirm `GRAPHQL_UPSTREAM_URL` is the private Nest origin (`http`/`https`, no credentials).
-5. Redeploy the Express service. After this boot hardening, a failed init **exits 1** and `/api/health` is **503** after the startup grace window.
-6. Confirm `GET /api/health` is healthy, then an authenticated `GET /api/signatures/documents/:id/file` returns `application/pdf`.
+Backup/PITR setup and restore drills remain deferred by the user. This runbook does not assert that a recoverable production snapshot exists.

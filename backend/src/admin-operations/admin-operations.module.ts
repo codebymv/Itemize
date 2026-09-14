@@ -1,3 +1,4 @@
+import { AuthModule } from '../auth/auth.module';
 import { DeliveryReconciliationService } from './delivery-reconciliation.service';
 import { DeliveryReconciliationResolver } from './delivery-reconciliation.resolver';
 import { Module } from '@nestjs/common';
@@ -8,8 +9,8 @@ import { AdminOperationsService } from './admin-operations.service';
 import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [NotificationsModule],
+  imports: [AuthModule, NotificationsModule],
   providers: [DeliveryReconciliationService, DeliveryReconciliationResolver, AdminAccessGuard, AdminOperationsRepository, AdminOperationsService, AdminOperationsResolver],
-  exports: [AdminAccessGuard],
+  exports: [AdminAccessGuard, AuthModule],
 })
 export class AdminOperationsModule {}

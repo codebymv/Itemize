@@ -240,7 +240,7 @@ export class AuthResolver {
   @Public()
   @CsrfProtected()
   @Mutation(() => AuthSessionStatus)
-  logout(@Context() context: GraphqlHttpContext): AuthSessionStatus {
-    return this.sessions.logout(context.res);
+  logout(@Context() context: GraphqlHttpContext): Promise<AuthSessionStatus> {
+    return this.sessions.logout(context.res, context.req.cookies?.itemize_refresh, context.req.cookies?.itemize_auth);
   }
 }

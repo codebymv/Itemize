@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { JwtService } from '@nestjs/jwt';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
@@ -55,7 +56,10 @@ describe('Admin operations GraphQL PostgreSQL contract', () => {
        SELECT $1,id,'active',NOW(),NOW() FROM subscription_plans WHERE name='pro' AND is_active=true LIMIT 1`,
       [userOrganizationId],
     );
-    adminToken = await jwt.signAsync({ id: adminId }, { secret: process.env.JWT_SECRET, expiresIn: '15m' });
+    const adminSessionId = randomUUID();
+    await pool.query("INSERT INTO admin_mfa(user_id,enabled_at) VALUES($1,CURRENT_TIMESTAMP)",[adminId]);
+    await pool.query("INSERT INTO auth_sessions(id,user_id,expires_at,admin_verified_at) VALUES($1,$2,CURRENT_TIMESTAMP+INTERVAL '1 hour',CURRENT_TIMESTAMP)",[adminSessionId,adminId]);
+    adminToken = await jwt.signAsync({ id: adminId, sid: adminSessionId }, { secret: process.env.JWT_SECRET, expiresIn: '15m' });
     userToken = await jwt.signAsync({ id: userId }, { secret: process.env.JWT_SECRET, expiresIn: '15m' });
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(PG_POOL).useValue(pool).compile();

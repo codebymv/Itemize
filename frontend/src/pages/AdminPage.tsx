@@ -1,3 +1,4 @@
+import { AdminMfaGate } from './admin/components/AdminMfaGate';
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAuthState } from '@/contexts/AuthContext';
@@ -62,7 +63,7 @@ export function AdminPage() {
             nav={<AdminNav />}
             navigationBreakpoint="wide"
         >
-            <Routes>
+            <AdminMfaGate><Routes>
                 <Route index element={(
                     <CommunicationsSection
                         onDesktopToolsChange={setDesktopTools}
@@ -75,7 +76,7 @@ export function AdminPage() {
                     />
                 )} />
                 <Route path="change-tier" element={<ChangeTierSection />} />
-            </Routes>
+            </Routes></AdminMfaGate>
         </PageLayout>
     );
 }

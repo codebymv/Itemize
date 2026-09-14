@@ -1,5 +1,6 @@
 export type AuthenticatedIdentity = {
   userId: number;
+  sessionId?: string;
 };
 
 export type OrganizationIdentity = {

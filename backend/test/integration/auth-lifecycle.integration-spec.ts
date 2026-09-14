@@ -305,6 +305,13 @@ describe('Authentication lifecycle GraphQL PostgreSQL contract', () => {
     expect(changed.body.errors).toBeUndefined();
     expect(changed.body.data.changePassword.success).toBe(true);
 
+    // Password changes revoke every previous session, including this browser.
+    const revoked = await agent.post('/graphql').send({query:'{ currentUser { id } }'});
+    expect(revoked.body.errors[0].extensions.code).toBe('UNAUTHENTICATED');
+    await agent.post('/graphql').send({
+      query:'mutation Login($input: LoginInput!) { login(input:$input) { success } }',
+      variables:{input:{email:primaryEmail,password:'ChangedPass4'}},
+    }).expect(200);
     const profile = await agent
       .post('/graphql')
       .set('x-csrf-token', csrfToken)
@@ -617,6 +624,11 @@ describe('Authentication lifecycle GraphQL PostgreSQL contract', () => {
     );
     expect(stillActive.rows[0]).toEqual({ active: true, no_recovery_token: true });
 
+    // Scheduling invalidates sessions even when failed email delivery cancels the schedule.
+    await agent.post('/graphql').send({
+      query:'mutation Login($input: LoginInput!) { login(input:$input) { success } }',
+      variables:{input:{email:deletionEmail,password:'DeletePass5'}},
+    }).expect(200);
     const scheduled = await deleteAccount();
     expect(scheduled.body.errors).toBeUndefined();
     expect(scheduled.body.data.deleteViewerAccount).toMatchObject({

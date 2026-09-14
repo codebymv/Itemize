@@ -1,3 +1,4 @@
+import { AuthSessionRepository } from './auth-session.repository';
 import { avatarAssetPath } from '../common/avatar-catalog';
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -12,6 +13,7 @@ import { SignupMode } from './auth.inputs';
 type RefreshTokenPayload = {
   userId?: unknown;
   type?: unknown;
+  sid?: unknown;
 };
 
 type GoogleTokenInfo = {
@@ -35,6 +37,7 @@ export class SessionService {
   constructor(
     private readonly jwt: JwtService,
     private readonly users: AuthRepository,
+    private readonly sessionRecords: AuthSessionRepository,
   ) {}
 
   async login(
@@ -123,13 +126,26 @@ export class SessionService {
         reason: 'EMAIL_NOT_VERIFIED',
       });
     }
-    const accessToken = await this.signAccessToken(user);
+    const sid = await this.sessionRecords.requireActive(userId, payload.sid);
+    const accessToken = await this.signAccessToken(user, sid);
     response.cookie(ACCESS_COOKIE, accessToken, this.cookieOptions(ACCESS_SECONDS));
     this.noStore(response);
     return { success: true };
   }
 
-  logout(response: Response): AuthSessionStatus {
+  async logout(response: Response, refreshToken?: unknown, accessToken?: unknown): Promise<AuthSessionStatus> {
+    const revoked = new Set<string>();
+    for (const token of [refreshToken, accessToken]) {
+      if (typeof token !== 'string') continue;
+      let payload: RefreshTokenPayload | undefined;
+      try {
+        payload = await this.jwt.verifyAsync<RefreshTokenPayload>(token, { secret: this.secret() });
+      } catch { /* Invalid or expired cookies are still cleared. */ }
+      if (typeof payload?.sid === 'string' && /^[0-9a-f-]{36}$/i.test(payload.sid) && !revoked.has(payload.sid)) {
+        await this.sessionRecords.revoke(payload.sid);
+        revoked.add(payload.sid);
+      }
+    }
     response.cookie(ACCESS_COOKIE, '', this.cookieOptions(0));
     response.cookie(REFRESH_COOKIE, '', this.cookieOptions(0));
     this.noStore(response);
@@ -149,10 +165,11 @@ export class SessionService {
   }
 
   async createSession(user: AuthenticationUser, response: Response): Promise<void> {
+    const sid = await this.sessionRecords.create(user.id, user.passwordHash);
     const [accessToken, refreshToken] = await Promise.all([
-      this.signAccessToken(user),
+      this.signAccessToken(user, sid),
       this.jwt.signAsync(
-        { userId: user.id, type: 'refresh' },
+        { userId: user.id, type: 'refresh', sid },
         { secret: this.secret(), expiresIn: REFRESH_SECONDS },
       ),
     ]);
@@ -161,9 +178,9 @@ export class SessionService {
     this.noStore(response);
   }
 
-  private signAccessToken(user: AuthenticationUser): Promise<string> {
+  private signAccessToken(user: AuthenticationUser, sid: string): Promise<string> {
     return this.jwt.signAsync(
-      { id: user.id, email: user.email, name: user.name },
+      { id: user.id, email: user.email, name: user.name, sid },
       { secret: this.secret(), expiresIn: ACCESS_SECONDS },
     );
   }

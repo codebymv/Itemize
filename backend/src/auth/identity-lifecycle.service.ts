@@ -191,7 +191,7 @@ export class IdentityLifecycleService {
       });
     }
     await this.emails.sendPasswordChanged(user);
-    return { success: true, message: 'Password changed successfully.' };
+    return { success: true, message: 'Password changed successfully. Please sign in again.' };
   }
 
   async updateViewerProfile(userId: number, rawName: string) {

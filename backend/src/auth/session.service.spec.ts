@@ -1,3 +1,4 @@
+import { AuthSessionRepository } from './auth-session.repository';
 import { JwtService } from '@nestjs/jwt';
 import bcrypt from 'bcryptjs';
 import { Response } from 'express';
@@ -45,6 +46,7 @@ describe('SessionService', () => {
     service = new SessionService(
       jwt as unknown as JwtService,
       repository as unknown as AuthRepository,
+      {create:jest.fn().mockResolvedValue("00000000-0000-4000-8000-000000000001"),requireActive:jest.fn().mockResolvedValue("00000000-0000-4000-8000-000000000001"),revoke:jest.fn()} as unknown as AuthSessionRepository,
     );
   });
 
@@ -103,10 +105,10 @@ describe('SessionService', () => {
     );
   });
 
-  it('clears both authentication cookies on logout', () => {
+  it('clears both authentication cookies on logout', async () => {
     const res = response();
 
-    expect(service.logout(res)).toEqual({ success: true });
+    expect(await service.logout(res)).toEqual({ success: true });
     expect(res.cookie).toHaveBeenCalledWith(
       'itemize_auth',
       '',

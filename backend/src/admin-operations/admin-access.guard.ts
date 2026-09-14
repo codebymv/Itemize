@@ -1,3 +1,4 @@
+import { AdminMfaService } from '../auth/admin-mfa.service';
 import { CanActivate, ExecutionContext, Inject, Injectable } from '@nestjs/common';
 import { Pool } from 'pg';
 import { itemizeGraphqlError } from '../common/graphql-error';
@@ -9,10 +10,13 @@ export class AdminAccessGuard implements CanActivate {
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,
     private readonly requestContext: RequestContextService,
+    private readonly mfa: AdminMfaService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    if (context.getType<string>() !== 'graphql') return true;
+    if (context.getType<string>() !== 'graphql') {
+      throw itemizeGraphqlError('Unsupported administrator transport', 'FORBIDDEN');
+    }
     const identity = this.requestContext.current().identity;
     if (!identity) throw itemizeGraphqlError('Authentication required', 'UNAUTHENTICATED');
     const result = await this.pool.query<{ role: string | null }>(
@@ -21,6 +25,7 @@ export class AdminAccessGuard implements CanActivate {
     if (result.rows[0]?.role !== 'ADMIN') {
       throw itemizeGraphqlError('Administrator access required', 'FORBIDDEN');
     }
+    await this.mfa.requireVerified(identity);
     return true;
   }
 }

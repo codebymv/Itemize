@@ -4,6 +4,8 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { AdminPage } from './AdminPage';
 
+vi.mock('./admin/components/AdminMfaGate', () => ({ AdminMfaGate: ({children}: PropsWithChildren) => children }));
+
 vi.mock('@/contexts/AuthContext', () => ({
   useAuthState: () => ({ currentUser: { role: 'ADMIN' } }),
 }));

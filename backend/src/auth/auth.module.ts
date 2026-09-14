@@ -1,3 +1,6 @@
+import { AdminMfaService } from './admin-mfa.service';
+import { AdminMfaResolver } from './admin-mfa.resolver';
+import { AuthSessionRepository } from './auth-session.repository';
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { AccessTokenService } from './access-token.service';
@@ -18,12 +21,13 @@ import { AccountDeletionSchedulerService } from './account-deletion-scheduler.se
 
 @Module({
   imports: [JwtModule.register({}), NotificationsModule],
-  providers: [
+  providers: [AdminMfaService, AdminMfaResolver,
     AccountDeletionRepository,
     AccountDeletionService,
     AccountDeletionSchedulerService,
     AccountDataExportRepository,
     AccountDataExportService,
+    AuthSessionRepository,
     AccessTokenService,
     AuthEmailService,
     AuthRepository,
@@ -34,6 +38,6 @@ import { AccountDeletionSchedulerService } from './account-deletion-scheduler.se
     IdentityLifecycleService,
     SessionService,
   ],
-  exports: [AccessTokenService, GraphqlAuthGuard, GraphqlCsrfGuard],
+  exports: [AdminMfaService, AccessTokenService, GraphqlAuthGuard, GraphqlCsrfGuard],
 })
 export class AuthModule {}

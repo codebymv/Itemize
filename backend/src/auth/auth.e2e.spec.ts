@@ -29,7 +29,7 @@ describe('Authentication GraphQL HTTP contract', () => {
     process.env.NODE_ENV = 'test';
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(PG_POOL)
-      .useValue({ query, end })
+      .useValue({ query, end, connect: async () => ({ query, release: jest.fn() }) })
       .compile();
     app = moduleRef.createNestApplication<NestExpressApplication>({
       bodyParser: false,
