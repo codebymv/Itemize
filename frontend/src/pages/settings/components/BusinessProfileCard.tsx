@@ -59,7 +59,7 @@ export const BusinessProfileCard: React.FC<BusinessProfileCardProps> = ({
         {businesses.length > 0 && (
           <Button
             size="sm"
-            onClick={onAddBusiness}
+            onClick={() => onAddBusiness()}
             className="bg-primary interaction-button--primary text-primary-foreground"
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -82,7 +82,7 @@ export const BusinessProfileCard: React.FC<BusinessProfileCardProps> = ({
             title="No businesses yet"
             description="Add the identity customers will see on estimates and invoices."
             actionLabel="Add business"
-            onAction={onAddBusiness}
+            onAction={() => onAddBusiness()}
           />
         ) : (
           <div className="space-y-2">

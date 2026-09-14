@@ -1,6 +1,6 @@
 # Estimate and booking delivery visibility and organizer contact
 
-Implemented locally after the production journey in estimate-booking-live-journeys-2026-09-13.md. These changes are not deployed and this implementation pass sent no live email.
+Implemented after the production journey in estimate-booking-live-journeys-2026-09-13.md and deployed as e83925c4. Production deployment and delivery-label verification passed; organizer-contact inbox verification remains pending configuration. No new live email was sent in this verification pass.
 
 ## Behavior
 
@@ -24,3 +24,17 @@ The contact lives in the existing immutable body snapshot. Editing business sett
 ## Rollout
 
 Deploy the backend before the frontend starts querying the new fields. No database migration or new dependency is required. After deployment, verify existing delivered estimate/booking evidence in the UI and use one authorized QA lifecycle send with a configured business email to inspect the organizer link. The earlier production inbox evidence covers the pre-change templates only. Mobile and other email-client checks remain outstanding.
+
+## Production verification ? September 13, 2026 (Phoenix)
+
+At 2026-09-14 03:33 UTC, CI run 34789086242 succeeded on e83925c468e1bd937d3ba3b8bd3c55419bbeadd1. Railway frontend deployment 3ebc9c0d-e369-4092-817e-f0a8942c7012 and backend deployment 13b33b84-f5ec-4d23-97b4-7b1f71e30308 both reported SUCCESS on that commit. The backend runtime independently confirmed the same SHA. API readiness, frontend HTML and entry asset returned 200; an unsigned billing webhook returned 400 for missing signature.
+
+The production estimate list and EST-01007 editor display Email delivered alongside Sent and the previously recorded view evidence. Booking 33 displays Cancelled and Cancellation email delivered. Older rows without provider evidence show no fabricated delivery labels. These checks used existing QA deliveries; no resend or fresh booking was created.
+
+At 03:35:07 UTC, all registered operations queues were available with zero pending or action-required work. The QA organization's selected business/payment settings contain no business contact email, so an actionable organizer mailto link cannot yet be verified with its current configuration. No contact address was inferred from private member data or changed during this pass. The link-rendering and contact snapshot behavior is covered by the recorded local tests; a newly delivered contact-bearing email and mobile inbox rendering remain unverified.
+
+## Follow-up: business profile creation regression
+
+The live organizer-contact setup exposed a separate frontend bug: both Add business actions passed the React click event into openBusinessDialog's optional business argument. This selected Edit Business with no valid ID and made saving fail. A read-only production check confirmed no business profile was created for the QA organization by the failed attempt.
+
+Both creation buttons now invoke the callback with no arguments. Regression tests cover empty and populated profile lists; the existing payment-settings hook suite covers create/edit behavior. All eleven focused tests, the frontend build and bundle budgets passed. This correction is required before resuming the live organizer-contact setup.
