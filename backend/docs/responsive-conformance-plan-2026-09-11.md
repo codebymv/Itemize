@@ -18,7 +18,22 @@
 | 3 | done 13 Sep | `ExpandedRowHeader` primitive + `expanded-row-header` container CSS (value lane ≥ 28rem, status lane ≥ 40rem, inline copies below). The five sales lists adopt the container **classes** on their existing markup (their menus are page-specific; one collapse order now lives in CSS instead of five sm/md/lg tiers). Contacts, Shared and Archive rebuilt on the component; `ContactsTable.tsx` deleted, `ContactCardList` serves every width with a select-all bar; `VIEWPORT_HOOK_BASELINE` 5 → 4. Contract: routed lists may not contain `<Table>` outside a tabular allowlist |
 | 4 | done 13 Sep | `EditorSplit` (`@container` frame; two columns at `@[52rem]` with `minmax(--editor-preview-min, --editor-preview-share)`; `EDITOR_SPLIT_STICKY` offsets from `--app-shell-height` = 3.5rem instead of `top-6`/`top-20`). All 9 editors (14 grids) wrapped; children keep their markup with `lg:col-span-2`, `xl:order-*`, `xl:sticky` rewritten to container forms. Measured at 1024: 644 px editor → 1 column, 836 px → 2 × 406 px (the audit's inversion is gone). Contract: editors import `EditorSplit`, no `*:sticky` in `pages/` |
 | 6 | done 13 Sep | `useElementSize` (ResizeObserver) hook. `CanvasContainer` measures its own left edge for the viewport controls instead of restating 256/64 and centres on its own size; `WhiteboardCard`/`SharedWhiteboardCard` scale-to-fit when the host is narrower than the board or the pointer is coarse; `WireframeCard` min-height via `@container`; `NoteContent` "Tap"/"Click" copy and focus via `useCoarsePointer`; `ContentsPage` accordion via `useCoarsePointer`; `SharedPage` landing via the shell's `useSidebar().isMobile`; `canvas.tsx` height from `--app-shell-height`. **`VIEWPORT_HOOK_BASELINE` = 0 and `VIEWPORT_READ_BASELINE` = 0** — all three ratchets are hard bans |
-| 7 | open | close-out docs |
+| 7 | done 14 Sep | Both audits carry a Resolved header; `frontend/scripts/responsive-probe.js` is the sweep probe from the rendered audit so every slice records the same four numbers per route; rulebook lists `ExpandedRowHeader`, `EditorSplit`, `FilterSelect`, `useCoarsePointer`, `useElementSize`. Slice 6 landed via `36af07a6` with canvas follow-ups `e597a7ac` and `245dfbbc`. **Final ratchets: invented breakpoints 0, viewport-hook branches 0, viewport reads 0 — all hard bans.** |
+
+### Final width-check numbers (13 Sep, local stack, seeded org)
+
+| Check | Before | After |
+|---|---|---|
+| `GetStartedCard` row at 1099/collapsed (761 px) vs 1100/expanded (570 px) | stacked / side-by-side (inverted) | container-driven; side-by-side at 942 px, `containerType: inline-size` |
+| Invoice/estimate editor at 1024 expanded (644 px) / collapsed (836 px) | 2 × 310 px / 1 column (inverted) | 1 column / 2 × 406 px |
+| Overview tile "Upcoming bookings" at 375 | 75 px box, clipped | single line, timeframe stacked below |
+| Filter selects "All Types" / "Most Recent" | 64/67, 80/93 clipped at every width | triggers 135–137 px, nothing clipped |
+| Contacts list at 375 / 1024 | table ↔ cards on `useIsMobile` | one row list; status lane hidden at 307 px, shown at 802 px |
+| Get Started dismiss at 375 | 16 × 16 | 44 × 44 |
+| 768 px content column | 512 px (sidebar forced open) | 704 px (cookie honoured, collapsed below `lg`) |
+| Horizontal overflow, 34 routes × 4 widths | none | none |
+
+Re-run the protocol after any shell or list change: install `scripts/responsive-probe.js` in the console, `__responsiveSweep(routes, 'w375')` at 375 / 768 / 1024 / 1440 with the sidebar expanded, then 1024 collapsed.
 
 ## Principles for every slice
 

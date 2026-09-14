@@ -1,5 +1,7 @@
 # Responsive audit, rendered pass — 13 Sep 2026
 
+> **Resolved 14 Sep 2026.** R1–R5 are fixed by plan slices 0.5–6 (`95abd6d3`, `40a72f97`, `6891c6d8`, `36af07a6`); the measured before/after table and the sweep probe live in [responsive-conformance-plan-2026-09-11.md](responsive-conformance-plan-2026-09-11.md). R6's remaining static vocabulary (nowrap in the sidebar, vh math on public pages) is tracked there as non-blocking.
+
 **Builds on:** [responsive-conformance-audit-2026-09-11.md](responsive-conformance-audit-2026-09-11.md) (mechanism-level, grep) and [responsive-conformance-plan-2026-09-11.md](responsive-conformance-plan-2026-09-11.md). Slice 0 of the plan landed in `e32b2a9f` (ratchets at 50 / 7 / 5, container-query plugin, dead `PageLayout` props removed).
 
 **What this pass adds:** the app was actually run and measured. The 11 Sep audit found *where* width decisions bypass the design system; this one shows *what that costs on screen*, with numbers, and adds a deeper static scan (fixed widths, nowrap, overflow, vh math, dialog widths, hidden-pairs, tables) over every non-marketing surface.

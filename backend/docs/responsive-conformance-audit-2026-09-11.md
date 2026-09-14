@@ -1,5 +1,7 @@
 # Responsive conformance audit — 11 Sep 2026
 
+> **Resolved 14 Sep 2026.** Findings A–H are closed by the plan's slices 0–7; all three `visual-language.test.ts` width ratchets sit at 0 and are now hard bans. See [responsive-conformance-plan-2026-09-11.md](responsive-conformance-plan-2026-09-11.md) for the per-slice record and [responsive-rendered-audit-2026-09-13.md](responsive-rendered-audit-2026-09-13.md) for the measured evidence.
+
 **Question asked:** does every page handle width the way the design system says, or is there per-page ad-hoc handling?
 **Method:** read the responsive rules in `frontend/src/design-system/index.md` and the contract tests that enforce them, then grepped every page and shared component for the mechanisms those rules forbid or replace: viewport hooks, arbitrary pixel breakpoints, duplicated desktop/mobile markup, per-page layout recipes, and bypassed primitives.
 **Companion:** `production-readiness-audit-2026-09-11.md` (security/ops). This doc is frontend-only.
