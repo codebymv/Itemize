@@ -103,6 +103,8 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
   // References for direct DOM manipulation to prevent flashing
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const pendingPathsRef = useRef<unknown[] | null>(null);
+  const onSaveRef = useRef(onSave);
+  onSaveRef.current = onSave;
   const loadedWhiteboardIdRef = useRef(whiteboard.id);
 
   useUnsavedChangesGuard({
@@ -226,7 +228,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
     try {
       const sanitizedCanvasData = sanitizeWhiteboardPaths(canvasData);
       setSaveState('saving');
-      await onSave({ canvas_data: sanitizedCanvasData, updated_at: new Date().toISOString() });
+      await onSaveRef.current({ canvas_data: sanitizedCanvasData, updated_at: new Date().toISOString() });
       if (pendingPathsRef.current === canvasData) pendingPathsRef.current = null;
       setSaveState('saved');
     } catch (error) {
@@ -238,7 +240,9 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
         variant: 'destructive',
       });
     }
-  }, [onSave, toast]);
+  // Parent optimistic updates can replace onSave during a request. Keep this
+  // callback stable so effect cleanup does not flush the same pending save again.
+  }, [toast]);
 
   // Debounced auto-save function (reduced delay for faster saves)
   const debouncedAutoSave = useMemo(
@@ -654,6 +658,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
               <div className="flex items-center gap-2 p-2 rounded-md border bg-card border-border">
                 <span className="text-xs font-medium min-w-[20px] text-foreground">{strokeWidth}</span>
                 <Slider
+                  aria-label="Brush size"
                   value={[strokeWidth]}
                   onValueChange={handleStrokeWidthChange}
                   max={20}
@@ -666,7 +671,7 @@ export const WhiteboardCanvas: React.FC<WhiteboardCanvasProps> = ({
 
             {/* Color palette - shows inline on desktop, wraps on mobile */}
             {currentTool === 'pen' && (
-              <div className="flex items-center gap-1 p-1 rounded-md border bg-card border-border order-last sm:order-none">
+              <div className="flex max-w-full flex-wrap items-center gap-1 p-1 rounded-md border bg-card border-border order-last sm:order-none">
                 {COLOR_PALETTE.map((color) => (
                   <button
                     key={color}
