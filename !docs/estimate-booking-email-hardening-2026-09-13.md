@@ -38,3 +38,15 @@ At 03:35:07 UTC, all registered operations queues were available with zero pendi
 The live organizer-contact setup exposed a separate frontend bug: both Add business actions passed the React click event into openBusinessDialog's optional business argument. This selected Edit Business with no valid ID and made saving fail. A read-only production check confirmed no business profile was created for the QA organization by the failed attempt.
 
 Both creation buttons now invoke the callback with no arguments. Regression tests cover empty and populated profile lists; the existing payment-settings hook suite covers create/edit behavior. All eleven focused tests, the frontend build and bundle budgets passed. This correction is required before resuming the live organizer-contact setup.
+
+## Organizer contact journey verified in production
+
+At 2026-09-14 03:56 UTC (September 13 in Phoenix), commit 67c1c0611a207b460fde7260537cd956d299e879 passed CI run 34803631201 and deployed successfully to both Railway services: frontend d07ddeba-2f0d-4bd9-b9c4-ce577b9658e5 and backend 9dc8507e-9445-47bd-b3d5-8a919ed8e763. The runtime confirmed the commit. Readiness, frontend and entry asset returned 200; an unsigned billing webhook returned 400.
+
+The repaired Add business action opened a blank creation form and successfully created Itemize QA with the authorized QA email, codebymv@gmail.com. That business was explicitly selected and saved as organization 14's default identity. The QA contact remains configured for future tests.
+
+Booking 34, Itemize QA Organizer Contact 2026-09-13, was created through the production UI for September 17, 11:00-11:30 America/Phoenix. Confirmation outbox 16 and cancellation outbox 17 each completed on the first attempt and have delivered provider receipts. Confirmation provider ID: 1c7320a5-f025-47a3-a3b6-cef9cf1898fc; cancellation provider ID: ab7c8982-50e2-4143-ba19-782763385af6.
+
+The Resend confirmation body matched the encrypted immutable provider payload, contained the shared logo/color/font tokens, and included the configured organizer address in HTML and plain text. Gmail desktop visibly rendered the branded card and an actual mailto:codebymv@gmail.com link. Itemize's booking list updated to Confirmation email delivered. No reply was sent.
+
+The test booking was cancelled and the QA calendar restored to Paused with zero upcoming appointments. At 03:59:58 UTC, all registered operations queues were available with zero queued, processing, retrying or action-required work. This closes the live organizer-contact gap recorded above. Mobile and other email-client rendering remain unverified.
