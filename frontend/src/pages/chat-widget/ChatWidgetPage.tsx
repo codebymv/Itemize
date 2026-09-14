@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { EditorSplit } from "@/components/layout/EditorSplit";
 import {
   BellRing,
   Code2,
@@ -294,10 +295,10 @@ export function ChatWidgetPage() {
         icon={<MessageCircle className="h-5 w-5 flex-shrink-0 text-icon-accent" />}
         className="mx-auto max-w-7xl"
       >
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.8fr)]">
+        <EditorSplit previewMinRem={22} previewShare="0.8fr">
           <Skeleton className="h-[34rem]" />
           <Skeleton className="h-[38rem]" />
-        </div>
+        </EditorSplit>
       </PageLayout>
     );
   }
@@ -380,8 +381,8 @@ export function ChatWidgetPage() {
             {statusVisual.label}
           </Badge>
         </div>
-        <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.8fr)]">
-          <div className="order-2 min-w-0 xl:order-1">
+        <EditorSplit previewMinRem={22} previewShare="0.8fr">
+          <div className="order-2 min-w-0 @[52rem]:order-1">
             <TabsContent value="settings" className="mt-0 space-y-6">
               <Card>
                 <CardHeader>
@@ -731,10 +732,10 @@ export function ChatWidgetPage() {
             </TabsContent>
           </div>
 
-          <aside className="order-1 min-w-0 xl:order-2 xl:sticky xl:top-6">
+          <aside className="order-1 min-w-0 @[52rem]:order-2 @[52rem]:sticky @[52rem]:top-[calc(var(--app-shell-height)+1.5rem)]">
             <ChatWidgetPreview config={config} />
           </aside>
-        </div>
+        </EditorSplit>
       </Tabs>
     </PageLayout>
   );

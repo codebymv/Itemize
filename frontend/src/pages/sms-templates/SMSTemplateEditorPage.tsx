@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { EditorSplit } from "@/components/layout/EditorSplit";
 import { useQueryClient } from "@tanstack/react-query";
 import { debounce } from "lodash";
 import { Braces, Loader2, MessageSquare, Save, Settings2 } from "lucide-react";
@@ -381,8 +382,8 @@ export function SMSTemplateEditorPage() {
         }
       />
 
-      <div className="grid items-start gap-6 xl:grid-cols-3">
-        <div className="space-y-6 xl:col-span-2">
+      <EditorSplit previewMinRem={20} previewShare="0.5fr">
+        <div className="space-y-6">
           <Card>
             <CardHeader>
               <SectionCardTitle icon={Settings2}>
@@ -511,7 +512,7 @@ export function SMSTemplateEditorPage() {
           </Card>
         </div>
 
-        <Card className="xl:sticky xl:top-6">
+        <Card className="@[52rem]:sticky @[52rem]:top-[calc(var(--app-shell-height)+1.5rem)]">
           <CardHeader>
             <SectionCardTitle icon={MessageSquare}>
               Recipient preview
@@ -528,7 +529,7 @@ export function SMSTemplateEditorPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </EditorSplit>
     </PageLayout>
   );
 }

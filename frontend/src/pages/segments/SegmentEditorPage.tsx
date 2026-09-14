@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { EditorSplit } from "@/components/layout/EditorSplit";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -416,8 +417,8 @@ export function SegmentEditorPage() {
         }
       />
 
-      <div className="grid items-start gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
+      <EditorSplit previewMinRem={20} previewShare="0.5fr">
+        <div className="space-y-6">
           <Card>
             <CardHeader>
               <SectionCardTitle icon={Settings2}>
@@ -566,7 +567,7 @@ export function SegmentEditorPage() {
           </Card>
         </div>
 
-        <div className="space-y-6 lg:sticky lg:top-6">
+        <div className="space-y-6 @[52rem]:sticky @[52rem]:top-[calc(var(--app-shell-height)+1.5rem)]">
           <Card>
             <CardHeader>
               <SectionCardTitle icon={Eye}>Audience preview</SectionCardTitle>
@@ -626,7 +627,7 @@ export function SegmentEditorPage() {
             </CardContent>
           </Card>
         </div>
-      </div>
+      </EditorSplit>
     </PageLayout>
   );
 }

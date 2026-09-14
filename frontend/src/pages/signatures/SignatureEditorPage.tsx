@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { EditorSplit } from "@/components/layout/EditorSplit";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
@@ -938,8 +939,8 @@ function DraftDocumentEditor({
   ];
   return (
     <div className="space-y-6">
-      <div className="grid items-start gap-6 xl:grid-cols-3">
-        <div className="space-y-6 xl:col-span-2">
+      <EditorSplit previewMinRem={20} previewShare="0.5fr">
+        <div className="space-y-6">
           <Card>
             <CardHeader>
               <SectionCardTitle icon={Settings2}>
@@ -1187,7 +1188,7 @@ function DraftDocumentEditor({
             </CardContent>
           </Card>
         </div>
-      </div>
+      </EditorSplit>
       <Card>
         <CardHeader>
           <SectionCardTitle icon={FileSignature}>
@@ -1266,8 +1267,8 @@ function ReadOnlyDocumentDetail({
           />
         </ResponsiveCardRail>
       </FramedSection>
-      <div className="grid items-stretch gap-6 xl:grid-cols-3">
-        <Card className="xl:col-span-2">
+      <EditorSplit previewMinRem={20} previewShare="0.5fr">
+        <Card className="">
           <CardHeader>
             <SectionCardTitle icon={FileSignature}>
               {document.status === "completed"
@@ -1344,7 +1345,7 @@ function ReadOnlyDocumentDetail({
             )}
           </CardContent>
         </Card>
-      </div>
+      </EditorSplit>
       <Card>
         <CardHeader>
           <SectionCardTitle icon={Route}>Recipient delivery</SectionCardTitle>

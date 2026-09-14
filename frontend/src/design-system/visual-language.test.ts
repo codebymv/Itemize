@@ -662,6 +662,31 @@ describe('visual language: width decisions', () => {
     }
   });
 
+  it('keeps editor form/preview splits on the shared EditorSplit frame', () => {
+    // A 644px editor beside an open sidebar used to split into two 310px
+    // columns because `lg:grid-cols-2` looked at the viewport. EditorSplit
+    // splits at 52rem of its own width and owns the sticky preview offset.
+    const EDITORS = [
+      'pages/invoices/InvoiceEditorPage.tsx',
+      'pages/invoices/EstimateEditorPage.tsx',
+      'pages/pages/PageEditorPage.tsx',
+      'pages/segments/SegmentEditorPage.tsx',
+      'pages/signatures/SignatureEditorPage.tsx',
+      'pages/sms-templates/SMSTemplateEditorPage.tsx',
+      'pages/chat-widget/ChatWidgetPage.tsx',
+      'pages/reputation/ReputationWidgetEditorPage.tsx',
+      'pages/calendars/CalendarSettingsPage.tsx',
+    ];
+    for (const path of EDITORS) {
+      expect(read(path), `${path} uses EditorSplit`).toContain('<EditorSplit');
+    }
+    const viewportSticky = ALL_SOURCES.filter(file => (
+      file.path.startsWith('pages/') && /\b(?:sm|md|lg|xl|2xl):sticky\b/.test(file.body)
+    ));
+    expect(viewportSticky.map(file => file.path)).toEqual([]);
+    expect(INDEX_CSS).toContain('--app-shell-height: 3.5rem');
+  });
+
   it('keeps the container-query utilities available to every surface', () => {
     const tailwind = readFileSync(join(process.cwd(), 'tailwind.config.ts'), 'utf8');
     expect(tailwind).toContain('@tailwindcss/container-queries');

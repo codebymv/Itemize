@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { EditorSplit } from "@/components/layout/EditorSplit";
 import {
   CalendarDays,
   CalendarClock,
@@ -559,8 +560,8 @@ export function CalendarSettingsPage() {
             </>
           }
         />
-        <div className="grid items-start gap-6 2xl:grid-cols-[minmax(0,1fr)_minmax(27rem,0.72fr)]">
-          <div className="order-2 space-y-6 2xl:order-1">
+        <EditorSplit previewMinRem={27} previewShare="0.72fr">
+          <div className="order-2 space-y-6 @[52rem]:order-1">
             <Card>
               <CardHeader>
                 <SectionCardTitle icon={SlidersHorizontal}>
@@ -1060,7 +1061,7 @@ export function CalendarSettingsPage() {
               </CardContent>
             </Card>
           </div>
-          <aside className="order-1 min-w-0 2xl:order-2 2xl:sticky 2xl:top-20">
+          <aside className="order-1 min-w-0 @[52rem]:order-2 @[52rem]:sticky @[52rem]:top-[calc(var(--app-shell-height)+1.5rem)]">
             <CalendarBookingPreview
               config={{
                 name: draft.name,
@@ -1077,7 +1078,7 @@ export function CalendarSettingsPage() {
               availability={availability}
             />
           </aside>
-        </div>
+        </EditorSplit>
       </div>
     </PageLayout>
   );

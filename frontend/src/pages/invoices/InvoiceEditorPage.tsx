@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { EditorSplit } from '@/components/layout/EditorSplit';
 import { useQuery } from '@tanstack/react-query';
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import {
@@ -841,7 +842,7 @@ export function InvoiceEditorPage() {
                 </Collapsible>
 
                 {/* Customer + Invoice Details - Side by Side */}
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <EditorSplit previewMinRem={22} previewShare="1fr">
                     {/* Left: Customer (Bill To) */}
                     <CustomerInfoSection
                         contacts={contacts}
@@ -920,7 +921,7 @@ export function InvoiceEditorPage() {
                             </div>
                         </CardContent>
                     </Card>
-                </div>
+                </EditorSplit>
 
                 <Card>
                     <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
@@ -997,7 +998,7 @@ export function InvoiceEditorPage() {
                     onProductSelect={handleProductSelect}
                 />
 
-                <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+                <EditorSplit previewMinRem={22} previewShare="22rem">
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-base">
@@ -1171,7 +1172,7 @@ export function InvoiceEditorPage() {
                         </div>
                         </CardContent>
                     </Card>
-                </div>
+                </EditorSplit>
 
                 {/* Footer - Collapsible */}
                 <Collapsible open={footerOpen} onOpenChange={setFooterOpen}>

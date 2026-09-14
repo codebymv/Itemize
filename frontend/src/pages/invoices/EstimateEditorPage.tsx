@@ -1,4 +1,5 @@
 import { EmailDeliveryStatus } from '@/components/EmailDeliveryStatus';
+import { EditorSplit } from '@/components/layout/EditorSplit';
 import { hasPendingEmailOutcome } from '@/lib/emailDelivery';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -697,7 +698,7 @@ export function EstimateEditorPage() {
                     </Card>
                 )}
 
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <EditorSplit previewMinRem={22} previewShare="1fr">
                     <CustomerInfoSection
                         idPrefix="estimate"
                         contacts={contacts}
@@ -752,7 +753,7 @@ export function EstimateEditorPage() {
                             </div>
                         </CardContent>
                     </Card>
-                </div>
+                </EditorSplit>
 
                 <LineItemsTable
                     lineItems={lineItems}
@@ -765,7 +766,7 @@ export function EstimateEditorPage() {
                     onProductSelect={handleProductSelect}
                 />
 
-                <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_22rem]">
+                <EditorSplit previewMinRem={22} previewShare="22rem">
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2 text-base">
@@ -860,7 +861,7 @@ export function EstimateEditorPage() {
                             </div>
                         </CardContent>
                     </Card>
-                </div>
+                </EditorSplit>
 
                 <Collapsible open={footerOpen} onOpenChange={setFooterOpen}>
                     <Card>

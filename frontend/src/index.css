@@ -291,6 +291,12 @@
   }
 }
 
+/* The sticky app header is 3.5rem tall on desktop (AppShell md:h-14). Sticky
+   editor previews offset from this value instead of guessing top-6 / top-20. */
+:root {
+  --app-shell-height: 3.5rem;
+}
+
 /* Expandable list rows hand status and value from the command lane to the
    meta/footer rows on the row's own width, never the viewport. */
 .expanded-row-header {

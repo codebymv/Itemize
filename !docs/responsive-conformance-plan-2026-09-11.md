@@ -16,7 +16,8 @@
 | ratchets after 2b | — | `ARBITRARY_BREAKPOINT_BASELINE` 50 → 10 (`CommunicationsSection` 4, `OrganizationSettings` 3, `SettingsPage` 3); `VIEWPORT_HOOK_BASELINE` 7 → 5; `VIEWPORT_READ_BASELINE` 5 (sidebar allowlisted) |
 | 5 | done 13 Sep | `CommunicationsSection` `@[44rem]:`, `SettingsPage`/`OrganizationSettings` plan rows `@[46rem]:` on their `CardContent`, `OperationsSection` queue grid `grid-cols-2 sm:grid-cols-4`; **`ARBITRARY_BREAKPOINT_BASELINE` = 0** — the ban is now hard |
 | 3 | done 13 Sep | `ExpandedRowHeader` primitive + `expanded-row-header` container CSS (value lane ≥ 28rem, status lane ≥ 40rem, inline copies below). The five sales lists adopt the container **classes** on their existing markup (their menus are page-specific; one collapse order now lives in CSS instead of five sm/md/lg tiers). Contacts, Shared and Archive rebuilt on the component; `ContactsTable.tsx` deleted, `ContactCardList` serves every width with a select-all bar; `VIEWPORT_HOOK_BASELINE` 5 → 4. Contract: routed lists may not contain `<Table>` outside a tabular allowlist |
-| 4, 6, 7 | open | |
+| 4 | done 13 Sep | `EditorSplit` (`@container` frame; two columns at `@[52rem]` with `minmax(--editor-preview-min, --editor-preview-share)`; `EDITOR_SPLIT_STICKY` offsets from `--app-shell-height` = 3.5rem instead of `top-6`/`top-20`). All 9 editors (14 grids) wrapped; children keep their markup with `lg:col-span-2`, `xl:order-*`, `xl:sticky` rewritten to container forms. Measured at 1024: 644 px editor → 1 column, 836 px → 2 × 406 px (the audit's inversion is gone). Contract: editors import `EditorSplit`, no `*:sticky` in `pages/` |
+| 6, 7 | open | |
 
 ## Principles for every slice
 

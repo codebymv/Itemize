@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { EditorSplit } from "@/components/layout/EditorSplit";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -336,10 +337,10 @@ export function ReputationWidgetEditorPage() {
         leading={backButton}
         className="max-w-7xl"
       >
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.8fr)]">
+        <EditorSplit previewMinRem={22} previewShare="0.8fr">
           <Skeleton className="h-[38rem]" />
           <Skeleton className="h-[38rem]" />
-        </div>
+        </EditorSplit>
       </PageLayout>
     );
   }
@@ -414,8 +415,8 @@ export function ReputationWidgetEditorPage() {
         value={mode}
         onValueChange={(value) => setMode(value as EditorMode)}
       >
-        <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(22rem,0.8fr)]">
-          <div className="order-2 min-w-0 xl:order-1">
+        <EditorSplit previewMinRem={22} previewShare="0.8fr">
+          <div className="order-2 min-w-0 @[52rem]:order-1">
             <TabsContent value="settings" className="mt-0 space-y-6">
               <Card>
                 <CardHeader>
@@ -759,10 +760,10 @@ export function ReputationWidgetEditorPage() {
               </Card>
             </TabsContent>
           </div>
-          <aside className="order-1 min-w-0 xl:order-2 xl:sticky xl:top-20">
+          <aside className="order-1 min-w-0 @[52rem]:order-2 @[52rem]:sticky @[52rem]:top-[calc(var(--app-shell-height)+1.5rem)]">
             <ReputationWidgetPreview config={draft} reviews={reviews} />
           </aside>
-        </div>
+        </EditorSplit>
       </Tabs>
     </PageLayout>
   );

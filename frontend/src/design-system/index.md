@@ -114,8 +114,11 @@ Sanctioned mechanisms, in order of preference:
 2. **`ResponsiveValue`** for a figure or label that should show its widest
    fitting form: pass the candidates from full to compact and let it measure.
 3. **A layout primitive** when the same anatomy appears three or more times:
-   `ResponsiveCardRail`, `ResponsiveHeaderTools`, `EntityDetailHeader`. Add a
-   primitive rather than a fourth copy.
+   `ResponsiveCardRail`, `ResponsiveHeaderTools`, `EntityDetailHeader`,
+   `ExpandedRowHeader` (list rows: status hands off to the meta row below
+   40rem, value to the footer below 28rem), `EditorSplit` (form/preview
+   editors: two columns from 52rem of the editor's own width, sticky preview
+   offset from `--app-shell-height`). Add a primitive rather than a fourth copy.
 4. **Input modality** through `useCoarsePointer()` (`(pointer: coarse)`): a
    bottom sheet versus a popover, a touch drag delay, a thicker stroke. The
    768px shell handoff (`useIsMobile`, `md:`) is for the shell's own layers only.

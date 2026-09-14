@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { EditorSplit } from '@/components/layout/EditorSplit';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     Save,
@@ -310,8 +311,8 @@ export function PageEditorPage() {
                 icon={<Layout className="h-5 w-5 shrink-0 text-icon-accent" />}
                 leading={backButton}
             >
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-2 space-y-4">
+                <EditorSplit previewMinRem={20} previewShare="0.5fr">
+                    <div className=" space-y-4">
                         <Skeleton className="h-48" />
                         <Skeleton className="h-32" />
                         <Skeleton className="h-32" />
@@ -319,7 +320,7 @@ export function PageEditorPage() {
                     <div>
                         <Skeleton className="h-96" />
                     </div>
-                </div>
+                </EditorSplit>
             </PageLayout>
         );
     }
@@ -405,9 +406,9 @@ export function PageEditorPage() {
                     descriptor={<span className="whitespace-nowrap">/p/{page.slug}</span>}
                     metadata={<><span>{page.view_count || 0} views</span><span>{page.unique_visitors || 0} visitors</span></>}
                 />
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <EditorSplit previewMinRem={20} previewShare="0.5fr">
                     {/* Main Content - Sections */}
-                <div className="lg:col-span-2 space-y-4">
+                <div className=" space-y-4">
                     <Card>
                         <CardHeader className="pb-3">
                             <div className="flex items-center justify-between">
@@ -566,7 +567,7 @@ export function PageEditorPage() {
                     </Card>
 
                 </div>
-            </div>
+            </EditorSplit>
 
 {/* Add Section Dialog */}
             <Dialog open={showAddSection} onOpenChange={setShowAddSection}>
