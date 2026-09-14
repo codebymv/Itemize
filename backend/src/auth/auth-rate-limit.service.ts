@@ -1,59 +1,46 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Request } from 'express';
 import { itemizeGraphqlError } from '../common/graphql-error';
-
-type Bucket = { count: number; resetAt: number };
+import { RATE_LIMIT_BUCKET_STORE, RateLimitBucketStore } from '../common/rate-limit-store';
 
 const WINDOW_MS = 15 * 60 * 1000;
 
+/**
+ * Throttles authentication attempts per proxy-resolved IP and normalised
+ * identity. Buckets live in the shared RateLimitBucketStore, so the ceiling
+ * holds across API replicas; under NODE_ENV=test that store is in memory.
+ */
 @Injectable()
 export class AuthRateLimitService {
-  private readonly buckets = new Map<string, Bucket>();
+  constructor(
+    @Inject(RATE_LIMIT_BUCKET_STORE) private readonly store: RateLimitBucketStore,
+  ) {}
 
-  consume(request: Request, identity = ''): void {
-    this.consumeBucket(request, identity, 'standard',
+  consume(request: Request, identity = ''): Promise<void> {
+    return this.consumeBucket(request, identity, 'standard',
       process.env.NODE_ENV === 'development' ? 100 : 20);
   }
 
-  consumeStrict(request: Request, identity = ''): void {
-    this.consumeBucket(request, identity, 'strict',
+  consumeStrict(request: Request, identity = ''): Promise<void> {
+    return this.consumeBucket(request, identity, 'strict',
       process.env.NODE_ENV === 'development' ? 80 : 10);
   }
 
-  private consumeBucket(
+  private async consumeBucket(
     request: Request,
     identity: string,
     namespace: string,
     limit: number,
-  ): void {
-    const now = Date.now();
+  ): Promise<void> {
     const ip = request.ip || request.socket?.remoteAddress || 'unknown';
-    const key = `${namespace}:${ip}:${identity.trim().toLowerCase()}`;
-    const existing = this.buckets.get(key);
-    if (!existing || existing.resetAt <= now) {
-      this.buckets.set(key, { count: 1, resetAt: now + WINDOW_MS });
-      this.prune(now);
-      return;
-    }
-    if (existing.count >= limit) {
+    const key = `auth:${namespace}:${ip}:${identity.trim().toLowerCase()}`;
+    const { count } = await this.store.hit(key, WINDOW_MS);
+    if (count > limit) {
       throw itemizeGraphqlError(
         'Too many authentication attempts. Please try again in 15 minutes.',
         'RATE_LIMITED',
         { reason: 'AUTH_RATE_LIMITED' },
       );
-    }
-    existing.count += 1;
-  }
-
-  private prune(now: number): void {
-    if (this.buckets.size < 1_000) return;
-    for (const [key, bucket] of this.buckets) {
-      if (bucket.resetAt <= now) this.buckets.delete(key);
-    }
-    while (this.buckets.size > 10_000) {
-      const oldest = this.buckets.keys().next().value as string | undefined;
-      if (!oldest) break;
-      this.buckets.delete(oldest);
     }
   }
 }

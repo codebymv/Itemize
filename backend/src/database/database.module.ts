@@ -5,6 +5,7 @@ import {
   integerEnvironmentValue,
   validateRuntimeEnvironment,
 } from '../common/runtime-config';
+import { RATE_LIMIT_BUCKET_STORE, createRateLimitBucketStore } from '../common/rate-limit-store';
 
 export const PG_POOL = Symbol('PG_POOL');
 
@@ -51,8 +52,13 @@ class DatabaseLifecycle implements OnApplicationBootstrap, OnApplicationShutdown
 @Module({
   providers: [
     { provide: PG_POOL, useFactory: createPool },
+    {
+      provide: RATE_LIMIT_BUCKET_STORE,
+      useFactory: (pool: Pool) => createRateLimitBucketStore(pool),
+      inject: [PG_POOL],
+    },
     DatabaseLifecycle,
   ],
-  exports: [PG_POOL],
+  exports: [PG_POOL, RATE_LIMIT_BUCKET_STORE],
 })
 export class DatabaseModule {}

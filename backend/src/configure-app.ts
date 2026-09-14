@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import { Request, Response } from 'express';
 import { apiRateLimit } from './common/api-rate-limit';
 import { corsOptionsDelegate } from './common/cors';
+import { RATE_LIMIT_BUCKET_STORE, RateLimitBucketStore } from './common/rate-limit-store';
 
 export const configureApp = (app: NestExpressApplication): void => {
   app.set('trust proxy', 1);
@@ -19,7 +20,11 @@ export const configureApp = (app: NestExpressApplication): void => {
     referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   }));
   if (process.env.NODE_ENV !== 'test') {
-    const limiter = apiRateLimit();
+    // Buckets come from the shared store so the ceiling holds across replicas.
+    const limiter = apiRateLimit(
+      process.env,
+      app.get<RateLimitBucketStore>(RATE_LIMIT_BUCKET_STORE),
+    );
     app.use('/api', limiter);
     app.use('/graphql', limiter);
   }

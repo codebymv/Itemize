@@ -1,48 +1,37 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { Request } from 'express';
 import { itemizeGraphqlError } from '../common/graphql-error';
+import { RATE_LIMIT_BUCKET_STORE, RateLimitBucketStore } from '../common/rate-limit-store';
 
-type Bucket = { count: number; resetAt: number };
+const WINDOW_MS = 15 * 60 * 1000;
 
+/**
+ * Per-operation AI budgets: a per-actor ceiling for signed-in callers plus a
+ * looser per-IP ceiling, or a per-IP ceiling alone for public callers. Buckets
+ * live in the shared RateLimitBucketStore so the budget holds across replicas.
+ */
 @Injectable()
 export class AiRateLimitService {
-  private readonly buckets = new Map<string, Bucket>();
+  constructor(
+    @Inject(RATE_LIMIT_BUCKET_STORE) private readonly store: RateLimitBucketStore,
+  ) {}
 
-  consume(request: Request, namespace: string, limit: number, actorId?: string): void {
-    const now = Date.now();
+  async consume(request: Request, namespace: string, limit: number, actorId?: string): Promise<void> {
     const ip = request.ip || request.socket?.remoteAddress || 'unknown';
     if (actorId) {
-      this.consumeKey(`${namespace}:actor:${actorId}`, limit, now);
-      this.consumeKey(`${namespace}:ip:${ip}`, Math.max(limit * 3, limit), now);
+      await this.consumeKey(`ai:${namespace}:actor:${actorId}`, limit);
+      await this.consumeKey(`ai:${namespace}:ip:${ip}`, Math.max(limit * 3, limit));
     } else {
-      this.consumeKey(`${namespace}:ip:${ip}`, limit, now);
+      await this.consumeKey(`ai:${namespace}:ip:${ip}`, limit);
     }
-    this.prune(now);
   }
 
-  private consumeKey(key: string, limit: number, now: number): void {
-    const bucket = this.buckets.get(key);
-    if (!bucket || bucket.resetAt <= now) {
-      this.buckets.set(key, { count: 1, resetAt: now + 15 * 60 * 1000 });
-      return;
-    }
-    if (bucket.count >= limit) {
+  private async consumeKey(key: string, limit: number): Promise<void> {
+    const { count } = await this.store.hit(key, WINDOW_MS);
+    if (count > limit) {
       throw itemizeGraphqlError('Too many requests. Please try again later.', 'RATE_LIMITED', {
         reason: 'AI_RATE_LIMITED',
       });
-    }
-    bucket.count += 1;
-  }
-
-  private prune(now: number): void {
-    if (this.buckets.size < 1_000) return;
-    for (const [key, bucket] of this.buckets) {
-      if (bucket.resetAt <= now) this.buckets.delete(key);
-    }
-    while (this.buckets.size > 10_000) {
-      const key = this.buckets.keys().next().value as string | undefined;
-      if (!key) break;
-      this.buckets.delete(key);
     }
   }
 }

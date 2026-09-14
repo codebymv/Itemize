@@ -1,4 +1,5 @@
 const { runAdminMfaMigration } = require('./db_admin_mfa_migrations');
+const { runRateLimitBucketsMigration } = require('./db_rate_limit_migrations');
 const { runTransactionalEmailEventMigration } = require('./db_transactional_email_event_migrations');
 const { runRemainingEmailReceiptMigration } = require('./db_remaining_email_receipt_migrations');
 const { runDeliveryRecoveryMigration } = require('./db_delivery_recovery_migrations');
@@ -1185,6 +1186,7 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'transactional_email_events_v1', runTransactionalEmailEventMigration);
     await runMigrationOnce(pool, 'remaining_email_receipts_v1', runRemainingEmailReceiptMigration);
     await runMigrationOnce(pool, 'admin_mfa_v1', runAdminMfaMigration);
+    await runMigrationOnce(pool, 'rate_limit_buckets_v1', runRateLimitBucketsMigration);
 
     const elapsed = Date.now() - startTime;
     console.log(`✅ Database initialized successfully in ${elapsed}ms`);

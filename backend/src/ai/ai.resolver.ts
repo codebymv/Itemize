@@ -28,29 +28,29 @@ export class AiResolver {
   @CsrfProtected()
   @AccountScoped()
   @Mutation(() => AiSuggestionsPayload)
-  listSuggestions(
+  async listSuggestions(
     @Args('input') input: ListSuggestionsInput,
     @Context() context: { req: Request },
   ) {
-    this.consumeWorkspaceSuggestion(context.req);
+    await this.consumeWorkspaceSuggestion(context.req);
     return this.provider.listSuggestions(input.listTitle, input.existingItems, input.forceRefresh);
   }
 
   @CsrfProtected()
   @AccountScoped()
   @Mutation(() => AiSuggestionsPayload)
-  noteSuggestions(
+  async noteSuggestions(
     @Args('input') input: NoteSuggestionsInput,
     @Context() context: { req: Request },
   ) {
-    this.consumeWorkspaceSuggestion(context.req);
+    await this.consumeWorkspaceSuggestion(context.req);
     return this.provider.noteSuggestions(input.content, input.forceRefresh);
   }
 
   @Public()
   @Query(() => MarketingChatTokenPayload)
-  marketingChatToken(@Context() context: { req: Request }): MarketingChatTokenPayload {
-    this.rateLimit.consume(context.req, 'marketing-token', 60);
+  async marketingChatToken(@Context() context: { req: Request }): Promise<MarketingChatTokenPayload> {
+    await this.rateLimit.consume(context.req, 'marketing-token', 60);
     return { token: this.capabilities.issue() };
   }
 
@@ -60,17 +60,17 @@ export class AiResolver {
     @Args('input') input: MarketingChatAskInput,
     @Context() context: { req: Request },
   ): Promise<MarketingChatReplyPayload> {
-    this.rateLimit.consume(context.req, 'marketing-ask', 30);
+    await this.rateLimit.consume(context.req, 'marketing-ask', 30);
     this.capabilities.consume(input.token);
     return { reply: await this.provider.marketingAnswer(input.messages) };
   }
 
-  private consumeWorkspaceSuggestion(request: Request): void {
+  private consumeWorkspaceSuggestion(request: Request): Promise<void> {
     const requestContext = this.requestContext.current();
     const userId = requestContext.identity?.userId;
     if (!userId) throw new Error('Verified user identity is unavailable');
     const organizationId = requestContext.organization?.organizationId;
     const actorId = organizationId ? `${organizationId}:${userId}` : String(userId);
-    this.rateLimit.consume(request, 'workspace-suggestions', 120, actorId);
+    return this.rateLimit.consume(request, 'workspace-suggestions', 120, actorId);
   }
 }

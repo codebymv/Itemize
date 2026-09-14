@@ -1,58 +1,38 @@
-# Itemize.cloud Rate Limiting Strategy
+# Rate limiting
 
-## Overview
+Three limiters run in the NestJS API. All three count hits in one shared
+`RateLimitBucketStore` (`backend/src/common/rate-limit-store.ts`), so the
+ceilings hold whether the API runs as one replica or several.
 
-Currently, Itemize.cloud does not have explicit rate limiting implemented. This document outlines the planned strategy for implementing rate limiting to protect against various types of abuse and ensure fair resource usage.
+| Limiter | Where | Key | Window | Ceiling |
+| --- | --- | --- | --- | --- |
+| Ingress | `express-rate-limit` on `/api` and `/graphql` (`configure-app.ts`) | proxy-resolved IP | `API_RATE_LIMIT_WINDOW_MS` (15 min) | `API_RATE_LIMIT_MAX` (1000) |
+| Authentication | `AuthRateLimitService` on register, login, verification, reset | IP + normalised identity | 15 min | 20 standard / 10 strict (100 / 80 in development) |
+| AI | `AiRateLimitService` per operation | per actor (signed in) plus a 3× per-IP ceiling; per IP for public marketing chat | 15 min | 120 workspace suggestions, 60 marketing tokens, 30 marketing asks |
 
-## Planned Implementation Details
+Exceeding a ceiling returns HTTP 429 from the ingress limiter, or a GraphQL
+error with `code: RATE_LIMITED` and `reason: AUTH_RATE_LIMITED` /
+`AI_RATE_LIMITED` from the service limiters.
 
-### Tiered Rate Limits (Future)
+## Storage
 
-1.  **Global Rate Limit**
-    - **Purpose**: Prevents general abuse and DoS attempts.
-    - **Proposed Limit**: e.g., 100 requests per 15 minutes per IP.
+`RATE_LIMIT_STORE` selects where buckets live:
 
-2.  **Authentication Rate Limit**
-    - **Purpose**: Prevents brute force attacks on login and registration endpoints.
-    - **Proposed Limit**: e.g., 5 attempts per hour per IP.
+- `postgres` (default outside `NODE_ENV=test`): the `rate_limit_buckets`
+  table (migration `rate_limit_buckets_v1`). A hit is one atomic upsert that
+  restarts a lapsed window at 1 or increments the live one, so concurrent
+  replicas cannot both observe the same count. Expired rows are swept about
+  once per thousand hits.
+- `memory`: per-process maps. Correct only on a single replica; used by the
+  test suites, which drive the API far past any ceiling.
 
-3.  **API Specific Rate Limits**
-    - **Purpose**: Protects specific resource-intensive API endpoints.
-    - **Proposed Limit**: Varies per endpoint (e.g., 30 requests per minute for AI suggestions).
+The Express ingress limiter adapts the same store through
+`SharedRateLimitStore` (`express-rate-limit-store.ts`); skipped requests are
+not un-counted, so the ceiling is a hard per-window budget.
 
-### Storage Options
+## Scaling note
 
-- **Redis Store**: For distributed rate limiting across multiple server instances in production.
-- **Memory Store**: For development environments.
-
-## Security Benefits (Future)
-
-- **DDoS Protection**: By limiting the number of requests from a single source.
-- **Brute Force Prevention**: Especially for authentication endpoints.
-- **API Abuse Prevention**: Ensures fair resource distribution and prevents scraping.
-
-## Error Handling (Future)
-
-When a rate limit is exceeded, the API should return a `429 Too Many Requests` HTTP status code with a clear message and relevant headers.
-
-### Proposed Response Format
-
-```json
-{
-  "error": "Too many requests, please try again later."
-}
-}
-```
-
-### Proposed HTTP Headers
-
-- `X-RateLimit-Limit`: The maximum number of requests allowed in the current window.
-- `X-RateLimit-Remaining`: The number of requests remaining in the current window.
-- `X-RateLimit-Reset`: The time (in UTC epoch seconds) when the current rate limit window resets.
-- `Retry-After`: The number of seconds to wait before making another request.
-
-## Monitoring and Maintenance (Future)
-
-- **Logging**: Log rate limit hits and violations for monitoring and analysis.
-- **Alerting**: Set up alerts for unusual spikes in rate limit violations.
-- **Adjustment**: Regularly review and adjust rate limits based on usage patterns and security needs.
+Before adding a second API replica nothing else needs to change: every
+limiter already reads and writes the shared table. Postgres round-trips add
+one small query per limited request; if that ever matters, the store
+interface is the seam for a Redis implementation.

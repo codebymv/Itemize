@@ -10,6 +10,8 @@
 import rateLimit from 'express-rate-limit';
 import { Request, RequestHandler, Response } from 'express';
 import { integerEnvironmentValue } from './runtime-config';
+import { SharedRateLimitStore } from './express-rate-limit-store';
+import type { RateLimitBucketStore } from './rate-limit-store';
 
 const rateLimitHandler =
   (message: Record<string, unknown>, retryAfterSeconds = 60) =>
@@ -20,6 +22,7 @@ const rateLimitHandler =
 
 export const apiRateLimit = (
   environment: NodeJS.ProcessEnv = process.env,
+  buckets?: RateLimitBucketStore,
 ): RequestHandler => {
   const windowMs = integerEnvironmentValue(
     environment,
@@ -38,6 +41,9 @@ export const apiRateLimit = (
   return rateLimit({
     windowMs,
     max,
+    // The shared bucket store keeps the ceiling honest across replicas; without
+    // one (unit tests) the library's per-process MemoryStore is used.
+    ...(buckets ? { store: new SharedRateLimitStore(buckets) } : {}),
     standardHeaders: true,
     legacyHeaders: false,
     message: {

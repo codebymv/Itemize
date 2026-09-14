@@ -54,11 +54,11 @@ export class AuthResolver {
 
   @Public()
   @Mutation(() => AuthMessagePayload)
-  register(
+  async register(
     @Args('input') input: RegisterInput,
     @Context() context: GraphqlHttpContext,
   ) {
-    this.rateLimit.consume(context.req, input.email);
+    await this.rateLimit.consume(context.req, input.email);
     return this.identityLifecycle.register(
       input.email,
       input.password,
@@ -70,21 +70,21 @@ export class AuthResolver {
 
   @Public()
   @Mutation(() => AuthSessionPayload)
-  verifyEmail(
+  async verifyEmail(
     @Args('input') input: VerifyEmailInput,
     @Context() context: GraphqlHttpContext,
   ) {
-    this.rateLimit.consume(context.req);
+    await this.rateLimit.consume(context.req);
     return this.identityLifecycle.verifyEmail(input.token, context.res);
   }
 
   @Public()
   @Mutation(() => AuthMessagePayload)
-  resendVerificationEmail(
+  async resendVerificationEmail(
     @Args('input') input: ResendVerificationInput,
     @Context() context: GraphqlHttpContext,
   ) {
-    this.rateLimit.consumeStrict(context.req, input.email);
+    await this.rateLimit.consumeStrict(context.req, input.email);
     return this.identityLifecycle.resendVerification(
       input.email,
       input.invitationToken,
@@ -93,11 +93,11 @@ export class AuthResolver {
 
   @Public()
   @Mutation(() => AuthMessagePayload)
-  requestPasswordReset(
+  async requestPasswordReset(
     @Args('input') input: RequestPasswordResetInput,
     @Context() context: GraphqlHttpContext,
   ) {
-    this.rateLimit.consumeStrict(context.req, input.email);
+    await this.rateLimit.consumeStrict(context.req, input.email);
     return this.identityLifecycle.requestPasswordReset(input.email);
   }
 
