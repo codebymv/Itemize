@@ -1,11 +1,4 @@
-/**
- * Subscription webhook job primitives. The pinned values below —
- * including the SHA-256 of the rendered upgrade email — were captured
- * from the legacy worker (backend/src/jobs/subscription-webhook-jobs.js)
- * before its retirement, so notification content and retry cadence stay
- * byte-stable across the Express retirement.
- */
-import * as crypto from 'crypto';
+/** Subscription delivery content, identity, redaction and retry contracts. */
 import {
   buildUpgradeNotificationEmail,
   escapeHtml,
@@ -48,7 +41,7 @@ describe('subscription webhook job primitives', () => {
     expect(redactNotificationError(new Error('x'.repeat(700)))).toHaveLength(500);
   });
 
-  it('builds the byte-identical legacy upgrade email', () => {
+  it('preserves upgrade content and identity in the shared responsive email', () => {
     const payload = buildUpgradeNotificationEmail({
       stripe_event_id: 'evt_parity_1',
       organization_id: 7,
@@ -69,12 +62,15 @@ describe('subscription webhook job primitives', () => {
     expect(payload.tags).toEqual([
       { name: 'notification_type', value: 'subscription_upgraded' },
     ]);
-    // SHA-256 of the html the legacy sendUpgradeNotification produced
-    // for this exact job before retirement.
-    expect(
-      crypto.createHash('sha256').update(payload.html).digest('hex'),
-    ).toBe('473a549a561b128f16373697700dc9bb4e4ca9f316a90f701c61f58ac92f4b7a');
-    expect(payload.html).toHaveLength(2004);
+    expect(payload.html).toContain('Subscription updated');
+    expect(payload.html).toContain(
+      'Acme &lt;Studios&gt; &amp; &quot;Sons&quot; has been upgraded from <strong>Solo</strong> to <strong>Studio</strong>.',
+    );
+    expect(payload.html).not.toContain('Acme <Studios>');
+    expect(payload.html).toContain('https://itemize.cloud/cover.png');
+    expect(payload.html).toContain('Billing notification from Itemize.');
+    expect(payload.html).toContain('table-layout:fixed');
+    expect(payload.html).toContain('overflow-wrap:anywhere');
   });
 
   it('refuses a job without an owner recipient like the legacy builder', () => {
