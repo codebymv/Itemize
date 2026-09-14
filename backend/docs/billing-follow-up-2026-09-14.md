@@ -31,6 +31,10 @@ On September 14, the current master code plus a new regression passed both focus
 
 Regression: `backend/test/integration/subscription-webhooks.integration-spec.ts`. Command: `node db/scripts/run-integration-tests-fresh.js --runTestsByPath test/integration/subscription-webhooks.integration-spec.ts test/integration/billing.integration-spec.ts`. This establishes application processing and exposed limits under controlled provider state. Public Stripe-to-Railway transport, hosted Studio checkout/return, exact proration amounts, and paid renewal invoice status remain separate evidence gaps.
 
+## Later hosted Studio checkout and return verification
+
+The [Studio checkout journey](studio-checkout-return-journey-2026-09-14.md) subsequently passed on baseline `1b1cceb0`: actual Itemize upgrade action, paid $49 Stripe sandbox session, signed local replay of the real subscription event, automatic return to **Welcome to Studio**, and Studio account state retained after reload. This closes the isolated hosted Studio checkout/local-return gap listed above. Public Stripe-to-Railway delivery, production return configuration and exact proration remain separate checks.
+
 ## Confirmed observations
 
 Stripe dashboard remained signed in to Itemize account acct_1U78bFEHPD0TpM72. Test mode was available and its active product catalog had no entries. The previous isolated lifecycle runner remains in the billing-lifecycle QA worktree; it covered Solo, not Studio checkout or portal downgrade timing.
