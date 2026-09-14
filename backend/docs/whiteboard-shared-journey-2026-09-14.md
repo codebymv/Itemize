@@ -23,8 +23,18 @@ The local API stopped during the session. Restarted it with the explicit local e
 
 ## Remaining evidence
 
-- Deploy this correction and repeat a populated production QA journey.
+- Production verification completed below.
 - Actual Gmail mobile, Apple Mail, and Outlook rendering needs those clients or a connected email-rendering service. Available browser controls expose Chrome only. Browser responsive previews are not native mail-client evidence.
 - Check long titles, buttons, logo, footer, dark mode, and long unbroken values in each actual client; record client/version and screenshots before marking the email-client matrix complete.
 
 The disposable local drawing remains available; its share link is revoked. SMS and backup/PITR remain outside this pass.
+
+## Production verification — 2026-09-14 07:51–07:54 UTC
+
+CI run 34817434279 passed on 245dfbbc. Railway frontend deployment 3737aff6-ada1-4e82-95e2-5c6a45867986 and API deployment 54ef03e5-e02a-4de1-be6a-f5979d16b016 both report SUCCESS on that commit. API readiness, frontend HTML and its current entry asset returned 200; an unsigned billing webhook returned 400.
+
+Created "QA launch verification 2026-09-14 — whiteboard save and sharing" in the existing Itemize Account Features QA account. Drew a stroke at 1024px, observed autosave settle, reloaded, and compared the rendered SVG path: identical. Switched to 375px, where Contents showed the saved stroke without an error. Document scrollWidth was 375px; all ten palette buttons wrapped inside the card in two rows.
+
+Generated a temporary share link. The public page visibly displayed the QA drawing, long title, creator, Live status and Read only label. At 375px document scrollWidth was 365px; at 768px it was 758px and the drawing surface was 650px wide. These are browser viewport checks, not physical touch-device tests.
+
+Revoked sharing from the owner dialog. The already-open public page immediately removed the drawing and displayed "Shared item unavailable". Reloading still showed unavailable. The QA drawing remains private for follow-up; the temporary share link is revoked. No email, SMS, payment, signature or customer-facing business document was sent. QA tabs were closed after testing.

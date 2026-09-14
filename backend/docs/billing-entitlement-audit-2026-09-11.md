@@ -2,6 +2,13 @@
 
 ## Scope and result
 
+**September 14 verification:** an isolated Stripe portal test confirmed that
+Studio-to-Solo schedules at period end even across separate products. The test
+clock transition passed. A separate signed HTTP/PostgreSQL/GraphQL regression
+verified the application entitlement transition and duplicate/stale-event handling
+using controlled canonical Stripe state (22 tests passed). Public Stripe-to-Railway
+transport remains outside these runs. See [follow-up evidence and scope](billing-follow-up-2026-09-14.md).
+
 Reviewed consistency between advertised plans, checkout, Stripe subscription events,
 frontend entitlement checks, public intake, and paid worker claims. This batch closes
 confirmed access and configuration defects. It is not a certification of every quota

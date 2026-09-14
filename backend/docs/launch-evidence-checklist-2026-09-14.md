@@ -1,0 +1,22 @@
+# Launch evidence checkpoint
+
+This is an evidence checklist, not a declaration that every launch risk is closed. Historical audit entries must be reconciled with later verification before reopening them or marking them complete.
+
+| Check | Status | Evidence / next action |
+| --- | --- | --- |
+| Current master deployment and health | PASS | 245dfbbc; CI and both Railway services successful; readiness, HTML and entry asset 200; unsigned billing webhook rejected. |
+| Whiteboard save and phone palette | PASS | Production drawing survived reload with identical SVG path; 375px layout fits. See [journey](whiteboard-shared-journey-2026-09-14.md). |
+| Shared whiteboard and revocation | PASS | Populated public view at 375/768px; live revocation removed content; reload denied access. Same journey report. |
+| Transactional email browser widths | PASS, bounded | 64 synthetic browser cases; shared branding and long-value wrapping. See [width audit](transactional-email-width-audit-2026-09-13.md). |
+| Estimate and booking email delivery | PASS, bounded | Provider receipts and desktop Gmail evidence; excludes estimate acceptance and physical mobile clients. See [delivery journeys](estimate-booking-live-journeys-2026-09-13.md). |
+| Apple Mail | PASS, user-reported | On September 14 the user checked booking confirmation, cancellation and estimate emails and reported all three correct in light and dark mode. iOS version and screenshots were not supplied; this is not an agent-observed or version-specific certification. |
+| Gmail mobile / Outlook | NOT VERIFIED | Requires the actual clients or a connected rendering service. Chrome resizing is insufficient. |
+| Full billing customer journey | PARTIAL | Sandbox lifecycle evidence exists. Hosted return-to-app, Studio checkout, portal scheduled downgrade and exact proration need dedicated evidence or a later report explicitly closing them. See [sandbox scope](stripe-sandbox-billing-verification-2026-09-11.md). No live charge authorized by this checklist. |
+| Studio-to-Solo downgrade timing | PASS, bounded | Real Stripe test-clock portal transition passed across separate products. Separately, signed Nest HTTP + fresh PostgreSQL + authenticated GraphQL regression verified Studio before renewal, Solo limits afterward, and duplicate/stale-event protection with one in-app notice; 22 tests passed. Canonical Stripe state was controlled in the app test; public Stripe-to-Railway transport remains unverified by these runs. See [billing follow-up](billing-follow-up-2026-09-14.md). |
+| Worker recovery under a real held job | PARTIAL | Runtime/queue health and integration evidence exist; empty production queues do not prove an operator recovery mutation. See [operator recovery](remaining-email-operator-recovery-2026-09-13.md). |
+| Full responsive matrix and touch gestures | PARTIAL | Targeted production checks passed; do not generalize to every route, width or physical touch gesture. Close remaining matrix in [responsive plan](responsive-conformance-plan-2026-09-11.md). |
+| Load, admin MFA, incident/log retention | EVIDENCE REVIEW NEEDED | Historical launch audit lists these; establish current implementation and evidence before declaring pass or scheduling changes. |
+| Horizontal scaling | CONDITIONAL | Review shared rate limits and worker ownership before adding replicas; see [runtime ownership](Deploy/runtime-and-worker-ownership.md). |
+| Backup/PITR and SMS | DEFERRED BY USER | Not verified and outside this pass. |
+
+Next order: obtain actual email-client evidence, close the bounded billing and responsive gaps, then reconcile operational readiness and load evidence. Keep deferred items explicit in the launch decision.

@@ -254,6 +254,62 @@ describe('Stripe subscription webhook retained HTTP parity (NestJS vs legacy ori
     },
   );
 
+  it('keeps Studio until a scheduled downgrade takes effect and exposes Solo limits without replaying the change', async () => {
+    const suffix = `scheduled_${Date.now()}`;
+    const customerId = `cus_${suffix}`;
+    const subscriptionId = `sub_${suffix}`;
+    const owner = await createBillingOrganization('scheduled-downgrade', customerId);
+    // Period boundary observed in the separate real Stripe test-clock journey.
+    const boundary = 1791965410;
+    const initial = subscriptionEvent({ customerId, subscriptionId, eventId: `evt_initial_${suffix}` });
+    initial.data.object.current_period_end = boundary;
+    await signedPost(app.getHttpServer(), initial).expect(200);
+
+    const status = async () => {
+      const response = await request(app.getHttpServer()).post('/graphql')
+        .set('Cookie', `itemize_auth=${owner.token}`)
+        .set('x-organization-id', String(owner.org.id))
+        .send({ query: 'query { billingStatus { plan subscriptionStatus usersLimit contactsLimit emailsLimit workflowsLimit } }' })
+        .expect(200);
+      expect(response.body.errors).toBeUndefined();
+      return response.body.data.billingStatus;
+    };
+    const scheduled = {
+      ...initial, id: `evt_schedule_${suffix}`, created: boundary - 60,
+      data: { object: { ...initial.data.object, schedule: {
+        id: `sub_sched_${suffix}`,
+        phases: [
+          { end_date: boundary, items: [{ price: 'price_unlimited_monthly' }] },
+          { start_date: boundary, items: [{ price: 'price_starter_monthly' }] },
+        ],
+      } } },
+    };
+    await signedPost(app.getHttpServer(), scheduled).expect(200);
+    expect(await status()).toMatchObject({ plan: 'unlimited', subscriptionStatus: 'active', usersLimit: 10, contactsLimit: 25000, emailsLimit: 10000, workflowsLimit: 25 });
+    expect((await pool.query(`SELECT count(*)::int AS count FROM notification_events
+      WHERE organization_id=$1 AND event_type='subscription.plan_changed' AND payload->>'newPlan'='starter'`, [owner.org.id])).rows[0].count).toBe(0);
+
+    const effective = subscriptionEvent({ customerId, subscriptionId, eventId: `evt_effective_${suffix}`, created: boundary, priceId: 'price_starter_monthly' });
+    effective.data.object.current_period_start = boundary;
+    effective.data.object.current_period_end = 1794643810;
+    const applied = await signedPost(app.getHttpServer(), effective).expect(200);
+    // Downgrades create the shared in-app plan-change notification; the email
+    // notification queue currently handles upgrades and activations only.
+    expect(applied.body).toMatchObject({ previousPlan: 'unlimited', newPlan: 'starter', notificationType: null });
+    const solo = { plan: 'starter', subscriptionStatus: 'active', usersLimit: 3, contactsLimit: 5000, emailsLimit: 1000, workflowsLimit: 5 };
+    expect(await status()).toMatchObject(solo);
+
+    const duplicate = await signedPost(app.getHttpServer(), effective, { publish: false }).expect(200);
+    expect(duplicate.body.duplicate).toBe(true);
+    // An old Studio snapshot cannot reverse the canonical Solo state.
+    await signedPost(app.getHttpServer(), { ...scheduled, id: `evt_late_${suffix}` }, { publish: false }).expect(200);
+    expect(await status()).toMatchObject(solo);
+    expect((await pool.query(`SELECT count(*)::int AS count FROM notification_events
+      WHERE organization_id=$1 AND event_type='subscription.plan_changed' AND payload->>'newPlan'='starter'`, [owner.org.id])).rows[0].count).toBe(1);
+    expect((await pool.query(`SELECT count(*)::int AS count FROM notification_events
+      WHERE organization_id=$1 AND dedupe_key=$2`, [owner.org.id, `stripe:${effective.id}:plan-changed`])).rows[0].count).toBe(1);
+  });
+
   it('applies configured annual prices through upgrade, downgrade and payment recovery', async () => {
     const previous = process.env.STRIPE_PRICE_UNLIMITED_YEARLY;
     process.env.STRIPE_PRICE_UNLIMITED_YEARLY = 'price_1AnnualStudioIntegration';

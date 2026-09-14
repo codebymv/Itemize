@@ -41,8 +41,9 @@ Yearly is billed up front and saves about 17% versus month-to-month.
 The organization owner manages billing from Settings. Existing subscriptions open
 Stripe's customer portal for payment details, invoices, plan changes, and cancellation.
 The portal shows the amount and any prorations before a change is confirmed.
-Cancellation takes effect at the end of the paid period. Downgrades and changes to
-a shorter billing interval are scheduled at period end.
+Cancellation takes effect at the end of the paid period. Review the portal's
+effective date and proration preview before confirming a plan or billing-interval
+change. Period-end timing for all plan changes has not yet been verified.
 
 Paid tools require an active subscription or an unexpired trial. Past-due and unpaid
 subscriptions pause paid access until resolved. Expiry or cancellation preserves
