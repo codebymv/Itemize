@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useTheme } from 'next-themes';
 import { DraggableListCard } from './DraggableListCard';
 import { ContextMenu } from './ContextMenu';
-import { useSidebar } from '../ui/sidebar';
 import { List, Note, Whiteboard, Wireframe, Vault, Category, WorkspaceFrame } from '../../types';
 import { DraggableFrame } from './DraggableFrame';
 import { cardsInFrame } from '@/lib/frameContainment';
@@ -138,10 +137,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
     theme === 'dark' ||
     (!theme && typeof document !== 'undefined' && document.documentElement.classList.contains('dark'));
   const { currentUser } = useAuthState();
-  const { state: sidebarState, isMobile } = useSidebar();
   
-  // Keep viewport controls anchored to the visible canvas edge as the sidebar changes.
-  const sidebarWidth = isMobile ? 0 : (sidebarState === 'expanded' ? 256 : 64);
   
   const [loading, setLoading] = useState(false); // No longer need to load lists
   const [error, setError] = useState('');
@@ -156,9 +152,10 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   );
   const initialTransformAppliedRef = useRef(false);
 
+  const canvasRef = useRef<HTMLDivElement>(null);
   const getDefaultTransform = () => ({
-    x: window.innerWidth / 2 - 2000,
-    y: window.innerHeight / 2 - 2000,
+    x: (canvasRef.current?.clientWidth ?? 0) / 2 - 2000,
+    y: (canvasRef.current?.clientHeight ?? 0) / 2 - 2000,
     scale: 1,
   });
 
@@ -170,7 +167,6 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   // Use categoryFilter from props instead of internal state
   const selectedFilter = categoryFilter;
   
-  const canvasRef = useRef<HTMLDivElement>(null);
   const canvasContentRef = useRef<HTMLDivElement>(null);
   const canvasTransformRef = useRef(canvasTransform);
   const lastFocusedFilterRef = useRef('');
@@ -194,8 +190,8 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   }, [lists, notes, whiteboards, wireframes, vaults]);
 
   const getViewportSize = useCallback(() => {
-    const width = canvasRef.current?.clientWidth ?? window.innerWidth;
-    const height = canvasRef.current?.clientHeight ?? window.innerHeight;
+    const width = canvasRef.current?.clientWidth ?? 0;
+    const height = canvasRef.current?.clientHeight ?? 0;
     return { width, height };
   }, []);
 
@@ -762,7 +758,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   }, [showContextMenu, menuIsFromButton]);
 
   return (
-    <div className="canvas-container-wrapper">
+    <div className="canvas-container-wrapper relative">
       
       {/* Canvas area */}
       <div 
@@ -989,10 +985,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
         onZoomOut={handleZoomOut}
         onResetView={handleResetView}
         onZoomIn={handleZoomIn}
-        className="fixed bottom-4 z-[1002] transition-[left] duration-200 ease-in-out"
-        style={{
-          left: `${sidebarWidth + 16}px`,
-        }}
+        className="absolute bottom-4 left-4 z-[1002]"
       />
 
 

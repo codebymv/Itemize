@@ -11,7 +11,8 @@ import { cn } from "@/lib/utils";
 import { ColorPicker } from '@/components/ui/color-picker';
 import { Spinner } from '@/components/ui/Spinner';
 import { useToast } from '@/hooks/use-toast';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useCoarsePointer } from '@/hooks/use-coarse-pointer';
+import { useElementSize } from '@/hooks/useElementSize';
 import { useWhiteboardCardLogic } from '../../hooks/useWhiteboardCardLogic';
 import { WhiteboardCardProps, Category } from '../../types';
 import { WhiteboardCanvas } from './WhiteboardCanvas';
@@ -37,8 +38,7 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
   const categoryColor = existingCategories.find(c => c.name === whiteboard.category)?.color_value;
   const whiteboardDisplayColor = whiteboard.color_value || categoryColor || defaultCardAccent(); // Default to blue if no color is set
 
-  // Mobile detection using shared hook
-  const isMobile = useIsMobile();
+  const coarsePointer = useCoarsePointer();
   const [scaledCanvasHeight, setScaledCanvasHeight] = useState<number | undefined>(undefined);
 
   // State for delete confirmation modal
@@ -51,6 +51,10 @@ const WhiteboardCard: React.FC<WhiteboardCardProps> = ({
   const { toast } = useToast();
 
   const whiteboardContainerRef = useRef<HTMLDivElement>(null);
+  // Scale-to-fit and touch panning engage when the host is narrower than the
+  // board or the pointer is a finger — never on the viewport width alone.
+  const { width: hostWidth } = useElementSize(whiteboardContainerRef);
+  const isMobile = coarsePointer || (hostWidth > 0 && hostWidth < (whiteboard.canvas_width || 620));
 
   // Sync color preview when whiteboard color changes externally
   useEffect(() => {

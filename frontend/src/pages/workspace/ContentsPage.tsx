@@ -62,7 +62,7 @@ import {
 } from "@/lib/vaultZkSession";
 import type { CreateItemPresetPayload } from "@/config/contentPresets";
 import { CreateItemModal } from "@/components/CreateItemModal";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useCoarsePointer } from "@/hooks/use-coarse-pointer";
 import { PageLayout } from "@/components/layout/PageLayout";
 import {
   HeaderActionLabel,
@@ -115,7 +115,7 @@ export function ContentsPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { token, currentUser } = useAuthState();
-  const isMobile = useIsMobile();
+  const coarsePointer = useCoarsePointer();
 
   const {
     showModal: showOnboarding,
@@ -241,7 +241,8 @@ export function ContentsPage() {
     }
   };
 
-  const contentCollapse = useResponsiveContentCollapse(isMobile);
+  // One-open-at-a-time is a touch interaction pattern, not a width one.
+  const contentCollapse = useResponsiveContentCollapse(coarsePointer);
 
   const mutateList = useCallback(
     (list: List) => apiUpdateList(list, token),

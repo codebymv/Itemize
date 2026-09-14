@@ -597,7 +597,7 @@ describe('visual language: width decisions', () => {
     // useIsMobile is the shell handoff and an input-modality hint. It is not
     // a layout switch for content: a table at 1000px with the sidebar open
     // has 744px, and a 767px tablet has more room than the hook admits.
-    const VIEWPORT_HOOK_BASELINE = 4;
+    const VIEWPORT_HOOK_BASELINE = 0;
     const SHELL_AND_MODALITY: Record<string, string> = {
       'hooks/use-mobile.tsx': 'owns the 768px handoff',
       'components/ui/sidebar.tsx': 'the shell decides its own drawer/rail handoff',
@@ -616,7 +616,7 @@ describe('visual language: width decisions', () => {
   it('ratchets direct viewport width reads down to the baseline', () => {
     // Floating layers clamp their own position to the viewport; everything
     // else measures its host (ResizeObserver, as ResponsiveValue does).
-    const VIEWPORT_READ_BASELINE = 5;
+    const VIEWPORT_READ_BASELINE = 0;
     const FLOATING_LAYER_OR_DECOR: Record<string, string> = {
       'hooks/use-mobile.tsx': 'owns the 768px handoff',
       'components/ui/sidebar.tsx': 'the shell picks its own initial rail state from device class',

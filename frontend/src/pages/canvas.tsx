@@ -898,7 +898,7 @@ const CanvasPage: React.FC = () => {
         }
       `}</style>
       <div
-        className={`w-full flex flex-col ${isMobileView ? "min-h-screen" : "h-[calc(100vh-4rem)] overflow-hidden"}`}
+        className={`w-full flex flex-col ${isMobileView ? "min-h-screen" : "h-[calc(100dvh-var(--app-shell-height)-0.5rem)] overflow-hidden"}`}
       >
         {isLoading ? (
           <PageLoading message="Loading Canvas..." />

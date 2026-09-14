@@ -64,11 +64,11 @@ export const brandedTransactionalEmail = (
     `<meta name="viewport" content="width=device-width,initial-scale=1">` +
     `<meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light only">` +
     `<title>${escapeHtml(input.heading)}</title></head>` +
-    `<body style="margin:0;padding:0;background:${EMAIL_TOKENS.background};color:${EMAIL_TOKENS.foreground};font-family:${EMAIL_TOKENS.font};-webkit-text-size-adjust:100%">` +
+    `<body style="margin:0;padding:0;background:${EMAIL_TOKENS.background};color:${EMAIL_TOKENS.foreground};font-family:${EMAIL_TOKENS.font};-webkit-text-size-adjust:100%;word-wrap:break-word;overflow-wrap:anywhere">` +
     `<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent">${escapeHtml(input.previewText)}</div>` +
-    `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;background:${EMAIL_TOKENS.background}">` +
+    `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;table-layout:fixed;background:${EMAIL_TOKENS.background}">` +
     `<tr><td align="center" style="padding:32px 16px">` +
-    `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:600px;background:${EMAIL_TOKENS.surface};border:1px solid ${EMAIL_TOKENS.border};border-radius:${EMAIL_TOKENS.radius};overflow:hidden">` +
+    `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;table-layout:fixed;word-wrap:break-word;overflow-wrap:anywhere;max-width:600px;background:${EMAIL_TOKENS.surface};border:1px solid ${EMAIL_TOKENS.border};border-radius:${EMAIL_TOKENS.radius};overflow:hidden">` +
     `<tr><td style="height:4px;background:${EMAIL_TOKENS.primary};font-size:0;line-height:0">&nbsp;</td></tr>` +
     `<tr><td style="padding:18px 28px;border-bottom:1px solid ${EMAIL_TOKENS.border}">` +
     `<a href="${escapeHtml(origin)}" style="display:inline-block;text-decoration:none;color:${EMAIL_TOKENS.foreground}" aria-label="Itemize">` +

@@ -15,7 +15,6 @@ import { cn } from "@/lib/utils";
 import { ColorPicker } from '@/components/ui/color-picker';
 import { Spinner } from '@/components/ui/Spinner';
 import { useToast } from '@/hooks/use-toast';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { useWireframeCardLogic } from '@/hooks/useWireframeCardLogic';
 import { WireframeCardProps } from '@/types';
 import WireframeCanvas from './WireframeCanvas';
@@ -36,9 +35,6 @@ const WireframeCard: React.FC<WireframeCardProps> = ({
 }) => {
   const categoryColor = existingCategories.find(c => c.name === wireframe.category)?.color_value;
   const wireframeDisplayColor = wireframe.color_value || categoryColor || defaultCardAccent();
-
-  // Mobile detection
-  const isMobile = useIsMobile();
 
   // State for delete confirmation modal
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -119,7 +115,7 @@ const WireframeCard: React.FC<WireframeCardProps> = ({
       className="w-full h-full flex flex-col"
       style={{ '--wireframe-color': wireframeDisplayColor, '--card-accent': wireframeDisplayColor, '--card-accent-contrast': contrastTextFor(wireframeDisplayColor) } as React.CSSProperties}
     >
-      <WorkspaceContentCard className="h-full flex flex-col">
+      <WorkspaceContentCard className="@container h-full flex flex-col">
         <CardHeader className="pb-2">
           <div className="flex justify-between items-center">
             {isEditing ? (
@@ -273,10 +269,9 @@ const WireframeCard: React.FC<WireframeCardProps> = ({
 
         <CollapsibleContent className="flex-1 flex flex-col min-h-0">
           <div
-            className="rounded-lg mx-3 sm:mx-6 mb-6 flex-1 flex flex-col relative overflow-hidden"
+            className="relative mx-3 mb-6 flex min-h-[300px] flex-1 flex-col overflow-hidden rounded-lg sm:mx-6 @[40rem]:min-h-[400px]"
             style={{
               border: `2px solid ${wireframeDisplayColor}`,
-              minHeight: isMobile ? '300px' : '400px'
             }}
           >
             <WireframeCanvas

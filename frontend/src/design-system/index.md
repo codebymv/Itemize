@@ -113,6 +113,9 @@ Sanctioned mechanisms, in order of preference:
    `index.css`).
 2. **`ResponsiveValue`** for a figure or label that should show its widest
    fitting form: pass the candidates from full to compact and let it measure.
+   For anything else that must know its host's pixel size (a canvas, a board
+   that scales to fit), `useElementSize(ref)` measures the host with a
+   ResizeObserver.
 3. **A layout primitive** when the same anatomy appears three or more times:
    `ResponsiveCardRail`, `ResponsiveHeaderTools`, `EntityDetailHeader`,
    `ExpandedRowHeader` (list rows: status hands off to the meta row below

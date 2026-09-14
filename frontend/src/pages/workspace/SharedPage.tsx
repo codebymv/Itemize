@@ -63,7 +63,7 @@ import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { ErrorState } from '@/components/ErrorState';
 import { useWorkspaceContent } from './hooks/useWorkspaceContent';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useSidebar } from '@/components/ui/sidebar';
 import { useStableMutationKey } from '@/hooks/useStableMutationKey';
 import { getWorkspaceLanding } from '@/lib/workspaceNavigation';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -86,7 +86,8 @@ interface SharedContent {
 
 export function SharedPage() {
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
+  // The workspace landing follows the shell's own mobile mode, as the sidebar does.
+  const { isMobile } = useSidebar();
   const workspaceLanding = getWorkspaceLanding(isMobile);
   const WorkspaceLandingIcon = isMobile ? LayoutGrid : Map;
   const { toast } = useToast();

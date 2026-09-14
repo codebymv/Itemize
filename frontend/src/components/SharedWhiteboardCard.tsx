@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { SharedItemCard } from '@/components/public/BrandedPublicPage';
+import { useElementSize } from '@/hooks/useElementSize';
 import { ReactSketchCanvas, ReactSketchCanvasRef } from 'react-sketch-canvas';
 import type { CanvasPath } from 'react-sketch-canvas/dist/types';
 import { normalizeWhiteboardCanvasData } from '@/lib/whiteboardCanvasData';
@@ -57,24 +58,16 @@ const toCanvasPaths = (value: unknown): CanvasPath[] => {
 export const SharedWhiteboardCard: React.FC<SharedWhiteboardCardProps> = ({ whiteboardData, isLive = false }) => {
   const canvasRef = useRef<ReactSketchCanvasRef>(null);
   const canvasFrameRef = useRef<HTMLDivElement>(null);
-  const [isMobile, setIsMobile] = useState(false);
+  // Fit the board to its host when the host is narrower than the board.
+  const hostRef = useRef<HTMLDivElement>(null);
+  const { width: hostWidth } = useElementSize(hostRef);
+  const isMobile = hostWidth > 0 && hostWidth < (whiteboardData.canvas_width || 400);
   const [scaledCanvasHeight, setScaledCanvasHeight] = useState<number | undefined>(undefined);
   const [isCanvasLoaded, setIsCanvasLoaded] = useState(false);
 
   // Category display matching canvas logic
   const displayCategory = whiteboardData.category || 'General';
   const whiteboardColor = whiteboardData.color_value || BRAND_BLUE;
-
-  // Check if mobile on mount and resize
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
 
   // Calculate scaled canvas dimensions for mobile
   useEffect(() => {
@@ -248,7 +241,7 @@ const canvasWidth = isMobile ? '100%' : `${whiteboardData.canvas_width || 400}px
   const canvasHeight = isMobile ? `${scaledCanvasHeight || 300}px` : `${whiteboardData.canvas_height || 300}px`;
 
   return (
-    <div className="mx-auto w-full max-w-5xl">
+    <div ref={hostRef} className="mx-auto w-full max-w-5xl">
       <SharedItemCard
         title={whiteboardData.title}
         contentType="whiteboard"

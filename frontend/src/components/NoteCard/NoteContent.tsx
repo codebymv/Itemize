@@ -3,6 +3,7 @@ import { Edit3, Check, X, Sparkles } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useNoteSuggestions } from '../../hooks/use-note-suggestions';
+import { useCoarsePointer } from '@/hooks/use-coarse-pointer';
 import { useAISuggest } from '@/context/AISuggestContext';
 import { formatRelativeTime } from '@/utils/timeUtils';
 
@@ -35,6 +36,7 @@ export const NoteContent: React.FC<NoteContentProps> = ({
   onAutoSave,
   updatedAt
 }) => {
+  const coarsePointer = useCoarsePointer();
   // Use global AI enabled state from context
   const { aiEnabled } = useAISuggest();
   
@@ -256,7 +258,7 @@ export const NoteContent: React.FC<NoteContentProps> = ({
           setTimeout(() => {
             contentEditRef.current?.focus();
             // For mobile, also trigger the virtual keyboard
-            if (window.innerWidth < 768) {
+            if (coarsePointer) {
               contentEditRef.current?.click();
             }
           }, 100);
@@ -293,7 +295,7 @@ export const NoteContent: React.FC<NoteContentProps> = ({
           className={`flex-1 resize-none bg-transparent w-full cursor-text whitespace-pre-wrap !border-none !ring-0 !ring-offset-0 !outline-none focus:!border-none focus:!ring-0 focus:!ring-offset-0 focus-visible:!border-none focus-visible:!ring-0 focus-visible:!ring-offset-0 overflow-y-auto ${
             aiEnabled && isEditingContent ? 'p-3 pr-8' : 'p-3'
           }`}
-          placeholder={isEditingContent ? "Type your note content..." : (window.innerWidth < 768 ? "Tap to edit content..." : "Click anywhere to add content...")}
+          placeholder={isEditingContent ? "Type your note content..." : (coarsePointer ? "Tap to edit content..." : "Click anywhere to add content...")}
           readOnly={!isEditingContent}
           style={{ 
             height: '100%', 
