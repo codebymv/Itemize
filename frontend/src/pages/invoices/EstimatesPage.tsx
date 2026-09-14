@@ -426,25 +426,25 @@ export function EstimatesPage() {
                                 return (
                                     <div key={estimate.id}>
                                         <div
-                                            className="group cursor-pointer p-4 interaction-row"
+                                            className="expanded-row-header group cursor-pointer p-4 interaction-row"
                                             onClick={(event) => handleToggleExpand(estimate.id, event)}
                                         >
                                             <div className="flex items-center justify-between">
                                                 <div className="flex min-w-0 flex-1 items-center gap-2">
-                                                    <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full md:h-10 md:w-10 ${statusVisual.iconBackgroundClass}`}>
+                                                    <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full @[40rem]:h-10 @[40rem]:w-10 ${statusVisual.iconBackgroundClass}`}>
                                                         <StatusIcon className={`h-4 w-4 ${statusVisual.iconClass}`} aria-hidden="true" />
                                                     </div>
-                                                    <p className="truncate text-sm font-medium md:text-base">{estimate.estimate_number}</p>
+                                                    <p className="min-w-0 text-sm font-medium @[40rem]:text-base">{estimate.estimate_number}</p>
                                                 </div>
 
                                                 <div className="flex flex-shrink-0 items-center gap-2">
-                                                    <div className="hidden lg:block">
+                                                    <div className="expanded-row-header__status-lane">
                                                         <Badge className={`pointer-events-none cursor-default text-xs ${statusVisual.badgeClass}`}>
                                                             {statusVisual.label}
                                                         </Badge>
                                                     </div>
-                                                    <div className="hidden text-right sm:block">
-                                                        <p className="text-sm font-semibold md:text-base">{formatCurrency(estimate.total)}</p>
+                                                    <div className="expanded-row-header__value-lane flex-col items-end text-right">
+                                                        <p className="text-sm font-semibold @[40rem]:text-base">{formatCurrency(estimate.total)}</p>
                                                     </div>
                                                     <Button
                                                         variant="ghost"
@@ -492,7 +492,7 @@ export function EstimatesPage() {
 
                                             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 px-6">
                                                 <span className="text-sm font-medium text-muted-foreground">{getContactName(estimate)}</span>
-                                                <span className="lg:hidden">
+                                                <span className="expanded-row-header__status-inline">
                                                     <Badge className={`pointer-events-none cursor-default text-xs ${statusVisual.badgeClass}`}>
                                                         {statusVisual.label}
                                                     </Badge>
@@ -507,7 +507,7 @@ export function EstimatesPage() {
                                             </div>
 
                                             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 px-6 text-xs text-muted-foreground">
-                                                <span className="font-semibold md:hidden">{formatCurrency(estimate.total)}</span>
+                                                <span className="expanded-row-header__value-inline font-semibold text-foreground">{formatCurrency(estimate.total)}</span>
                                                 {effectiveStatus === 'expired' && (
                                                     <span className="font-medium text-red-600 dark:text-red-400">
                                                         {getWholeDaysSince(estimate.valid_until)}d expired

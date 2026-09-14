@@ -647,7 +647,7 @@ export default function OperationsSection({
                                         <p className="font-medium">{queue.name}</p>
                                         <Badge className={badgeClass(queue.status)}>{labels[queue.status]}</Badge>
                                     </div>
-                                    <div className="grid grid-cols-4 gap-2 text-center text-xs">
+                                    <div className="grid grid-cols-2 gap-2 text-center text-xs sm:grid-cols-4">
                                         <div><p className="font-semibold tabular-nums">{queue.queued}</p><p className="text-muted-foreground">Queued</p></div>
                                         <div><p className="font-semibold tabular-nums">{queue.processing}</p><p className="text-muted-foreground">Active</p></div>
                                         <div><p className="font-semibold tabular-nums">{queue.retrying}</p><p className="text-muted-foreground">Retry</p></div>

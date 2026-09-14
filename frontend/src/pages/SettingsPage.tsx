@@ -357,9 +357,9 @@ function AccountInfo({
         <CardHeader>
           <SettingsSectionTitle icon={Layers3}>Available Plans</SettingsSectionTitle>
         </CardHeader>
-        <CardContent surface="inset">
+        <CardContent surface="inset" className="@container">
           <Collapsible open={plansOpen} onOpenChange={setPlansOpen}>
-            <div className="flex flex-col gap-4 min-[1300px]:flex-row min-[1300px]:items-center min-[1300px]:justify-between">
+            <div className="flex flex-col gap-4 @[46rem]:flex-row @[46rem]:items-center @[46rem]:justify-between">
               <p className="text-sm text-muted-foreground">
                 Compare Solo and Studio features, limits, and pricing.
               </p>

@@ -418,9 +418,9 @@ export default function CommunicationsSection({
     ]);
 
     return (
-        <div className="space-y-4" data-communications-section>
+        <div className="@container space-y-4" data-communications-section>
             <div
-                className="flex flex-col gap-3 min-[1000px]:flex-row min-[1000px]:items-center min-[1000px]:justify-between"
+                className="flex flex-col gap-3 @[44rem]:flex-row @[44rem]:items-center @[44rem]:justify-between"
                 data-communications-header
             >
                 <Tabs value={activeTab} onValueChange={handleTabChange}>
@@ -435,7 +435,7 @@ export default function CommunicationsSection({
                         </IconTabsTrigger>
                     </IconTabsList>
                 </Tabs>
-                <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2 min-[1000px]:justify-end">
+                <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2 @[44rem]:justify-end">
                     <span className="whitespace-nowrap text-sm text-muted-foreground" data-communications-count>
                         {activeTab === 'users'
                             ? resultCountLabel

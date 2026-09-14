@@ -20,6 +20,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { ExpandedRowHeader } from '@/components/ui/expanded-row-header';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FilterSelect } from '@/components/ui/filter-select';
 import {
@@ -525,94 +526,76 @@ export function SharedPage() {
                 : undefined}
             />
           ) : (
-            <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="border-b bg-muted/30">
-                    <tr>
-                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Type</th>
-                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Title</th>
-                      <th className="text-left p-3 text-sm font-medium text-muted-foreground hidden md:table-cell">Category</th>
-                      <th className="text-left p-3 text-sm font-medium text-muted-foreground hidden sm:table-cell">Shared</th>
-                      <th className="text-left p-3 text-sm font-medium text-muted-foreground hidden lg:table-cell">Share Link</th>
-                      <th className="text-right p-3 text-sm font-medium text-muted-foreground">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredContent.map(content => {
-                      const Icon = getTypeIcon(content.type);
-                      return (
-                        <tr
-                          key={`${content.type}-${content.id}`}
-                          className="border-b"
-                        >
-                          <td className="p-3">
-                            <div className="flex items-center gap-2">
-                              <Icon
-                                className="h-5 w-5"
-                                style={{ color: content.color_value || defaultCardAccent() }}
-                              />
-                              <span className="text-xs text-muted-foreground hidden sm:inline">
-                                {getTypeLabel(content.type)}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="p-3">
-                            <span className="font-medium">{content.title}</span>
-                          </td>
-                          <td className="p-3 hidden md:table-cell">
-                            <Badge variant="secondary">{content.category}</Badge>
-                          </td>
-                          <td className="p-3 text-sm text-muted-foreground hidden sm:table-cell">
-                            {formatRelativeTime(content.shared_at)}
-                          </td>
-                          <td className="p-3 hidden lg:table-cell">
-                            <div className="flex items-center gap-2">
-                              <code className="text-xs bg-muted px-2 py-1 rounded truncate max-w-[200px]">
-                                {content.share_url}
-                              </code>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0 flex-shrink-0"
-                                onClick={() => handleCopyLink(content)}
-                                aria-label="Copy share link"
-                              >
-                                <Copy className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </td>
-                          <td className="p-3 text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleViewShared(content)}>
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  View Shared Page
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleCopyLink(content)}>
-                                  <Copy className="h-4 w-4 mr-2" />
-                                  Copy Link
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  className="text-destructive focus:text-destructive"
-                                  onClick={() => handleUnshareClick(content)}
-                                >
-                                  <Link2Off className="h-4 w-4 mr-2" />
-                                  Disable Sharing
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+            <div className="divide-y" data-shared-content-list>
+              {filteredContent.map(content => {
+                const Icon = getTypeIcon(content.type);
+                return (
+                  <div key={`${content.type}-${content.id}`} className="expanded-row-header p-4">
+                    <ExpandedRowHeader
+                      leading={(
+                        <Icon
+                          className="h-5 w-5 shrink-0"
+                          style={{ color: content.color_value || defaultCardAccent() }}
+                          aria-hidden="true"
+                        />
+                      )}
+                      title={content.title}
+                      status={content.category ? <Badge variant="secondary">{content.category}</Badge> : null}
+                      value={(
+                        <span className="text-sm text-muted-foreground">
+                          Shared {formatRelativeTime(content.shared_at)}
+                        </span>
+                      )}
+                      trailing={(
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={`Actions for ${content.title}`}>
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleViewShared(content)}>
+                              <Eye className="h-4 w-4 mr-2" />
+                              View Shared Page
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleCopyLink(content)}>
+                              <Copy className="h-4 w-4 mr-2" />
+                              Copy Link
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => handleUnshareClick(content)}
+                            >
+                              <Link2Off className="h-4 w-4 mr-2" />
+                              Disable Sharing
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                      meta={(
+                        <>
+                          <span className="text-xs text-muted-foreground">{getTypeLabel(content.type)}</span>
+                          <span className="flex min-w-0 max-w-full items-center gap-2">
+                            <code className="min-w-0 truncate rounded bg-muted px-2 py-1 text-xs">
+                              {content.share_url}
+                            </code>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 flex-shrink-0 p-0"
+                              onClick={() => handleCopyLink(content)}
+                              aria-label="Copy share link"
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </span>
+                        </>
+                      )}
+                    />
+                  </div>
+                );
+              })}
             </div>
           )}
             </CardContent>

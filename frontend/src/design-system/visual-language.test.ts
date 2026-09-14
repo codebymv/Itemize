@@ -584,7 +584,7 @@ describe('visual language: width decisions', () => {
     // min-[1100px] is "viewport minus sidebar" hand-tuned for one card. It
     // moves the wrong way when the sidebar collapses. Use @container on the
     // card and @md:/@lg: on its children instead.
-    const ARBITRARY_BREAKPOINT_BASELINE = 10;
+    const ARBITRARY_BREAKPOINT_BASELINE = 0;
     ratchet(
       'invented pixel breakpoints',
       ARBITRARY_BREAKPOINT_BASELINE,
@@ -597,7 +597,7 @@ describe('visual language: width decisions', () => {
     // useIsMobile is the shell handoff and an input-modality hint. It is not
     // a layout switch for content: a table at 1000px with the sidebar open
     // has 744px, and a 767px tablet has more room than the hook admits.
-    const VIEWPORT_HOOK_BASELINE = 5;
+    const VIEWPORT_HOOK_BASELINE = 4;
     const SHELL_AND_MODALITY: Record<string, string> = {
       'hooks/use-mobile.tsx': 'owns the 768px handoff',
       'components/ui/sidebar.tsx': 'the shell decides its own drawer/rail handoff',
@@ -631,6 +631,35 @@ describe('visual language: width decisions', () => {
       /window\.innerWidth|matchMedia\(\s*[`'"]\((?:min|max)-width/g,
       path => path in FLOATING_LAYER_OR_DECOR,
     );
+  });
+
+  it('keeps routed lists on expandable rows rather than tables', () => {
+    // A table needs columns, and columns need a width the sidebar can take
+    // away. Lists use ExpandedRow / ExpandedRowHeader, whose lane hands off
+    // on the row's own width. Tabular data (previews, admin queues, imports)
+    // is allowed to stay a table.
+    const TABULAR: Record<string, string> = {
+      'pages/admin/components/OperationsSection.tsx': 'queue diagnostics',
+      'pages/campaigns/CampaignDetailPage.tsx': 'delivery breakdown',
+      'pages/contacts/components/ImportContactsModal.tsx': 'CSV preview',
+      'pages/invoices/PublicEstimatePage.tsx': 'line items on a public document',
+      'pages/invoices/components/InvoicePreview.tsx': 'line items',
+      'pages/invoices/components/InvoicePreviewCard.tsx': 'line items',
+      'pages/invoices/components/InlineInvoicePreview.tsx': 'line items',
+      'pages/signatures/SignatureEditorPage.tsx': 'signer matrix',
+    };
+    const tables = ALL_SOURCES.filter(file => (
+      file.path.startsWith('pages/') && !(file.path in TABULAR) && /<(Table|table)\b/.test(file.body)
+    ));
+    expect(tables.map(file => file.path)).toEqual([]);
+    expect(read('pages/contacts/components/ContactCard.tsx')).toContain('<ExpandedRowHeader');
+    expect(read('pages/workspace/SharedPage.tsx')).toContain('<ExpandedRowHeader');
+    expect(read('pages/workspace/ArchivePage.tsx')).toContain('<ExpandedRowHeader');
+    for (const page of ['InvoicesPage', 'EstimatesPage', 'PaymentsPage', 'RecurringInvoicesPage', 'ProductsPage']) {
+      const body = read(`pages/invoices/${page}.tsx`);
+      expect(body, `${page} row root is the expanded-row-header container`).toContain('expanded-row-header ');
+      expect(body, `${page} has no viewport-tier show/hide on its row`).not.toMatch(/\b(?:hidden (?:sm|md|lg):(?:block|flex)|(?:sm|md|lg):hidden)\b/);
+    }
   });
 
   it('keeps the container-query utilities available to every surface', () => {

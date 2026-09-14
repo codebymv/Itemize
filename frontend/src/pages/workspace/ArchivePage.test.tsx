@@ -60,7 +60,9 @@ describe('ArchivePage', () => {
     renderPage();
     expect(await screen.findByText('Spring campaign')).toBeInTheDocument();
     expect(screen.getByText('Old scope')).toBeInTheDocument();
-    expect(screen.getByText('Renovation')).toBeInTheDocument();
+    // The category badge renders once in the command lane and once inline; the
+    // row's container width decides which one is displayed.
+    expect(screen.getAllByText('Renovation').length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole('button', { name: 'Restore list Old scope' }));
     await waitFor(() => expect(restore).toHaveBeenCalledWith('list', 4));

@@ -649,8 +649,8 @@ export function OrganizationSettings({
             </Badge>
           )}
         </CardHeader>
-        <CardContent surface="inset" className="space-y-4">
-          <div className="flex flex-col gap-4 min-[1300px]:flex-row min-[1300px]:items-center min-[1300px]:justify-between">
+        <CardContent surface="inset" className="@container space-y-4">
+          <div className="flex flex-col gap-4 @[46rem]:flex-row @[46rem]:items-center @[46rem]:justify-between">
             <div className="flex min-w-0 items-center gap-1.5">
               <p className="text-sm text-muted-foreground">
                 You belong to {organizations.length} {organizations.length === 1 ? 'organization' : 'organizations'} and own{' '}

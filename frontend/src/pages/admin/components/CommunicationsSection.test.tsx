@@ -66,8 +66,8 @@ describe('CommunicationsSection', () => {
         const content = container.querySelector('[data-communications-content]');
         expect(header).toHaveClass(
             'flex-col',
-            'min-[1000px]:flex-row',
-            'min-[1000px]:justify-between',
+            '@[44rem]:flex-row',
+            '@[44rem]:justify-between',
         );
         expect(container.querySelector('[data-communications-count]')).toHaveTextContent('0 users');
         expect(content?.parentElement).toHaveAttribute('data-communications-section');

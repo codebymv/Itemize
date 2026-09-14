@@ -38,13 +38,11 @@ import { OnboardingModal } from '@/components/OnboardingModal';
 import { ONBOARDING_CONTENT } from '@/config/onboardingContent';
 import { Contact, ContactsResponse } from '@/types';
 import { getContacts, deleteContact, bulkDeleteContacts, exportContactsCSV, createContact, CreateContactData } from '@/services/contactsApi';
-import { ContactsTable } from './components/ContactsTable';
 import { ContactCardList } from './components/ContactCard';
 import { ContactFilters } from './components/ContactFilters';
 import { CreateContactModal } from './components/CreateContactModal';
 import { ImportContactsModal } from './components/ImportContactsModal';
 import { BulkTagModal } from './components/BulkTagModal';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { useOrganization } from '@/hooks/useOrganization';
 import { StatCard } from '@/components/StatCard';
 import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
@@ -58,7 +56,6 @@ const getApiStatus = (error: unknown): number | undefined =>
 export function ContactsPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const isMobile = useIsMobile();
 
   // Onboarding
   const { showModal: showOnboarding, handleComplete: completeOnboarding, handleDismiss: dismissOnboarding, handleClose: closeOnboarding } = useOnboardingTrigger('contacts');
@@ -445,16 +442,8 @@ export function ContactsPage() {
                     : () => setShowCreateModal(true)}
                   className="p-12"
                 />
-              ) : isMobile ? (
-                <ContactCardList
-                  contacts={contacts}
-                  selectedContacts={selectedContacts}
-                  onSelectContact={handleSelectContact}
-                  onContactClick={handleContactClick}
-                  onDeleteContact={handleDeleteContact}
-                />
               ) : (
-                <ContactsTable
+                <ContactCardList
                   contacts={contacts}
                   selectedContacts={selectedContacts}
                   onSelectContact={handleSelectContact}

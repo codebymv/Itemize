@@ -856,7 +856,7 @@ export function InvoicesPage() {
                                     <div key={invoice.id}>
                                         {/* Invoice Row - Aligned with VaultCard Pattern */}
                                         <div
-                                            className="p-4 interaction-row cursor-pointer group"
+                                            className="expanded-row-header p-4 interaction-row cursor-pointer group"
                                             onClick={(e) => handleToggleExpand(invoice.id, e)}
                                         >
                                             {/* Header Row: Icon + Invoice # on left, Amount + Chevron + Menu on right */}
@@ -864,22 +864,22 @@ export function InvoicesPage() {
                                                 {/* Left Side: Status Icon + Invoice Number */}
                                                 <div className="flex items-center gap-2 min-w-0 flex-1">
                                                     {/* Status Icon */}
-                                                    <div className={`w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${statusVisual.iconBackgroundClass}`}>
+                                                    <div className={`h-9 w-9 @[40rem]:h-10 @[40rem]:w-10 rounded-full flex items-center justify-center flex-shrink-0 ${statusVisual.iconBackgroundClass}`}>
                                                         <StatusIcon className={`h-4 w-4 ${statusVisual.iconClass}`} aria-hidden="true" />
                                                     </div>
                                                     {/* Invoice Number */}
-                                                    <p className="font-medium text-sm md:text-base">{invoice.invoice_number}</p>
+                                                    <p className="font-medium text-sm @[40rem]:text-base">{invoice.invoice_number}</p>
                                                 </div>
                                                 
                                                 {/* Right Side: Amount + Chevron + Menu */}
                                                 <div className="flex items-center gap-2 flex-shrink-0">
-                                                    <div className="hidden lg:block">
+                                                    <div className="expanded-row-header__status-lane">
                                                         <Badge className={`pointer-events-none cursor-default text-xs ${statusVisual.badgeClass}`}>
                                                             {statusVisual.label}
                                                         </Badge>
                                                     </div>
-                                                    <div className="hidden flex-col items-end text-right sm:flex">
-                                                        <p className="font-semibold text-sm md:text-base">{formatCurrency(invoice.total)}</p>
+                                                    <div className="expanded-row-header__value-lane flex-col items-end text-right">
+                                                        <p className="font-semibold text-sm @[40rem]:text-base">{formatCurrency(invoice.total)}</p>
                                                         {invoice.amount_paid > 0 && (
                                                             <p className="text-xs font-medium text-green-600 dark:text-green-400">
                                                                 -{formatCurrency(invoice.amount_paid)}
@@ -968,7 +968,7 @@ export function InvoicesPage() {
                                                 <span className="text-sm text-muted-foreground font-medium">{getContactName(invoice)}</span>
                                                 
                                                 {/* Status Badge */}
-                                                <span className="lg:hidden">
+                                                <span className="expanded-row-header__status-inline">
                                                     <Badge className={`pointer-events-none cursor-default text-xs ${statusVisual.badgeClass}`}>
                                                         {statusVisual.label}
                                                     </Badge>
@@ -1014,7 +1014,7 @@ export function InvoicesPage() {
                                             
                                             {/* Footer Row: Amount (on mobile) + Overdue status + Amount due */}
                                             <div className="mt-2 px-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                                                <span className="md:hidden font-semibold">{formatCurrency(invoice.total)}</span>
+                                                <span className="expanded-row-header__value-inline font-semibold text-foreground">{formatCurrency(invoice.total)}</span>
                                                 {isOverdue(invoice) && (
                                                     <span className="font-medium text-red-600 dark:text-red-400">
                                                         {getWholeDaysSince(invoice.due_date)}d overdue

@@ -68,8 +68,7 @@ describe('hover-state contract', () => {
 
   it('keeps representative clickable cards and rows on the explicit interaction contract', () => {
     expect(read('components/activity-timeline/ActivityTimeline.tsx')).toContain('interactive={Boolean(onSelect)}')
-    expect(read('pages/contacts/components/ContactCard.tsx')).toContain('<Card\n            interactive')
-    expect(read('pages/contacts/components/ContactsTable.tsx')).toContain('<TableRow\n            key={contact.id}\n            interactive')
+    expect(read('pages/contacts/components/ContactCard.tsx')).toContain('className="group cursor-pointer p-4 interaction-row"')
     expect(read('pages/DashboardPage.tsx')).toContain('<Card surface="inset" interactive')
   })
 

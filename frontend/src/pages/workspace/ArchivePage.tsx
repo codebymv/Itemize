@@ -14,6 +14,7 @@ import { PageLayout } from '@/components/layout/PageLayout';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { Badge } from '@/components/ui/badge';
+import { ExpandedRowHeader } from '@/components/ui/expanded-row-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -76,55 +77,38 @@ export function ArchivePage() {
               className="p-12"
             />
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="border-b bg-muted/30">
-                  <tr>
-                    <th className="text-left p-3 text-sm font-medium text-muted-foreground">Type</th>
-                    <th className="text-left p-3 text-sm font-medium text-muted-foreground">Title</th>
-                    <th className="text-left p-3 text-sm font-medium text-muted-foreground hidden md:table-cell">Category</th>
-                    <th className="text-left p-3 text-sm font-medium text-muted-foreground hidden sm:table-cell">Archived</th>
-                    <th className="text-right p-3 text-sm font-medium text-muted-foreground">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row) => {
-                    const meta = TYPE_META[row.type];
-                    const Icon = meta.icon;
-                    const age = compactAge(row.archivedAt);
-                    return (
-                      <tr key={`${row.type}-${row.id}`} className="border-b">
-                        <td className="p-3">
-                          <div className="flex items-center gap-2">
-                            <Icon className="h-5 w-5" style={{ color: row.color || defaultCardAccent() }} aria-hidden="true" />
-                            <span className="text-xs text-muted-foreground hidden sm:inline">{meta.label}</span>
-                          </div>
-                        </td>
-                        <td className="p-3">
-                          <span className="font-medium">{row.title}</span>
-                        </td>
-                        <td className="p-3 hidden md:table-cell">
-                          {row.category ? <Badge variant="secondary">{row.category}</Badge> : <span className="text-sm text-muted-foreground">—</span>}
-                        </td>
-                        <td className="p-3 text-sm text-muted-foreground hidden sm:table-cell">
-                          {age === null ? '—' : age === 'now' ? 'just now' : `${age} ago`}
-                        </td>
-                        <td className="p-3 text-right">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => void restore(row.type, row.id)}
-                            aria-label={`Restore ${meta.label.toLowerCase()} ${row.title}`}
-                          >
-                            <ArchiveRestore className="mr-2 h-4 w-4" aria-hidden="true" />
-                            Restore
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div className="divide-y" data-archived-content-list>
+              {rows.map((row) => {
+                const meta = TYPE_META[row.type];
+                const Icon = meta.icon;
+                const age = compactAge(row.archivedAt);
+                return (
+                  <div key={`${row.type}-${row.id}`} className="expanded-row-header p-4">
+                    <ExpandedRowHeader
+                      leading={<Icon className="h-5 w-5 shrink-0" style={{ color: row.color || defaultCardAccent() }} aria-hidden="true" />}
+                      title={row.title}
+                      status={row.category ? <Badge variant="secondary">{row.category}</Badge> : null}
+                      value={(
+                        <span className="text-sm text-muted-foreground">
+                          {age === null ? 'Archived' : age === 'now' ? 'Archived just now' : `Archived ${age} ago`}
+                        </span>
+                      )}
+                      trailing={(
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => void restore(row.type, row.id)}
+                          aria-label={`Restore ${meta.label.toLowerCase()} ${row.title}`}
+                        >
+                          <ArchiveRestore className="mr-2 h-4 w-4" aria-hidden="true" />
+                          Restore
+                        </Button>
+                      )}
+                      meta={<span className="text-xs text-muted-foreground">{meta.label}</span>}
+                    />
+                  </div>
+                );
+              })}
             </div>
           )}
         </CardContent>

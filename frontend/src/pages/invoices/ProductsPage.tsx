@@ -496,15 +496,15 @@ export function ProductsPage() {
                                 const statusVisual = getProductStatusVisual(product.is_active);
 
                                 return (
-                                <div key={product.id} className="group p-4 interaction-row">
+                                <div key={product.id} className="expanded-row-header group p-4 interaction-row">
                                     <div className="flex items-center justify-between gap-2">
                                         <div className="flex min-w-0 flex-1 items-center gap-2">
-                                            <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full md:h-10 md:w-10 ${statusVisual.iconBackgroundClass}`}>
+                                            <div className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full @[40rem]:h-10 @[40rem]:w-10 ${statusVisual.iconBackgroundClass}`}>
                                                 <ProductTypeIcon className={`h-4 w-4 ${statusVisual.iconClass}`} aria-hidden="true" />
                                             </div>
                                             <button
                                                 type="button"
-                                                className="truncate text-left text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 md:text-base"
+                                                className="truncate text-left text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 @[40rem]:text-base"
                                                 onClick={() => openEditDialog(product)}
                                             >
                                                 {product.name}
@@ -514,13 +514,13 @@ export function ProductsPage() {
                                             </span>
                                         </div>
                                         <div className="flex flex-shrink-0 items-center gap-2">
-                                            <div className="hidden lg:block">
+                                            <div className="expanded-row-header__status-lane">
                                                 <Badge className={`pointer-events-none cursor-default text-xs ${statusVisual.badgeClass}`}>
                                                     {statusVisual.label}
                                                 </Badge>
                                             </div>
-                                            <div className="hidden text-right sm:block">
-                                                <p className="text-sm font-semibold md:text-base">{formatCurrency(product.price, product.currency)}</p>
+                                            <div className="expanded-row-header__value-lane flex-col items-end text-right">
+                                                <p className="text-sm font-semibold @[40rem]:text-base">{formatCurrency(product.price, product.currency)}</p>
                                                 {product.taxable && product.tax_rate > 0 && (
                                                     <>
                                                         <p className="text-xs text-muted-foreground">+{product.tax_rate}% tax</p>
@@ -553,7 +553,7 @@ export function ProductsPage() {
                                     </div>
 
                                     <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 px-6">
-                                        <span className="lg:hidden">
+                                        <span className="expanded-row-header__status-inline">
                                             <Badge className={`pointer-events-none cursor-default text-xs ${statusVisual.badgeClass}`}>
                                                 {statusVisual.label}
                                             </Badge>
@@ -565,7 +565,7 @@ export function ProductsPage() {
                                     </div>
 
                                     <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 px-6 text-xs text-muted-foreground">
-                                        <span className="flex flex-col sm:hidden">
+                                        <span className="expanded-row-header__value-inline flex-col">
                                             <span className="font-semibold text-foreground">{formatCurrency(product.price, product.currency)}</span>
                                             {product.taxable && product.tax_rate > 0 && (
                                                 <>

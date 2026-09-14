@@ -657,7 +657,7 @@ export function PaymentsPage() {
                                     <div key={payment.id}>
                                         {/* Payment Row - Aligned with VaultCard Pattern */}
                                         <div
-                                            className="p-4 interaction-row cursor-pointer group"
+                                            className="expanded-row-header p-4 interaction-row cursor-pointer group"
                                             onClick={(e) => handleToggleExpand(payment.id, e)}
                                         >
                                             {/* Header Row: Icon + Amount on left, Date + Chevron + Menu on right */}
@@ -665,21 +665,21 @@ export function PaymentsPage() {
                                                 {/* Left Side: Status Icon + Payment Number */}
                                                 <div className="flex items-center gap-2 min-w-0 flex-1">
                                                     {/* Status Icon */}
-                                                    <div className={`w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${statusVisual.iconBackgroundClass}`}>
+                                                    <div className={`h-9 w-9 @[40rem]:h-10 @[40rem]:w-10 rounded-full flex items-center justify-center flex-shrink-0 ${statusVisual.iconBackgroundClass}`}>
                                                         <StatusIcon className={`h-4 w-4 ${statusVisual.iconClass}`} aria-hidden="true" />
                                                     </div>
-                                                    <p className="truncate font-medium text-sm md:text-base">{getPaymentIdentifier(payment)}</p>
+                                                    <p className="truncate font-medium text-sm @[40rem]:text-base">{getPaymentIdentifier(payment)}</p>
                                                 </div>
                                                 
                                                 {/* Right Side: Date + Chevron + Menu */}
                                                 <div className="flex items-center gap-2 flex-shrink-0">
-                                                    <div className="hidden lg:block">
+                                                    <div className="expanded-row-header__status-lane">
                                                         <Badge className={`pointer-events-none cursor-default text-xs ${statusVisual.badgeClass}`}>
                                                             {statusVisual.label}
                                                         </Badge>
                                                     </div>
-                                                    <div className="text-right hidden sm:block">
-                                                        <p className="font-semibold text-sm md:text-base">
+                                                    <div className="expanded-row-header__value-lane flex-col items-end text-right">
+                                                        <p className="font-semibold text-sm @[40rem]:text-base">
                                                             {formatCurrency(payment.amount, payment.currency)}
                                                         </p>
                                                         {payment.refunded_amount > 0 && (
@@ -750,7 +750,7 @@ export function PaymentsPage() {
                                                 <span className="text-sm text-muted-foreground font-medium">{getContactName(payment)}</span>
                                                 
                                                 {/* Status Badge */}
-                                                <span className="lg:hidden">
+                                                <span className="expanded-row-header__status-inline">
                                                     <Badge className={`text-xs pointer-events-none cursor-default ${statusVisual.badgeClass}`}>
                                                         {statusVisual.label}
                                                     </Badge>
@@ -784,7 +784,7 @@ export function PaymentsPage() {
                                             
                                             {/* Footer Row: Date (on mobile) + Card info */}
                                             <div className="mt-2 px-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                                                <span className="font-semibold md:hidden">{formatCurrency(payment.amount, payment.currency)}</span>
+                                                <span className="expanded-row-header__value-inline font-semibold text-foreground">{formatCurrency(payment.amount, payment.currency)}</span>
                                                 {paymentAge && (
                                                     <span className={`font-medium ${paymentAge.className}`}>{paymentAge.label}</span>
                                                 )}

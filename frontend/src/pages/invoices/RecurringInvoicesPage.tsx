@@ -687,7 +687,7 @@ export function RecurringInvoicesPage() {
                                     <div key={recurring.id}>
                                         {/* Recurring Row - Aligned with VaultCard Pattern */}
                                         <div
-                                            className="p-4 interaction-row cursor-pointer group"
+                                            className="expanded-row-header p-4 interaction-row cursor-pointer group"
                                             onClick={(e) => handleToggleExpand(recurring.id, e)}
                                         >
                                             {/* Header Row: Icon + Template Name on left, Amount + Chevron + Menu on right */}
@@ -695,22 +695,22 @@ export function RecurringInvoicesPage() {
                                                 {/* Left Side: Status Icon + Template Name */}
                                                 <div className="flex items-center gap-2 min-w-0 flex-1">
                                                     {/* Status Icon */}
-                                                    <div className={`w-9 h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${statusVisual.iconBackgroundClass}`}>
+                                                    <div className={`h-9 w-9 @[40rem]:h-10 @[40rem]:w-10 rounded-full flex items-center justify-center flex-shrink-0 ${statusVisual.iconBackgroundClass}`}>
                                                         <StatusIcon className={`h-4 w-4 ${statusVisual.iconClass}`} aria-hidden="true" />
                                                     </div>
                                                     {/* Template Name */}
-                                                    <p className="font-medium text-sm md:text-base">{recurring.template_name}</p>
+                                                    <p className="font-medium text-sm @[40rem]:text-base">{recurring.template_name}</p>
                                                 </div>
                                                 
                                                 {/* Right Side: Amount + Chevron + Menu */}
                                                 <div className="flex items-center gap-2 flex-shrink-0">
-                                                    <div className="hidden lg:block">
+                                                    <div className="expanded-row-header__status-lane">
                                                         <Badge className={`pointer-events-none cursor-default text-xs ${statusVisual.badgeClass}`}>
                                                             {statusVisual.label}
                                                         </Badge>
                                                     </div>
-                                                    <div className="text-right hidden sm:block">
-                                                        <p className="font-semibold text-sm md:text-base">{formatCurrency(recurring.total)}</p>
+                                                    <div className="expanded-row-header__value-lane flex-col items-end text-right">
+                                                        <p className="font-semibold text-sm @[40rem]:text-base">{formatCurrency(recurring.total)}</p>
                                                     </div>
                                                     {/* Chevron - Collapsible Trigger */}
                                                     <Button 
@@ -780,7 +780,7 @@ export function RecurringInvoicesPage() {
                                                 <span className="text-sm text-muted-foreground font-medium">{getContactName(recurring)}</span>
                                                 
                                                 {/* Status Badge */}
-                                                <span className="lg:hidden">
+                                                <span className="expanded-row-header__status-inline">
                                                     <Badge className={`text-xs pointer-events-none cursor-default ${statusVisual.badgeClass}`}>
                                                         {statusVisual.label}
                                                     </Badge>
@@ -794,7 +794,7 @@ export function RecurringInvoicesPage() {
                                             
                                             {/* Footer Row: Amount (on mobile) + Next run date + Generated count */}
                                             <div className="mt-2 px-6 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                                                <span className="md:hidden font-semibold">{formatCurrency(recurring.total)}</span>
+                                                <span className="expanded-row-header__value-inline font-semibold text-foreground">{formatCurrency(recurring.total)}</span>
                                                 {recurring.status === 'active' && recurring.next_run_date && (
                                                     <span>Next invoice: {formatDate(recurring.next_run_date)}</span>
                                                 )}

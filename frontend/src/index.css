@@ -291,6 +291,43 @@
   }
 }
 
+/* Expandable list rows hand status and value from the command lane to the
+   meta/footer rows on the row's own width, never the viewport. */
+.expanded-row-header {
+  container-name: expanded-row-header;
+  container-type: inline-size;
+}
+
+.expanded-row-header__status-lane,
+.expanded-row-header__value-lane {
+  display: none;
+}
+
+.expanded-row-header__status-inline,
+.expanded-row-header__value-inline {
+  display: inline-flex;
+}
+
+@container expanded-row-header (min-width: 28rem) {
+  .expanded-row-header__value-lane {
+    display: flex;
+  }
+
+  .expanded-row-header__value-inline {
+    display: none;
+  }
+}
+
+@container expanded-row-header (min-width: 40rem) {
+  .expanded-row-header__status-lane {
+    display: block;
+  }
+
+  .expanded-row-header__status-inline {
+    display: none;
+  }
+}
+
 /* Expanded-record actions respond to the row width left by the app shell. */
 .expanded-row-actions {
   container-name: expanded-row-actions;

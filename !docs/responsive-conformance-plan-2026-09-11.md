@@ -14,7 +14,9 @@
 | 2 | done 13 Sep | Dashboard welcome row `@[44rem]:`; five label pairs `@[22rem]:` on their cards; attention banner `@[32.5rem]:`; signal tiles stack the timeframe under the title below `@[18rem]` (R2 fixed: every title single-line at 375); signal picker and `NotificationCenter` switch Sheet/Popover on `useCoarsePointer()` |
 | 2b | done 13 Sep | `FilterSelect` (trigger sized to its widest option via overlapped invisible sizers; `!grid` because `SelectTrigger` line-clamps direct spans) replaces the 9 rem-tuned triggers in CanvasToolbar, ContentsPage, SharedPage, InvoiceViewSelect; contact/deal modal field grids `grid-cols-1 sm:grid-cols-2` |
 | ratchets after 2b | — | `ARBITRARY_BREAKPOINT_BASELINE` 50 → 10 (`CommunicationsSection` 4, `OrganizationSettings` 3, `SettingsPage` 3); `VIEWPORT_HOOK_BASELINE` 7 → 5; `VIEWPORT_READ_BASELINE` 5 (sidebar allowlisted) |
-| 3, 4, 5, 6, 7 | open | |
+| 5 | done 13 Sep | `CommunicationsSection` `@[44rem]:`, `SettingsPage`/`OrganizationSettings` plan rows `@[46rem]:` on their `CardContent`, `OperationsSection` queue grid `grid-cols-2 sm:grid-cols-4`; **`ARBITRARY_BREAKPOINT_BASELINE` = 0** — the ban is now hard |
+| 3 | done 13 Sep | `ExpandedRowHeader` primitive + `expanded-row-header` container CSS (value lane ≥ 28rem, status lane ≥ 40rem, inline copies below). The five sales lists adopt the container **classes** on their existing markup (their menus are page-specific; one collapse order now lives in CSS instead of five sm/md/lg tiers). Contacts, Shared and Archive rebuilt on the component; `ContactsTable.tsx` deleted, `ContactCardList` serves every width with a select-all bar; `VIEWPORT_HOOK_BASELINE` 5 → 4. Contract: routed lists may not contain `<Table>` outside a tabular allowlist |
+| 4, 6, 7 | open | |
 
 ## Principles for every slice
 
