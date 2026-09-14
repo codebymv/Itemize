@@ -24,11 +24,15 @@ describe("createCanvasHeaderTools", () => {
       </TooltipProvider>,
     );
 
+    // The trigger sizes itself to its widest option, so no authored label can clip.
+    const typeFilter = screen.getByRole("combobox", { name: "Filter by content type" });
+    expect(typeFilter).toHaveAttribute("data-filter-select");
+    expect(typeFilter).not.toHaveClass("w-[8rem]");
     expect(
-      screen.getByRole("combobox", { name: "Filter by content type" }),
-    ).toHaveClass("w-[8rem]");
-    expect(
-      screen.getByRole("combobox", { name: "Filter by category" }),
-    ).toHaveClass("w-[9.5rem]");
+      Array.from(typeFilter.querySelectorAll("[data-filter-select-sizer]")).map((node) => node.textContent),
+    ).toEqual(["All Types", "Lists", "Notes", "Whiteboards", "Wireframes", "Vaults"]);
+    const categoryFilter = screen.getByRole("combobox", { name: "Filter by category" });
+    expect(categoryFilter).toHaveAttribute("data-filter-select");
+    expect(categoryFilter.querySelector("[data-filter-select-sizer]")).toHaveTextContent("All Categories");
   });
 });

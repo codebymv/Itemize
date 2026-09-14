@@ -761,7 +761,7 @@ export function InvoiceEditorPage() {
                                                     value="Invoice"
                                                     readOnly
                                                     aria-label="Document type"
-                                                    className="h-auto border-none bg-transparent py-0 text-left text-xl font-medium shadow-none focus-visible:ring-0 sm:text-right"
+                                                    className="touch-target-mobile h-auto border-none bg-transparent py-0 text-left text-xl font-medium shadow-none focus-visible:ring-0 sm:text-right"
                                                 />
                                                 <Input
                                                     value={invoiceSummary}
@@ -828,7 +828,7 @@ export function InvoiceEditorPage() {
                                             )}
                                             <Link
                                                 to="/payment-settings"
-                                                className="mt-2 inline-block text-icon-accent hover:underline dark:hover:text-icon-accent"
+                                                className="touch-target-mobile mt-2 inline-flex items-center text-icon-accent hover:underline dark:hover:text-icon-accent"
                                             >
                                                 {businesses.length > 0 ? 'Manage businesses' : 'Add a business profile'}
                                             </Link>

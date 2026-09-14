@@ -27,8 +27,10 @@ describe('ModuleWidget', () => {
     expect(container.querySelector('[data-module-widget-header]')).toHaveClass('items-start');
     expect(container.querySelector('[data-module-widget-header]')).not.toHaveClass('lg:flex-col');
     expect(container.querySelector('[data-module-widget-icon]')).toHaveClass(
-      'min-[1280px]:max-[1399px]:hidden',
+      'hidden',
+      '@[22rem]:block',
     );
+    expect(container.querySelector('[data-card-surface="inset"]')).toHaveClass('@container');
 
     fireEvent.click(screen.getByRole('button', { name: 'View Invoices' }));
     expect(onView).toHaveBeenCalledOnce();
@@ -65,7 +67,7 @@ describe('ModuleWidget', () => {
     );
 
     expect(screen.getByRole('button', { name: 'View Invoices' })).toBeInTheDocument();
-    expect(screen.getByText('View')).toHaveClass('min-[1750px]:hidden');
-    expect(screen.getByText('View Invoices')).toHaveClass('hidden', 'min-[1750px]:inline');
+    expect(screen.getByText('View')).toHaveClass('@[30rem]:hidden');
+    expect(screen.getByText('View Invoices')).toHaveClass('hidden', '@[30rem]:inline');
   });
 });

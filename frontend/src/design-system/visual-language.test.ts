@@ -584,7 +584,7 @@ describe('visual language: width decisions', () => {
     // min-[1100px] is "viewport minus sidebar" hand-tuned for one card. It
     // moves the wrong way when the sidebar collapses. Use @container on the
     // card and @md:/@lg: on its children instead.
-    const ARBITRARY_BREAKPOINT_BASELINE = 50;
+    const ARBITRARY_BREAKPOINT_BASELINE = 10;
     ratchet(
       'invented pixel breakpoints',
       ARBITRARY_BREAKPOINT_BASELINE,
@@ -597,7 +597,7 @@ describe('visual language: width decisions', () => {
     // useIsMobile is the shell handoff and an input-modality hint. It is not
     // a layout switch for content: a table at 1000px with the sidebar open
     // has 744px, and a 767px tablet has more room than the hook admits.
-    const VIEWPORT_HOOK_BASELINE = 7;
+    const VIEWPORT_HOOK_BASELINE = 5;
     const SHELL_AND_MODALITY: Record<string, string> = {
       'hooks/use-mobile.tsx': 'owns the 768px handoff',
       'components/ui/sidebar.tsx': 'the shell decides its own drawer/rail handoff',
@@ -619,6 +619,7 @@ describe('visual language: width decisions', () => {
     const VIEWPORT_READ_BASELINE = 5;
     const FLOATING_LAYER_OR_DECOR: Record<string, string> = {
       'hooks/use-mobile.tsx': 'owns the 768px handoff',
+      'components/ui/sidebar.tsx': 'the shell picks its own initial rail state from device class',
       'components/Canvas/ContextMenu.tsx': 'clamps a floating menu inside the viewport',
       'components/NoteCard/noteMentionSuggestion.ts': 'clamps a floating suggestion list inside the viewport',
       'components/workspace/MentionInput.tsx': 'clamps a floating suggestion list inside the viewport',

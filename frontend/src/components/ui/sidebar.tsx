@@ -71,7 +71,18 @@ const SidebarProvider = React.forwardRef<
 
     // This is the internal state of the sidebar.
     // We use openProp and setOpenProp for control from outside the component.
-    const [_open, _setOpen] = React.useState(defaultOpen)
+    // The persisted cookie wins; otherwise a tablet-width window starts with
+    // the rail collapsed so the content column is not squeezed to ~512px.
+    const [_open, _setOpen] = React.useState(() => {
+      if (typeof document === "undefined") return defaultOpen
+      const persisted = document.cookie
+        .split("; ")
+        .find((entry) => entry.startsWith(`${SIDEBAR_COOKIE_NAME}=`))
+        ?.split("=")[1]
+      if (persisted === "true") return true
+      if (persisted === "false") return false
+      return defaultOpen && window.matchMedia("(min-width: 1024px)").matches
+    })
     const open = openProp ?? _open
     const setOpen = React.useCallback(
       (value: boolean | ((value: boolean) => boolean)) => {

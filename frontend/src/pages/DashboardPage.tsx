@@ -218,11 +218,13 @@ export function DashboardPage() {
             }}
         >
             {/* Welcome Section */}
-            <div className="mb-8 min-[1000px]:flex min-[1000px]:items-center min-[1000px]:justify-between min-[1000px]:gap-6">
-                <h2 className="mb-2 text-2xl font-light tracking-tight min-[1000px]:mb-0">
+            <div className="@container mb-8">
+              <div className="@[44rem]:flex @[44rem]:items-center @[44rem]:justify-between @[44rem]:gap-6">
+                <h2 className="mb-2 text-2xl font-light tracking-tight @[44rem]:mb-0">
                     Welcome back, <span className="font-medium">{firstName}</span>
                 </h2>
-                <p className="text-muted-foreground min-[1000px]:shrink-0 min-[1000px]:text-right">Here's a look at your performance</p>
+                <p className="text-muted-foreground @[44rem]:shrink-0 @[44rem]:text-right">Here's a look at your performance</p>
+              </div>
             </div>
 
             <GetStartedCard />
@@ -303,7 +305,7 @@ export function DashboardPage() {
                 </CardHeader>
                 <CardContent className="grid gap-6 lg:grid-cols-2">
                     {/* Pipeline info */}
-                    <Card surface="inset" className="flex flex-col">
+                    <Card surface="inset" className="@container flex flex-col">
                         <CardHeader>
                             <div className="flex items-center justify-between">
                                 <div className="min-w-0">
@@ -316,7 +318,7 @@ export function DashboardPage() {
                                 <Button size="sm" variant="ghost" onClick={() => navigate('/pipelines')} className={DASHBOARD_CARD_ACTION_CLASS} aria-label="View pipeline info details" data-dashboard-detail-action>
                                     <span data-dashboard-detail-label>
                                         View
-                                        <span className="hidden min-[1048px]:inline"> Details</span>
+                                        <span className="hidden @[22rem]:inline"> Details</span>
                                     </span>
                                     <ArrowRight className="ml-1 h-3 w-3" />
                                 </Button>
@@ -341,7 +343,7 @@ export function DashboardPage() {
                                 <Button size="sm" variant="ghost" onClick={() => navigate('/pipelines')} className={DASHBOARD_CARD_ACTION_CLASS} aria-label="View open deal age details" data-dashboard-detail-action>
                                     <span data-dashboard-detail-label>
                                         View
-                                        <span className="hidden min-[1048px]:inline"> Details</span>
+                                        <span className="hidden @[22rem]:inline"> Details</span>
                                     </span>
                                     <ArrowRight className="ml-1 h-3 w-3" />
                                 </Button>
@@ -364,7 +366,7 @@ export function DashboardPage() {
             </Card>
 
             {/* Recent Activity */}
-            <Card className="mb-8">
+            <Card className="@container mb-8">
                 <CardHeader>
                     <div className="flex items-center justify-between gap-3">
                         <CardTitle className="flex shrink-0 items-center gap-2 text-base">
@@ -379,7 +381,7 @@ export function DashboardPage() {
                             <Button size="sm" variant="ghost" onClick={() => navigate('/contacts')} className={DASHBOARD_CARD_ACTION_CLASS} aria-label="View recent activity details" data-dashboard-detail-action>
                                 <span data-dashboard-detail-label>
                                     View
-                                    <span className="hidden min-[1048px]:inline"> Details</span>
+                                    <span className="hidden @[22rem]:inline"> Details</span>
                                 </span>
                                 <ArrowRight className="ml-1 h-3 w-3" />
                             </Button>
@@ -402,13 +404,13 @@ export function DashboardPage() {
             {/* Performance analytics: swipeable rail on mobile, grid on desktop */}
             <ResponsiveCardRail label="Performance analytics" desktopColumns="md:grid-cols-1 md:gap-6 xl:grid-cols-2" mobileCardClassName="flex-[0_0_92%]" className="dashboard-performance-analytics mb-8">
                 {/* Conversion Rates */}
-                <Card className="h-full flex flex-col">
+                <Card className="@container h-full flex flex-col">
                     <CardHeader>
                         <div className="flex items-center justify-between">
                             <CardTitle className="text-base flex items-center gap-2">
                                 <Target className="h-4 w-4 text-icon-accent" />
-                                <span className="min-[1048px]:hidden">Rates</span>
-                                <span className="hidden min-[1048px]:inline">Conversion Rates</span>
+                                <span className="@[22rem]:hidden">Rates</span>
+                                <span className="hidden @[22rem]:inline">Conversion Rates</span>
                             </CardTitle>
                             <span className="text-xs text-muted-foreground">{periodLabels[period]}</span>
                         </div>
@@ -480,13 +482,13 @@ export function DashboardPage() {
                 </Card>
 
                 {/* Communication Stats */}
-                <Card className="h-full flex flex-col">
+                <Card className="@container h-full flex flex-col">
                     <CardHeader>
                         <div className="flex items-center justify-between">
                             <CardTitle className="text-base flex items-center gap-2">
                                 <Mail className="h-4 w-4 text-icon-accent" />
-                                <span className="min-[1048px]:hidden">Comms</span>
-                                <span className="hidden min-[1048px]:inline">Communication</span>
+                                <span className="@[22rem]:hidden">Comms</span>
+                                <span className="hidden @[22rem]:inline">Communication</span>
                             </CardTitle>
                             <span className="text-xs text-muted-foreground">{periodLabels[period]}</span>
                         </div>

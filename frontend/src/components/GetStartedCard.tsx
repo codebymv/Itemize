@@ -101,12 +101,12 @@ export function GetStartedCard() {
   const isBusinessJourney = data.steps.some((step) => step.id === 'first_contact');
 
   return (
-    <Card className="mb-6">
+    <Card className="@container mb-6">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-3">
           <div className={cn(
             'min-w-0 flex-1',
-            isBusinessJourney && 'min-[1100px]:flex min-[1100px]:items-center min-[1100px]:justify-between min-[1100px]:gap-4',
+            isBusinessJourney && '@[35rem]:flex @[35rem]:items-center @[35rem]:justify-between @[35rem]:gap-4',
           )}>
             <CardTitle className="text-base font-semibold">
               {isBusinessJourney ? 'Get your first client approval' : 'Start your workspace'}
@@ -116,7 +116,7 @@ export function GetStartedCard() {
                 Begin with one useful piece of work.
               </p>
             )}
-            <div className="mt-2 flex items-center gap-2 min-[1100px]:mt-0 min-[1100px]:shrink-0">
+            <div className="mt-2 flex items-center gap-2 @[35rem]:mt-0 @[35rem]:shrink-0">
               <Progress value={percent} className="h-2 w-40 sm:w-56" />
               <span className="text-xs text-muted-foreground">
                 {data.completedCount}/{data.totalCount} complete
@@ -126,7 +126,7 @@ export function GetStartedCard() {
           <button
             type="button"
             onClick={() => dismiss.mutate()}
-            className="text-muted-foreground hover:text-foreground transition-colors"
+            className="touch-target-mobile inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground transition-colors"
             aria-label="Dismiss Get Started"
           >
             <X className="h-4 w-4" />
@@ -183,7 +183,7 @@ function GetStartedRow({
         <Circle className="h-5 w-5 shrink-0 text-muted-foreground" />
       )}
       <div
-        className="min-w-0 flex-1 min-[1100px]:flex min-[1100px]:items-baseline min-[1100px]:justify-between min-[1100px]:gap-6"
+        className="min-w-0 flex-1 @[35rem]:flex @[35rem]:items-baseline @[35rem]:justify-between @[35rem]:gap-6"
         data-get-started-copy
       >
         <p
@@ -195,7 +195,7 @@ function GetStartedRow({
           {copy.label}
         </p>
         <p
-          className="mt-0.5 text-xs text-muted-foreground min-[1100px]:ml-auto min-[1100px]:mt-0 min-[1100px]:whitespace-nowrap min-[1100px]:text-right"
+          className="mt-0.5 text-xs text-muted-foreground @[35rem]:ml-auto @[35rem]:mt-0 @[35rem]:whitespace-nowrap @[35rem]:text-right"
           data-get-started-description
         >
           {copy.description}

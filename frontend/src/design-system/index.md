@@ -116,9 +116,14 @@ Sanctioned mechanisms, in order of preference:
 3. **A layout primitive** when the same anatomy appears three or more times:
    `ResponsiveCardRail`, `ResponsiveHeaderTools`, `EntityDetailHeader`. Add a
    primitive rather than a fourth copy.
-4. **The 768px shell handoff** (`useIsMobile`, `md:`) only for the shell's own
-   layers and for input modality that genuinely tracks device class. Prefer
-   `(pointer: coarse)` for modality.
+4. **Input modality** through `useCoarsePointer()` (`(pointer: coarse)`): a
+   bottom sheet versus a popover, a touch drag delay, a thicker stroke. The
+   768px shell handoff (`useIsMobile`, `md:`) is for the shell's own layers only.
+
+Filter and sort selects use `FilterSelect`, which sizes its trigger to the
+widest option. Never give a `SelectTrigger` a rem width tuned to one label;
+"All Types" and "Most Recent" were being clipped by triggers sized to "Type"
+and "Sort".
 
 Banned in application code, enforced by `visual-language.test.ts`:
 

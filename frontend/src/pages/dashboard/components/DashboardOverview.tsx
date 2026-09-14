@@ -51,7 +51,7 @@ import {
 } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useCoarsePointer } from '@/hooks/use-coarse-pointer';
 import { getStatIconBgClass, getStatIconClass, getStatValueClass } from '@/hooks/useStatStyles';
 import { cn } from '@/lib/utils';
 import { STATUS_THEME_CLASSES } from '@/lib/statusVisuals';
@@ -125,7 +125,7 @@ function SortableDashboardSignalCell({
         zIndex: isDragging ? 10 : undefined,
         opacity: isDragging ? 0.75 : undefined,
       }}
-      className="group relative flex min-w-0 bg-background"
+      className="group relative flex min-w-0 @container bg-background"
       data-dashboard-signal={signal.id}
       data-dragging={isDragging || undefined}
     >
@@ -138,8 +138,8 @@ function SortableDashboardSignalCell({
         <div className="flex min-w-0 items-start gap-3">
           <SignalIcon signal={signal} />
           <div className="min-w-0 flex-1">
-            <div className="flex min-w-0 items-start justify-between gap-2">
-              <p className="truncate text-sm font-medium text-foreground">{signal.title}</p>
+            <div className="flex min-w-0 flex-col gap-x-2 @[18rem]:flex-row @[18rem]:items-baseline @[18rem]:justify-between">
+              <p className="min-w-0 text-sm font-medium text-foreground">{signal.title}</p>
               {signal.timeframe ? (
                 <span className="shrink-0 text-[11px] text-muted-foreground">{signal.timeframe}</span>
               ) : null}
@@ -214,8 +214,8 @@ function AttentionSignals({
   if (signals.length === 0) return null;
 
   return (
-    <div className="dashboard-overview-attention-body mb-4 grid overflow-hidden rounded-lg border border-red-200 bg-red-50/70 min-[520px]:grid-cols-[auto_minmax(0,1fr)] dark:border-red-900 dark:bg-red-950/20">
-      <div className="flex items-center justify-between gap-3 border-b border-red-200 px-4 py-3 min-[520px]:border-b-0 min-[520px]:border-r dark:border-red-900">
+    <div className="dashboard-overview-attention-body mb-4 grid overflow-hidden rounded-lg border border-red-200 bg-red-50/70 @[32.5rem]:grid-cols-[auto_minmax(0,1fr)] dark:border-red-900 dark:bg-red-950/20">
+      <div className="flex items-center justify-between gap-3 border-b border-red-200 px-4 py-3 @[32.5rem]:border-b-0 @[32.5rem]:border-r dark:border-red-900">
         <div className="flex min-w-0 items-center gap-2">
           <AlertTriangle aria-hidden="true" className="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" />
           <h3 className="text-sm font-medium">Needs attention</h3>
@@ -236,7 +236,7 @@ function AttentionSignals({
             <SignalIcon signal={signal} size="small" />
             <span className="min-w-0 flex-1 truncate text-sm font-medium">{signal.title}</span>
             <span className="shrink-0 text-sm font-semibold text-red-600 dark:text-red-400">{signal.value}</span>
-            <span className="hidden shrink-0 text-xs text-muted-foreground min-[520px]:inline">{signal.supportingText}</span>
+            <span className="hidden shrink-0 text-xs text-muted-foreground @[32.5rem]:inline">{signal.supportingText}</span>
           </button>
         ))}
       </div>
@@ -415,7 +415,7 @@ function OverviewSignalPicker({
   pinnedSignalIds: DashboardSignalId[];
   onSave: (signalIds: DashboardSignalId[]) => void;
 }) {
-  const isMobile = useIsMobile();
+  const coarsePointer = useCoarsePointer();
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -431,7 +431,7 @@ function OverviewSignalPicker({
     />
   );
 
-  if (isMobile) {
+  if (coarsePointer) {
     return (
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger asChild>{trigger}</SheetTrigger>

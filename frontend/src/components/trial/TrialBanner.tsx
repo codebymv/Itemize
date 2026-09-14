@@ -161,7 +161,7 @@ export function TrialBanner({
               type="button"
               onClick={handleDismiss}
               className={cn(
-                'rounded-md p-1 transition-colors hover:bg-black/5 dark:hover:bg-white/5',
+                'touch-target-mobile inline-flex items-center justify-center rounded-md p-1 transition-colors hover:bg-black/5 dark:hover:bg-white/5',
                 'focus:outline-none focus:ring-2 focus:ring-offset-2',
                 styles.text
               )}
@@ -188,7 +188,7 @@ export function TrialBanner({
               type="button"
               onClick={handleDismiss}
               className={cn(
-                'absolute right-0 rounded-md p-1 transition-colors hover:bg-black/5 dark:hover:bg-white/5',
+                'touch-target-mobile absolute right-0 inline-flex items-center justify-center rounded-md p-1 transition-colors hover:bg-black/5 dark:hover:bg-white/5',
                 'focus:outline-none focus:ring-2 focus:ring-offset-2',
                 styles.text
               )}

@@ -15,13 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { FilterSelect } from "@/components/ui/filter-select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -1271,51 +1265,44 @@ export function ContentsPage() {
   const headerQueryCount =
     headerFilterCount + Number(searchQuery.trim().length > 0);
   const typeHeaderFilter = (
-      <Select
+      <FilterSelect<ContentType>
         value={typeFilter}
-        onValueChange={(value) => setTypeFilter(value as ContentType)}
-      >
-        <SelectTrigger className="h-11 w-[6.5rem] bg-muted/20">
-          <SelectValue placeholder="Type" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All Types</SelectItem>
-          <SelectItem value="list">Lists</SelectItem>
-          <SelectItem value="note">Notes</SelectItem>
-          <SelectItem value="whiteboard">Whiteboards</SelectItem>
-          <SelectItem value="wireframe">Wireframes</SelectItem>
-          <SelectItem value="vault">Vaults</SelectItem>
-        </SelectContent>
-      </Select>
+        onValueChange={setTypeFilter}
+        aria-label="Filter by content type"
+        placeholder="Type"
+        options={[
+          { value: "all", label: "All Types" },
+          { value: "list", label: "Lists" },
+          { value: "note", label: "Notes" },
+          { value: "whiteboard", label: "Whiteboards" },
+          { value: "wireframe", label: "Wireframes" },
+          { value: "vault", label: "Vaults" },
+        ]}
+      />
   );
   const secondaryHeaderFilters = (
     <>
-      <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-        <SelectTrigger className="h-11 w-[8.5rem] bg-muted/20">
-          <SelectValue placeholder="Category" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All Categories</SelectItem>
-          {uniqueCategories.map((category) => (
-            <SelectItem key={category} value={category}>
-              {category}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Select
+      <FilterSelect
+        value={categoryFilter}
+        onValueChange={setCategoryFilter}
+        aria-label="Filter by category"
+        placeholder="Category"
+        options={[
+          { value: "all", label: "All Categories" },
+          ...uniqueCategories.map((category) => ({ value: category, label: category })),
+        ]}
+      />
+      <FilterSelect<SortOption>
         value={sortBy}
-        onValueChange={(value) => setSortBy(value as SortOption)}
-      >
-        <SelectTrigger className="h-11 w-[6.5rem] bg-muted/20">
-          <SelectValue placeholder="Sort" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="updated">Updated</SelectItem>
-          <SelectItem value="created">Created</SelectItem>
-          <SelectItem value="title">Title A-Z</SelectItem>
-        </SelectContent>
-      </Select>
+        onValueChange={setSortBy}
+        aria-label="Sort contents"
+        placeholder="Sort"
+        options={[
+          { value: "updated", label: "Updated" },
+          { value: "created", label: "Created" },
+          { value: "title", label: "Title A-Z" },
+        ]}
+      />
     </>
   );
   const headerFilters = (

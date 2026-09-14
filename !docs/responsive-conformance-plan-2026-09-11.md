@@ -4,6 +4,18 @@
 **Goal:** every width decision in the application goes through a design-system mechanism (container query, `ResponsiveValue`, `ResponsiveHeaderTools`, a layout primitive, or the single 768 px shell handoff). No page-local pixel breakpoints, no viewport-hook layout branching, no duplicated row/layout markup.
 **Non-goals:** marketing pages under `pages/home/` and `Index.tsx`; the customer-authored public canvases (`PublicFormPage`, `PublicLandingPage`); visual redesign of any surface — this pass changes *how* layouts respond, not what they look like at the widths they were designed for.
 
+## Progress
+
+| Slice | Status | Commit / notes |
+|---|---|---|
+| 0 | done | `e32b2a9f` — ratchets 50 / 7 / 5, container-query plugin, dead `PageLayout` props removed |
+| 0.5 addendum (rendered audit R4/R1) | done 13 Sep | `.interaction-navigation` joins the 44 px floor; `touch-target-mobile` on the trial and Get Started dismiss buttons, the invoice document-type field and the business-profile link; `SidebarProvider` reads its cookie and starts collapsed below `lg` |
+| 1 | done 13 Sep | `GetStartedCard` → `@container` + `@[35rem]:`; `ModuleWidget` → `@[22rem]:` icon, `@[30rem]:` label (note: `ModuleWidget` has no consumer outside its test — delete or adopt) |
+| 2 | done 13 Sep | Dashboard welcome row `@[44rem]:`; five label pairs `@[22rem]:` on their cards; attention banner `@[32.5rem]:`; signal tiles stack the timeframe under the title below `@[18rem]` (R2 fixed: every title single-line at 375); signal picker and `NotificationCenter` switch Sheet/Popover on `useCoarsePointer()` |
+| 2b | done 13 Sep | `FilterSelect` (trigger sized to its widest option via overlapped invisible sizers; `!grid` because `SelectTrigger` line-clamps direct spans) replaces the 9 rem-tuned triggers in CanvasToolbar, ContentsPage, SharedPage, InvoiceViewSelect; contact/deal modal field grids `grid-cols-1 sm:grid-cols-2` |
+| ratchets after 2b | — | `ARBITRARY_BREAKPOINT_BASELINE` 50 → 10 (`CommunicationsSection` 4, `OrganizationSettings` 3, `SettingsPage` 3); `VIEWPORT_HOOK_BASELINE` 7 → 5; `VIEWPORT_READ_BASELINE` 5 (sidebar allowlisted) |
+| 3, 4, 5, 6, 7 | open | |
+
 ## Principles for every slice
 
 1. **Enforce first, then fix to green.** Each rule lands as a contract assertion in `visual-language.test.ts` with a ratchet baseline (the `RAW_BLUE_BASELINE` idiom). The baseline is set to today's count, and each slice lowers it. The test fails if the count rises *or* if it falls without the baseline being lowered, so the ratchet cannot silently loosen.

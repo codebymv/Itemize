@@ -43,7 +43,7 @@ import { ToastAction } from '@/components/ui/toast';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { VisuallyHidden } from '@/components/ui/visually-hidden';
 import { useToast } from '@/hooks/use-toast';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { useCoarsePointer } from '@/hooks/use-coarse-pointer';
 import { useOrganization } from '@/hooks/useOrganization';
 import { getApiUrl } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -306,7 +306,7 @@ function NotificationPanel({
 }
 
 export function NotificationCenter() {
-  const isMobile = useIsMobile();
+  const coarsePointer = useCoarsePointer();
   const { organizationId } = useOrganization();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -478,7 +478,7 @@ export function NotificationCenter() {
     />
   );
 
-  if (isMobile) {
+  if (coarsePointer) {
     return (
       <Sheet open={open} onOpenChange={handleOpenChange}>
         <SheetTrigger asChild>{trigger}</SheetTrigger>

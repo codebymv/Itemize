@@ -1,11 +1,4 @@
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import { cn } from '@/lib/utils';
+import { FilterSelect } from '@/components/ui/filter-select';
 
 export type InvoiceView = 'invoices' | 'recurring';
 
@@ -21,24 +14,15 @@ export function InvoiceViewSelect({
     compact = false,
 }: InvoiceViewSelectProps) {
     return (
-        <Select value={value} onValueChange={(nextValue) => onValueChange(nextValue as InvoiceView)}>
-            <SelectTrigger
-                aria-label="Select invoice view"
-                className={cn(
-                    'h-11 bg-muted/20',
-                    compact ? 'w-full' : 'w-[11.5rem]',
-                )}
-            >
-                <SelectValue>
-                    {compact
-                        ? (value === 'recurring' ? 'Schedules' : 'Invoices')
-                        : (value === 'recurring' ? 'Recurring schedules' : 'All invoices')}
-                </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-                <SelectItem value="invoices">All invoices</SelectItem>
-                <SelectItem value="recurring">Recurring schedules</SelectItem>
-            </SelectContent>
-        </Select>
+        <FilterSelect<InvoiceView>
+            value={value}
+            onValueChange={onValueChange}
+            aria-label="Select invoice view"
+            triggerClassName={compact ? 'w-full' : undefined}
+            options={[
+                { value: 'invoices', label: 'All invoices', triggerLabel: compact ? 'Invoices' : 'All invoices' },
+                { value: 'recurring', label: 'Recurring schedules', triggerLabel: compact ? 'Schedules' : 'Recurring schedules' },
+            ]}
+        />
     );
 }

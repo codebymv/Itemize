@@ -44,11 +44,11 @@ describe('GetStartedCard', () => {
     expect(screen.queryByText('Follow one simple path from client to sent estimate.')).not.toBeInTheDocument()
     expect(screen.getByText('1/3 complete')).toBeInTheDocument()
     expect(screen.getByText('Give your first estimate a real recipient').parentElement).toHaveClass(
-      'min-[1100px]:flex',
-      'min-[1100px]:justify-between',
+      '@[35rem]:flex',
+      '@[35rem]:justify-between',
     )
     expect(screen.getByText('Give your first estimate a real recipient')).toHaveClass(
-      'min-[1100px]:text-right',
+      '@[35rem]:text-right',
     )
   })
 })

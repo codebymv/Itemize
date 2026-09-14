@@ -110,7 +110,7 @@ export function EditContactModal({
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
           <ModalBody className="grid gap-4">
             {/* Basic Info */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="first_name" style={{ fontFamily: '"Raleway", sans-serif' }}>First Name</Label>
                 <Input
@@ -153,7 +153,7 @@ export function EditContactModal({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="company" style={{ fontFamily: '"Raleway", sans-serif' }}>Company</Label>
                 <Input
@@ -199,7 +199,7 @@ export function EditContactModal({
                 value={formData.address.street}
                 onChange={(e) => handleChange('address.street', e.target.value)}
               />
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <Input
                   placeholder="City"
                   value={formData.address.city}
@@ -211,7 +211,7 @@ export function EditContactModal({
                   onChange={(e) => handleChange('address.state', e.target.value)}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <Input
                   placeholder="ZIP/Postal code"
                   value={formData.address.zip}

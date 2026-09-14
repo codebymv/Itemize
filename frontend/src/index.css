@@ -177,6 +177,7 @@
   .interaction-button--neutral,
   .interaction-button--link,
   .interaction-control[role='tab'],
+  .interaction-navigation,
   .touch-target-mobile {
     min-height: 2.75rem;
     min-width: 2.75rem;

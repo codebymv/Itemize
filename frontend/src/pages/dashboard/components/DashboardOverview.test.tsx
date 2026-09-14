@@ -8,8 +8,8 @@ import { DashboardOverview } from './DashboardOverview';
 
 const viewport = vi.hoisted(() => ({ isMobile: false }));
 
-vi.mock('@/hooks/use-mobile', () => ({
-  useIsMobile: () => viewport.isMobile,
+vi.mock('@/hooks/use-coarse-pointer', () => ({
+  useCoarsePointer: () => viewport.isMobile,
 }));
 
 const signals: DashboardSignal[] = [
@@ -109,8 +109,8 @@ describe('DashboardOverview', () => {
     expect(screen.getByText('Needs attention')).toBeInTheDocument();
     const attentionFrame = screen.getByText('Needs attention').closest('.grid');
     expect(attentionFrame).toHaveClass('dashboard-overview-attention-body');
-    expect(attentionFrame).toHaveClass('min-[520px]:grid-cols-[auto_minmax(0,1fr)]');
-    expect(screen.getByText('4 pending')).toHaveClass('min-[520px]:inline');
+    expect(attentionFrame).toHaveClass('@[32.5rem]:grid-cols-[auto_minmax(0,1fr)]');
+    expect(screen.getByText('4 pending')).toHaveClass('@[32.5rem]:inline');
     fireEvent.click(screen.getByRole('button', { name: /^Needs attention: Overdue tasks\./ }));
     expect(onNavigate).toHaveBeenCalledWith('/canvas');
   });

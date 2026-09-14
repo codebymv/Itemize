@@ -21,13 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { FilterSelect } from '@/components/ui/filter-select';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -397,30 +391,32 @@ export function SharedPage() {
   const headerQueryCount = headerFilterCount
     + Number(searchQuery.trim().length > 0);
   const typeHeaderFilter = (
-      <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as ContentType)}>
-        <SelectTrigger className="h-11 w-[7.5rem] bg-muted/20">
-          <SelectValue placeholder="Type" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All Types</SelectItem>
-          <SelectItem value="list">Lists</SelectItem>
-          <SelectItem value="note">Notes</SelectItem>
-          <SelectItem value="whiteboard">Whiteboards</SelectItem>
-          <SelectItem value="wireframe">Wireframes</SelectItem>
-          <SelectItem value="vault">Vaults</SelectItem>
-        </SelectContent>
-      </Select>
+      <FilterSelect<ContentType>
+        value={typeFilter}
+        onValueChange={setTypeFilter}
+        aria-label="Filter by content type"
+        placeholder="Type"
+        options={[
+          { value: 'all', label: 'All Types' },
+          { value: 'list', label: 'Lists' },
+          { value: 'note', label: 'Notes' },
+          { value: 'whiteboard', label: 'Whiteboards' },
+          { value: 'wireframe', label: 'Wireframes' },
+          { value: 'vault', label: 'Vaults' },
+        ]}
+      />
   );
   const sortHeaderFilter = (
-      <Select value={sortBy} onValueChange={(value) => setSortBy(value as 'recent' | 'title')}>
-        <SelectTrigger className="h-11 w-[7.5rem] bg-muted/20">
-          <SelectValue placeholder="Sort" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="recent">Most Recent</SelectItem>
-          <SelectItem value="title">Title A-Z</SelectItem>
-        </SelectContent>
-      </Select>
+      <FilterSelect<'recent' | 'title'>
+        value={sortBy}
+        onValueChange={setSortBy}
+        aria-label="Sort shared content"
+        placeholder="Sort"
+        options={[
+          { value: 'recent', label: 'Most Recent' },
+          { value: 'title', label: 'Title A-Z' },
+        ]}
+      />
   );
   const headerFilters = (
     <>

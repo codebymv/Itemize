@@ -16,13 +16,7 @@ import {
   HeaderSearch,
   type DesktopHeaderToolsProps,
 } from "@/components/layout/DesktopHeaderTools";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { FilterSelect } from "@/components/ui/filter-select";
 import {
   Tooltip,
   TooltipContent,
@@ -58,58 +52,34 @@ export function createCanvasHeaderTools({
   const activeQueryCount =
     activeFilterCount + Number(searchQuery.trim().length > 0);
   const typeFilterControl = (
-      <Select value={typeFilter} onValueChange={setTypeFilter}>
-        <SelectTrigger
-          aria-label="Filter by content type"
-          className="h-11 w-[8rem] bg-muted/20"
-        >
-          <Filter className="mr-2 h-4 w-4" />
-          <SelectValue placeholder="Type" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">All Types</SelectItem>
-          <SelectItem value="list">
-            <CheckSquare className="mr-2 inline h-4 w-4" />
-            Lists
-          </SelectItem>
-          <SelectItem value="note">
-            <StickyNote className="mr-2 inline h-4 w-4" />
-            Notes
-          </SelectItem>
-          <SelectItem value="whiteboard">
-            <Palette className="mr-2 inline h-4 w-4" />
-            Whiteboards
-          </SelectItem>
-          <SelectItem value="wireframe">
-            <GitBranch className="mr-2 inline h-4 w-4" />
-            Wireframes
-          </SelectItem>
-          <SelectItem value="vault">
-            <KeyRound className="mr-2 inline h-4 w-4" />
-            Vaults
-          </SelectItem>
-        </SelectContent>
-      </Select>
+      <FilterSelect
+        value={typeFilter}
+        onValueChange={setTypeFilter}
+        aria-label="Filter by content type"
+        placeholder="Type"
+        icon={<Filter className="mr-2 h-4 w-4" />}
+        options={[
+          { value: "all", label: "All Types" },
+          { value: "list", label: <><CheckSquare className="mr-2 inline h-4 w-4" />Lists</>, triggerLabel: "Lists" },
+          { value: "note", label: <><StickyNote className="mr-2 inline h-4 w-4" />Notes</>, triggerLabel: "Notes" },
+          { value: "whiteboard", label: <><Palette className="mr-2 inline h-4 w-4" />Whiteboards</>, triggerLabel: "Whiteboards" },
+          { value: "wireframe", label: <><GitBranch className="mr-2 inline h-4 w-4" />Wireframes</>, triggerLabel: "Wireframes" },
+          { value: "vault", label: <><KeyRound className="mr-2 inline h-4 w-4" />Vaults</>, triggerLabel: "Vaults" },
+        ]}
+      />
   );
   const categoryFilterControl = (
-      <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-        <SelectTrigger
-          aria-label="Filter by category"
-          className="h-11 w-[9.5rem] bg-muted/20"
-        >
-          <SelectValue placeholder="Category">
-            {categoryFilter === "all" ? "All Categories" : categoryFilter}
-          </SelectValue>
-        </SelectTrigger>
-        <SelectContent>
-          {getUniqueCategories.map((category) => (
-            <SelectItem key={category} value={category}>
-              {category === "all" ? "All Categories" : category} (
-              {getCategoryCounts[category] || 0})
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <FilterSelect
+        value={categoryFilter}
+        onValueChange={setCategoryFilter}
+        aria-label="Filter by category"
+        placeholder="Category"
+        options={getUniqueCategories.map((category) => ({
+          value: category,
+          label: `${category === "all" ? "All Categories" : category} (${getCategoryCounts[category] || 0})`,
+          triggerLabel: category === "all" ? "All Categories" : category,
+        }))}
+      />
   );
   const filters = (
     <>

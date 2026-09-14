@@ -76,7 +76,7 @@ export function ModuleWidget({
 
   if (loading) {
     return (
-      <Card surface="inset" className={cn('h-full', className)}>
+      <Card surface="inset" className={cn('@container h-full', className)}>
         <CardHeader>
           <Skeleton className="h-6 w-32" />
           <Skeleton className="h-4 w-48 mt-2" />
@@ -101,7 +101,7 @@ const hasRecentItems = recentItems !== undefined;
           onToggleCollapse?.();
         }}
       >
-        <Card surface="inset" className={cn('h-full', className)}>
+        <Card surface="inset" className={cn('@container h-full', className)}>
           <CardHeader data-module-widget-card-header>
             <div
               className="flex items-start justify-between gap-2"
@@ -109,7 +109,7 @@ const hasRecentItems = recentItems !== undefined;
             >
               <div className="flex items-center gap-3">
                 <div
-                  className="rounded-lg bg-muted p-2 min-[1280px]:max-[1399px]:hidden"
+                  className="hidden rounded-lg bg-muted p-2 @[22rem]:block"
                   data-module-widget-icon
                 >
                   <Icon className={cn("h-5 w-5", iconColor || "text-icon-accent")} />
@@ -149,10 +149,10 @@ const hasRecentItems = recentItems !== undefined;
                   >
                     {action.compactLabel ? (
                       <>
-                        <span aria-hidden="true" className="min-[1750px]:hidden">
+                        <span aria-hidden="true" className="@[30rem]:hidden">
                           {action.compactLabel}
                         </span>
-                        <span aria-hidden="true" className="hidden min-[1750px]:inline">
+                        <span aria-hidden="true" className="hidden @[30rem]:inline">
                           {action.label}
                         </span>
                       </>
@@ -224,7 +224,7 @@ const hasRecentItems = recentItems !== undefined;
   }
 
   return (
-    <Card surface="inset" className={cn('h-full', className)}>
+    <Card surface="inset" className={cn('@container h-full', className)}>
       <CardHeader data-module-widget-card-header>
         <div
           className="flex items-start justify-between gap-2"
@@ -232,7 +232,7 @@ const hasRecentItems = recentItems !== undefined;
         >
           <div className="flex items-center gap-3">
             <div
-              className="rounded-lg bg-muted p-2 min-[1280px]:max-[1399px]:hidden"
+              className="hidden rounded-lg bg-muted p-2 @[22rem]:block"
               data-module-widget-icon
             >
               <Icon className={cn("h-5 w-5", iconColor || "text-icon-accent")} />
@@ -254,10 +254,10 @@ const hasRecentItems = recentItems !== undefined;
               >
                 {action.compactLabel ? (
                   <>
-                    <span aria-hidden="true" className="min-[1750px]:hidden">
+                    <span aria-hidden="true" className="@[30rem]:hidden">
                       {action.compactLabel}
                     </span>
-                    <span aria-hidden="true" className="hidden min-[1750px]:inline">
+                    <span aria-hidden="true" className="hidden @[30rem]:inline">
                       {action.label}
                     </span>
                   </>

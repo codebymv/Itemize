@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { NotificationCenter } from './NotificationCenter'
 
-vi.mock('@/hooks/use-mobile', () => ({ useIsMobile: () => false }))
+vi.mock('@/hooks/use-coarse-pointer', () => ({ useCoarsePointer: () => false }))
 vi.mock('@/hooks/useOrganization', () => ({ useOrganization: () => ({ organizationId: 7 }) }))
 vi.mock('@/hooks/use-toast', () => ({ useToast: () => ({ toast: vi.fn() }) }))
 vi.mock('@/lib/api', () => ({ getApiUrl: () => 'http://localhost' }))
