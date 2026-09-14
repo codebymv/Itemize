@@ -30,4 +30,6 @@ The signed-in admin Operations page was reloaded after deployment and shows Heal
 
 ## Next scope
 
+September 14 update: the [isolated held-estimate journey](held-email-recovery-journey-2026-09-14.md) passed with a real Resend send, injected receipt persistence failure, actual operator UI reconciliation and worker completion without a second send. This closes the isolated app-generated recovery journey below; it does not claim a production held-job mutation or automatic scheduler timing.
+
 Admin review queue details loaded successfully after deployment and show zero outstanding jobs. An isolated app-generated recovery journey, broader user-facing delivery status and visual verification of shared email design remain separate launch tasks. No claim is made that this action can reconstruct legacy evidence or guarantee inbox delivery.
