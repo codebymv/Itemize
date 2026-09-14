@@ -72,6 +72,10 @@ export function RichTextEditor({
     const editor = useEditor({
         extensions: [
             StarterKit.configure({
+                // Tiptap 3's StarterKit bundles Underline and Link; the editor
+                // registers its own configured copies below.
+                underline: false,
+                link: false,
                 heading: { levels: [1, 2, 3] },
                 horizontalRule: {
                     HTMLAttributes: {
@@ -115,6 +119,9 @@ export function RichTextEditor({
         onUpdate: handleUpdate,
         editable: !disabled,
         immediatelyRender: false,
+        // The toolbar reads editor.isActive() during render; Tiptap 3 stops
+        // re-rendering on every transaction unless asked.
+        shouldRerenderOnTransaction: true,
     });
 
     useEffect(() => {
@@ -125,9 +132,9 @@ export function RichTextEditor({
     // Sync content from props
     useEffect(() => {
         if (editor && !editor.isDestroyed && value !== editor.getHTML()) {
-            // Tiptap 2 suppresses update events for setContent by default.
-            // A separate pending flag would swallow the next real user edit.
-            editor.commands.setContent(value || '<p></p>', false);
+            // Suppress the update event for prop-driven content; a separate
+            // pending flag would swallow the next real user edit.
+            editor.commands.setContent(value || '<p></p>', { emitUpdate: false });
         }
     }, [value, editor]);
 

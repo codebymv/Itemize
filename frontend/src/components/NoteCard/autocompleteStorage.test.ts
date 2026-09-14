@@ -29,7 +29,7 @@ describe('note autocomplete storage', () => {
     const storage = editor.storage.autocomplete as ReturnType<typeof createAutocompleteStorage>;
     storage.suggestion = ' with a useful continuation';
     storage.acceptSuggestion = accept;
-    editor.commands.setTextSelection('end');
+    editor.commands.focus('end');
     editor.view.focus();
 
     const event = new KeyboardEvent('keydown', {

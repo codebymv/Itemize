@@ -5,7 +5,7 @@ import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
 import Placeholder from '@tiptap/extension-placeholder';
-import TextStyle from '@tiptap/extension-text-style';
+import { TextStyle } from '@tiptap/extension-text-style';
 import Mention from '@tiptap/extension-mention';
 import { useNavigate } from 'react-router-dom';
 import { Sparkles } from 'lucide-react';
@@ -117,6 +117,10 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
+        // Tiptap 3's StarterKit bundles Underline and Link; the note editor
+        // registers its own Underline below and has no link mark.
+        underline: false,
+        link: false,
         // Configure paragraph
         paragraph: {
           HTMLAttributes: {
@@ -207,6 +211,9 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
     content: '',
     editable: true,
     immediatelyRender: false,
+    // The toolbar reads editor.isActive() during render; Tiptap 3 stops
+    // re-rendering on every transaction unless asked.
+    shouldRerenderOnTransaction: true,
     onUpdate: ({ editor }) => {
       if (isUpdatingFromProps.current) {
         return;
@@ -298,7 +305,7 @@ export const RichNoteContent: React.FC<RichNoteContentProps> = ({
       return;
     }
     isUpdatingFromProps.current = true;
-    editor.commands.setContent(incomingHtml, false);
+    editor.commands.setContent(incomingHtml, { emitUpdate: false });
     setEditContent(incomingHtml);
     isUpdatingFromProps.current = false;
   }, [editor, content, setEditContent]);

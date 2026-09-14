@@ -22,7 +22,9 @@ const chainSpy = () => {
       return chain;
     };
   }
-  return { editor: { chain: () => chain }, calls };
+  // Tiptap 3 types the command chain precisely; the spy only needs its shape.
+  const editor = { chain: () => chain } as unknown as Parameters<typeof acceptMention>[2]['editor'];
+  return { editor, calls };
 };
 
 const context = (values: Partial<MentionContext> = {}): MentionContext => ({

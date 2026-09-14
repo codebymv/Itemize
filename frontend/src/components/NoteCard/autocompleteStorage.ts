@@ -6,6 +6,12 @@ export type AutocompleteStorage = {
   acceptSuggestion: (() => void) | null;
 };
 
+declare module '@tiptap/core' {
+  interface Storage {
+    autocomplete: AutocompleteStorage;
+  }
+}
+
 export const createAutocompleteStorage = (): AutocompleteStorage => ({
   suggestion: null,
   triggerSuggestions: null,

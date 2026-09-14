@@ -35,7 +35,15 @@ const referenceStatusKey = new PluginKey<DecorationSet>('referenceStatus');
  * hydrated references and is pushed in with a transaction meta, so the
  * decorations refresh without touching content or the save path.
  */
-export const ReferenceStatus = Extension.create({
+export type ReferenceStatusStorage = { references: WorkspaceReference[] };
+
+declare module '@tiptap/core' {
+  interface Storage {
+    referenceStatus: ReferenceStatusStorage;
+  }
+}
+
+export const ReferenceStatus = Extension.create<Record<string, never>, ReferenceStatusStorage>({
   name: 'referenceStatus',
   addStorage() {
     return { references: [] as WorkspaceReference[] };

@@ -112,3 +112,28 @@ message delivery, or an actual public signing transaction.
    shared worker ownership. Review Railway's announced Config-as-Code retirement
    before 2026-12-01; current deployment files still work now.
 6. Backup/recovery remains explicitly deferred, not verified.
+
+## Follow-up — 14 Sep 2026
+
+Two of the remaining decisions above are closed in code:
+
+- **Rate limiting across replicas.** Every limiter (ingress `express-rate-limit`,
+  `AuthRateLimitService`, `AiRateLimitService`) now counts hits in one shared
+  `RateLimitBucketStore`. `RATE_LIMIT_STORE=postgres` (the default outside
+  `NODE_ENV=test`) keeps buckets in the `rate_limit_buckets` table (migration
+  `rate_limit_buckets_v1`) through one atomic upsert per hit; `memory` is the
+  single-process fallback the test suites use. Verified locally: three failed
+  logins produced `auth:standard:…|3` and `ingress:…|3` rows. Horizontal scaling
+  no longer needs a limiter change. See Security/rate-limiting.md.
+- **TipTap.** Upgraded from 2.x to 3.31.x (`@tiptap/core` 3.31.3), which
+  closes GHSA-cp6q-959q-f8rh (`mergeAttributes` prototype pollution) and
+  GHSA-j95f-988m-3j2f (Markdown attribute ReDoS). Changes: `setContent(…,
+  { emitUpdate: false })`, `StarterKit.configure({ underline: false, link:
+  false })` where the editors register their own, named `TextStyle` import,
+  `shouldRerenderOnTransaction: true` so toolbars keep reflecting
+  `editor.isActive()`, and `Storage` module augmentation for the autocomplete
+  and reference-status extensions. The frontend's standalone lockfile was
+  regenerated with `--workspaces=false`.
+
+Still open: Vitest 5 (dev-only moderate advisory; requires the Vite 7 line),
+backups/PITR (Railway Pro), incident and log-retention runbooks.
