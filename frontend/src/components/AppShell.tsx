@@ -169,7 +169,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
         <SearchContext.Provider value={{ searchOpen, setSearchOpen }}>
             <SidebarProvider defaultOpen={true}>
                 <AppSidebar />
-                <SidebarInset className="min-w-0 overflow-x-clip">
+                <SidebarInset className="h-dvh min-h-0 min-w-0 overflow-x-clip">
                     <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md">
                         Skip to main content
                     </a>
@@ -378,7 +378,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                 />
 
                 {/* Main content */}
-                <main id="main-content" tabIndex={-1} className="flex-1 overflow-x-hidden overflow-y-auto relative h-[calc(100vh-3.5rem)]">
+                <main id="main-content" tabIndex={-1} className="relative min-h-0 flex-1 overflow-x-hidden overflow-y-auto">
                     {children}
                 </main>
             </SidebarInset>

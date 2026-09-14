@@ -898,7 +898,7 @@ const CanvasPage: React.FC = () => {
         }
       `}</style>
       <div
-        className={`w-full flex flex-col ${isMobileView ? "min-h-screen" : "h-[calc(100dvh-var(--app-shell-height)-0.5rem)] overflow-hidden"}`}
+        className={`w-full flex flex-col ${isMobileView ? "min-h-full" : "h-full min-h-0 overflow-hidden"}`}
       >
         {isLoading ? (
           <PageLoading message="Loading Canvas..." />
@@ -945,8 +945,7 @@ const CanvasPage: React.FC = () => {
         ) : (
           // Desktop: Full-width Canvas View with drag and drop
           <div
-            className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] absolute inset-x-0"
-            style={{ top: 0, bottom: 0 }}
+            className="relative h-full min-h-0 w-full min-w-0"
           >
             <WorkspaceCanvasActionsProvider value={canvasActions}>
             <CanvasContainer

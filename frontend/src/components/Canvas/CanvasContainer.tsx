@@ -758,7 +758,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
   }, [showContextMenu, menuIsFromButton]);
 
   return (
-    <div className="canvas-container-wrapper relative">
+    <div className="canvas-container-wrapper relative h-full min-h-0 w-full min-w-0">
       
       {/* Canvas area */}
       <div 
@@ -772,7 +772,7 @@ export const CanvasContainer: React.FC<CanvasContainerProps> = ({
         style={{
           position: 'relative',
           width: '100%',
-          height: '100vh',
+          height: '100%',
           backgroundColor: 'var(--background-alt)',
           borderRadius: '0',
           overflow: 'hidden',
