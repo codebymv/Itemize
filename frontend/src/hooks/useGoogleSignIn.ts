@@ -6,6 +6,7 @@ import { useAuthActions, type User } from '@/contexts/AuthContext';
 import logger from '@/lib/logger';
 import { loginWithGoogleAccessTokenViaGraphql } from '@/services/authGraphql';
 import type { SignupMode } from '@/services/authGraphql';
+import { safeLoginReturn } from '@/lib/loginReturn';
 
 /**
  * Google OAuth popup sign-in. Only use inside GoogleOAuthProvider
@@ -56,7 +57,7 @@ export function useGoogleSignIn() {
   });
 
   return useCallback((redirectTo?: string, signupMode: SignupMode = 'FREE') => {
-    pendingRedirectRef.current = redirectTo || '/dashboard';
+    pendingRedirectRef.current = safeLoginReturn(redirectTo, '/dashboard');
     signupModeRef.current = signupMode;
     logger.debug('auth', 'Starting Google login, will redirect to:', pendingRedirectRef.current);
     googleLogin();

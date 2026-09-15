@@ -11,6 +11,7 @@ import { useGoogleSignIn } from '@/hooks/useGoogleSignIn';
 import { Mail, Lock, Loader2, AlertCircle } from 'lucide-react';
 import BackgroundClouds from '@/components/ui/BackgroundClouds';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { safeLoginReturn } from '@/lib/loginReturn';
 
 function LoginForm() {
   const navigate = useNavigate();
@@ -27,11 +28,9 @@ function LoginForm() {
 
   // Accept only same-origin path redirects from public handoff pages.
   const requestedRedirect = searchParams.get('redirect');
-  const safeRedirect = requestedRedirect?.startsWith('/') && !requestedRedirect.startsWith('//')
-    ? requestedRedirect
-    : null;
-  const from = safeRedirect ||
-    (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || '/';
+  const safeRedirect = requestedRedirect ? safeLoginReturn(requestedRedirect) : null;
+  const previous = (location.state as {from?: {pathname?: string; search?: string; hash?: string}} | null)?.from;
+  const from = safeRedirect || safeLoginReturn(previous?.pathname ? previous.pathname + (previous.search || '') + (previous.hash || '') : '/');
   const invitationToken = safeRedirect?.match(/^\/invite\/([a-f0-9]{64})$/)?.[1];
 
   // Check if redirected due to session expiration

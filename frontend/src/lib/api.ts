@@ -1,5 +1,6 @@
 import axios, { AxiosHeaders, AxiosError } from 'axios';
 import { getUserFriendlyError } from './error-messages';
+import { loginReturnUrl } from './loginReturn';
 import {
   type RetryConfig,
   shouldRetryTransport,
@@ -120,7 +121,9 @@ export const setRefreshToken = (token: string | null): void => {
   void token;
 };
 
+let authenticatedSessionGeneration = 0;
 export const markAuthenticatedSession = (): void => {
+  authenticatedSessionGeneration++;
   setLoggedOut(false);
   scheduleSessionExpiringWarning();
 };
@@ -225,9 +228,13 @@ const expireAuthenticatedSession = (): void => {
   window.sessionStorage?.removeItem('itemize_user');
   window.sessionStorage?.removeItem('itemize_expiry');
   if (!window.location.pathname.includes('/login')) {
+    const destination = window.location.pathname + window.location.search + window.location.hash;
+    const generation = authenticatedSessionGeneration;
     window.dispatchEvent(new CustomEvent('auth:session-expired'));
     setTimeout(() => {
-      window.location.href = '/login?session=expired';
+      if (authenticatedSessionGeneration === generation && window.location.pathname + window.location.search + window.location.hash === destination) {
+        window.location.href = loginReturnUrl(destination, true);
+      }
     }, 2000);
   }
 };

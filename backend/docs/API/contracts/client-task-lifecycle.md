@@ -56,3 +56,9 @@ Production migrations, real customer data and external providers were not used f
 ## Exact navigation verification — September 15, 2026
 
 Eleven task integration tests, twelve focused UI tests and the cross-service HTTP/GraphQL acceptance journey passed. The latter resolves the generated Gleam task URL to the same unlinked Itemize task before exercising completion and reopening. No migration is needed for the optional filter. Deploy this backend and focused route before Gleam publishes the links. Current frontend baseline comparison reports 312 diagnostics before and after, with zero new diagnostics; full frontend type checking remains failing. Expired-login return navigation and mobile completion still need browser rehearsal.
+
+## Login and mobile rehearsal — September 15, 2026
+
+Signed-out task links now go to login with the full internal path, query and fragment. Login validates return paths for both password and Google flows. Expired sessions retain that destination without overriding a newer session or a page change. Organization checks still apply after login. Long task titles wrap within the card on mobile.
+
+The dedicated frontend/pilot browser fixture passed at desktop and mobile widths with synthetic identity and GraphQL responses, including login reload, wrong-organization gating, completion after a dropped response, idempotent retry, reopening and expired-session return navigation. The separate real cross-service HTTP/GraphQL test also passed against disposable databases. This is not a full-stack staging browser or real OAuth rehearsal. Frontend baseline comparison remains 312 diagnostics before and after, with none added. Production pilot enablement remains pending deployed login, full-shell mobile and worker outage/restart verification.

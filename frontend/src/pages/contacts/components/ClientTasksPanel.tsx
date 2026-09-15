@@ -83,9 +83,9 @@ function TaskPanel({organizationId,contactId,taskId,createRequested=false,onClos
       {!modal && errorBox}
       {query.isPending?<p role="status">Loading follow-ups…</p>:query.isError?<div role="alert"><p>Follow-ups could not be loaded.</p><Button variant="outline" onClick={()=>void query.refetch()}>Retry</Button></div>:<>
         {query.data.nodes.length===0?<p className="text-sm text-muted-foreground">{taskId?'This task is unavailable. It may have been removed or you may not have access.':'No follow-ups in this view.'}</p>:<ul className="space-y-3">{query.data.nodes.map(task=><li key={task.id} id={`task-${task.id}`} className="space-y-2 rounded-md border p-3">
-          <div className="flex flex-wrap justify-between gap-2"><h3 className="font-medium">{task.title}</h3><span className="text-sm capitalize">{task.status.replace('_',' ')}</span></div>
+          <div className="flex flex-wrap justify-between gap-2"><h3 className="min-w-0 max-w-full break-words [overflow-wrap:anywhere] font-medium">{task.title}</h3><span className="text-sm capitalize">{task.status.replace('_',' ')}</span></div>
           {task.description&&<p className="whitespace-pre-wrap break-words text-sm">{task.description}</p>}
-          <p className="text-sm text-muted-foreground">{task.assignedToName??'Unassigned'} · {task.priority} priority{task.dueAt?` · Due ${new Date(task.dueAt).toLocaleString()}`:''}</p>
+          <p className="break-words text-sm text-muted-foreground">{task.assignedToName??'Unassigned'} · {task.priority} priority{task.dueAt?` · Due ${new Date(task.dueAt).toLocaleString()}`:''}</p>
           <div className="flex flex-wrap gap-2">
             {!contactId&&task.contactId&&<Button size="sm" variant="outline" asChild><Link to={`/contacts/${task.contactId}#client-tasks`}>Open client</Link></Button>}
             {task.canClaim&&<Button size="sm" disabled={locked} onClick={()=>void execute(JSON.stringify(['claim',task.id,task.version]),key=>updateClientTask(organizationId,task,{assignedToId:query.data.viewerId},key))}>Assign to me</Button>}
