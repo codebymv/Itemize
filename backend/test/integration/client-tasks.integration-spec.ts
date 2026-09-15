@@ -49,6 +49,19 @@ describe('Client task lifecycle PostgreSQL contract', () => {
         }
     });
     const create = (assignedToId: number | null = member) => service.create(org, owner, { title: 'Return client call', contactId: contact, assignedToId }, randomUUID());
+    it('opens an exact unlinked task beyond the first page without crossing organizations',async()=>{
+        const target=await service.create(org,owner,{title:'Exact unknown caller follow-up',assignedToId:member},randomUUID());
+        await pool.query("INSERT INTO tasks(organization_id,title,status) SELECT $1,'More recent follow-up '||n,'pending' FROM generate_series(1,25) n",[org]);
+        const page=await service.list(org,owner,{taskId:target.id},{page:1,pageSize:20});
+        expect(page.nodes.map(task=>task.id)).toEqual([target.id]);expect(page.nodes[0].contactId).toBeNull();
+        expect(page.pageInfo.total).toBe(1);
+        expect((await service.list(otherOrg,outsider,{taskId:target.id},{page:1,pageSize:20})).nodes).toEqual([]);
+        await service.transition(org,owner,target.id,target.version,'completed',randomUUID());
+        expect((await service.list(org,owner,{taskId:target.id},{page:1,pageSize:20})).nodes[0].status).toBe('completed');
+        await pool.query('DELETE FROM tasks WHERE id=$1',[target.id]);
+        expect((await service.list(org,owner,{taskId:target.id},{page:1,pageSize:20})).nodes).toEqual([]);
+        await pool.query("DELETE FROM tasks WHERE organization_id=$1 AND title LIKE 'More recent follow-up %'",[org]);
+    });
     it('serves the browser GraphQL workflow with CSRF and paid-plan enforcement', async () => {
         const token = await new JwtService().signAsync({ id: owner }, { secret: process.env.JWT_SECRET, expiresIn: '15m' });
         const send = (query: string, variables: Record<string, unknown> = {}, csrf = true) => {

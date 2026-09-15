@@ -1,4 +1,4 @@
-﻿# Client task lifecycle
+# Client task lifecycle
 
 Date: 2026-09-15. Implemented locally; not deployed.
 
@@ -8,7 +8,7 @@ Client detail (`/contacts/:id`) now includes a Follow-ups panel and an enabled N
 
 Staff can create tasks with title, details, priority, due date/time and assignee; edit tasks; claim unassigned work; complete, cancel and reopen tasks. Filters include All, My tasks, Needs assignment and Overdue. The organization view also includes Without a client. Due dates display in the browser's local timezone. Lists paginate 20 records at a time with deterministic due-date/ID ordering.
 
-The current client links use `/contacts/:id#client-tasks`. Exact task deep-link loading across pagination and linking an unknown caller to an existing client remain integration follow-up work; the UI does not claim to provide those features yet.
+Client links use `/contacts/:id#client-tasks`. Exact task links now use `/contacts?view=follow-ups&taskId=<id>&organizationId=<id>`. The focused page validates both IDs and requires the matching active organization before fetching. The optional `clientTasks` filter `taskId` combines with the existing organization predicate and loads an exact task independently of pagination or client linkage. Existing permissions and mutation controls apply; deleted/inaccessible tasks show an unavailable state. New Gleam assignment notifications use this route. Linking an unknown caller to an existing client remains follow-up work.
 
 ## Authorization and concurrency
 
@@ -52,3 +52,7 @@ Deploy the database migration before the new backend and frontend. Application r
 - A TypeScript baseline comparison against HEAD found the same 162 frontend diagnostics before and after this change, with zero added diagnostics. The full frontend type check is therefore not green; this change does not claim to fix that existing backlog.
 
 Production migrations, real customer data and external providers were not used for these checks.
+
+## Exact navigation verification — September 15, 2026
+
+Eleven task integration tests, twelve focused UI tests and the cross-service HTTP/GraphQL acceptance journey passed. The latter resolves the generated Gleam task URL to the same unlinked Itemize task before exercising completion and reopening. No migration is needed for the optional filter. Deploy this backend and focused route before Gleam publishes the links. Current frontend baseline comparison reports 312 diagnostics before and after, with zero new diagnostics; full frontend type checking remains failing. Expired-login return navigation and mobile completion still need browser rehearsal.

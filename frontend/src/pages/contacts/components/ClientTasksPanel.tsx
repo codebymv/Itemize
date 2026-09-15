@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { createClientTask, getClientTasks, transitionClientTask, updateClientTask, type ClientTask, type ClientTaskInput } from '@/services/clientTasksGraphql';
 import { GraphqlRequestError } from '@/services/graphqlClient';
 
-type Props={organizationId:number;contactId?:number;createRequested?:boolean;onCloseCreate?:()=>void;onCanCreate?:(canCreate:boolean)=>void};
+type Props={organizationId:number;contactId?:number;taskId?:number;createRequested?:boolean;onCloseCreate?:()=>void;onCanCreate?:(canCreate:boolean)=>void};
 const localDate = (value:string|null) => {
   if (!value) return '';
   const date=new Date(value);
@@ -18,9 +18,9 @@ const localDate = (value:string|null) => {
 };
 export function ClientTasksPanel(props:Props) {
   // Remount when switching clients/organizations so pending form data cannot cross tenants.
-  return <TaskPanel key={`${props.organizationId}:${props.contactId ?? 'all'}`} {...props}/>;
+  return <TaskPanel key={`${props.organizationId}:${props.contactId ?? 'all'}:${props.taskId ?? 'list'}`} {...props}/>;
 }
-function TaskPanel({organizationId,contactId,createRequested=false,onCloseCreate,onCanCreate}:Props) {
+function TaskPanel({organizationId,contactId,taskId,createRequested=false,onCloseCreate,onCanCreate}:Props) {
   const client=useQueryClient();
   const [view,setView]=useState('all');
   const [page,setPage]=useState(1);
@@ -34,7 +34,7 @@ function TaskPanel({organizationId,contactId,createRequested=false,onCloseCreate
   const alive=useRef(true);
   const inFlight=useRef(false);
   useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
-  const query=useQuery({queryKey:['client-tasks',organizationId,contactId,view,page],queryFn:({signal})=>getClientTasks(organizationId,{...(contactId?{contactId}:{}),view},page,signal)});
+  const query=useQuery({queryKey:['client-tasks',organizationId,contactId,taskId,view,page],queryFn:({signal})=>getClientTasks(organizationId,{...(contactId?{contactId}:{}),...(taskId?{taskId}:{}),view},page,signal)});
   useEffect(()=>{onCanCreate?.(query.data?.canCreate ?? false);},[query.data?.canCreate,onCanCreate]);
   const openCreate=()=>{setEditing(null);setForm({title:'',description:'',priority:'medium',due:'',assignee:''});setCreating(true);};
   useEffect(()=>{
@@ -77,12 +77,12 @@ function TaskPanel({organizationId,contactId,createRequested=false,onCloseCreate
   };
   const errorBox=error?<div role="alert" className="space-y-2 rounded-md border p-3 text-sm"><p>{error}</p>{pendingRetry?<><p>The result is not confirmed. Retry the same request to check it safely.</p><Button disabled={busy} onClick={()=>void submitAttempt()}>Retry save</Button></>:<Button variant="outline" onClick={()=>{setError('');void reload();}}>Reload tasks</Button>}</div>:null;
   return <Card id="client-tasks">
-    <CardHeader><div className="flex flex-wrap items-center justify-between gap-3"><CardTitle>Follow-ups</CardTitle><div className="flex gap-2">{contactId && <Button variant="outline" asChild><Link to="/contacts?view=follow-ups">All follow-ups</Link></Button>}{query.data?.canCreate && <Button disabled={locked} onClick={openCreate}>New task</Button>}</div></div></CardHeader>
+    <CardHeader><div className="flex flex-wrap items-center justify-between gap-3"><CardTitle>Follow-ups</CardTitle><div className="flex gap-2">{contactId && <Button variant="outline" asChild><Link to="/contacts?view=follow-ups">All follow-ups</Link></Button>}{!taskId && query.data?.canCreate && <Button disabled={locked} onClick={openCreate}>New task</Button>}</div></div></CardHeader>
     <CardContent className="space-y-4">
-      <div className="flex flex-wrap gap-3"><Label htmlFor="task-view">Show</Label><select id="task-view" value={view} disabled={locked} className="rounded-md border bg-background p-2" onChange={e=>{setView(e.target.value);setPage(1);}}><option value="all">All tasks</option><option value="mine">My tasks</option><option value="unassigned">Needs assignment</option><option value="overdue">Overdue</option>{!contactId&&<option value="unlinked">Without a client</option>}</select></div>
+      {!taskId && <div className="flex flex-wrap gap-3"><Label htmlFor="task-view">Show</Label><select id="task-view" value={view} disabled={locked} className="rounded-md border bg-background p-2" onChange={e=>{setView(e.target.value);setPage(1);}}><option value="all">All tasks</option><option value="mine">My tasks</option><option value="unassigned">Needs assignment</option><option value="overdue">Overdue</option>{!contactId&&<option value="unlinked">Without a client</option>}</select></div>}
       {!modal && errorBox}
       {query.isPending?<p role="status">Loading follow-ups…</p>:query.isError?<div role="alert"><p>Follow-ups could not be loaded.</p><Button variant="outline" onClick={()=>void query.refetch()}>Retry</Button></div>:<>
-        {query.data.nodes.length===0?<p className="text-sm text-muted-foreground">No follow-ups in this view.</p>:<ul className="space-y-3">{query.data.nodes.map(task=><li key={task.id} id={`task-${task.id}`} className="space-y-2 rounded-md border p-3">
+        {query.data.nodes.length===0?<p className="text-sm text-muted-foreground">{taskId?'This task is unavailable. It may have been removed or you may not have access.':'No follow-ups in this view.'}</p>:<ul className="space-y-3">{query.data.nodes.map(task=><li key={task.id} id={`task-${task.id}`} className="space-y-2 rounded-md border p-3">
           <div className="flex flex-wrap justify-between gap-2"><h3 className="font-medium">{task.title}</h3><span className="text-sm capitalize">{task.status.replace('_',' ')}</span></div>
           {task.description&&<p className="whitespace-pre-wrap break-words text-sm">{task.description}</p>}
           <p className="text-sm text-muted-foreground">{task.assignedToName??'Unassigned'} · {task.priority} priority{task.dueAt?` · Due ${new Date(task.dueAt).toLocaleString()}`:''}</p>
@@ -92,7 +92,7 @@ function TaskPanel({organizationId,contactId,createRequested=false,onCloseCreate
             {task.canEdit&&<><Button size="sm" variant="outline" disabled={locked} onClick={()=>edit(task)}>Edit task</Button>{(task.status==='completed'||task.status==='cancelled')?<Button size="sm" disabled={locked} onClick={()=>void execute(JSON.stringify(['reopen',task.id,task.version]),key=>transitionClientTask(organizationId,task,'pending',key))}>Reopen</Button>:<><Button size="sm" disabled={locked} onClick={()=>void execute(JSON.stringify(['complete',task.id,task.version]),key=>transitionClientTask(organizationId,task,'completed',key))}>Complete</Button><Button size="sm" variant="outline" disabled={locked} onClick={()=>void execute(JSON.stringify(['cancel',task.id,task.version]),key=>transitionClientTask(organizationId,task,'cancelled',key))}>Cancel task</Button></>}</>}
           </div>
         </li>)}</ul>}
-        <div className="flex items-center gap-3"><Button variant="outline" disabled={locked||!query.data.pageInfo.hasPreviousPage} onClick={()=>setPage(p=>p-1)}>Previous</Button><span className="text-sm">Page {page} · {query.data.pageInfo.total} tasks</span><Button variant="outline" disabled={locked||!query.data.pageInfo.hasNextPage} onClick={()=>setPage(p=>p+1)}>Next</Button></div>
+        {!taskId && <div className="flex items-center gap-3"><Button variant="outline" disabled={locked||!query.data.pageInfo.hasPreviousPage} onClick={()=>setPage(p=>p-1)}>Previous</Button><span className="text-sm">Page {page} · {query.data.pageInfo.total} tasks</span><Button variant="outline" disabled={locked||!query.data.pageInfo.hasNextPage} onClick={()=>setPage(p=>p+1)}>Next</Button></div>}
       </>}
       <Dialog open={modal} onOpenChange={open=>{if(!open&&!locked){setCreating(false);setEditing(null);setError('');}}}><DialogContent className="max-h-[90vh] overflow-y-auto"><DialogHeader><DialogTitle>{editing?'Edit follow-up':'New follow-up'}</DialogTitle><DialogDescription>Choose the next action, its owner and when it is due.</DialogDescription></DialogHeader>
         {errorBox}<form className="space-y-4" onSubmit={e=>{e.preventDefault();void save();}}><fieldset disabled={locked} className="space-y-4">

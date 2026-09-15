@@ -159,7 +159,8 @@ export class GleamHandoffReceiverService {
             eventType:'gleam.follow_up_assigned',entityType:'task',entityId:task.id,
             dedupeKey:`gleam-follow-up:${connection.id}:${applied.result.handoffId}`,payload:{taskId:String(task.id)},
             category:'business',priority:'normal',title:'A caller needs follow-up',
-            body:'A Gleam call follow-up is assigned to you. Review the task before contacting the caller.',href:'/contacts?view=follow-ups'});
+            body:'A Gleam call follow-up is assigned to you. Review the task before contacting the caller.',
+            href:`/contacts?view=follow-ups&taskId=${task.id}&organizationId=${connection.organization_id}`});
           status = 'notified';
         }
       }

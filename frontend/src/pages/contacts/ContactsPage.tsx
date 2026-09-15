@@ -49,7 +49,7 @@ import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { getContactStatusVisual } from './constants/contactStatusConstants';
 import { FramedSection } from '@/components/ui/framed-section';
-import { ClientTasksPanel } from './components/ClientTasksPanel';
+import { ClientFollowUpsPage } from './components/ClientFollowUpsPage';
 
 const getApiStatus = (error: unknown): number | undefined =>
   (error as { response?: { status?: number } })?.response?.status;
@@ -57,11 +57,6 @@ const getApiStatus = (error: unknown): number | undefined =>
 export function ContactsPage() {
   const [params] = useSearchParams();
   return params.get('view') === 'follow-ups' ? <ClientFollowUpsPage/> : <ContactListPage/>;
-}
-
-function ClientFollowUpsPage() {
-  const {organizationId,isLoading,error}=useOrganization();
-  return <PageLayout title="CLIENT FOLLOW-UPS"><div className="mb-4"><Button variant="outline" asChild><Link to="/contacts">Back to clients</Link></Button></div>{isLoading?<p role="status">Loading organization…</p>:error?<p role="alert">{error}</p>:organizationId?<ClientTasksPanel organizationId={organizationId}/>:<p>Select an organization to view follow-ups.</p>}</PageLayout>;
 }
 
 function ContactListPage() {

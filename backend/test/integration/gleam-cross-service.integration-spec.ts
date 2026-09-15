@@ -19,7 +19,7 @@ const acceptance = process.env.GLEAM_TEST_RUNTIME_ROOT ? describe : describe.ski
 acceptance('Gleam and Itemize paired handoff acceptance', () => {
   let pool: Pool, app: NestExpressApplication, gleamDb: any, gleamApp: express.Express;
   let gleamOrg: string, gleamActor: string, agent: string, org: number, actor: number, assignee: number;
-  let fetcher: jest.SpyInstance, pairService: any, worker: any, persist: any;
+  let fetcher: jest.SpyInstance, pairService: any, worker: any, persist: any, getCallFollowUp:any;
   let statusWorker: any, statusOverride: object | undefined, statusFailure = false;
   let notificationWorker: any, deliverEmail: any, notificationDropped=false, emailSends=0;
   let beforeStatusResponse: (() => Promise<void>) | undefined;
@@ -49,6 +49,7 @@ acceptance('Gleam and Itemize paired handoff acceptance', () => {
     deliverEmail = load('services/booking-notification.service').deliverNextBookingNotification;
     const {ItemizeDeliveryClient} = load('integrations/itemize-delivery-client');
     persist = load('services/booking-handoff.service').persistBookingHandoff;
+    getCallFollowUp = load('services/recovery-queue.service').getCallItemizeFollowUp;
     gleamApp = express(); gleamApp.use(express.json()); gleamApp.use('/api/itemize', load('routes/itemize.routes').default);
     gleamApp.use((error: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => res.status(error.statusCode || 500).json({error: 'Test request failed'}));
     pool = new Pool(getTestDatabasePoolConfig(process.env)); await runGleamPairingMigration(pool);
@@ -140,6 +141,13 @@ acceptance('Gleam and Itemize paired handoff acceptance', () => {
     const tasks = (await pool.query('SELECT id,assigned_to,status,description FROM tasks WHERE organization_id=$1', [org])).rows;
     expect(tasks).toHaveLength(1); expect(tasks[0]).toMatchObject({assigned_to: assignee, status: 'pending'});
     expect(tasks[0].description).toContain('+12025550100'); expect(delivery.receipt.result.taskId).toBe(String(tasks[0].id));
+    const callFollowUp=await getCallFollowUp(gleamOrg,delivery.callId);
+    const taskLink=new URL(callFollowUp.itemizeDelivery.taskUrl);
+    expect(taskLink.searchParams.get('organizationId')).toBe(String(org));
+    expect(taskLink.searchParams.get('taskId')).toBe(String(tasks[0].id));
+    const exactTask=await graphql('query($id:Int!){clientTasks(filter:{taskId:$id}){nodes{id contactId}}}',{id:Number(taskLink.searchParams.get('taskId'))});
+    expect(exactTask.body.errors).toBeUndefined();
+    expect(exactTask.body.data.clientTasks.nodes).toEqual([{id:tasks[0].id,contactId:null}]);
     const notices = async () => (await pool.query("SELECT recipient_user_id FROM user_notifications n JOIN notification_events e ON e.id=n.event_id WHERE n.organization_id=$1 AND e.event_type='gleam.follow_up_assigned'",[org])).rows;
     expect(await deliverEmail()).toBe(false); // Initial two-minute grace period.
     expect(await notificationWorker.deliverNext()).toBe(true);

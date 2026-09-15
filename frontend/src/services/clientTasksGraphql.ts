@@ -41,6 +41,7 @@ export type ClientTaskInput = {
 };
 const fields = 'id contactId title description priority status assignedToId assignedToName dueAt completedAt updatedAt version canEdit canClaim';
 export async function getClientTasks(organizationId: number, filter: {
+    taskId?: number;
     contactId?: number;
     view?: string;
 }, page: number, signal?: AbortSignal) {

@@ -11,6 +11,13 @@ const page:api.ClientTaskPage={nodes:[task],pageInfo:{page:1,total:1,hasNextPage
 const mount=()=>render(<MemoryRouter><QueryClientProvider client={new QueryClient({defaultOptions:{queries:{retry:false},mutations:{retry:false}}})}><ClientTasksPanel organizationId={20} contactId={10}/></QueryClientProvider></MemoryRouter>);
 beforeEach(()=>{vi.resetAllMocks();vi.mocked(api.getClientTasks).mockResolvedValue(page);vi.mocked(api.createClientTask).mockResolvedValue(task);vi.mocked(api.transitionClientTask).mockResolvedValue(task);});
 describe('client follow-up workflow',()=>{
+  it('fetches an exact task without list pagination or creation controls',async()=>{
+    render(<QueryClientProvider client={new QueryClient({defaultOptions:{queries:{retry:false}}})}><MemoryRouter><ClientTasksPanel organizationId={20} taskId={42}/></MemoryRouter></QueryClientProvider>);
+    await screen.findByText('Call the client');
+    expect(api.getClientTasks).toHaveBeenCalledWith(20,{taskId:42,view:'all'},1,expect.any(AbortSignal));
+    expect(screen.queryByRole('button',{name:'Next'})).not.toBeInTheDocument();
+    expect(screen.queryByRole('button',{name:'New task'})).not.toBeInTheDocument();
+  });
   it('creates a client-linked assigned task from the dialog',async()=>{
     mount();fireEvent.click(await screen.findByRole('button',{name:'New task'}));
     fireEvent.change(screen.getByLabelText('Title'),{target:{value:'Prepare estimate'}});

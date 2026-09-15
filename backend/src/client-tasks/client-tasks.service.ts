@@ -60,13 +60,14 @@ export class ClientTasksService {
     async list(org: number, actor: number, filter: ClientTaskFilterInput = {}, page: PageInput = new PageInput()): Promise<ClientTaskPage> {
         const checked = parse(z.object({
             contactId: idSchema.optional(), view: z.enum(['all', 'mine', 'unassigned', 'overdue', 'unlinked']).optional(),
-            status: statusSchema.optional(),
+            status: statusSchema.optional(), taskId:idSchema.optional(),
         }).strict(), filter);
         const paging = parse(z.object({ page: z.number().int().min(1).max(100000), pageSize: z.number().int().min(1).max(100) }), page);
         return this.transaction(async (client) => {
             const role = await this.membership(client, org, actor);
             const values: unknown[] = [org];
             let where = 't.organization_id=$1';
+            if (checked.taskId) where += ` AND t.id=$${values.push(checked.taskId)}`;
             if (checked.contactId) {
                 await this.contact(client, org, checked.contactId);
                 where += ` AND t.contact_id=$${values.push(checked.contactId)}`;

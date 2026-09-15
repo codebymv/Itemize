@@ -31,6 +31,8 @@ export class UpdateClientTaskInput {
 @InputType()
 export class ClientTaskFilterInput {
     @Field(() => Int, { nullable: true })
+    taskId?: number;
+    @Field(() => Int, { nullable: true })
     contactId?: number;
     @Field(() => String, { nullable: true })
     view?: string;

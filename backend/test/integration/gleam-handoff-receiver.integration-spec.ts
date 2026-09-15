@@ -118,6 +118,8 @@ describe('Gleam handoff receiver PostgreSQL and HTTP boundary',()=>{
     expect(one.status).toBe(200);expect(two.body).toEqual(one.body);expect(one.body.status).toBe('notified');
     const notices=async()=> (await pool.query("SELECT n.recipient_user_id FROM user_notifications n JOIN notification_events e ON e.id=n.event_id WHERE e.organization_id=$1 AND e.entity_type='task' AND e.entity_id=$2",[org,id])).rows;
     expect(await notices()).toEqual([{recipient_user_id:owner}]);
+    const link=(await pool.query("SELECT n.href FROM user_notifications n JOIN notification_events e ON e.id=n.event_id WHERE e.organization_id=$1 AND e.entity_type='task' AND e.entity_id=$2",[org,id])).rows[0].href;
+    expect(link).toBe(`/contacts?view=follow-ups&taskId=${id}&organizationId=${org}`);
     await pool.query('UPDATE tasks SET assigned_to=$2 WHERE id=$1',[id,member]);
     const newEvent=randomUUID();await post({...input,eventId:newEvent});
     expect((await notify(newEvent)).body).toMatchObject({eventId:newEvent,status:'notified'});
