@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import ts from 'typescript';
 
-type HttpBoundary = 'public' | 'public-resource' | 'capability' | 'provider-webhook' | 'session';
+type HttpBoundary = 'public' | 'public-resource' | 'capability' | 'provider-webhook' | 'session' | 'integration';
 
 type HttpRoute = {
   file: string;
@@ -13,6 +13,7 @@ type HttpRoute = {
   conflictingBoundaries: HttpBoundary[];
   guards: string[];
   verifiesProviderRequest: boolean;
+  hasIntegrationScope: boolean;
 };
 
 const sourceRoot = path.resolve(__dirname, '..');
@@ -95,6 +96,7 @@ const inspectController = (absolutePath: string): HttpRoute[] => {
         ['capability', 'HttpCapabilityScoped'],
         ['provider-webhook', 'HttpProviderWebhookScoped'],
         ['session', 'HttpSessionScoped'],
+        ['integration', 'HttpIntegrationScoped'],
       ] as const;
       const methodBoundaries = boundaryDecorators.filter(([, name]) => methodDecorators.has(name));
       const boundaries = (methodBoundaries.length > 0 ? methodBoundaries : boundaryDecorators
@@ -110,6 +112,7 @@ const inspectController = (absolutePath: string): HttpRoute[] => {
         boundary: boundaries[0] ?? 'unclassified',
         conflictingBoundaries: boundaries.slice(1),
         guards: [...classGuards, ...guardNames(member)],
+        hasIntegrationScope: methodDecorators.has('GleamScopeRequired'),
         verifiesProviderRequest: /(?:\.verify|verify[A-Z][A-Za-z]+)\s*\(/.test(
           member.getText(sourceFile),
         ),
@@ -162,5 +165,11 @@ describe('HTTP authorization boundary contract', () => {
       .map((route) => `${route.file}:${route.line} ${route.verb} ${route.name}`);
 
     expect(missingVerification).toEqual([]);
+  });
+
+  it('requires integration routes to use the pinned-key guard and an explicit scope', () => {
+    const integrationRoutes = routes.filter(route => route.boundary === 'integration');
+    expect(integrationRoutes.length).toBeGreaterThan(0);
+    expect(integrationRoutes.filter(route => !route.guards.includes('GleamIntegrationGuard') || !route.hasIntegrationScope)).toEqual([]);
   });
 });

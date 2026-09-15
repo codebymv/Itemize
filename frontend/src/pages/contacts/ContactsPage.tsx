@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, MoreHorizontal, Trash2, Tag, UserPlus, Download, Upload, Users, PieChart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -49,11 +49,22 @@ import { ResponsiveCardRail } from '@/components/layout/ResponsiveCardRail';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { getContactStatusVisual } from './constants/contactStatusConstants';
 import { FramedSection } from '@/components/ui/framed-section';
+import { ClientTasksPanel } from './components/ClientTasksPanel';
 
 const getApiStatus = (error: unknown): number | undefined =>
   (error as { response?: { status?: number } })?.response?.status;
 
 export function ContactsPage() {
+  const [params] = useSearchParams();
+  return params.get('view') === 'follow-ups' ? <ClientFollowUpsPage/> : <ContactListPage/>;
+}
+
+function ClientFollowUpsPage() {
+  const {organizationId,isLoading,error}=useOrganization();
+  return <PageLayout title="CLIENT FOLLOW-UPS"><div className="mb-4"><Button variant="outline" asChild><Link to="/contacts">Back to clients</Link></Button></div>{isLoading?<p role="status">Loading organization…</p>:error?<p role="alert">{error}</p>:organizationId?<ClientTasksPanel organizationId={organizationId}/>:<p>Select an organization to view follow-ups.</p>}</PageLayout>;
+}
+
+function ContactListPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -346,6 +357,7 @@ export function ContactsPage() {
         onDismiss={dismissOnboarding}
         content={ONBOARDING_CONTENT.contacts}
       />
+      <div className="mb-4"><Button variant="outline" asChild><Link to="/contacts?view=follow-ups">Follow-ups</Link></Button></div>
           <FramedSection title="Overview" icon={PieChart} className="mb-6">
             <ResponsiveCardRail
               label="Contact status summary"

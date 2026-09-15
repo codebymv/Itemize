@@ -27,6 +27,7 @@ import { graphqlParseOptions, graphqlValidationRules, graphqlRequestLimitsPlugin
 import { RuntimeConfigModule } from './common/runtime-config.module';
 import { ContactTransfersModule } from './contact-transfers/contact-transfers.module';
 import { ContactsModule } from './contacts/contacts.module';
+import { GleamIntegrationModule } from './gleam-integration/gleam-integration.module';
 import { ConversationsModule } from './conversations/conversations.module';
 import { DatabaseModule } from './database/database.module';
 import { DealsModule } from './deals/deals.module';
@@ -133,6 +134,7 @@ const apolloPlugins = [
     WorkspaceFramesModule,
     RealtimeOutboxModule,
     ContactsModule,
+    GleamIntegrationModule,
     ConversationsModule,
     ContactTransfersModule,
     DealsModule,

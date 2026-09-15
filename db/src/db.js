@@ -1,4 +1,9 @@
 const { runAdminMfaMigration } = require('./db_admin_mfa_migrations');
+const { runClientTaskLifecycleMigration } = require('./db_client_task_migrations');
+const { runGleamHandoffReceiverMigration } = require('./db_gleam_handoff_receiver_migrations');
+const { runGleamPairingMigration } = require('./db_gleam_pairing_migrations');
+const { runGleamTaskStatusMigration } = require('./db_gleam_task_status_migrations');
+const { runGleamNotificationMigration } = require('./db_gleam_notification_migrations');
 const { runRateLimitBucketsMigration } = require('./db_rate_limit_migrations');
 const { runTransactionalEmailEventMigration } = require('./db_transactional_email_event_migrations');
 const { runRemainingEmailReceiptMigration } = require('./db_remaining_email_receipt_migrations');
@@ -1186,6 +1191,11 @@ const initializeDatabase = async (pool) => {
     await runMigrationOnce(pool, 'transactional_email_events_v1', runTransactionalEmailEventMigration);
     await runMigrationOnce(pool, 'remaining_email_receipts_v1', runRemainingEmailReceiptMigration);
     await runMigrationOnce(pool, 'admin_mfa_v1', runAdminMfaMigration);
+    await runMigrationOnce(pool, 'client_task_lifecycle_v1', runClientTaskLifecycleMigration);
+    await runMigrationOnce(pool, 'gleam_handoff_receiver_v1', runGleamHandoffReceiverMigration);
+    await runMigrationOnce(pool, 'gleam_pairing_v1', runGleamPairingMigration);
+    await runMigrationOnce(pool, 'gleam_task_status_v1', runGleamTaskStatusMigration);
+    await runMigrationOnce(pool, 'gleam_notification_ownership_v1', runGleamNotificationMigration);
     await runMigrationOnce(pool, 'rate_limit_buckets_v1', runRateLimitBucketsMigration);
 
     const elapsed = Date.now() - startTime;

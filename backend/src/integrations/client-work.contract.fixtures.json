@@ -1,0 +1,52 @@
+{
+  "handoff": {
+    "schemaVersion": 1,
+    "eventId": "11111111-1111-4111-8111-111111111111",
+    "connectionId": "22222222-2222-4222-8222-222222222222",
+    "connectionGeneration": 1,
+    "entityVersion": 1,
+    "occurredAt": "2026-09-15T12:00:00.000Z",
+    "correlationId": "synthetic-call-1",
+    "type": "gleam.handoff.requested",
+    "data": {
+      "handoffId": "synthetic-handoff-1",
+      "callId": "synthetic-call-1",
+      "title": "Return the caller's request for an estimate",
+      "summary": "Synthetic caller requested a callback about a service estimate.",
+      "priority": "medium",
+      "requestedAt": "2026-09-15T11:59:00.000Z",
+      "itemizeContactId": null,
+      "contactCandidate": { "name": "Synthetic Client", "phone": "+12025550100", "email": null }
+    }
+  },
+  "taskCompleted": {
+    "schemaVersion": 1,
+    "eventId": "33333333-3333-4333-8333-333333333333",
+    "connectionId": "22222222-2222-4222-8222-222222222222",
+    "connectionGeneration": 1,
+    "entityVersion": 2,
+    "occurredAt": "2026-09-15T12:30:00.000Z",
+    "correlationId": "synthetic-call-1",
+    "type": "itemize.task.updated",
+    "data": {
+      "taskId": "42",
+      "handoffId": "synthetic-handoff-1",
+      "callId": "synthetic-call-1",
+      "itemizeContactId": "24",
+      "title": "Return the caller's request for an estimate",
+      "status": "completed",
+      "assignedUserId": "7",
+      "dueAt": "2026-09-16T12:00:00.000Z",
+      "completedAt": "2026-09-15T12:30:00.000Z"
+    }
+  },
+  "appliedReceipt": {
+    "schemaVersion": 1,
+    "status": "applied",
+    "eventId": "11111111-1111-4111-8111-111111111111",
+    "connectionId": "22222222-2222-4222-8222-222222222222",
+    "connectionGeneration": 1,
+    "appliedAt": "2026-09-15T12:00:01.000Z",
+    "result": { "handoffId": "synthetic-handoff-1", "taskId": "42", "itemizeContactId": "24" }
+  }
+}

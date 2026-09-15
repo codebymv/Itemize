@@ -9,10 +9,14 @@ import { ContactProfileService } from './contact-profile.service';
 import { ContactsRepository } from './contacts.repository';
 import { ContactsResolver } from './contacts.resolver';
 import { ContactsService } from './contacts.service';
+import { ClientTasksService } from '../client-tasks/client-tasks.service';
+import { ClientTasksResolver } from '../client-tasks/client-tasks.resolver';
 
 @Module({
   imports: [GetStartedModule],
   providers: [
+    ClientTasksService,
+    ClientTasksResolver,
     ContactActivitiesRepository,
     ContactActivitiesService,
     ContactContentRepository,

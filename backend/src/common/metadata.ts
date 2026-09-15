@@ -8,6 +8,7 @@ export const HTTP_PUBLIC_RESOURCE_SCOPED_KEY = 'itemize:httpPublicResourceScoped
 export const HTTP_CAPABILITY_SCOPED_KEY = 'itemize:httpCapabilityScoped';
 export const HTTP_PROVIDER_WEBHOOK_SCOPED_KEY = 'itemize:httpProviderWebhookScoped';
 export const HTTP_SESSION_SCOPED_KEY = 'itemize:httpSessionScoped';
+export const HTTP_INTEGRATION_SCOPED_KEY = 'itemize:httpIntegrationScoped';
 export const CSRF_PROTECTED_KEY = 'itemize:csrfProtected';
 export const REQUIRED_PLAN_KEY = 'itemize:requiredPlan';
 
@@ -27,6 +28,8 @@ export const HttpProviderWebhookScoped = () =>
   SetMetadata(HTTP_PROVIDER_WEBHOOK_SCOPED_KEY, true);
 export const HttpSessionScoped = () =>
   SetMetadata(HTTP_SESSION_SCOPED_KEY, true);
+export const HttpIntegrationScoped = () =>
+  SetMetadata(HTTP_INTEGRATION_SCOPED_KEY, true);
 export const CsrfProtected = () => SetMetadata(CSRF_PROTECTED_KEY, true);
 export const RequiresPlan = (plan: RequiredPlan = 'starter') =>
   SetMetadata(REQUIRED_PLAN_KEY, plan);

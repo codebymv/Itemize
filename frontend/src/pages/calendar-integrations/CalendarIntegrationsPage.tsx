@@ -32,6 +32,7 @@ import { IntegrationStatusRow } from '@/components/integrations/IntegrationStatu
 import { AVAILABLE_PLANS_PATH } from '@/lib/settingsNavigation';
 import { QUERY_STALE_TIME_MS, shouldRetryQuery } from '@/lib/queryPolicy';
 import { CalendarAccountRow } from '@/components/integrations/CalendarAccountRow';
+import { GleamIntegration } from '@/components/integrations/GleamIntegration';
 
 export function CalendarIntegrationsPage({ embedded = false }: { embedded?: boolean }) {
     const { toast } = useToast();
@@ -226,6 +227,7 @@ export function CalendarIntegrationsPage({ embedded = false }: { embedded?: bool
 
     const content = (
         <div className="flex flex-col gap-6">
+            {organizationId && <GleamIntegration key={organizationId} organizationId={organizationId} />}
             <Card>
                 <CardHeader>
                     <SettingsSectionTitle icon={Plug}>Connections</SettingsSectionTitle>

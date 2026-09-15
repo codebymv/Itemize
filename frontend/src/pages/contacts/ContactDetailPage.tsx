@@ -57,6 +57,7 @@ import {
 } from '@/services/contactsApi';
 import type { ContactDetailBootstrap } from '@/services/contactsGraphql';
 import { ActivityTimeline } from './components/ActivityTimeline';
+import { ClientTasksPanel } from './components/ClientTasksPanel';
 import { EditContactModal } from './components/EditContactModal';
 import { ComposeEmailModal } from './components/ComposeEmailModal';
 import { useOrganization } from '@/hooks/useOrganization';
@@ -134,6 +135,8 @@ export function ContactDetailPage() {
     error: organizationError,
   } = useOrganization();
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showTaskCreate, setShowTaskCreate] = useState(false);
+  const [canCreateTasks, setCanCreateTasks] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [newNote, setNewNote] = useState('');
 
@@ -580,7 +583,8 @@ export function ContactDetailPage() {
                 variant="outline"
                 size="sm"
                 className="min-w-0 justify-start overflow-hidden px-2 text-xs"
-                disabled
+                disabled={!canCreateTasks}
+                onClick={() => setShowTaskCreate(true)}
                 aria-label="Create task"
               >
                 <CheckSquare className="h-4 w-4" />
@@ -625,6 +629,7 @@ export function ContactDetailPage() {
         </div>
       </div>
 
+      {organizationId && contactId && <div className="mt-6"><ClientTasksPanel organizationId={organizationId} contactId={contactId} createRequested={showTaskCreate} onCloseCreate={() => setShowTaskCreate(false)} onCanCreate={setCanCreateTasks}/></div>}
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <Card className="flex min-h-0 flex-col lg:h-[22.5rem]">
             <CardHeader className="pb-3">
