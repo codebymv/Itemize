@@ -49,6 +49,7 @@ describe('Gleam handoff receiver PostgreSQL and HTTP boundary',()=>{
     [owner,member,foreignOwner]=users.rows.map(row=>row.id);
     const orgs=await pool.query<{id:number}>(`INSERT INTO organizations(name,slug) VALUES('Gleam receiver',$1),('Other receiver',$2) RETURNING id`,[suffix,`${suffix}-other`]);
     [org,foreignOrg]=orgs.rows.map(row=>row.id);
+    process.env.GLEAM_ALLOWED_ORGANIZATION_IDS = `${org},${foreignOrg}`;
     await pool.query(`INSERT INTO organization_members(organization_id,user_id,role,joined_at) VALUES($1,$2,'owner',NOW()),($1,$3,'member',NOW()),($4,$5,'owner',NOW())`,[org,owner,member,foreignOrg,foreignOwner]);
     const contacts=await pool.query<{id:number}>(`INSERT INTO contacts(organization_id,first_name) VALUES($1,'Linked client'),($2,'Foreign client') RETURNING id`,[org,foreignOrg]);
     [contact,foreignContact]=contacts.rows.map(row=>row.id);
@@ -74,6 +75,18 @@ describe('Gleam handoff receiver PostgreSQL and HTTP boundary',()=>{
     const receipt=await request(app.getHttpServer()).get(`/api/integrations/gleam/receipts/${input.eventId}`).set('Authorization',`Bearer ${await token({scope:'receipts:read'})}`);
     expect(receipt.status).toBe(200);expect(receipt.body).toEqual(one.body);
   });
+  it('denies an authenticated excluded organization without creating work, and resumes after re-enrollment',async()=>{
+    const input=event(), before=await counts();
+    process.env.GLEAM_ALLOWED_ORGANIZATION_IDS=String(foreignOrg);
+    try {
+      const result=await post(input);
+      expect(result.status).toBe(403);
+      expect(result.body.error.code).toBe('ROLLOUT_DISABLED');
+      expect(await counts()).toEqual(before);
+    } finally { process.env.GLEAM_ALLOWED_ORGANIZATION_IDS=`${org},${foreignOrg}`; }
+    expect((await post(input)).status).toBe(200);
+  });
+
   it('preserves human edits when the same handoff is re-emitted under a new event ID',async()=>{
     const input=event(),first=await post(input),id=Number(first.body.result.taskId);
     await pool.query("UPDATE tasks SET title='Staff edited this',status='completed',completed_at=NOW(),version=2 WHERE id=$1",[id]);

@@ -37,6 +37,7 @@ beforeEach(async () => {
   const users = await pool.query("INSERT INTO users(email,name,provider,email_verified) VALUES($1,'Pairing owner','email',true),($2,'Pairing assignee','email',true) RETURNING id", [`${id}@test.itemize`,`${id}-member@test.itemize`]);
   [actor,member] = users.rows.map(row => row.id);
   org = (await pool.query("INSERT INTO organizations(name,slug) VALUES('Synthetic Itemize',$1) RETURNING id", [id])).rows[0].id;
+  process.env.GLEAM_ALLOWED_ORGANIZATION_IDS = String(org);
   await pool.query("INSERT INTO organization_members(organization_id,user_id,role,joined_at) VALUES($1,$2,'owner',NOW()),($1,$3,'member',NOW())", [org,actor,member]);
   fetcher = jest.spyOn(global, 'fetch').mockImplementation(async (_url, options) => new Response(JSON.stringify({schemaVersion: 1,
     nonce: JSON.parse(options!.body as string).nonce, connectionId: connection, generation: 1, sourceOrganizationId: 'synthetic-gleam',
@@ -50,6 +51,15 @@ afterEach(async () => {
   await pool.query('DELETE FROM users WHERE id=ANY($1::int[])', [[actor,member]]);
 });
 afterAll(async () => {if (app) await app.close(); else if (pool) await pool.end();});
+
+it('denies new pairing and pending-code claims after exclusion without peer I/O', async () => {
+  await service.start(org, actor, input(), id);
+  process.env.GLEAM_ALLOWED_ORGANIZATION_IDS = '';
+  await expect(service.start(org, actor, input(), randomUUID())).rejects.toThrow('not enabled');
+  await expect(claim()).rejects.toThrow('not enabled');
+  expect(fetcher).not.toHaveBeenCalled();
+  await expect(service.status(org, actor)).resolves.toMatchObject({enabled:false});
+});
 
 it('requires browser CSRF and current manager authority to create a pairing code', async () => {
   const auth = await new JwtService().signAsync({id: actor}, {secret: process.env.JWT_SECRET, expiresIn: '5m'});
@@ -109,6 +119,7 @@ it('rechecks source approval before final activation and refuses reassignment to
 it('revokes access immediately, preserves audit, and rejects conflicting replay keys', async () => {
   await service.start(org, actor, input(), id); await claim();
   const key = randomUUID(); await service.approve(org, actor, id, key);
+  process.env.GLEAM_ALLOWED_ORGANIZATION_IDS = '';
   await expect(service.disconnect(org, actor, connection, key)).rejects.toThrow('different change');
   const revoke = randomUUID(); await service.disconnect(org, actor, connection, revoke); await service.disconnect(org, actor, connection, revoke);
   const response = await request(app.getHttpServer()).get('/api/integrations/gleam/connection').set('Authorization', `Bearer ${await token('connection:read')}`);

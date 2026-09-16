@@ -34,3 +34,23 @@ PostgreSQL/HTTP suites cover actor and tenant checks, CSRF, code expiry, key and
 Itemize's optional `gleam-cross-service.integration-spec.ts` uses both real HTTP controller stacks and both disposable databases. Set `GLEAM_TEST_RUNTIME_ROOT` to an isolated Gleam checkout with compiled `backend/dist` and matching generated Prisma client, and `GLEAM_TEST_DATABASE_URL` to the guarded disposable Gleam database on loopback port 55439. Itemize uses its existing guarded `TEST_DATABASE_URL` harness. The suite routes only two synthetic HTTPS peer origins through local test HTTP handlers, provisions generated credentials and verifies pairing followed by one assigned task, a dropped response and receipt recovery without another handoff POST. It does not contact external services.
 
 Human task completion/reopening now appears in Gleam through authenticated, versioned status reads; see ITEMIZE_TASK_STATUS.md. The cross-service suite also verifies completion, reopening, stale results, unavailable reads, revocation and deletion. Notification ownership and late-delivery coordination are now implemented. Audited manual delivery recovery is now implemented; exact navigation and deployment/pilot readiness remain outstanding. Keep customer rollout disabled until readiness is reviewed.
+
+
+## Organization allowlists
+
+Both backends require explicit local organization enrollment in addition to the
+existing flags, plans, membership and approval checks. Set
+`ITEMIZE_ALLOWED_ORGANIZATION_IDS` to comma-separated Gleam organization IDs and
+`GLEAM_ALLOWED_ORGANIZATION_IDS` to comma-separated Itemize organization IDs.
+Missing, empty or malformed lists deny all; wildcards are not supported. Deploy
+both sides with flags off before enabling a pilot. The same ID must not be copied
+between apps: each list uses its own database's organization IDs.
+
+Gleam excludes non-enrolled organizations from producer export and all worker
+claims. Removing enrollment pauses existing queued work without consuming
+attempts or changing permanent notification ownership. New excluded handoffs
+retain the ordinary Gleam fallback and are not exported retroactively. Itemize
+rejects excluded pairing and authenticated integration requests. Settings status
+and disconnect remain available to authorized managers outside the lists.
+Environment changes require deployment and do not cancel in-flight requests;
+disconnect is the revocation mechanism.

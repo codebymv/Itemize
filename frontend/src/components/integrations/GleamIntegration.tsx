@@ -35,7 +35,7 @@ export function GleamIntegration({organizationId}: {organizationId: number}) {
   return <Card><CardHeader><h2 className="font-semibold">Gleam voice follow-ups</h2></CardHeader><CardContent className="space-y-4">
     <p>Receive assigned follow-up tasks and call summaries from your Gleam organization.</p>
     {overview && <p>Itemize organization: {overview.organizationName}</p>}
-    {!overview ? <p>Connection status is unavailable.</p> : !overview.enabled && !pairing?.connection_id ? <p>Gleam pairing is not enabled for this deployment yet.</p> : <>
+    {!overview ? <p>Connection status is unavailable.</p> : !overview.enabled && !pairing?.connection_id ? <p>Gleam pairing is not enabled for this organization yet.</p> : <>
       {pairing?.state === 'approved' ? <p>Approved for {pairing.source_name}. Finish connecting in Gleam to enable delivery.</p> : <>
         <label className="block" htmlFor={`gleam-assignee-${organizationId}`}>Assign new tasks to</label>
         <select id={`gleam-assignee-${organizationId}`} value={assignee} disabled={busy || hasIntent} onChange={event => setAssignee(event.target.value)} className="border rounded p-2">

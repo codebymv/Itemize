@@ -93,11 +93,13 @@ acceptance('Gleam and Itemize paired handoff acceptance', () => {
     const suffix = randomUUID();
     gleamActor = (await gleamDb.user.create({data: {email: `${suffix}@example.invalid`}})).id;
     gleamOrg = (await gleamDb.organization.create({data: {name: 'Cross-service Gleam', slug: suffix, plan: 'PROFESSIONAL'}})).id;
+    process.env.ITEMIZE_ALLOWED_ORGANIZATION_IDS = gleamOrg;
     await gleamDb.organizationMember.create({data: {userId: gleamActor, organizationId: gleamOrg, role: 'OWNER', acceptedAt: new Date()}});
     agent = (await gleamDb.agent.create({data: {userId: gleamActor, organizationId: gleamOrg, name: 'Synthetic agent', systemPrompt: 'Test only'}})).id;
     const users = await pool.query("INSERT INTO users(email,name,provider,email_verified) VALUES($1,'Cross owner','email',true),($2,'Cross assignee','email',true) RETURNING id", [`${suffix}@test.itemize`,`${suffix}-assignee@test.itemize`]);
     [actor,assignee] = users.rows.map(row => row.id);
     org = (await pool.query("INSERT INTO organizations(name,slug) VALUES('Cross-service Itemize',$1) RETURNING id", [suffix])).rows[0].id;
+    process.env.GLEAM_ALLOWED_ORGANIZATION_IDS = String(org);
     await pool.query("INSERT INTO organization_members(organization_id,user_id,role,joined_at) VALUES($1,$2,'owner',NOW()),($1,$3,'member',NOW())", [org,actor,assignee]);
   }, 120000);
   afterAll(async () => {
@@ -156,6 +158,12 @@ acceptance('Gleam and Itemize paired handoff acceptance', () => {
     expect(alert).toMatchObject({notificationOwner:'ITEMIZE',state:'ITEMIZE_PENDING'});
     expect(await notices()).toEqual([{recipient_user_id:assignee}]);
     await gleamDb.bookingNotification.update({where:{id:alert.id},data:{nextAttemptAt:new Date(0)}});
+    process.env.ITEMIZE_ALLOWED_ORGANIZATION_IDS = 'excluded-fixture';
+    const pausedAlert = await gleamDb.bookingNotification.findUniqueOrThrow({where:{id:alert.id}});
+    expect(await notificationWorker.deliverNext()).toBe(false);
+    expect(await gleamDb.bookingNotification.findUniqueOrThrow({where:{id:alert.id}})).toEqual(pausedAlert);
+    expect(await deliverEmail()).toBe(false); // Never change the permanent remote owner on exclusion.
+    process.env.ITEMIZE_ALLOWED_ORGANIZATION_IDS = gleamOrg;
     expect(await notificationWorker.deliverNext()).toBe(true);
     alert=await gleamDb.bookingNotification.findUniqueOrThrow({where:{id:alert.id}});
     expect(alert.state).toBe('ITEMIZE_NOTIFIED');
@@ -173,6 +181,12 @@ acceptance('Gleam and Itemize paired handoff acceptance', () => {
       expect(result.body.errors).toBeUndefined(); return result.body.data.transitionClientTask;
     };
     const pending = await poll();
+    process.env.ITEMIZE_ALLOWED_ORGANIZATION_IDS = 'excluded-fixture';
+    await gleamDb.itemizeHandoffDelivery.update({where:{id:delivery.id},data:{nextTaskStatusCheckAt:new Date(0)}});
+    const pausedStatus = await gleamDb.itemizeHandoffDelivery.findUniqueOrThrow({where:{id:delivery.id}});
+    expect(await statusWorker.pollNext()).toBe(false);
+    expect(await gleamDb.itemizeHandoffDelivery.findUniqueOrThrow({where:{id:delivery.id}})).toEqual(pausedStatus);
+    process.env.ITEMIZE_ALLOWED_ORGANIZATION_IDS = gleamOrg;
     expect(pending.taskSnapshot.task).toEqual({version:1,status:'pending',completedAt:null});
     expect(pending.taskStatusError).toBeNull();
     const complete = await transition(1,'completed');

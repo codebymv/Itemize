@@ -1,3 +1,4 @@
+import { gleamOrganizationAllowed } from './gleam-rollout';
 ﻿import { Inject, Injectable } from '@nestjs/common';
 import { Pool, PoolClient } from 'pg';
 import { z } from 'zod';
@@ -175,6 +176,7 @@ export class GleamHandoffReceiverService {
   }
 
   private async lockConnection(client: PoolClient, principal: GleamPrincipal, scope: GleamScope): Promise<GleamConnection> {
+    if (!gleamOrganizationAllowed(principal.organizationId)) gleamError(403, 'ROLLOUT_DISABLED');
     if (principal.scope !== scope) gleamError(403, 'SCOPE_FORBIDDEN');
     const result = await client.query<GleamConnection>('SELECT * FROM gleam_connections WHERE id=$1 FOR UPDATE', [principal.connectionId]);
     const row = result.rows[0];

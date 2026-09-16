@@ -1,3 +1,4 @@
+import { gleamOrganizationAllowed } from './gleam-rollout';
 import { CanActivate, ExecutionContext, Inject, Injectable, SetMetadata } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
@@ -75,6 +76,7 @@ export class GleamIntegrationGuard implements CanActivate {
       if (claims.exp <= now || claims.iat > now + 30 || claims.exp <= claims.iat || claims.exp - claims.iat > 300) throw new Error();
     } catch { gleamError(401, 'INVALID_CREDENTIAL'); }
     if (claims.scope !== required) gleamError(403, 'SCOPE_FORBIDDEN');
+    if (!gleamOrganizationAllowed(connection.organization_id)) gleamError(403, 'ROLLOUT_DISABLED');
     request.gleam = {
       connectionId: claims.connectionId, generation: claims.generation, sourceOrganizationId: claims.sub,
       organizationId: connection.organization_id,

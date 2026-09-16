@@ -1,3 +1,4 @@
+import { gleamOrganizationAllowed } from './gleam-rollout';
 import { Inject, Injectable } from '@nestjs/common';
 import { createHash, createPublicKey, randomUUID } from 'node:crypto';
 import { Pool, PoolClient } from 'pg';
@@ -21,7 +22,7 @@ const requestSchema = z.object({code: pairingCodeSchema, defaultAssigneeId: z.nu
 @Injectable()
 export class GleamPairingService {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
-  private enabled() { if (process.env.GLEAM_PAIRING_ENABLED !== 'true') fail('Gleam pairing is not enabled.'); }
+  private enabled(org?: number) { if (process.env.GLEAM_PAIRING_ENABLED !== 'true' || (org !== undefined && !gleamOrganizationAllowed(org))) fail('Gleam pairing is not enabled.'); }
   private async transaction<T>(fn: (client: PoolClient) => Promise<T>) {
     const client = await this.pool.connect();
     try { await client.query('BEGIN'); const result = await fn(client); await client.query('COMMIT'); return result; }
@@ -59,7 +60,7 @@ export class GleamPairingService {
     return result;
   }
   async start(org: number, actor: number, input: unknown, idempotencyKey: string) {
-    this.enabled(); const value = requestSchema.parse(input); z.string().uuid().parse(idempotencyKey);
+    this.enabled(org); const value = requestSchema.parse(input); z.string().uuid().parse(idempotencyKey);
     // Pairing capabilities must never use the development JWT-derived encryption fallback.
     parseCalendarTokenKeyring(process.env, {allowDevelopmentFallback: false});
     return this.transaction(async client => {
@@ -83,6 +84,7 @@ export class GleamPairingService {
     this.enabled(); pairingCodeSchema.parse(code); const value = pairingClaimSchema.parse(input);
     const pairing = (await this.pool.query<Pairing>('SELECT * FROM gleam_pairing_requests WHERE code_hash=$1', [hash(code)])).rows[0];
     if (!pairing || pairing.expires_at <= new Date() || pairing.state === 'cancelled') gleamError(401,'INVALID_PAIRING_CODE');
+    this.enabled(pairing.organization_id);
     const proof = await this.proof(value.connectionId, value.proof);
     if (proof.pairingCodeHash !== pairing.code_hash) gleamError(401,'PAIRING_CODE_MISMATCH');
     parseCalendarTokenKeyring(process.env, {allowDevelopmentFallback: false});
@@ -106,7 +108,7 @@ export class GleamPairingService {
     });
   }
   async approve(org: number, actor: number, id: string, idempotencyKey: string) {
-    this.enabled(); z.string().uuid().parse(id); z.string().uuid().parse(idempotencyKey);
+    this.enabled(org); z.string().uuid().parse(id); z.string().uuid().parse(idempotencyKey);
     const pairing = await this.transaction(async client => {
       await this.manager(client, org, actor);
       const row = (await client.query<Pairing>('SELECT * FROM gleam_pairing_requests WHERE id=$1 AND organization_id=$2', [id,org])).rows[0];
@@ -155,7 +157,7 @@ export class GleamPairingService {
     const pairing = (await client.query("SELECT id,state,source_name,expires_at,connection_id,default_assignee_id,due_after_minutes FROM gleam_pairing_requests WHERE organization_id=$1 AND state<>'cancelled' ORDER BY created_at DESC LIMIT 1", [org])).rows[0];
     const organization = (await client.query('SELECT name FROM organizations WHERE id=$1', [org])).rows[0];
     const assignees = (await client.query("SELECT u.id,COALESCE(u.name,u.email) AS name FROM organization_members m JOIN users u ON u.id=m.user_id WHERE m.organization_id=$1 AND m.joined_at IS NOT NULL AND m.role IN ('owner','admin','member') ORDER BY u.id", [org])).rows;
-    return {enabled: process.env.GLEAM_PAIRING_ENABLED === 'true', organizationId: org, organizationName: organization.name,
+    return {enabled: process.env.GLEAM_PAIRING_ENABLED === 'true' && gleamOrganizationAllowed(org), organizationId: org, organizationName: organization.name,
       pairing: pairing ? {...pairing, expires_at: new Date(pairing.expires_at).toISOString()} : null, assignees};
   }
   private async connectionView(client: PoolClient, id: string) {
@@ -164,6 +166,7 @@ export class GleamPairingService {
       targetOrganizationId: row.organization_id, targetOrganizationName: row.target_name, state: row.state};
   }
   async connectionStatus(principal: GleamPrincipal) {
+    if (!gleamOrganizationAllowed(principal.organizationId)) gleamError(403, 'ROLLOUT_DISABLED');
     return this.transaction(async client => {
       const row = (await client.query('SELECT * FROM gleam_connections WHERE id=$1 FOR SHARE', [principal.connectionId])).rows[0];
       if (!row || !['pending','active'].includes(row.state) || row.organization_id !== principal.organizationId
