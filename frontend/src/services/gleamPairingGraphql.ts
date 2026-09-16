@@ -13,6 +13,10 @@ export async function createGleamPairing(org: number, input: {code: string; defa
 }
 export async function changeGleamPairing(org: number, action: 'approveGleamPairing' | 'disconnectGleamConnection', id: string, key: string) {
   const variables = {id, idempotencyKey: key};
-  return (await graphqlMutationRequest<Record<typeof action, GleamPairingOverview>, typeof variables>(
-    `mutation ChangeGleamPairing($id:String!,$idempotencyKey:String!){${action}(id:$id,idempotencyKey:$idempotencyKey){${fields}}}`, variables, org))[action];
+  if (action === 'approveGleamPairing') {
+    return (await graphqlMutationRequest<{approveGleamPairing: GleamPairingOverview}, typeof variables>(
+      `mutation ApproveGleamPairing($id:String!,$idempotencyKey:String!){approveGleamPairing(id:$id,idempotencyKey:$idempotencyKey){${fields}}}`, variables, org)).approveGleamPairing;
+  }
+  return (await graphqlMutationRequest<{disconnectGleamConnection: GleamPairingOverview}, typeof variables>(
+    `mutation DisconnectGleamConnection($id:String!,$idempotencyKey:String!){disconnectGleamConnection(id:$id,idempotencyKey:$idempotencyKey){${fields}}}`, variables, org)).disconnectGleamConnection;
 }
