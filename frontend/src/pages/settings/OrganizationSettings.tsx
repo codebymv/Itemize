@@ -239,7 +239,7 @@ export function OrganizationSettings({
   }, [organization]);
 
   const loadDetails = useCallback(async () => {
-    if (!organizationId) return;
+    if (!organizationId || !organization) return;
     setLoading(true);
     setDetailsLoadError(false);
     const configuredDefaultBusinessId = settingId(
@@ -293,7 +293,7 @@ export function OrganizationSettings({
     } finally {
       setLoading(false);
     }
-  }, [canManage, organization.settings, organizationId]);
+  }, [canManage, organization, organizationId]);
 
   useEffect(() => {
     void loadDetails();

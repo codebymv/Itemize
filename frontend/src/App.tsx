@@ -69,6 +69,7 @@ const DashboardPage = React.lazy(() => import("./pages/DashboardPage"));
 const SettingsPage = React.lazy(() => import("./pages/SettingsPage"));
 const AdminPage = React.lazy(() => import("./pages/AdminPage"));
 const ContactsPage = React.lazy(() => import("./pages/contacts/ContactsPage"));
+const ClientTaskOrganizationGate = React.lazy(() => import("./pages/contacts/components/ClientTaskOrganizationGate"));
 const ContactDetailPage = React.lazy(() => import("./pages/contacts/ContactDetailPage"));
 const PipelinesPage = React.lazy(() => import("./pages/pipelines/PipelinesPage"));
 const AutomationsPage = React.lazy(() => import("./pages/automations").then(m => ({ default: m.AutomationsPage })));
@@ -432,9 +433,12 @@ const AppContent = () => {
         <Route path="/calendar-integrations" element={<LegacyIntegrationsRedirect />} />
         <Route path="/admin/*" element={<AuthenticatedLayout><AdminPage /></AuthenticatedLayout>} />
 
+        <Route element={<ClientTaskOrganizationGate><EntitledRoute /></ClientTaskOrganizationGate>}>
+          <Route path="/contacts" element={<ContactsPage />} />
+        </Route>
+
         <Route element={<EntitledRoute />}>
           <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/contacts" element={<ContactsPage />} />
           <Route path="/contacts/:id" element={<ContactDetailPage />} />
           <Route path="/pipelines" element={<PipelinesPage />} />
           <Route path="/calendars" element={<CalendarsPage />} />

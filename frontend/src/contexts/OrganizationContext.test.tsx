@@ -88,6 +88,44 @@ describe('OrganizationProvider', () => {
     expect(result.current.organizations.find((candidate) => candidate.id === 1)?.is_default).toBe(false);
   });
 
+  it('selects a newly created membership immediately after refresh using retained callbacks', async () => {
+    vi.mocked(getOrganizations).mockResolvedValue([organization(1, 'Alpha', true)]);
+    const { result } = renderHook(() => useOrganizationContext(), { wrapper });
+    await waitFor(() => expect(result.current.organizationId).toBe(1));
+    const { refresh, selectOrganization } = result.current;
+    vi.mocked(getOrganizations).mockResolvedValue([
+      organization(1, 'Alpha', true), organization(2, 'New organization'),
+    ]);
+    vi.mocked(persistSelectedOrganization).mockResolvedValue(organization(2, 'New organization', true));
+
+    await act(async () => {
+      await refresh();
+      await selectOrganization(2);
+    });
+
+    expect(result.current.organizationId).toBe(2);
+    expect(persistSelectedOrganization).toHaveBeenCalledWith(2);
+    expect(clearSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects a removed membership after refresh even through retained callbacks', async () => {
+    vi.mocked(getOrganizations).mockResolvedValue([
+      organization(1, 'Alpha', true), organization(2, 'Removed'),
+    ]);
+    const { result } = renderHook(() => useOrganizationContext(), { wrapper });
+    await waitFor(() => expect(result.current.organizationId).toBe(1));
+    const { refresh, selectOrganization } = result.current;
+    vi.mocked(getOrganizations).mockResolvedValue([organization(1, 'Alpha', true)]);
+
+    await act(async () => {
+      await refresh();
+      await expect(selectOrganization(2)).rejects.toThrow('Organization is not available');
+    });
+
+    expect(persistSelectedOrganization).not.toHaveBeenCalled();
+    expect(result.current.organizationId).toBe(1);
+  });
+
   it('creates a personal organization only when the membership list is empty', async () => {
     vi.mocked(getOrganizations).mockResolvedValue([]);
     vi.mocked(ensureDefaultOrganization).mockResolvedValue(organization(3, 'Personal'));

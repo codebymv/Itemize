@@ -5,6 +5,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { OrganizationSettings } from './OrganizationSettings';
 
 const mocks = vi.hoisted(() => ({
+  organizationReady: true,
   navigate: vi.fn(),
   toast: vi.fn(),
   refresh: vi.fn(),
@@ -50,8 +51,8 @@ vi.mock('@/contexts/AuthContext', () => ({
 }));
 vi.mock('@/contexts/organization-context', () => ({
   useOrganizationContext: () => ({
-    organization: mocks.organization,
-    organizationId: mocks.organization.id,
+    organization: mocks.organizationReady ? mocks.organization : null,
+    organizationId: mocks.organizationReady ? mocks.organization.id : null,
     organizations: [mocks.organization],
     refresh: mocks.refresh,
     selectOrganization: mocks.selectOrganization,
@@ -84,6 +85,7 @@ vi.mock('@/services/invoicesApi', () => ({
 
 describe('OrganizationSettings', () => {
   beforeEach(() => {
+    mocks.organizationReady = true;
     mocks.subscription.limits.users = 3;
     mocks.refresh.mockResolvedValue(undefined);
     mocks.selectOrganization.mockResolvedValue(mocks.organization);
@@ -167,6 +169,23 @@ describe('OrganizationSettings', () => {
       created_at: '2026-08-24T00:00:00.000Z',
       updated_at: '2026-08-24T00:00:00.000Z',
     });
+  });
+
+  it('waits for organization bootstrap before loading scoped details', async () => {
+    mocks.organizationReady = false;
+    const view = render(<OrganizationSettings />);
+
+    expect(screen.queryByText('Organization details')).not.toBeInTheDocument();
+    expect(mocks.getMembers).not.toHaveBeenCalled();
+    expect(mocks.getBusinessPage).not.toHaveBeenCalled();
+    expect(mocks.getActivity).not.toHaveBeenCalled();
+
+    mocks.organizationReady = true;
+    view.rerender(<OrganizationSettings />);
+
+    expect(await screen.findByText('Ada Lovelace')).toBeInTheDocument();
+    expect(mocks.getMembers).toHaveBeenCalledWith(7);
+    expect(screen.getByDisplayValue('Ada Studio')).toBeInTheDocument();
   });
 
   it('presents organization identity, regional defaults, business identity, and members', async () => {

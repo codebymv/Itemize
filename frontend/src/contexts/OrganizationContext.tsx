@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuthState } from '@/contexts/AuthContext';
 import {
@@ -14,6 +14,10 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const queryClient = useQueryClient();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [organization, setOrganization] = useState<Organization | null>(null);
+  // Async callers can refresh and then select before React publishes new callbacks.
+  const selectionRef = useRef<{ memberships: Organization[]; selected: Organization | null }>({
+    memberships: [], selected: null,
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [isSwitching, setIsSwitching] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -21,6 +25,7 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const refresh = useCallback(async (): Promise<Organization | null> => {
     if (!userId) {
+      selectionRef.current = { memberships: [], selected: null };
       setOrganizations([]);
       setOrganization(null);
       setError(null);
@@ -45,11 +50,13 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }));
         selected = memberships.find((candidate) => candidate.id === repaired.id) ?? repaired;
       }
+      selectionRef.current = { memberships, selected };
       setOrganizations(memberships);
       setOrganization(selected);
       setError(null);
       return selected;
     } catch (refreshError) {
+      selectionRef.current = { memberships: [], selected: null };
       setOrganizations([]);
       setOrganization(null);
       setError(refreshError);
@@ -64,11 +71,12 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   }, [refresh]);
 
   const selectOrganization = useCallback(async (organizationId: number): Promise<Organization> => {
-    const membership = organizations.find((candidate) => candidate.id === organizationId);
+    const { memberships, selected: currentOrganization } = selectionRef.current;
+    const membership = memberships.find((candidate) => candidate.id === organizationId);
     if (!membership) {
       throw new Error('Organization is not available to the current user');
     }
-    if (organization?.id === organizationId) return organization;
+    if (currentOrganization?.id === organizationId) return currentOrganization;
 
     setIsSwitching(true);
     try {
@@ -76,17 +84,19 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       const normalized = { ...membership, ...selected, is_default: true };
 
       queryClient.clear();
-      setOrganizations((current) => current.map((candidate) => ({
+      const updatedMemberships = selectionRef.current.memberships.map((candidate) => ({
         ...candidate,
         is_default: candidate.id === organizationId,
-      })));
+      }));
+      selectionRef.current = { memberships: updatedMemberships, selected: normalized };
+      setOrganizations(updatedMemberships);
       setOrganization(normalized);
       setError(null);
       return normalized;
     } finally {
       setIsSwitching(false);
     }
-  }, [organization, organizations, queryClient]);
+  }, [queryClient]);
 
   const value = useMemo<OrganizationContextValue>(() => ({
     organizations,
