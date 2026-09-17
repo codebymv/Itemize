@@ -33,7 +33,9 @@ describe('IntegrationStatusRow', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Disconnect' }));
     expect(screen.getByRole('alertdialog')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Disconnect Facebook?' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Disconnect Facebook?' }),
+    ).toBeInTheDocument();
     expect(onDisconnect).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Disconnect' }));
@@ -55,5 +57,28 @@ describe('IntegrationStatusRow', () => {
     expect(screen.getByText('Unavailable')).toBeInTheDocument();
     expect(screen.queryByText('Not connected')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeEnabled();
+  });
+
+  it('exposes its detail panel as an accordion row', () => {
+    const onToggle = vi.fn();
+    render(
+      <IntegrationStatusRow
+        name="Gleam"
+        description="Turn call outcomes into follow-ups."
+        status="connected"
+        icon={<span>G</span>}
+        expanded
+        controlsId="gleam-details"
+        onToggle={onToggle}
+      />,
+    );
+
+    const summary = screen.getByText('Gleam').closest('button');
+    expect(summary).not.toBeNull();
+    expect(summary).toHaveAttribute('aria-expanded', 'true');
+    expect(summary).toHaveAttribute('aria-controls', 'gleam-details');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse Gleam' }));
+    expect(onToggle).toHaveBeenCalledOnce();
   });
 });
