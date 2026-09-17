@@ -83,6 +83,7 @@ it('claims once, keeps capabilities encrypted, and requires final approval befor
   expect(blocked.status).toBe(401);
   const key = randomUUID(); await service.approve(org, actor, id, key); await service.approve(org, actor, id, key);
   expect((await pool.query('SELECT state FROM gleam_connections WHERE id=$1', [connection])).rows[0].state).toBe('active');
+  expect((await service.status(org, actor)).pairing.connection_state).toBe('active');
   expect((await pool.query("SELECT COUNT(*)::int AS count FROM gleam_connection_audit WHERE connection_id=$1 AND action='CONNECTION_APPROVED'", [connection])).rows[0].count).toBe(1);
   expect((await pool.query('SELECT encrypted_proof FROM gleam_pairing_requests WHERE id=$1', [id])).rows[0].encrypted_proof).toBeNull();
   expect(JSON.stringify(await service.status(org, actor))).not.toMatch(/encrypted_proof|code_hash|PRIVATE KEY/);

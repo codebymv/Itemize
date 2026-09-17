@@ -154,7 +154,12 @@ export class GleamPairingService {
     return this.transaction(async client => { await this.manager(client, org, actor, false); return this.view(client, org); });
   }
   private async view(client: PoolClient, org: number) {
-    const pairing = (await client.query("SELECT id,state,source_name,expires_at,connection_id,default_assignee_id,due_after_minutes FROM gleam_pairing_requests WHERE organization_id=$1 AND state<>'cancelled' ORDER BY created_at DESC LIMIT 1", [org])).rows[0];
+    const pairing = (await client.query(`SELECT p.id,p.state,p.source_name,p.expires_at,p.connection_id,
+      p.default_assignee_id,p.due_after_minutes,c.state AS connection_state
+      FROM gleam_pairing_requests p
+      LEFT JOIN gleam_connections c ON c.id=p.connection_id
+      WHERE p.organization_id=$1 AND p.state<>'cancelled'
+      ORDER BY p.created_at DESC LIMIT 1`, [org])).rows[0];
     const organization = (await client.query('SELECT name FROM organizations WHERE id=$1', [org])).rows[0];
     const assignees = (await client.query("SELECT u.id,COALESCE(u.name,u.email) AS name FROM organization_members m JOIN users u ON u.id=m.user_id WHERE m.organization_id=$1 AND m.joined_at IS NOT NULL AND m.role IN ('owner','admin','member') ORDER BY u.id", [org])).rows;
     return {enabled: process.env.GLEAM_PAIRING_ENABLED === 'true' && gleamOrganizationAllowed(org), organizationId: org, organizationName: organization.name,

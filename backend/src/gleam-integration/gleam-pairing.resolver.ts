@@ -20,6 +20,7 @@ class GleamPairingRequest {
   @Field() state!: string;
   @Field({nullable: true}) source_name?: string;
   @Field({nullable: true}) connection_id?: string;
+  @Field({nullable: true}) connection_state?: string;
   @Field() expires_at!: string;
   @Field(() => Int) default_assignee_id!: number;
   @Field(() => Int) due_after_minutes!: number;

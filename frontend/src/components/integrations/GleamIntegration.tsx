@@ -27,6 +27,7 @@ export function GleamIntegration({organizationId}: {organizationId: number}) {
     finally { running.current = false; if (active.current) setBusy(false); }
   };
   const pairing = overview?.pairing;
+  const connectionActive = pairing?.connection_state === 'active';
   const change = async (action: 'approveGleamPairing' | 'disconnectGleamConnection', id: string) => {
     if (changeIntent.current?.action !== action || changeIntent.current.id !== id) changeIntent.current = {action, id, key: crypto.randomUUID()};
     const result = await changeGleamPairing(organizationId, action, id, changeIntent.current.key);
@@ -36,7 +37,11 @@ export function GleamIntegration({organizationId}: {organizationId: number}) {
     <p>Receive assigned follow-up tasks and call summaries from your Gleam organization.</p>
     {overview && <p>Itemize organization: {overview.organizationName}</p>}
     {!overview ? <p>Connection status is unavailable.</p> : !overview.enabled && !pairing?.connection_id ? <p>Gleam pairing is not enabled for this organization yet.</p> : <>
-      {pairing?.state === 'approved' ? <p>Approved for {pairing.source_name}. Finish connecting in Gleam to enable delivery.</p> : <>
+      {connectionActive ? <div className="space-y-2" role="status">
+        <p><strong>Connected to {pairing.source_name}</strong></p>
+        <p>New Gleam voice follow-ups can create assigned tasks in Itemize.</p>
+        <p>Tasks are assigned to {overview.assignees.find(user => user.id === pairing.default_assignee_id)?.name || 'the selected team member'}, due within {pairing.due_after_minutes / 60} hours.</p>
+      </div> : pairing?.state === 'approved' ? <p>Approved for {pairing.source_name}. Finish connecting in Gleam to enable delivery.</p> : <>
         <label className="block" htmlFor={`gleam-assignee-${organizationId}`}>Assign new tasks to</label>
         <select id={`gleam-assignee-${organizationId}`} value={assignee} disabled={busy || hasIntent} onChange={event => setAssignee(event.target.value)} className="border rounded p-2">
           <option value="">Select a team member</option>{overview.assignees.map(user => <option key={user.id} value={user.id}>{user.name}</option>)}

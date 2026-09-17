@@ -18,7 +18,7 @@ it('freezes the code, assignee and request key across uncertain creation', async
 });
 it('requires explicit approval of the verified source organization and shows the saved assignee', async () => {
   const pending = {...initial, pairing: {id: 'request-id', state: 'claimed', source_name: 'Gleam A', connection_id: 'connection-id',
-    expires_at: new Date(Date.now()+600000).toISOString(), default_assignee_id: 2, due_after_minutes: 1440}};
+    connection_state: 'pending', expires_at: new Date(Date.now()+600000).toISOString(), default_assignee_id: 2, due_after_minutes: 1440}};
   vi.mocked(getGleamPairing).mockResolvedValue(pending);
   vi.mocked(changeGleamPairing).mockResolvedValue({...pending, pairing: {...pending.pairing, state: 'approved'}});
   render(<GleamIntegration organizationId={1} />);
@@ -27,4 +27,17 @@ it('requires explicit approval of the verified source organization and shows the
   fireEvent.click(screen.getByRole('button', {name: 'Approve connection to Gleam A'}));
   await screen.findByText(/Approved for Gleam A/);
   expect(changeGleamPairing).toHaveBeenCalledWith(1, 'approveGleamPairing', 'request-id', expect.any(String));
+});
+it('shows the active delivery state and saved task defaults', async () => {
+  vi.mocked(getGleamPairing).mockResolvedValue({...initial, pairing: {
+    id: 'request-id', state: 'approved', source_name: 'Gleam A', connection_id: 'connection-id',
+    connection_state: 'active', expires_at: new Date(Date.now()+600000).toISOString(),
+    default_assignee_id: 2, due_after_minutes: 1440,
+  }});
+  render(<GleamIntegration organizationId={1} />);
+  expect(await screen.findByText('Connected to Gleam A')).toBeInTheDocument();
+  expect(screen.getByText('New Gleam voice follow-ups can create assigned tasks in Itemize.')).toBeInTheDocument();
+  expect(screen.getByText('Tasks are assigned to Sam, due within 24 hours.')).toBeInTheDocument();
+  expect(screen.queryByText(/Finish connecting in Gleam/)).not.toBeInTheDocument();
+  expect(screen.getByRole('button', {name: 'Disconnect in Itemize'})).toBeInTheDocument();
 });
