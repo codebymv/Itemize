@@ -17,6 +17,11 @@ const initial = {
   organizationName: 'Itemize A',
   assignees: [{ id: 2, name: 'Sam' }],
   pairing: null,
+  deliveryActivity: {
+    checkedAt: new Date().toISOString(),
+    lastDeliveryAt: null,
+    recentDeliveries: [],
+  },
 };
 beforeEach(() => {
   vi.resetAllMocks();
@@ -77,6 +82,19 @@ it('requires explicit approval of the verified source organization and shows the
 it('shows the active delivery state and saved task defaults', async () => {
   vi.mocked(getGleamPairing).mockResolvedValue({
     ...initial,
+    deliveryActivity: {
+      checkedAt: new Date().toISOString(),
+      lastDeliveryAt: '2026-09-17T12:00:00.000Z',
+      recentDeliveries: [{
+        id: 'delivery-id',
+        callId: 'call-id',
+        callOutcome: 'Jordan Lee · Qualified follow-up',
+        assignedTo: 'Sam',
+        created: 'Task + call summary',
+        taskUrl: '/contacts?view=follow-ups&taskId=3&organizationId=1',
+        appliedAt: '2026-09-17T12:00:00.000Z',
+      }],
+    },
     pairing: {
       id: 'request-id',
       state: 'approved',
@@ -90,11 +108,16 @@ it('shows the active delivery state and saved task defaults', async () => {
   });
   render(<GleamIntegration organizationId={1} />);
   expect(await screen.findByText('Connected')).toBeInTheDocument();
+  expect(screen.getByText('Connection active')).toBeInTheDocument();
   expect(screen.getByText('Delivery routing')).toBeInTheDocument();
   expect(screen.getByText('Assignee(s)')).toBeInTheDocument();
-  expect(screen.getByText('Sam')).toBeInTheDocument();
+  expect(screen.getAllByText('Sam')).toHaveLength(2);
   expect(screen.getByText('1 day')).toBeInTheDocument();
-  expect(screen.queryByText(/Connection active/)).not.toBeInTheDocument();
+  expect(screen.getByText('Jordan Lee · Qualified follow-up')).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: /Task \+ call summary/ })).toHaveAttribute(
+    'href',
+    '/contacts?view=follow-ups&taskId=3&organizationId=1',
+  );
   expect(
     screen.queryByText(/Finish connecting in Gleam/),
   ).not.toBeInTheDocument();

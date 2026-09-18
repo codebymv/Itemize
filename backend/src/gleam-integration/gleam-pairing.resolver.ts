@@ -26,12 +26,29 @@ class GleamPairingRequest {
   @Field(() => Int) due_after_minutes!: number;
 }
 @ObjectType()
+class GleamDeliveryRecord {
+  @Field() id!: string;
+  @Field() callId!: string;
+  @Field() callOutcome!: string;
+  @Field() assignedTo!: string;
+  @Field() created!: string;
+  @Field({nullable: true}) taskUrl?: string;
+  @Field() appliedAt!: string;
+}
+@ObjectType()
+class GleamDeliveryActivity {
+  @Field() checkedAt!: string;
+  @Field({nullable: true}) lastDeliveryAt?: string;
+  @Field(() => [GleamDeliveryRecord]) recentDeliveries!: GleamDeliveryRecord[];
+}
+@ObjectType()
 class GleamPairingOverview {
   @Field() enabled!: boolean;
   @Field(() => Int) organizationId!: number;
   @Field() organizationName!: string;
   @Field(() => GleamPairingRequest, {nullable: true}) pairing?: GleamPairingRequest;
   @Field(() => [GleamPairingAssignee]) assignees!: GleamPairingAssignee[];
+  @Field(() => GleamDeliveryActivity) deliveryActivity!: GleamDeliveryActivity;
 }
 @Resolver()
 export class GleamPairingResolver {

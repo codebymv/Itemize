@@ -1,8 +1,10 @@
 import { graphqlMutationRequest, graphqlRequest } from './graphqlClient';
 export type GleamPairingOverview = {enabled: boolean; organizationId: number; organizationName: string;
   assignees: {id: number; name: string}[]; pairing: null | {id: string; state: string; source_name: string | null;
-    connection_id: string | null; connection_state: string | null; expires_at: string; default_assignee_id: number; due_after_minutes: number}};
-const fields = 'enabled organizationId organizationName assignees{id name} pairing{id state source_name connection_id connection_state expires_at default_assignee_id due_after_minutes}';
+    connection_id: string | null; connection_state: string | null; expires_at: string; default_assignee_id: number; due_after_minutes: number};
+  deliveryActivity: {checkedAt: string; lastDeliveryAt: string | null; recentDeliveries: {id: string; callId: string;
+    callOutcome: string; assignedTo: string; created: string; taskUrl: string | null; appliedAt: string}[]}};
+const fields = 'enabled organizationId organizationName assignees{id name} pairing{id state source_name connection_id connection_state expires_at default_assignee_id due_after_minutes} deliveryActivity{checkedAt lastDeliveryAt recentDeliveries{id callId callOutcome assignedTo created taskUrl appliedAt}}';
 export async function getGleamPairing(org: number, signal?: AbortSignal) {
   return (await graphqlRequest<{gleamPairingOverview: GleamPairingOverview}, Record<string, never>>(`query GleamPairingOverview{gleamPairingOverview{${fields}}}`, {}, org, signal)).gleamPairingOverview;
 }

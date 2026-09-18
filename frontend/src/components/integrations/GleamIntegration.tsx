@@ -1,14 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  ArrowRight,
-  Building2,
   Check,
+  CheckCircle2,
   Clock3,
   Copy,
-  ListTodo,
+  ExternalLink,
   Loader2,
-  MessageSquareText,
-  UserRound,
 } from "lucide-react";
 import { ServiceMark } from "@/components/brand/ServiceMark";
 import {
@@ -30,6 +27,7 @@ import {
   type IntegrationStatus,
 } from "./IntegrationStatusRow";
 import { STATUS_THEME_CLASSES } from "@/lib/statusVisuals";
+import { formatRelativeTime } from "@/utils/timeUtils";
 import {
   createGleamPairing,
   changeGleamPairing,
@@ -47,40 +45,19 @@ const formatDueWindow = (minutes: number) => {
   return `${minutes / 60} hours`;
 };
 
-function DetailCell({
-  icon: Icon,
+function RoutingValue({
   label,
   value,
 }: {
-  icon: typeof Building2;
   label: string;
-  value: string | string[];
+  value: string;
 }) {
   return (
-    <div className="min-w-0 bg-card p-4">
-      <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        <Icon className="h-3.5 w-3.5" />
-        {label}
-      </div>
-      {Array.isArray(value) ? (
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {value.map((item) => (
-            <span
-              key={item}
-              className="rounded-full border bg-background px-2 py-0.5 text-xs font-medium text-foreground"
-            >
-              {item}
-            </span>
-          ))}
-        </div>
-      ) : (
-        <p
-          className="mt-2 truncate text-sm font-medium text-foreground"
-          title={value}
-        >
-          {value}
-        </p>
-      )}
+    <div className="min-w-0 py-3 sm:px-4 sm:first:pl-0 sm:last:pr-0">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1 truncate text-sm font-medium text-foreground" title={value}>
+        {value}
+      </p>
     </div>
   );
 }
@@ -164,9 +141,7 @@ export function GleamIntegration({
   const selectedAssignee =
     overview?.assignees.find((user) => user.id === pairing?.default_assignee_id)
       ?.name || "the selected team member";
-  // The API currently stores one default assignee; the UI uses a collection so
-  // additional routing recipients can be displayed without another redesign.
-  const assigneeNames = [selectedAssignee];
+  const deliveryActivity = overview?.deliveryActivity;
   const rowStatus: IntegrationStatus = connectionActive
     ? "connected"
     : pairing?.state === "claimed" || pairing?.state === "approved"
@@ -223,7 +198,7 @@ export function GleamIntegration({
         name="Gleam"
         description="Turn voice call outcomes into assigned Itemize follow-ups."
         status={rowStatus}
-        detail={pairing?.source_name || overview?.organizationName}
+        detail={connectionActive ? undefined : pairing?.source_name || overview?.organizationName}
         icon={<ServiceMark service="gleam" className="h-6 w-6" />}
         primaryLabel="Refresh status"
         primaryVariant="outline"
@@ -248,57 +223,87 @@ export function GleamIntegration({
             </div>
           ) : connectionActive ? (
             <>
-              <div>
-                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Delivery routing
-                </p>
-                <div className="grid gap-px overflow-hidden rounded-lg border bg-border sm:grid-cols-2 lg:grid-cols-4">
-                  <DetailCell
-                    icon={Building2}
-                    label="From"
-                    value={pairing.source_name}
-                  />
-                  <DetailCell
-                    icon={ArrowRight}
-                    label="To"
-                    value={overview.organizationName}
-                  />
-                  <DetailCell
-                    icon={UserRound}
-                    label="Assignee(s)"
-                    value={assigneeNames}
-                  />
-                  <DetailCell
-                    icon={Clock3}
-                    label="Due within"
-                    value={formatDueWindow(pairing.due_after_minutes)}
-                  />
-                </div>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b pb-4 text-sm text-muted-foreground">
+                <span className="inline-flex items-center gap-2 font-medium text-foreground">
+                  <span className="h-2 w-2 rounded-full bg-green-500" aria-hidden="true" />
+                  Connection active
+                </span>
+                <span className="hidden text-border sm:inline" aria-hidden="true">|</span>
+                <span>Checked {formatRelativeTime(deliveryActivity?.checkedAt || new Date())}</span>
+                <span className="hidden text-border sm:inline" aria-hidden="true">|</span>
+                <span>
+                  {deliveryActivity?.lastDeliveryAt
+                    ? `Last delivery ${formatRelativeTime(deliveryActivity.lastDeliveryAt)}`
+                    : "Awaiting first delivery"}
+                </span>
               </div>
 
-              <div className="flex flex-col gap-4 rounded-lg border bg-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm font-medium text-foreground">
-                    Delivered after qualifying calls
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                    <span className="inline-flex items-center gap-1.5 rounded-full border bg-background px-2.5 py-1">
-                      <ListTodo className="h-3.5 w-3.5 text-icon-accent" />{" "}
-                      Follow-up tasks
-                    </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-full border bg-background px-2.5 py-1">
-                      <MessageSquareText className="h-3.5 w-3.5 text-icon-accent" />{" "}
-                      Call summaries
-                    </span>
-                  </div>
+              <section aria-labelledby={`gleam-routing-${organizationId}`}>
+                <h3 id={`gleam-routing-${organizationId}`} className="text-sm font-medium text-foreground">
+                  Delivery routing
+                </h3>
+                <div className="mt-2 grid divide-y border-y sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+                  <RoutingValue label="Itemize organization" value={overview.organizationName} />
+                  <RoutingValue label="Assignee(s)" value={selectedAssignee} />
+                  <RoutingValue label="Due within" value={formatDueWindow(pairing.due_after_minutes)} />
                 </div>
+              </section>
+
+              <section aria-labelledby={`gleam-deliveries-${organizationId}`}>
+                <div className="flex items-center justify-between gap-4">
+                  <h3 id={`gleam-deliveries-${organizationId}`} className="text-sm font-medium text-foreground">
+                    Recent deliveries
+                  </h3>
+                  <a href="/contacts?view=follow-ups" className="text-sm text-primary hover:underline">
+                    View tasks
+                  </a>
+                </div>
+                {deliveryActivity?.recentDeliveries.length ? (
+                  <div className="mt-2 overflow-hidden border-y">
+                    <div className="hidden grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_auto_1.25rem] gap-4 border-b py-2 text-xs uppercase tracking-wide text-muted-foreground md:grid">
+                      <span>Call outcome</span>
+                      <span>Assigned to</span>
+                      <span>Created</span>
+                      <span>When</span>
+                      <span className="sr-only">Status</span>
+                    </div>
+                    {deliveryActivity.recentDeliveries.map((delivery) => (
+                      <div key={delivery.id} className="grid gap-1 border-b py-3 last:border-b-0 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1fr)_auto_1.25rem] md:items-center md:gap-4">
+                        <p className="truncate text-sm font-medium text-foreground" title={delivery.callOutcome}>
+                          {delivery.callOutcome}
+                        </p>
+                        <p className="truncate text-sm text-muted-foreground">{delivery.assignedTo}</p>
+                        <div className="flex items-center gap-1.5 text-sm text-foreground">
+                          {delivery.taskUrl ? (
+                            <a href={delivery.taskUrl} className="inline-flex items-center gap-1.5 hover:text-primary hover:underline">
+                              {delivery.created}
+                              <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                            </a>
+                          ) : delivery.created}
+                        </div>
+                        <p className="text-sm text-muted-foreground">{formatRelativeTime(delivery.appliedAt)}</p>
+                        <CheckCircle2 className="hidden h-4 w-4 text-green-500 md:block" aria-label="Delivered" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-2 border-y py-4 text-sm text-muted-foreground">
+                    No Gleam follow-ups have been delivered yet.
+                  </p>
+                )}
+              </section>
+
+              <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Creates follow-up tasks and call summaries.
+                </p>
                 {pairing.connection_id && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
-                        className="shrink-0 text-destructive hover:text-destructive"
+                        className="h-auto shrink-0 px-0 text-destructive hover:bg-transparent hover:text-destructive"
                         disabled={busy}
                         aria-label="Disconnect in Itemize"
                       >

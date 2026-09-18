@@ -1,12 +1,5 @@
 import type { ReactNode } from 'react';
-import {
-  AlertCircle,
-  CheckCircle2,
-  ChevronDown,
-  Clock3,
-  Loader2,
-} from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { ChevronDown, Loader2 } from 'lucide-react';
 import { Button, type ButtonProps } from '@/components/ui/button';
 import {
   AlertDialog,
@@ -19,7 +12,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { defineStatus, type StatusVisual } from '@/lib/statusVisuals';
 import { cn } from '@/lib/utils';
 
 export type IntegrationStatus =
@@ -30,13 +22,13 @@ export type IntegrationStatus =
   | 'available'
   | 'unavailable';
 
-const INTEGRATION_STATUS_VISUALS: Record<IntegrationStatus, StatusVisual> = {
-  connected: defineStatus('Connected', 'theme', CheckCircle2),
-  disconnected: defineStatus('Not connected', 'gray', Clock3),
-  inactive: defineStatus('Inactive', 'orange', Clock3),
-  soon: defineStatus('Soon', 'gray', Clock3),
-  available: defineStatus('Available', 'theme', CheckCircle2),
-  unavailable: defineStatus('Unavailable', 'red', AlertCircle),
+const INTEGRATION_STATUS_VISUALS: Record<IntegrationStatus, {label: string; dotClass: string}> = {
+  connected: {label: 'Connected', dotClass: 'bg-green-500'},
+  disconnected: {label: 'Not connected', dotClass: 'bg-muted-foreground/60'},
+  inactive: {label: 'Inactive', dotClass: 'bg-orange-500'},
+  soon: {label: 'Soon', dotClass: 'bg-muted-foreground/60'},
+  available: {label: 'Available', dotClass: 'bg-icon-accent'},
+  unavailable: {label: 'Unavailable', dotClass: 'bg-destructive'},
 };
 
 interface IntegrationStatusRowProps {
@@ -58,14 +50,13 @@ interface IntegrationStatusRowProps {
   controlsId?: string;
 }
 
-function StatusBadge({ status }: { status: IntegrationStatus }) {
+function StatusIndicator({ status }: { status: IntegrationStatus }) {
   const visual = INTEGRATION_STATUS_VISUALS[status];
-  const StatusIcon = visual.icon;
   return (
-    <Badge className={visual.badgeClass}>
-      <StatusIcon className="mr-1 h-3 w-3" />
+    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+      <span className={cn('h-2 w-2 rounded-full', visual.dotClass)} aria-hidden="true" />
       {visual.label}
-    </Badge>
+    </span>
   );
 }
 
@@ -97,7 +88,7 @@ export function IntegrationStatusRow({
       <div className="min-w-0 flex-1 text-left">
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="text-sm font-medium text-foreground">{name}</h3>
-          <StatusBadge status={status} />
+          <StatusIndicator status={status} />
         </div>
         <p className="mt-1 text-sm text-muted-foreground">{description}</p>
         {detail ? (

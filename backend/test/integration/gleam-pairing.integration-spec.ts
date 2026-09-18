@@ -10,6 +10,7 @@ import { PG_POOL } from '../../src/database/database.module';
 import { GleamPairingService } from '../../src/gleam-integration/gleam-pairing.service';
 const {getTestDatabasePoolConfig} = require('../../../db/test-support/test-database-config');
 const {runGleamPairingMigration} = require('../../../db/src/db_gleam_pairing_migrations');
+const {runGleamHandoffReceiverMigration} = require('../../../db/src/db_gleam_handoff_receiver_migrations');
 const keys = generateKeyPairSync('rsa', {modulusLength: 2048});
 const publicKey = keys.publicKey.export({type: 'spki', format: 'pem'}).toString();
 const privateKey = keys.privateKey.export({type: 'pkcs8', format: 'pem'}).toString();
@@ -27,7 +28,8 @@ beforeAll(async () => {
   process.env.GLEAM_PAIRING_ENABLED = 'true'; process.env.GLEAM_API_ORIGIN = 'https://gleam.test';
   process.env.CALENDAR_TOKEN_ENCRYPTION_KEYS = JSON.stringify({test: randomBytes(32).toString('hex')});
   process.env.CALENDAR_TOKEN_ACTIVE_KEY_ID = 'test';
-  pool = new Pool(getTestDatabasePoolConfig(process.env)); await runGleamPairingMigration(pool);
+  pool = new Pool(getTestDatabasePoolConfig(process.env));
+  await runGleamHandoffReceiverMigration(pool); await runGleamPairingMigration(pool);
   const module = await Test.createTestingModule({imports: [AppModule]}).overrideProvider(PG_POOL).useValue(pool).compile();
   app = module.createNestApplication<NestExpressApplication>({bodyParser: false, logger: false}); configureApp(app); await app.init();
   service = app.get(GleamPairingService);
@@ -87,6 +89,24 @@ it('claims once, keeps capabilities encrypted, and requires final approval befor
   expect((await pool.query("SELECT COUNT(*)::int AS count FROM gleam_connection_audit WHERE connection_id=$1 AND action='CONNECTION_APPROVED'", [connection])).rows[0].count).toBe(1);
   expect((await pool.query('SELECT encrypted_proof FROM gleam_pairing_requests WHERE id=$1', [id])).rows[0].encrypted_proof).toBeNull();
   expect(JSON.stringify(await service.status(org, actor))).not.toMatch(/encrypted_proof|code_hash|PRIVATE KEY/);
+});
+it('reports tenant-scoped receiver-confirmed delivery activity', async () => {
+  await service.start(org, actor, input(), id); await claim(); await service.approve(org, actor, id, randomUUID());
+  const contact = (await pool.query("INSERT INTO contacts(organization_id,first_name,last_name) VALUES($1,'Recent','Caller') RETURNING id", [org])).rows[0].id;
+  const task = (await pool.query("INSERT INTO tasks(organization_id,contact_id,assigned_to,title,status) VALUES($1,$2,$3,'Qualified follow-up','pending') RETURNING id", [org,contact,member])).rows[0].id;
+  const activity = (await pool.query("INSERT INTO contact_activities(contact_id,user_id,type,title,content,metadata) VALUES($1,NULL,'call','Gleam call follow-up','{}'::jsonb,'{}'::jsonb) RETURNING id", [contact])).rows[0].id;
+  const eventId = randomUUID(), handoffId = randomUUID();
+  await pool.query(`INSERT INTO gleam_handoff_sources(connection_id,handoff_id,source_fingerprint,call_id,task_id,contact_id,activity_id)
+    VALUES($1,$2,$3,'call-recent',$4,$5,$6)`, [connection,handoffId,'f'.repeat(64),task,contact,activity]);
+  await pool.query(`INSERT INTO gleam_handoff_inbox(connection_id,generation,event_id,fingerprint,receipt,applied_at)
+    VALUES($1,1,$2,$3,$4::jsonb,NOW()-INTERVAL '2 minutes')`, [connection,eventId,'e'.repeat(64),JSON.stringify({result:{handoffId}})]);
+  const overview = await service.status(org, actor);
+  expect(Number.isNaN(Date.parse(overview.deliveryActivity.checkedAt))).toBe(false);
+  expect(overview.deliveryActivity.lastDeliveryAt).toBe(overview.deliveryActivity.recentDeliveries[0].appliedAt);
+  expect(overview.deliveryActivity.recentDeliveries).toEqual([expect.objectContaining({
+    id:eventId,callId:'call-recent',callOutcome:'Recent Caller · Qualified follow-up',assignedTo:'Pairing assignee',
+    created:'Task + call summary',taskUrl:`/contacts?view=follow-ups&taskId=${task}&organizationId=${org}`,
+  })]);
 });
 it('does not contact Gleam for an invalid/expired code', async () => {
   await expect(service.claim(code, {connectionId: connection, proof})).rejects.toThrow();

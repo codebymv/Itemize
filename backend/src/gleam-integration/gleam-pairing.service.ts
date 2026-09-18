@@ -15,6 +15,9 @@ import { gleamError } from './gleam-errors';
 
 type Pairing = {id: string; organization_id: number; actor_id: number; code_hash: string; default_assignee_id: number;
   due_after_minutes: number; state: string; connection_id: string | null; source_name: string | null; encrypted_proof: string | null; expires_at: Date};
+type DeliveryActivityRow = {event_id: string; applied_at: Date; call_id: string; task_id: number | null;
+  activity_id: number | null; task_title: string | null; assignee_name: string | null;
+  contact_first_name: string | null; contact_last_name: string | null};
 function fail(message: string): never { throw itemizeGraphqlError(message, 'CONFLICT'); }
 const hash = (value: string) => createHash('sha256').update(value).digest('hex');
 const requestSchema = z.object({code: pairingCodeSchema, defaultAssigneeId: z.number().int().positive(), dueAfterMinutes: z.number().int().min(1).max(43200)}).strict();
@@ -162,8 +165,34 @@ export class GleamPairingService {
       ORDER BY p.created_at DESC LIMIT 1`, [org])).rows[0];
     const organization = (await client.query('SELECT name FROM organizations WHERE id=$1', [org])).rows[0];
     const assignees = (await client.query("SELECT u.id,COALESCE(u.name,u.email) AS name FROM organization_members m JOIN users u ON u.id=m.user_id WHERE m.organization_id=$1 AND m.joined_at IS NOT NULL AND m.role IN ('owner','admin','member') ORDER BY u.id", [org])).rows;
+    const deliveries = pairing?.connection_id ? (await client.query<DeliveryActivityRow>(`SELECT
+        i.event_id,i.applied_at,s.call_id,s.task_id,s.activity_id,t.title AS task_title,
+        COALESCE(NULLIF(TRIM(u.name),''),u.email) AS assignee_name,
+        c.first_name AS contact_first_name,c.last_name AS contact_last_name
+      FROM gleam_handoff_inbox i
+      JOIN gleam_handoff_sources s ON s.connection_id=i.connection_id
+        AND s.handoff_id=i.receipt->'result'->>'handoffId'
+      JOIN gleam_connections gc ON gc.id=i.connection_id AND gc.organization_id=$2
+      LEFT JOIN tasks t ON t.id=s.task_id AND t.organization_id=gc.organization_id
+      LEFT JOIN organization_members om ON om.organization_id=gc.organization_id AND om.user_id=t.assigned_to
+        AND om.joined_at IS NOT NULL
+      LEFT JOIN users u ON u.id=om.user_id
+      LEFT JOIN contacts c ON c.id=s.contact_id AND c.organization_id=gc.organization_id
+      WHERE i.connection_id=$1
+      ORDER BY i.applied_at DESC,i.event_id DESC LIMIT 5`, [pairing.connection_id,org])).rows : [];
+    const recentDeliveries = deliveries.map(row => {
+      const contactName = [row.contact_first_name,row.contact_last_name].filter(Boolean).join(' ').trim();
+      return {id:row.event_id,callId:row.call_id,
+        callOutcome:[contactName,row.task_title || 'Gleam follow-up'].filter(Boolean).join(' · '),
+        assignedTo:row.assignee_name || 'Unassigned',
+        created:row.task_id !== null && row.activity_id !== null ? 'Task + call summary'
+          : row.task_id !== null ? 'Follow-up task' : row.activity_id !== null ? 'Call summary' : 'Delivery record',
+        taskUrl:row.task_id === null ? null : `/contacts?view=follow-ups&taskId=${row.task_id}&organizationId=${org}`,
+        appliedAt:new Date(row.applied_at).toISOString()};
+    });
     return {enabled: process.env.GLEAM_PAIRING_ENABLED === 'true' && gleamOrganizationAllowed(org), organizationId: org, organizationName: organization.name,
-      pairing: pairing ? {...pairing, expires_at: new Date(pairing.expires_at).toISOString()} : null, assignees};
+      pairing: pairing ? {...pairing, expires_at: new Date(pairing.expires_at).toISOString()} : null, assignees,
+      deliveryActivity:{checkedAt:new Date().toISOString(),lastDeliveryAt:recentDeliveries[0]?.appliedAt || null,recentDeliveries}};
   }
   private async connectionView(client: PoolClient, id: string) {
     const row = (await client.query('SELECT c.*,o.name AS target_name FROM gleam_connections c JOIN organizations o ON o.id=c.organization_id WHERE c.id=$1', [id])).rows[0];
